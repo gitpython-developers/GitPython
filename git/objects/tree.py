@@ -97,17 +97,17 @@ class TreeModifier:
 
         If an item with the given name already exists, nothing will be done, but a
         :class:`ValueError` will be raised if the sha and mode of the existing item do
-        not match the one you add, unless `force` is True.
+        not match the one you add, unless `force` is ``True``.
 
         :param sha:
             The 20 or 40 byte sha of the item to add.
 
         :param mode:
-            int representing the stat compatible mode of the item.
+            :class:`int` representing the stat-compatible mode of the item.
 
         :param force:
-            If True, an item with your name and information will overwrite any existing
-            item with the same name, no matter which information it has.
+            If ``True``, an item with your name and information will overwrite any
+            existing item with the same name, no matter which information it has.
 
         :return:
             self
@@ -164,11 +164,10 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
     other :class:`~git.objects.tree.Tree`\s.
 
-    Tree as a list::
+    Tree as a list:
 
-        Access a specific blob using the ``tree['filename']`` notation.
-
-        You may likewise access by index, like ``blob = tree[0]``.
+    * Access a specific blob using the ``tree['filename']`` notation.
+    * You may likewise access by index, like ``blob = tree[0]``.
     """
 
     type: Literal["tree"] = "tree"
@@ -235,7 +234,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             or :class:`~git.objects.submodule.base.Submodule`
 
         :raise KeyError:
-            If the given file or tree does not exist in tree.
+            If the given file or tree does not exist in this tree.
         """
         msg = "Blob or Tree named %r not found"
         if "/" in file:
@@ -275,12 +274,12 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     @property
     def trees(self) -> List["Tree"]:
-        """:return: list(Tree, ...) list of trees directly below this tree"""
+        """:return: list(Tree, ...) List of trees directly below this tree"""
         return [i for i in self if i.type == "tree"]
 
     @property
     def blobs(self) -> List[Blob]:
-        """:return: list(Blob, ...) list of blobs directly below this tree"""
+        """:return: list(Blob, ...) List of blobs directly below this tree"""
         return [i for i in self if i.type == "blob"]
 
     @property
@@ -342,7 +341,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             :class:`~git.util.IterableList`IterableList with the results of the
             traversal as produced by :meth:`traverse`
 
-            Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
+            Tree -> IterableList[Union[Submodule, Tree, Blob]]
         """
         return super()._list_traverse(*args, **kwargs)
 

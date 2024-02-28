@@ -95,9 +95,9 @@ def mode_str_to_int(modestr: Union[bytes, str]) -> int:
         used.
 
     :return:
-        String identifying a mode compatible to the mode methods ids of the stat module
-        regarding the rwx permissions for user, group and other, special flags and file
-        system flags, such as whether it is a symlink.
+        String identifying a mode compatible to the mode methods ids of the :mod:`stat`
+        module regarding the rwx permissions for user, group and other, special flags
+        and file system flags, such as whether it is a symlink.
     """
     mode = 0
     for iteration, char in enumerate(reversed(modestr[-6:])):
@@ -401,7 +401,7 @@ class Traversable(Protocol):
     def list_traverse(self, *args: Any, **kwargs: Any) -> Any:
         """Traverse self and collect all items found.
 
-        Calling this directly only the abstract base class, including via a ``super()``
+        Calling this directly on the abstract base class, including via a ``super()``
         proxy, is deprecated. Only overridden implementations should be called.
         """
         warnings.warn(
@@ -418,12 +418,13 @@ class Traversable(Protocol):
     ) -> IterableList[Union["Commit", "Submodule", "Tree", "Blob"]]:
         """Traverse self and collect all items found.
 
-        :return: :class:`~git.util.IterableList` with the results of the traversal as
+        :return:
+            :class:`~git.util.IterableList` with the results of the traversal as
             produced by :meth:`traverse`::
 
-                Commit -> IterableList["Commit"]
-                Submodule ->  IterableList["Submodule"]
-                Tree -> IterableList[Union["Submodule", "Tree", "Blob"]]
+                Commit -> IterableList[Commit]
+                Submodule ->  IterableList[Submodule]
+                Tree -> IterableList[Union[Submodule, Tree, Blob]]
         """
         # Commit and Submodule have id.__attribute__ as IterableObj.
         # Tree has id.__attribute__ inherited from IndexObject.
@@ -476,12 +477,12 @@ class Traversable(Protocol):
         """Iterator yielding items found when traversing self.
 
         :param predicate:
-            A function ``f(i,d)`` that returns False if item i at depth ``d`` should not
-            be included in the result.
+            A function ``f(i,d)`` that returns ``False`` if item i at depth ``d`` should
+            not be included in the result.
 
         :param prune:
-            A function ``f(i,d)`` that returns True if the search should stop at item
-            ``i`` at depth ``d``. Item ``i`` will not be returned.
+            A function ``f(i,d)`` that returns ``True`` if the search should stop at
+            item ``i`` at depth ``d``. Item ``i`` will not be returned.
 
         :param depth:
             Defines at which level the iteration should not go deeper if -1, there is no
@@ -489,19 +490,19 @@ class Traversable(Protocol):
             i.e. if 1, you would only get the first level of predecessors/successors.
 
         :param branch_first:
-            If True, items will be returned branch first, otherwise depth first.
+            If ``True``, items will be returned branch first, otherwise depth first.
 
         :param visit_once:
-            If True, items will only be returned once, although they might be
+            If ``True``, items will only be returned once, although they might be
             encountered several times. Loops are prevented that way.
 
         :param ignore_self:
-            If True, self will be ignored and automatically pruned from the result.
-            Otherwise it will be the first item to be returned. If `as_edge` is True, the
-            source of the first edge is None
+            If ``True``, self will be ignored and automatically pruned from the result.
+            Otherwise it will be the first item to be returned. If `as_edge` is
+            ``True``, the source of the first edge is ``None``.
 
         :param as_edge:
-            If True, return a pair of items, first being the source, second the
+            If ``True``, return a pair of items, first being the source, second the
             destination, i.e. tuple(src, dest) with the edge spanning from source to
             destination.
 

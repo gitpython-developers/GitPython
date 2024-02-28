@@ -108,11 +108,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         encoding: Union[str, None] = None,
         gpgsig: Union[str, None] = None,
     ) -> None:
-        R"""Instantiate a new :class:`Commit`. All keyword arguments taking None as
+        R"""Instantiate a new :class:`Commit`. All keyword arguments taking ``None`` as
         default will be implicitly set on first query.
 
         :param binsha:
-            20 byte sha1
+            20 byte sha1.
 
         :param parents: tuple(Commit, ...)
             A tuple of commit ids or actual :class:`Commit`\s.
@@ -120,8 +120,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :param tree:
             A :class:`~git.objects.tree.Tree` object.
 
-        :param author: :class:`~git.util.Actor`
-            The author Actor object
+        :param author:
+            The author :class:`~git.util.Actor` object.
 
         :param authored_date: int_seconds_since_epoch
             The authored DateTime - use :func:`time.gmtime` to convert it into a
@@ -130,8 +130,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :param author_tz_offset: int_seconds_west_of_utc
             The timezone that the `authored_date` is in.
 
-        :param committer: :class:`~git.util.Actor`
-            The committer string.
+        :param committer:
+            The committer string, as an :class:`~git.util.Actor` object.
 
         :param committed_date: int_seconds_since_epoch
             The committed DateTime - use :func:`time.gmtime` to convert it into a
@@ -209,7 +209,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return istream.binsha
 
     def replace(self, **kwargs: Any) -> "Commit":
-        """Create new commit object from existing commit object.
+        """Create new commit object from an existing commit object.
 
         Any values provided as keyword arguments will replace the corresponding
         attribute in the new object.
@@ -295,7 +295,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         R"""Find all commits matching the given criteria.
 
         :param repo:
-            The Repo
+            The :class:`~git.repo.base.Repo`.
 
         :param rev:
             Revision specifier, see git-rev-parse for viable options.
@@ -378,7 +378,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     @property
     def trailers(self) -> Dict[str, str]:
-        """Get the trailers of the message as a dictionary
+        """Deprecated. Get the trailers of the message as a dictionary.
 
         :note: This property is deprecated, please use either :attr:`trailers_list` or
             :attr:`trailers_dict``.
@@ -396,7 +396,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         Git messages can contain trailer information that are similar to RFC 822 e-mail
         headers (see: https://git-scm.com/docs/git-interpret-trailers).
 
-        This functions calls ``git interpret-trailers --parse`` onto the message to
+        This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information, returns the raw trailer data as a list.
 
         Valid message with trailer::
@@ -444,7 +444,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         Git messages can contain trailer information that are similar to RFC 822 e-mail
         headers (see: https://git-scm.com/docs/git-interpret-trailers).
 
-        This functions calls ``git interpret-trailers --parse`` onto the message to
+        This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information. The key value pairs are stripped of leading and
         trailing whitespaces before they get saved into a dictionary.
 
@@ -481,7 +481,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def _iter_from_process_or_stream(cls, repo: "Repo", proc_or_stream: Union[Popen, IO]) -> Iterator["Commit"]:
         """Parse out commit information into a list of :class:`Commit` objects.
 
-        We expect one-line per commit, and parse the actual commit information directly
+        We expect one line per commit, and parse the actual commit information directly
         from our lighting fast object database.
 
         :param proc:
@@ -555,11 +555,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :param parent_commits:
             Optional :class:`Commit` objects to use as parents for the new commit. If
             empty list, the commit will have no parents at all and become a root commit.
-            If None, the current head commit will be the parent of the new commit
+            If ``None``, the current head commit will be the parent of the new commit
             object.
 
         :param head:
-            If True, the HEAD will be advanced to the new commit automatically.
+            If ``True``, the HEAD will be advanced to the new commit automatically.
             Otherwise the HEAD will remain pointing on the previous commit. This could
             lead to undesired results when diffing files.
 

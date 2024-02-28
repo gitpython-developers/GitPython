@@ -128,7 +128,7 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
 
 
 def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int) -> EntryTupOrNone:
-    """Return data entry matching the given name and tree mode or None.
+    """Return data entry matching the given name and tree mode or ``None``.
 
     Before the item is returned, the respective data item is set None in the `tree_data`
     list to mark it done.
@@ -172,7 +172,8 @@ def traverse_trees_recursive(
     odb: "GitCmdObjectDB", tree_shas: Sequence[Union[bytes, None]], path_prefix: str
 ) -> List[Tuple[EntryTupOrNone, ...]]:
     """
-    :return: list of list with entries according to the given binary tree-shas.
+    :return:
+        List of list with entries according to the given binary tree-shas.
 
         The result is encoded in a list
         of n tuple|None per blob/commit, (n == len(tree_shas)), where:
@@ -181,12 +182,12 @@ def traverse_trees_recursive(
         * [1] == mode as int
         * [2] == path relative to working tree root
 
-        The entry tuple is None if the respective blob/commit did not exist in the given
-        tree.
+        The entry tuple is ``None`` if the respective blob/commit did not exist in the
+        given tree.
 
     :param tree_shas:
         Iterable of shas pointing to trees. All trees must be on the same level. A
-        tree-sha may be None in which case None.
+        tree-sha may be ``None`` in which case ``None``.
 
     :param path_prefix:
         A prefix to be added to the returned paths on this level.
@@ -257,7 +258,8 @@ def traverse_trees_recursive(
 
 def traverse_tree_recursive(odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
     """
-    :return: list of entries of the tree pointed to by the binary `tree_sha`.
+    :return:
+        List of entries of the tree pointed to by the binary `tree_sha`.
 
         An entry has the following format:
 

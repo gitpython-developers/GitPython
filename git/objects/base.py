@@ -58,7 +58,7 @@ class Object(LazyMixin):
     def __init__(self, repo: "Repo", binsha: bytes):
         """Initialize an object by identifying it by its binary sha.
 
-        All keyword arguments will be set on demand if None.
+        All keyword arguments will be set on demand if ``None``.
 
         :param repo:
             Repository this object is located in.
@@ -83,7 +83,7 @@ class Object(LazyMixin):
             input id may have been a `~git.refs.reference.Reference` or rev-spec.
 
         :param id:
-            :class:`~git.refs.reference.Reference`, rev-spec, or hexsha
+            :class:`~git.refs.reference.Reference`, rev-spec, or hexsha.
 
         :note:
             This cannot be a ``__new__`` method as it would always call :meth:`__init__`
@@ -119,13 +119,13 @@ class Object(LazyMixin):
             super()._set_cache_(attr)
 
     def __eq__(self, other: Any) -> bool:
-        """:return: True if the objects have the same SHA1"""
+        """:return: ``True`` if the objects have the same SHA1"""
         if not hasattr(other, "binsha"):
             return False
         return self.binsha == other.binsha
 
     def __ne__(self, other: Any) -> bool:
-        """:return: True if the objects do not have the same SHA1"""
+        """:return: ``True`` if the objects do not have the same SHA1"""
         if not hasattr(other, "binsha"):
             return True
         return self.binsha != other.binsha
@@ -199,8 +199,8 @@ class IndexObject(Object):
             20 byte sha1.
 
         :param mode:
-            The stat compatible file mode as int, use the :mod:`stat` module to evaluate
-            the information.
+            The stat-compatible file mode as :class:`int`.
+            Use the :mod:`stat` module to evaluate the information.
 
         :param path:
             The path to the file in the file system, relative to the git repository
