@@ -222,8 +222,8 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
 def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, int]:
     """
     :return:
-        Key suitable to be used for the :attr:`index.entries
-        <git.index.base.IndexFile.entries>` dictionary.
+        Key suitable to be used for the
+        :attr:`index.entries <git.index.base.IndexFile.entries>` dictionary.
 
     :param entry:
         One instance of type BaseIndexEntry or the path and the stage.
