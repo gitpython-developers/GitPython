@@ -1067,9 +1067,9 @@ class Git:
             A dictionary of environment variables to be passed to :class:`subprocess.Popen`.
 
         :param max_chunk_size:
-            Maximum number of bytes in one chunk of data passed to the output_stream in
-            one invocation of write() method. If the given number is not positive then
-            the default value is used.
+            Maximum number of bytes in one chunk of data passed to the `output_stream`
+            in one invocation of its ``write()`` method. If the given number is not
+            positive then the default value is used.
 
         :param strip_newline_in_stdout:
             Whether to strip the trailing ``\n`` of the command stdout.
