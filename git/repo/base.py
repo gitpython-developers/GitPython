@@ -798,8 +798,8 @@ class Repo:
             if err.status == 128:
                 raise
             # END handle invalid rev
-            # Status code 1 is returned if there is no merge-base
-            # (see https://github.com/git/git/blob/master/builtin/merge-base.c#L16)
+            # Status code 1 is returned if there is no merge-base.
+            # (See: https://github.com/git/git/blob/v2.44.0/builtin/merge-base.c#L19)
             return res
         # END exception handling
 
