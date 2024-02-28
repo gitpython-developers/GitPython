@@ -133,8 +133,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         :param url:
             The URL to the remote repository which is the submodule.
 
-        :param branch_path: Complete relative path to ref to checkout when cloning the
-            remote repository.
+        :param branch_path:
+            Complete relative path to ref to checkout when cloning the remote
+            repository.
         """
         super().__init__(repo, binsha, mode, path)
         self.size = 0
@@ -214,10 +215,12 @@ class Submodule(IndexObject, TraversableIterableObj):
         cls, repo: "Repo", parent_commit: Union[Commit_ish, None], read_only: bool
     ) -> SubmoduleConfigParser:
         """
-        :return: Config Parser constrained to our submodule in read or write mode
+        :return:
+            Config parser constrained to our submodule in read or write mode
 
-        :raise IOError: If the .gitmodules file cannot be found, either locally or in
-            the repository at the given parent commit. Otherwise the exception would be
+        :raise IOError:
+            If the ``.gitmodules`` file cannot be found, either locally or in the
+            repository at the given parent commit. Otherwise the exception would be
             delayed until the first access of the config parser.
         """
         parent_matches_head = True
@@ -225,7 +228,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             try:
                 parent_matches_head = repo.head.commit == parent_commit
             except ValueError:
-                # We are most likely in an empty repository, so the HEAD doesn't point to a valid ref.
+                # We are most likely in an empty repository, so the HEAD doesn't point
+                # to a valid ref.
                 pass
         # END handle parent_commit
         fp_module: Union[str, BytesIO]
@@ -260,13 +264,17 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _sio_modules(cls, parent_commit: Commit_ish) -> BytesIO:
-        """:return: Configuration file as BytesIO - we only access it through the respective blob's data"""
+        """
+        :return:
+            Configuration file as BytesIO - we only access it through the respective
+            blob's data
+        """
         sio = BytesIO(parent_commit.tree[cls.k_modules_file].data_stream.read())
         sio.name = cls.k_modules_file
         return sio
 
     def _config_parser_constrained(self, read_only: bool) -> SectionConstraint:
-        """:return: Config Parser constrained to our submodule in read or write mode"""
+        """:return: Config parser constrained to our submodule in read or write mode"""
         try:
             pc: Union["Commit_ish", None] = self.parent_commit
         except ValueError:
@@ -296,14 +304,29 @@ class Submodule(IndexObject, TraversableIterableObj):
         **kwargs: Any,
     ) -> "Repo":
         """
-        :return: Repo instance of newly cloned repository
-        :param repo: Our parent repository
-        :param url: URL to clone from
-        :param path: Repository - relative path to the submodule checkout location
-        :param name: Canonical name of the submodule
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
-        :param kwargs: Additional arguments given to git.clone
+        :return:
+            :class:`~git.repo.base.Repo` instance of newly cloned repository.
+
+        :param repo:
+            Our parent repository.
+
+        :param url:
+            URL to clone from.
+
+        :param path:
+            Repository-relative path to the submodule checkout location.
+
+        :param name:
+            Canonical name of the submodule.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :param allow_unsafe_options:
+            Allow unsafe options to be used, like ``--upload-pack``.
+
+        :param kwargs:
+            Additional arguments given to ``git clone``
         """
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
@@ -328,8 +351,11 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _to_relative_path(cls, parent_repo: "Repo", path: PathLike) -> PathLike:
-        """:return: a path guaranteed  to be relative to the given parent - repository
-        :raise ValueError: if path is not contained in the parent repository's working tree"""
+        """:return: a path guaranteed to be relative to the given parent repository
+
+        :raise ValueError:
+            If path is not contained in the parent repository's working tree
+        """
         path = to_native_path_linux(path)
         if path.endswith("/"):
             path = path[:-1]
@@ -352,16 +378,26 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _write_git_file_and_module_config(cls, working_tree_dir: PathLike, module_abspath: PathLike) -> None:
-        """Write a .git file containing a(preferably) relative path to the actual git module repository.
+        """Write a .git file containing a (preferably) relative path to the actual git
+        module repository.
 
-        It is an error if the module_abspath cannot be made into a relative path, relative to the working_tree_dir
+        It is an error if the `module_abspath` cannot be made into a relative path,
+        relative to the `working_tree_dir`.
 
-        :note: This will overwrite existing files!
-        :note: as we rewrite both the git file as well as the module configuration, we might fail on the configuration
-            and will not roll back changes done to the git file. This should be a non - issue, but may easily be fixed
-            if it becomes one.
-        :param working_tree_dir: Directory to write the .git file into
-        :param module_abspath: Absolute path to the bare repository
+        :note:
+            This will overwrite existing files!
+
+        :note:
+            As we rewrite both the git file as well as the module configuration, we
+            might fail on the configuration and will not roll back changes done to the
+            git file. This should be a non-issue, but may easily be fixed if it becomes
+            one.
+
+        :param working_tree_dir:
+            Directory to write the ``.git`` file into.
+
+        :param module_abspath:
+            Absolute path to the bare repository.
         """
         git_file = osp.join(working_tree_dir, ".git")
         rela_path = osp.relpath(module_abspath, start=working_tree_dir)
@@ -395,54 +431,77 @@ class Submodule(IndexObject, TraversableIterableObj):
         allow_unsafe_protocols: bool = False,
     ) -> "Submodule":
         """Add a new submodule to the given repository. This will alter the index
-        as well as the .gitmodules file, but will not create a new commit.
+        as well as the ``.gitmodules`` file, but will not create a new commit.
         If the submodule already exists, no matter if the configuration differs
         from the one provided, the existing submodule will be returned.
 
-        :param repo: Repository instance which should receive the submodule.
-        :param name: The name/identifier for the submodule.
-        :param path: Repository-relative or absolute path at which the submodule
-            should be located.
+        :param repo:
+            Repository instance which should receive the submodule.
+
+        :param name:
+            The name/identifier for the submodule.
+
+        :param path:
+            Repository-relative or absolute path at which the submodule should be
+            located.
             It will be created as required during the repository initialization.
-        :param url: git-clone compatible URL, see git-clone reference for more information.
-            If None, the repository is assumed to exist, and the url of the first
-            remote is taken instead. This is useful if you want to make an existing
-            repository a submodule of another one.
-        :param branch: name of branch at which the submodule should (later) be checked out.
-            The given branch must exist in the remote repository, and will be checked
-            out locally as a tracking branch.
-            It will only be written into the configuration if it not None, which is
-            when the checked out branch will be the one the remote HEAD pointed to.
-            The result you get in these situation is somewhat fuzzy, and it is recommended
-            to specify at least 'master' here.
-            Examples are 'master' or 'feature/new'.
-        :param no_checkout: If True, and if the repository has to be cloned manually,
-            no checkout will be performed.
-        :param depth: Create a shallow clone with a history truncated to the
-            specified number of commits.
-        :param env: Optional dictionary containing the desired environment variables.
+
+        :param url:
+            git-clone compatible URL, see git-clone reference for more information.
+            If None, the repository is assumed to exist, and the url of the first remote
+            is taken instead. This is useful if you want to make an existing repository
+            a submodule of another one.
+
+        :param branch:
+            Name of branch at which the submodule should (later) be checked out. The
+            given branch must exist in the remote repository, and will be checked out
+            locally as a tracking branch.
+            It will only be written into the configuration if it not None, which is when
+            the checked out branch will be the one the remote HEAD pointed to.
+            The result you get in these situation is somewhat fuzzy, and it is
+            recommended to specify at least ``master`` here.
+            Examples are ``master`` or ``feature/new``.
+
+        :param no_checkout:
+            If True, and if the repository has to be cloned manually, no checkout will
+            be performed.
+
+        :param depth:
+            Create a shallow clone with a history truncated to the specified number of
+            commits.
+
+        :param env:
+            Optional dictionary containing the desired environment variables.
+
             Note: Provided variables will be used to update the execution environment
             for ``git``. If some variable is not specified in `env` and is defined in
             attr:`os.environ`, the value from attr:`os.environ` will be used. If you
             want to unset some variable, consider providing an empty string as its
             value.
+
         :param clone_multi_options: A list of Clone options. Please see
             :meth:`Repo.clone <git.repo.base.Repo.clone>` for details.
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext.
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
-        :return: The newly created submodule instance.
-        :note: Works atomically, such that no change will be done if the repository
-            update fails for instance.
-        """
 
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :param allow_unsafe_options:
+            Allow unsafe options to be used, like ``--upload-pack``.
+
+        :return:
+            The newly created :class:`Submodule` instance.
+
+        :note:
+            Works atomically, such that no change will be done if, for example, the
+            repository update fails.
+        """
         if repo.bare:
             raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
         # END handle bare repos
 
         path = cls._to_relative_path(repo, path)
 
-        # Ensure we never put backslashes into the URL, as some operating systems
-        # like it...
+        # Ensure we never put backslashes into the URL, as might happen on Windows.
         if url is not None:
             url = to_native_path_linux(url)
         # END ensure URL correctness
@@ -569,24 +628,29 @@ class Submodule(IndexObject, TraversableIterableObj):
         allow_unsafe_options: bool = False,
         allow_unsafe_protocols: bool = False,
     ) -> "Submodule":
-        """Update the repository of this submodule to point to the checkout
-        we point at with the binsha of this instance.
+        """Update the repository of this submodule to point to the checkout we point at
+        with the binsha of this instance.
 
         :param recursive:
             If True, we will operate recursively and update child modules as well.
+
         :param init:
             If True, the module repository will be cloned into place if necessary.
+
         :param to_latest_revision:
             If True, the submodule's sha will be ignored during checkout. Instead, the
             remote will be fetched, and the local tracking branch updated. This only
             works if we have a local tracking branch, which is the case if the remote
             repository had a master branch, or of the 'branch' option was specified for
             this submodule and the branch existed remotely.
+
         :param progress:
-            UpdateProgress instance or None if no progress should be shown.
+            :class:`UpdateProgress` instance, or None if no progress should be shown.
+
         :param dry_run:
             If True, the operation will only be simulated, but not performed.
             All performed operations are read-only.
+
         :param force:
             If True, we may reset heads even if the repository in question is dirty.
             Additionally we will be allowed to set a tracking branch which is ahead of
@@ -594,31 +658,40 @@ class Submodule(IndexObject, TraversableIterableObj):
             This will essentially 'forget' commits.
             If False, local tracking branches that are in the future of their respective
             remote branches will simply not be moved.
+
         :param keep_going:
             If True, we will ignore but log all errors, and keep going recursively.
-            Unless dry_run is set as well, keep_going could cause subsequent / inherited
-            errors you wouldn't see otherwise.
-            In conjunction with dry_run, it can be useful to anticipate all errors when
-            updating submodules.
+            Unless `dry_run` is set as well, `keep_going` could cause
+            subsequent/inherited errors you wouldn't see otherwise.
+            In conjunction with `dry_run`, it can be useful to anticipate all errors
+            when updating submodules.
+
         :param env: Optional dictionary containing the desired environment variables.
             Note: Provided variables will be used to update the execution environment
             for ``git``. If some variable is not specified in `env` and is defined in
             attr:`os.environ`, value from attr:`os.environ` will be used.
             If you want to unset some variable, consider providing the empty string as
             its value.
+
         :param clone_multi_options:
-            List of Clone options.
+            List of ``git clone`` options.
             Please see :meth:`Repo.clone <git.repo.base.Repo.clone>` for details.
             They only take effect with the `init` option.
+
         :param allow_unsafe_protocols:
-            Allow unsafe protocols to be used, like ext.
+            Allow unsafe protocols to be used, like ``ext``.
+
         :param allow_unsafe_options:
-            Allow unsafe options to be used, like --upload-pack.
+            Allow unsafe options to be used, like ``--upload-pack``.
 
-        :note: Does nothing in bare repositories.
-        :note: This method is definitely not atomic if `recursive` is True.
+        :note:
+            Does nothing in bare repositories.
 
-        :return: self
+        :note:
+            This method is definitely not atomic if `recursive` is True.
+
+        :return:
+            self
         """
         if self.repo.bare:
             return self
@@ -742,9 +815,10 @@ class Submodule(IndexObject, TraversableIterableObj):
                     # END handle tracking branch
 
                     # NOTE: Have to write the repo config file as well, otherwise the
-                    # default implementation will be offended and not update the repository.
-                    # Maybe this is a good way to ensure it doesn't get into our way, but
-                    # we want to stay backwards compatible too... It's so redundant!
+                    # default implementation will be offended and not update the
+                    # repository. Maybe this is a good way to ensure it doesn't get into
+                    # our way, but we want to stay backwards compatible too... It's so
+                    # redundant!
                     with self.repo.config_writer() as writer:
                         writer.set_value(sm_section(self.name), "url", self.url)
                 # END handle dry_run
@@ -755,7 +829,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             binsha = self.binsha
             hexsha = self.hexsha
             if mrepo is not None:
-                # mrepo is only set if we are not in dry-run mode or if the module existed.
+                # mrepo is only set if we are not in dry-run mode or if the module
+                # existed.
                 is_detached = mrepo.head.is_detached
             # END handle dry_run
 
@@ -782,10 +857,12 @@ class Submodule(IndexObject, TraversableIterableObj):
             # Update the working tree.
             # Handles dry_run.
             if mrepo is not None and mrepo.head.commit.binsha != binsha:
-                # We must ensure that our destination sha (the one to point to) is in the future of our current head.
-                # Otherwise, we will reset changes that might have been done on the submodule, but were not yet pushed.
-                # We also handle the case that history has been rewritten, leaving no merge-base. In that case
-                # we behave conservatively, protecting possible changes the user had done.
+                # We must ensure that our destination sha (the one to point to) is in
+                # the future of our current head. Otherwise, we will reset changes that
+                # might have been done on the submodule, but were not yet pushed. We
+                # also handle the case that history has been rewritten, leaving no
+                # merge-base. In that case we behave conservatively, protecting possible
+                # changes the user had done.
                 may_reset = True
                 if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
                     base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
@@ -822,10 +899,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
                 if not dry_run and may_reset:
                     if is_detached:
-                        # NOTE: For now we force. The user is not supposed to change detached
-                        # submodules anyway. Maybe at some point this becomes an option, to
-                        # properly handle user modifications - see below for future options
-                        # regarding rebase and merge.
+                        # NOTE: For now we force. The user is not supposed to change
+                        # detached submodules anyway. Maybe at some point this becomes
+                        # an option, to properly handle user modifications - see below
+                        # for future options regarding rebase and merge.
                         mrepo.git.checkout(hexsha, force=force)
                     else:
                         mrepo.head.reset(hexsha, index=True, working_tree=True)
@@ -871,19 +948,30 @@ class Submodule(IndexObject, TraversableIterableObj):
         the repository at our current path, changing the configuration, as well as
         adjusting our index entry accordingly.
 
-        :param module_path: The path to which to move our module in the parent
-            repository's working tree, given as repository - relative or absolute path.
-            Intermediate directories will be created accordingly. If the path already
-            exists, it must be empty. Trailing (back)slashes are removed automatically.
-        :param configuration: If True, the configuration will be adjusted to let
-            the submodule point to the given path.
-        :param module: If True, the repository managed by this submodule
-            will be moved as well. If False, we don't move the submodule's checkout,
-            which may leave the parent repository in an inconsistent state.
-        :return: self
-        :raise ValueError: If the module path existed and was not empty, or was a file.
-        :note: Currently the method is not atomic, and it could leave the repository
-            in an inconsistent state if a sub-step fails for some reason.
+        :param module_path:
+            The path to which to move our module in the parent repository's working
+            tree, given as repository - relative or absolute path. Intermediate
+            directories will be created accordingly. If the path already exists, it must
+            be empty. Trailing (back)slashes are removed automatically.
+
+        :param configuration:
+            If True, the configuration will be adjusted to let the submodule point to
+            the given path.
+
+        :param module:
+            If True, the repository managed by this submodule will be moved as well. If
+            False, we don't move the submodule's checkout, which may leave the parent
+            repository in an inconsistent state.
+
+        :return:
+            self
+
+        :raise ValueError:
+            If the module path existed and was not empty, or was a file.
+
+        :note:
+            Currently the method is not atomic, and it could leave the repository in an
+            inconsistent state if a sub-step fails for some reason.
         """
         if module + configuration < 1:
             raise ValueError("You must specify to move at least the module or the configuration of the submodule")
@@ -940,8 +1028,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END handle git file rewrite
         # END move physical module
 
-        # Rename the index entry - we have to manipulate the index directly as
-        # git-mv cannot be used on submodules... yeah.
+        # Rename the index entry - we have to manipulate the index directly as git-mv
+        # cannot be used on submodules... yeah.
         previous_sm_path = self.path
         try:
             if configuration:
@@ -967,7 +1055,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             raise
         # END handle undo rename
 
-        # Auto-rename submodule if its name was 'default', that is, the checkout directory.
+        # Auto-rename submodule if its name was 'default', that is, the checkout
+        # directory.
         if previous_sm_path == self.name:
             self.rename(module_checkout_path)
 
@@ -982,30 +1071,46 @@ class Submodule(IndexObject, TraversableIterableObj):
         dry_run: bool = False,
     ) -> "Submodule":
         """Remove this submodule from the repository. This will remove our entry
-        from the .gitmodules file and the entry in the .git/config file.
+        from the ``.gitmodules`` file and the entry in the ``.git/config`` file.
 
-        :param module: If True, the checked out module we point to will be deleted as
-            well. If that module is currently on a commit outside any branch in the
-            remote, or if it is ahead of its tracking branch, or if there are modified
-            or untracked files in its working tree, then the removal will fail. In case
-            the removal of the repository fails for these reasons, the submodule status
-            will not have been altered.
+        :param module:
+            If True, the checked out module we point to will be deleted as well. If that
+            module is currently on a commit outside any branch in the remote, or if it
+            is ahead of its tracking branch, or if there are modified or untracked files
+            in its working tree, then the removal will fail. In case the removal of the
+            repository fails for these reasons, the submodule status will not have been
+            altered.
             If this submodule has child modules of its own, these will be deleted prior
             to touching the direct submodule.
-        :param force: Enforces the deletion of the module even though it contains
-            modifications. This basically enforces a brute-force file system based
-            deletion.
-        :param configuration: If True, the submodule is deleted from the configuration,
-            otherwise it isn't. Although this should be enabled most of the time, this
-            flag enables you to safely delete the repository of your submodule.
-        :param dry_run: If True, we will not actually do anything, but throw the errors
-            we would usually throw.
-        :return: self
-        :note: Doesn't work in bare repositories.
-        :note: Doesn't work atomically, as failure to remove any part of the submodule
-            will leave an inconsistent state.
-        :raise InvalidGitRepositoryError: Thrown if the repository cannot be deleted.
-        :raise OSError: If directories or files could not be removed.
+
+        :param force:
+            Enforces the deletion of the module even though it contains modifications.
+            This basically enforces a brute-force file system based deletion.
+
+        :param configuration:
+            If True, the submodule is deleted from the configuration, otherwise it
+            isn't. Although this should be enabled most of the time, this flag enables
+            you to safely delete the repository of your submodule.
+
+        :param dry_run:
+            If True, we will not actually do anything, but throw the errors we would
+            usually throw.
+
+        :return:
+            self
+
+        :note:
+            Doesn't work in bare repositories.
+
+        :note:
+            Doesn't work atomically, as failure to remove any part of the submodule will
+            leave an inconsistent state.
+
+        :raise InvalidGitRepositoryError:
+            Thrown if the repository cannot be deleted.
+
+        :raise OSError:
+            If directories or files could not be removed.
         """
         if not (module or configuration):
             raise ValueError("Need to specify to delete at least the module, or the configuration")
@@ -1019,8 +1124,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             del csm
 
         if configuration and not dry_run and nc > 0:
-            # Ensure we don't leave the parent repository in a dirty state, and commit our changes.
-            # It's important for recursive, unforced, deletions to work as expected.
+            # Ensure we don't leave the parent repository in a dirty state, and commit
+            # our changes. It's important for recursive, unforced, deletions to work as
+            # expected.
             self.module().index.commit("Removed at least one of child-modules of '%s'" % self.name)
         # END handle recursion
 
@@ -1031,8 +1137,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             git_dir = mod.git_dir
             if force:
                 # Take the fast lane and just delete everything in our module path.
-                # TODO: If we run into permission problems, we have a highly inconsistent
-                # state. Delete the .git folders last, start with the submodules first.
+                # TODO: If we run into permission problems, we have a highly
+                # inconsistent state. Delete the .git folders last, start with the
+                # submodules first.
                 mp = self.abspath
                 method: Union[None, Callable[[PathLike], None]] = None
                 if osp.islink(mp):
@@ -1129,18 +1236,24 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     def set_parent_commit(self, commit: Union[Commit_ish, None], check: bool = True) -> "Submodule":
         """Set this instance to use the given commit whose tree is supposed to
-        contain the .gitmodules blob.
+        contain the ``.gitmodules`` blob.
 
         :param commit:
             Commit-ish reference pointing at the root_tree, or None to always point to
             the most recent commit
+
         :param check:
-            If True, relatively expensive checks will be performed to verify
-            validity of the submodule.
-        :raise ValueError: If the commit's tree didn't contain the .gitmodules blob.
+            If True, relatively expensive checks will be performed to verify validity of
+            the submodule.
+
+        :raise ValueError:
+            If the commit's tree didn't contain the ``.gitmodules`` blob.
+
         :raise ValueError:
             If the parent commit didn't store this submodule under the current path.
-        :return: self
+
+        :return:
+            self
         """
         if commit is None:
             self._parent_commit = None
@@ -1179,21 +1292,28 @@ class Submodule(IndexObject, TraversableIterableObj):
         self, index: Union["IndexFile", None] = None, write: bool = True
     ) -> SectionConstraint["SubmoduleConfigParser"]:
         """
-        :return: A config writer instance allowing you to read and write the data
-            belonging to this submodule into the .gitmodules file.
+        :return:
+            A config writer instance allowing you to read and write the data belonging
+            to this submodule into the ``.gitmodules`` file.
 
-        :param index: If not None, an IndexFile instance which should be written.
+        :param index:
+            If not None, an IndexFile instance which should be written.
             Defaults to the index of the Submodule's parent repository.
-        :param write: If True, the index will be written each time a configuration
-            value changes.
 
-        :note: The parameters allow for a more efficient writing of the index,
-            as you can pass in a modified index on your own, prevent automatic writing,
-            and write yourself once the whole operation is complete.
+        :param write:
+            If True, the index will be written each time a configuration value changes.
 
-        :raise ValueError: If trying to get a writer on a parent_commit which does not
-            match the current head commit.
-        :raise IOError: If the .gitmodules file/blob could not be read
+        :note:
+            The parameters allow for a more efficient writing of the index, as you can
+            pass in a modified index on your own, prevent automatic writing, and write
+            yourself once the whole operation is complete.
+
+        :raise ValueError:
+            If trying to get a writer on a parent_commit which does not match the
+            current head commit.
+
+        :raise IOError:
+            If the ``.gitmodules`` file/blob could not be read.
         """
         writer = self._config_parser_constrained(read_only=False)
         if index is not None:
@@ -1208,22 +1328,24 @@ class Submodule(IndexObject, TraversableIterableObj):
         :note:
             This method takes care of renaming the submodule in various places, such as:
 
-            * $parent_git_dir / config
-            * $working_tree_dir / .gitmodules
+            * ``$parent_git_dir / config``
+            * ``$working_tree_dir / .gitmodules``
             * (git >= v1.8.0: move submodule repository to new name)
 
-        As .gitmodules will be changed, you would need to make a commit afterwards. The
-        changed .gitmodules file will already be added to the index.
+        As ``.gitmodules`` will be changed, you would need to make a commit afterwards.
+        The changed ``.gitmodules`` file will already be added to the index.
 
-        :return: This submodule instance
+        :return:
+            This :class:`Submodule` instance
         """
         if self.name == new_name:
             return self
 
         # .git/config
         with self.repo.config_writer() as pw:
-            # As we ourselves didn't write anything about submodules into the parent .git/config,
-            # we will not require it to exist, and just ignore missing entries.
+            # As we ourselves didn't write anything about submodules into the parent
+            # .git/config, we will not require it to exist, and just ignore missing
+            # entries.
             if pw.has_section(sm_section(self.name)):
                 pw.rename_section(sm_section(self.name), sm_section(new_name))
 
@@ -1260,8 +1382,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         :return: Repo instance initialized from the repository at our submodule path
 
-        :raise InvalidGitRepositoryError: If a repository was not available. This could
-            also mean that it was not yet initialized.
+        :raise InvalidGitRepositoryError:
+            If a repository was not available.
+            This could also mean that it was not yet initialized.
         """
         module_checkout_abspath = self.abspath
         try:
@@ -1276,7 +1399,11 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END handle exceptions
 
     def module_exists(self) -> bool:
-        """:return: True if our module exists and is a valid git repository. See module() method."""
+        """
+        :return:
+            True if our module exists and is a valid git repository.
+            See the :meth:`module` method.
+        """
         try:
             self.module()
             return True
@@ -1286,9 +1413,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     def exists(self) -> bool:
         """
-        :return: True if the submodule exists, False otherwise. Please note that
-            a submodule may exist (in the .gitmodules file) even though its module
-            doesn't exist on disk.
+        :return:
+            True if the submodule exists, False otherwise.
+            Please note that a submodule may exist (in the ``.gitmodules`` file) even
+            though its module doesn't exist on disk.
         """
         # Keep attributes for later, and restore them if we have no valid data.
         # This way we do not actually alter the state of the object.
@@ -1299,7 +1427,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                     loc[attr] = getattr(self, attr)
                 # END if we have the attribute cache
             except (cp.NoSectionError, ValueError):
-                # On PY3, this can happen apparently... don't know why this doesn't happen on PY2.
+                # On PY3, this can happen apparently... don't know why this doesn't
+                # happen on PY2.
                 pass
         # END for each attr
         self._clear_cache()
@@ -1333,8 +1462,9 @@ class Submodule(IndexObject, TraversableIterableObj):
     @property
     def branch_path(self) -> PathLike:
         """
-        :return: Complete relative path as string to the branch we would checkout
-            from the remote and track
+        :return:
+            Complete relative path as string to the branch we would checkout from the
+            remote and track
         """
         return self._branch_path
 
@@ -1344,8 +1474,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         :return:
             The name of the branch, which is the shortest possible branch name
         """
-        # Use an instance method, for this we create a temporary Head instance
-        # which uses a repository that is available at least (it makes no difference).
+        # Use an instance method, for this we create a temporary Head instance which
+        # uses a repository that is available at least (it makes no difference).
         return git.Head(self.repo, self._branch_path).name
 
     @property
@@ -1420,7 +1550,8 @@ class Submodule(IndexObject, TraversableIterableObj):
     ) -> Iterator["Submodule"]:
         """
         :return:
-            Iterator yielding Submodule instances available in the given repository
+            Iterator yielding :class:`Submodule` instances available in the given
+            repository
         """
         try:
             pc = repo.commit(parent_commit)  # Parent commit instance
