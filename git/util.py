@@ -500,7 +500,7 @@ def expand_path(p: None, expand_vars: bool = ...) -> None:
 
 @overload
 def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
-    # improve these overloads when 3.5 dropped
+    # TODO: Support for Python 3.5 has been dropped, so these overloads can be improved.
     ...
 
 
