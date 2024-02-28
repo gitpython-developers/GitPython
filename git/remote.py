@@ -125,7 +125,8 @@ def to_progress_instance(
 
 
 class PushInfo(IterableObj):
-    """Carries information about the result of a push operation of a single head::
+    """
+    Carries information about the result of a push operation of a single head::
 
         info = remote.push()[0]
         info.flags          # bitflags providing more information about the result
@@ -294,7 +295,8 @@ class PushInfoList(IterableList[PushInfo]):
 
 
 class FetchInfo(IterableObj):
-    """Carries information about the results of a fetch operation of a single head::
+    """
+    Carries information about the results of a fetch operation of a single head::
 
      info = remote.fetch()[0]
      info.ref           # Symbolic Reference or RemoteReference to the changed
