@@ -1535,22 +1535,29 @@ class Repo:
     ) -> Repo:
         """Archive the tree at the given revision.
 
-        :param ostream: file compatible stream object to which the archive will be written as bytes.
+        :param ostream:
+            File-compatible stream object to which the archive will be written as bytes.
 
-        :param treeish: is the treeish name/id, defaults to active branch.
+        :param treeish:
+            The treeish name/id, defaults to active branch.
 
-        :param prefix: is the optional prefix to prepend to each filename in the archive.
+        :param prefix:
+            The optional prefix to prepend to each filename in the archive.
 
-        :param kwargs: Additional arguments passed to git-archive:
+        :param kwargs:
+            Additional arguments passed to ``git archive``:
 
-            * Use the 'format' argument to define the kind of format. Use
-              specialized ostreams to write any format supported by python.
-            * You may specify the special **path** keyword, which may either be a repository-relative
-              path to a directory or file to place into the archive, or a list or tuple of multiple paths.
+            * Use the 'format' argument to define the kind of format. Use specialized
+              ostreams to write any format supported by Python.
+            * You may specify the special **path** keyword, which may either be a
+              repository-relative path to a directory or file to place into the archive,
+              or a list or tuple of multiple paths.
 
-        :raise GitCommandError: If something went wrong.
+        :raise GitCommandError:
+            If something went wrong.
 
-        :return: self
+        :return:
+            self
         """
         if treeish is None:
             treeish = self.head.commit
