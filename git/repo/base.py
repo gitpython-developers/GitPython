@@ -784,7 +784,7 @@ class Repo:
             :class:`~git.objects.commit.Commit`, or is empty if no common merge base
             exists.
 
-        :raises ValueError:
+        :raise ValueError:
             If fewer than two revisions are provided.
         """
         if len(rev) < 2:

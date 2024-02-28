@@ -59,7 +59,7 @@ def touch(filename: str) -> str:
 def is_git_dir(d: "PathLike") -> bool:
     """This is taken from the git setup.c:is_git_directory function.
 
-    :raises WorkTreeRepositoryUnsupported:
+    :raise WorkTreeRepositoryUnsupported:
         If it sees a worktree directory. It's quite hacky to do that here, but at least
         clearly indicates that we don't support it. There is the unlikely danger to
         throw if we see directories which just look like a worktree dir, but are none.
