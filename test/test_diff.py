@@ -473,3 +473,45 @@ class TestDiff(TestBase):
         self.assertEqual(True, diff.renamed_file)
         self.assertEqual("file_a.txt", diff.rename_from)
         self.assertEqual("file_b.txt", diff.rename_to)
+
+    @with_rw_directory
+    def test_diff_patch_with_external_engine(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        gitignore = osp.join(rw_dir, ".gitignore")
+
+        # First commit
+        with open(gitignore, "w") as f:
+            f.write("first_line\n")
+        repo.git.add(".gitignore")
+        repo.index.commit("first commit")
+
+        # Adding second line and committing
+        with open(gitignore, "a") as f:
+            f.write("second_line\n")
+        repo.git.add(".gitignore")
+        repo.index.commit("second commit")
+
+        # Adding third line and staging
+        with open(gitignore, "a") as f:
+            f.write("third_line\n")
+        repo.git.add(".gitignore")
+
+        # Adding fourth line
+        with open(gitignore, "a") as f:
+            f.write("fourth_line\n")
+
+        # Set the external diff engine
+        with repo.config_writer(config_level="repository") as writer:
+            writer.set_value("diff", "external", "bogus_diff_engine")
+
+        head_against_head = repo.head.commit.diff("HEAD^", create_patch=True)
+        self.assertEqual(len(head_against_head), 1)
+        head_against_index = repo.head.commit.diff(create_patch=True)
+        self.assertEqual(len(head_against_index), 1)
+        head_against_working_tree = repo.head.commit.diff(None, create_patch=True)
+        self.assertEqual(len(head_against_working_tree), 1)
+
+        index_against_head = repo.index.diff("HEAD", create_patch=True)
+        self.assertEqual(len(index_against_head), 1)
+        index_against_working_tree = repo.index.diff(None, create_patch=True)
+        self.assertEqual(len(index_against_working_tree), 1)
