@@ -68,7 +68,7 @@ class TagObject(base.Object):
             :class:`~git.util.Actor` identifying the tagger.
 
         :param tagged_date: int_seconds_since_epoch
-            The :class:`DateTime` of the tag creation.
+            The DateTime of the tag creation.
             Use :func:`time.gmtime` to convert it into a different format.
 
         :param tagger_tz_offset: int_seconds_west_of_utc
