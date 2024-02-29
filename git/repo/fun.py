@@ -128,7 +128,7 @@ def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
 def short_to_long(odb: "GitCmdObjectDB", hexsha: str) -> Optional[bytes]:
     """
     :return:
-        Long hexadecimal sha1 from the given less than 40 byte hexsha or None if no
+        Long hexadecimal sha1 from the given less than 40 byte hexsha, or ``None`` if no
         candidate could be found.
 
     :param hexsha:
@@ -150,7 +150,7 @@ def name_to_object(
         references are supported.
 
     :param return_ref:
-        If True, and name specifies a reference, we will return the reference
+        If ``True``, and name specifies a reference, we will return the reference
         instead of the object. Otherwise it will raise `~gitdb.exc.BadObject` o
         `~gitdb.exc.BadName`.
     """
@@ -202,7 +202,7 @@ def name_to_object(
 
 
 def deref_tag(tag: "Tag") -> "TagObject":
-    """Recursively dereference a tag and return the resulting object"""
+    """Recursively dereference a tag and return the resulting object."""
     while True:
         try:
             tag = tag.object
@@ -213,7 +213,7 @@ def deref_tag(tag: "Tag") -> "TagObject":
 
 
 def to_commit(obj: Object) -> Union["Commit", "TagObject"]:
-    """Convert the given object to a commit if possible and return it"""
+    """Convert the given object to a commit if possible and return it."""
     if obj.type == "tag":
         obj = deref_tag(obj)
 

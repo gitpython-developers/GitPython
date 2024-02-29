@@ -102,9 +102,9 @@ class BlameEntry(NamedTuple):
 
 
 class Repo:
-    """Represents a git repository and allows you to query references,
-    gather commit information, generate diffs, create and clone repositories, and query
-    the log.
+    """Represents a git repository and allows you to query references, father
+    commit information, generate diffs, create and clone repositories, and query the
+    log.
 
     The following attributes are worth using:
 
@@ -188,16 +188,18 @@ class Repo:
                 repo = Repo(R"C:\Users\mtrier\Development\git-python\.git")
 
             - In *Cygwin*, `path` may be a ``cygdrive/...`` prefixed path.
-            - If `path` is None or an empty string, :envvar:`GIT_DIR` is used. If that
-              environment variable is absent or empty, the current directory is used.
+            - If `path` is ``None`` or an empty string, :envvar:`GIT_DIR` is used. If
+              that environment variable is absent or empty, the current directory is
+              used.
 
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data
+            used to access all object data.
 
         :param search_parent_directories:
-            If True, all parent directories will be searched for a valid repo as well.
+            If ``True``, all parent directories will be searched for a valid repo as
+            well.
 
             Please note that this was the default behaviour in older versions of
             GitPython, which is considered a bug though.
@@ -372,7 +374,7 @@ class Repo:
         """
         :return:
             The working tree directory of our git repository.
-            If this is a bare repository, None is returned.
+            If this is a bare repository, ``None`` is returned.
         """
         return self._working_tree_dir
 
@@ -387,7 +389,7 @@ class Repo:
 
     @property
     def bare(self) -> bool:
-        """:return: True if the repository is bare"""
+        """:return: ``True`` if the repository is bare"""
         return self._bare
 
     @property
@@ -450,7 +452,7 @@ class Repo:
     def remote(self, name: str = "origin") -> "Remote":
         """:return: The remote with the specified name
 
-        :raise ValueError
+        :raise ValueError:
             If no remote with such a name exists.
         """
         r = Remote(self, name)
@@ -494,10 +496,13 @@ class Repo:
         return Submodule.add(self, *args, **kwargs)
 
     def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
-        """An iterator yielding Submodule instances, see Traversable interface
-        for a description of args and kwargs.
+        """An iterator yielding Submodule instances.
 
-        :return: Iterator
+        See the `~git.objects.util.Traversable` interface for a description of `args`
+        and `kwargs`.
+
+        :return:
+            Iterator
         """
         return RootModule(self).traverse(*args, **kwargs)
 
@@ -554,7 +559,8 @@ class Repo:
     ) -> "Head":
         """Create a new head within the repository.
 
-        :note: For more documentation, please see the
+        :note:
+            For more documentation, please see the
             :meth:`Head.create <git.refs.head.Head.create>` method.
 
         :return:
@@ -648,7 +654,7 @@ class Repo:
             configuration files.
 
         :param config_level:
-            For possible values, see the :meth:`config_writer` method. If None, all
+            For possible values, see the :meth:`config_writer` method. If ``None``, all
             applicable levels will be used. Specify a level in case you know which file
             you wish to read to prevent reading multiple files.
 
@@ -744,7 +750,7 @@ class Repo:
 
         :param rev:
             Revision specifier, see ``git rev-parse`` for viable options.
-            If None, the active branch will be used.
+            If ``None``, the active branch will be used.
 
         :param paths:
             An optional path or a list of paths. If set, only commits that include the
@@ -759,7 +765,7 @@ class Repo:
             ``"revA...revB"`` revision specifier.
 
         :return:
-            Iterator of  :class:`~git.objects.commit.Commit` objects
+            Iterator of :class:`~git.objects.commit.Commit` objects
         """
         if rev is None:
             rev = self.head.commit
@@ -819,7 +825,7 @@ class Repo:
             Rev to test against `ancestor_rev`.
 
         :return:
-            True if `ancestor_rev` is an ancestor to `rev`.
+            ``True`` if `ancestor_rev` is an ancestor to `rev`.
         """
         try:
             self.git.merge_base(ancestor_rev, rev, is_ancestor=True)
@@ -923,9 +929,9 @@ class Repo:
     ) -> bool:
         """
         :return:
-            True if the repository is considered dirty. By default it will react like a
-            git-status without untracked files, hence it is dirty if the index or the
-            working copy have changes.
+            ``True`` if the repository is considered dirty. By default it will react
+            like a git-status without untracked files, hence it is dirty if the index or
+            the working copy have changes.
         """
         if self._bare:
             # Bare repositories with no associated working directory are
@@ -1036,9 +1042,9 @@ class Repo:
         stream of :class:`BlameEntry` tuples.
 
         :param rev:
-            Revision specifier. If None, the blame will include all the latest
-            uncommitted changes. Otherwise, anything successfully parsed by ``git
-            rev-parse`` is a valid option.
+            Revision specifier. If ``None``, the blame will include all the latest
+            uncommitted changes. Otherwise, anything successfully parsed by
+            ``git rev-parse`` is a valid option.
 
         :return:
             Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates the
@@ -1132,9 +1138,9 @@ class Repo:
         """The blame information for the given file at the given revision.
 
         :param rev:
-            Revision specifier. If None, the blame will include all the latest
+            Revision specifier. If ``None``, the blame will include all the latest
             uncommitted changes. Otherwise, anything successfully parsed by
-            git-rev-parse is a valid option.
+            ``git rev-parse`` is a valid option.
 
         :return:
             list: [git.Commit, list: [<line>]]
@@ -1286,9 +1292,9 @@ class Repo:
         """Initialize a git repository at the given path if specified.
 
         :param path:
-            The full path to the repo (traditionally ends with ``/<name>.git``).
-            Or None, in which case the repository will be created in the current working
-            directory.
+            The full path to the repo (traditionally ends with ``/<name>.git``). Or
+            ``None``, in which case the repository will be created in the current
+            working directory.
 
         :param mkdir:
             If specified, will create the repository directory if it doesn't already
@@ -1445,7 +1451,7 @@ class Repo:
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param kwargs:
-            * odbt = ObjectDatabase Type, allowing to determine the object database
+            * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned Repo instance.
             * All remaining keyword arguments are given to the ``git clone`` command.
 
@@ -1547,9 +1553,9 @@ class Repo:
         :param kwargs:
             Additional arguments passed to ``git archive``:
 
-            * Use the 'format' argument to define the kind of format. Use specialized
+            * Use the ``format`` argument to define the kind of format. Use specialized
               ostreams to write any format supported by Python.
-            * You may specify the special **path** keyword, which may either be a
+            * You may specify the special ``path`` keyword, which may either be a
               repository-relative path to a directory or file to place into the archive,
               or a list or tuple of multiple paths.
 
@@ -1581,7 +1587,7 @@ class Repo:
             to.
 
         :note:
-            Bare repositories will always return False here.
+            Bare repositories will always return ``False`` here.
         """
         if self.bare:
             return False
@@ -1601,7 +1607,7 @@ class Repo:
         :return:
             The commit which is currently being replayed while rebasing.
 
-            None if we are not currently rebasing.
+            ``None`` if we are not currently rebasing.
         """
         if self.git_dir:
             rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
