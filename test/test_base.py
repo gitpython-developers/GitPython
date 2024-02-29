@@ -72,7 +72,10 @@ class TestBase(_TestBase):
                 self.assertEqual(item, item.stream_data(tmpfile))
                 tmpfile.seek(0)
                 self.assertEqual(tmpfile.read(), data)
-            os.remove(tmpfile.name)  # Do it this way so we can inspect the file on failure.
+
+            # Remove the file this way, instead of with a context manager or "finally",
+            # so it is only removed on success, and we can inspect the file on failure.
+            os.remove(tmpfile.name)
         # END for each object type to create
 
         # Each has a unique sha.
