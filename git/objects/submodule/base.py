@@ -172,7 +172,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _get_intermediate_items(cls, item: "Submodule") -> IterableList["Submodule"]:
-        """:return: all the submodules of our module repository"""
+        """:return: All the submodules of our module repository"""
         try:
             return cls.list_items(item.module())
         except InvalidGitRepositoryError:
@@ -326,7 +326,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param kwargs:
-            Additional arguments given to ``git clone``
+            Additional arguments given to ``git clone``.
         """
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
@@ -351,7 +351,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _to_relative_path(cls, parent_repo: "Repo", path: PathLike) -> PathLike:
-        """:return: a path guaranteed to be relative to the given parent repository
+        """:return: A path guaranteed to be relative to the given parent repository
 
         :raise ValueError:
             If path is not contained in the parent repository's working tree.
@@ -642,7 +642,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             If ``True``, the submodule's sha will be ignored during checkout. Instead,
             the remote will be fetched, and the local tracking branch updated. This only
             works if we have a local tracking branch, which is the case if the remote
-            repository had a master branch, or of the ``branch`` option was specified
+            repository had a master branch, or if the ``branch`` option was specified
             for this submodule and the branch existed remotely.
 
         :param progress:
@@ -1309,7 +1309,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             repository.
 
         :param write:
-            If True, the index will be written each time a configuration value changes.
+            If ``True``, the index will be written each time a configuration value changes.
 
         :note:
             The parameters allow for a more efficient writing of the index, as you can
