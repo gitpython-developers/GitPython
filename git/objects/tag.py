@@ -3,7 +3,11 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Object-based types."""
+"""Provides an :class:`git.objects.base.Object`-based type for annotated tags.
+
+This defines the :class:`TagReference` class, which represents annotated tags.
+For lightweight tags, see the :mod:`git.refs.tag` module.
+"""
 
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
@@ -25,8 +29,8 @@ __all__ = ("TagObject",)
 
 
 class TagObject(base.Object):
-    """Non-lightweight tag carrying additional information about an object we are
-    pointing to."""
+    """Annotated (i.e. non-lightweight) tag carrying additional information about an
+    object we are pointing to."""
 
     type: Literal["tag"] = "tag"
 

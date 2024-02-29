@@ -1,6 +1,13 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+"""Provides a :class:`~git.refs.reference.Reference`-based type for lightweight tags.
+
+This defines the :class:`TagReference` class (and its alias :class:`Tag`), which
+represents lightweight tags. For annotated tags (which are git objects), see the
+:mod:`git.objects.tag` module.
+"""
+
 from .reference import Reference
 
 __all__ = ["TagReference", "Tag"]
