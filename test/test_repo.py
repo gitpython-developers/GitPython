@@ -543,8 +543,8 @@ class TestRepo(TestBase):
                 try:
                     rmtree(clone_path)
                 except OSError:
-                    # When relative paths are used, the clone may actually be inside
-                    # of the parent directory.
+                    # When relative paths are used, the clone may actually be inside of
+                    # the parent directory.
                     pass
                 # END exception handling
 
@@ -556,8 +556,8 @@ class TestRepo(TestBase):
                 try:
                     rmtree(clone_path)
                 except OSError:
-                    # When relative paths are used, the clone may actually be inside
-                    # of the parent directory.
+                    # When relative paths are used, the clone may actually be inside of
+                    # the parent directory.
                     pass
                 # END exception handling
 
@@ -832,8 +832,8 @@ class TestRepo(TestBase):
             assert self.rorepo._get_config_path(config_level)
 
     def test_creation_deletion(self):
-        # Just a very quick test to assure it generally works. There are
-        # specialized cases in the test_refs module.
+        # Just a very quick test to assure it generally works. There are specialized
+        # cases in the test_refs module.
         head = self.rorepo.create_head("new_head", "HEAD~1")
         self.rorepo.delete_head(head)
 
@@ -1027,7 +1027,8 @@ class TestRepo(TestBase):
                     num_resolved += 1
                 except (BadName, BadObject):
                     print("failed on %s" % path_section)
-                    # This is fine if we have something like 112, which belongs to remotes/rname/merge-requests/112.
+                    # This is fine if we have something like 112, which belongs to
+                    # remotes/rname/merge-requests/112.
                 # END exception handling
             # END for each token
             if ref_no == 3 - 1:
@@ -1149,7 +1150,7 @@ class TestRepo(TestBase):
         )
         self.assertIsInstance(sm, Submodule)
 
-        # NOTE: the rest of this functionality is tested in test_submodule.
+        # NOTE: The rest of this functionality is tested in test_submodule.
 
     @with_rw_repo("HEAD")
     def test_git_file(self, rwrepo):
@@ -1178,8 +1179,9 @@ class TestRepo(TestBase):
         # This is based on this comment:
         # https://github.com/gitpython-developers/GitPython/issues/60#issuecomment-23558741
         # And we expect to set max handles to a low value, like 64.
-        # You should set ulimit -n X, see .travis.yml
-        # The loops below would easily create 500 handles if these would leak (4 pipes + multiple mapped files).
+        # You should set ulimit -n X. See .travis.yml.
+        # The loops below would easily create 500 handles if these would leak
+        # (4 pipes + multiple mapped files).
         for _ in range(64):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
@@ -1200,8 +1202,8 @@ class TestRepo(TestBase):
         self.assertEqual(r.active_branch.name, "master")
         assert not r.active_branch.is_valid(), "Branch is yet to be born"
 
-        # Actually, when trying to create a new branch without a commit, git itself fails.
-        # We should, however, not fail ungracefully.
+        # Actually, when trying to create a new branch without a commit, git itself
+        # fails. We should, however, not fail ungracefully.
         self.assertRaises(BadName, r.create_head, "foo")
         self.assertRaises(BadName, r.create_head, "master")
         # It's expected to not be able to access a tree
@@ -1315,13 +1317,13 @@ class TestRepo(TestBase):
         repo = Repo(worktree_path)
         self.assertIsInstance(repo, Repo)
 
-        # This ensures we're able to actually read the refs in the tree, which
-        # means we can read commondir correctly.
+        # This ensures we're able to actually read the refs in the tree, which means we
+        # can read commondir correctly.
         commit = repo.head.commit
         self.assertIsInstance(commit, Object)
 
-        # This ensures we can read the remotes, which confirms we're reading
-        # the config correctly.
+        # This ensures we can read the remotes, which confirms we're reading the config
+        # correctly.
         origin = repo.remotes.origin
         self.assertIsInstance(origin, Remote)
 

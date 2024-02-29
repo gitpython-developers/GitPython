@@ -41,7 +41,7 @@ class TestBase(TestCase):
         return sio
 
     def test_read_write(self):
-        # writer must create the exact same file as the one read before
+        # The writer must create the exact same file as the one read before.
         for filename in ("git_config", "git_config_global"):
             file_obj = self._to_memcache(fixture_path(filename))
             with GitConfigParser(file_obj, read_only=False) as w_config:
@@ -56,7 +56,8 @@ class TestBase(TestCase):
                     self._to_memcache(fixture_path(filename)).getvalue(),
                 )
 
-                # Creating an additional config writer must fail due to exclusive access.
+                # Creating an additional config writer must fail due to exclusive
+                # access.
                 with self.assertRaises(IOError):
                     GitConfigParser(file_obj, read_only=False)
 
@@ -91,8 +92,8 @@ class TestBase(TestCase):
             r_config.read()  # Enforce reading.
             # Simple inclusions, again checking them taking precedence.
             assert r_config.get_value("sec", "var0") == "value0_included"
-            # This one should take the git_config_global value since included
-            # values must be considered as soon as they get them.
+            # This one should take the git_config_global value since included values
+            # must be considered as soon as they get them.
             assert r_config.get_value("diff", "tool") == "meld"
             try:
                 # FIXME: Split this assertion out somehow and mark it xfail (or fix it).
@@ -109,7 +110,8 @@ class TestBase(TestCase):
         # Entering again locks the file again...
         with gcp as cw:
             cw.set_value("include", "some_other_value", "b")
-            # ...so creating an additional config writer must fail due to exclusive access.
+            # ...so creating an additional config writer must fail due to exclusive
+            # access.
             with self.assertRaises(IOError):
                 GitConfigParser(fpl, read_only=False)
         # but work when the lock is removed

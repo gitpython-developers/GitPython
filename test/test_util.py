@@ -153,7 +153,8 @@ class TestRmtree:
         reason="PermissionError is only ever wrapped on Windows",
     )
     def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is
+        true."""
         self._patch_for_wrapping_test(mocker, True)
 
         with pytest.raises(SkipTest):
@@ -171,7 +172,8 @@ class TestRmtree:
         ],
     )
     def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
-        """rmtree does not wrap PermissionError on non-Windows systems or when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        """rmtree does not wrap PermissionError on non-Windows systems or when
+        HIDE_WINDOWS_KNOWN_ERRORS is false."""
         self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
 
         with pytest.raises(PermissionError):
@@ -182,7 +184,9 @@ class TestRmtree:
 
     @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
     def test_does_not_wrap_other_errors(self, tmp_path, mocker, hide_windows_known_errors):
-        file_not_found_tmpdir = tmp_path / "testdir"  # It is deliberately never created.
+        # The file is deliberately never created.
+        file_not_found_tmpdir = tmp_path / "testdir"
+
         self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
 
         with pytest.raises(FileNotFoundError):
@@ -502,7 +506,8 @@ class TestUtils(TestBase):
         committer = Actor.committer(None)
         author = Actor.author(None)
         # We can't test with `self.rorepo.config_reader()` here, as the UUID laziness
-        # depends on whether the user running the test has their global user.name config set.
+        # depends on whether the user running the test has their global user.name config
+        # set.
         self.assertEqual(committer.name, "user")
         self.assertTrue(committer.email.startswith("user@"))
         self.assertEqual(author.name, "user")

@@ -46,9 +46,9 @@ class TestInstallation(TestBase):
             msg=result.stderr or result.stdout or "Dependencies not installed",
         )
 
-        # Even IF gitdb or any other dependency is supplied during development
-        # by inserting its location into PYTHONPATH or otherwise patched into
-        # sys.path, make sure it is not wrongly inserted as the *first* entry.
+        # Even IF gitdb or any other dependency is supplied during development by
+        # inserting its location into PYTHONPATH or otherwise patched into sys.path,
+        # make sure it is not wrongly inserted as the *first* entry.
         result = subprocess.run(
             [venv.python, "-c", "import sys; import git; print(sys.path)"],
             stdout=subprocess.PIPE,

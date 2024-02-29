@@ -135,8 +135,8 @@ class TestBase(_TestBase):
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the Python implementation.
             rw_repo.index.add([file_path])
-            # However, when the test winds down, rmtree fails to delete this file, which is recognized
-            # as ??? only.
+            # However, when the test winds down, rmtree fails to delete this file, which
+            # is recognized as ??? only.
         else:
             # On POSIX, we can just add Unicode files without problems.
             rw_repo.git.add(rw_repo.working_dir)

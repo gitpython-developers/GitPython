@@ -253,21 +253,27 @@ class TestGit(TestBase):
         if old_name == old_name.upper():
             raise RuntimeError("test bug or strange locale: old_name invariant under upcasing")
 
-        # Step 1: Set the environment variable in this parent process. Because os.putenv is a thin
-        #         wrapper around a system API, os.environ never sees the variable in this parent
-        #         process, so the name is not upcased even on Windows.
+        # Step 1
+        #
+        # Set the environment variable in this parent process. Because os.putenv is a
+        # thin wrapper around a system API, os.environ never sees the variable in this
+        # parent process, so the name is not upcased even on Windows.
         os.putenv(old_name, "1")
 
-        # Step 2: Create the child process that inherits the environment variable. The child uses
-        #         GitPython, and we are testing that it passes the variable with the exact original
-        #         name to its own child process (the grandchild).
+        # Step 2
+        #
+        # Create the child process that inherits the environment variable. The child
+        # uses GitPython, and we are testing that it passes the variable with the exact
+        # original name to its own child process (the grandchild).
         cmdline = [
             sys.executable,
             fixture_path("env_case.py"),  # Contains steps 3 and 4.
             self.rorepo.working_dir,
             old_name,
         ]
-        pair_text = subprocess.check_output(cmdline, shell=False, text=True)  # Run steps 3 and 4.
+
+        # Run steps 3 and 4.
+        pair_text = subprocess.check_output(cmdline, shell=False, text=True)
 
         new_name = pair_text.split("=")[0]
         self.assertEqual(new_name, old_name)
@@ -668,7 +674,7 @@ class TestGit(TestBase):
                 # as unintended shell expansions can occur, and is deprecated. Instead,
                 # use a custom command, by setting the GIT_PYTHON_GIT_EXECUTABLE
                 # environment variable to git.cmd or by passing git.cmd's full path to
-                # git.refresh. Or wrap the script with a .exe shim.
+                # git.refresh. Or wrap the script with a .exe shim.)
                 stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
 
             new_git = Git()

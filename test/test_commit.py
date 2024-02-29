@@ -27,8 +27,8 @@ import os.path as osp
 
 class TestCommitSerialization(TestBase):
     def assert_commit_serialization(self, rwrepo, commit_id, print_performance_info=False):
-        """Traverse all commits in the history of commit identified by commit_id and check
-        if the serialization works.
+        """Traverse all commits in the history of commit identified by commit_id and
+        check if the serialization works.
 
         :param print_performance_info: If True, we will show how fast we are.
         """
@@ -317,8 +317,9 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(self.rorepo.tag("refs/tags/0.1.5").commit.count(), 143)
 
     def test_list(self):
-        # This doesn't work anymore, as we will either attempt getattr with bytes, or compare 20 byte string
-        # with actual 20 byte bytes. This usage makes no sense anyway.
+        # This doesn't work anymore, as we will either attempt getattr with bytes, or
+        # compare 20 byte string with actual 20 byte bytes. This usage makes no sense
+        # anyway.
         assert isinstance(
             Commit.list_items(self.rorepo, "0.1.5", max_count=5)["5117c9c8a4d3af19a9958677e45cda9269de1541"],
             Commit,
@@ -383,8 +384,8 @@ class TestCommit(TestCommitSerialization):
 
         self.assertEqual(cmt.author.name, ncmt.author.name)
         self.assertEqual(cmt.message, ncmt.message)
-        # Actually, it can't be printed in a shell as repr wants to have ascii only
-        # it appears.
+        # Actually, it can't be printed in a shell as repr wants to have ascii only it
+        # appears.
         cmt.author.__repr__()
 
     def test_invalid_commit(self):
@@ -498,7 +499,8 @@ JzJMZDRLQLFvnzqZuCjE
         KEY_2 = "Key"
         VALUE_2 = "Value with inner spaces"
 
-        # Check that the following trailer example is extracted from multiple msg variations.
+        # Check that the following trailer example is extracted from multiple msg
+        # variations.
         TRAILER = f"{KEY_1}: {VALUE_1_1}\n{KEY_2}: {VALUE_2}\n{KEY_1}: {VALUE_1_2}"
         msgs = [
             f"Subject\n\n{TRAILER}\n",

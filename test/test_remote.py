@@ -294,11 +294,11 @@ class TestRemote(TestBase):
 
         # Provoke to receive actual objects to see what kind of output we have to
         # expect. For that we need a remote transport protocol.
-        # Create a new UN-shared repo and fetch into it after we pushed a change
-        # to the shared repo.
+        # Create a new UN-shared repo and fetch into it after we pushed a change to the
+        # shared repo.
         other_repo_dir = tempfile.mktemp("other_repo")
-        # Must clone with a local path for the repo implementation not to freak out
-        # as it wants local paths only (which I can understand).
+        # Must clone with a local path for the repo implementation not to freak out as
+        # it wants local paths only (which I can understand).
         other_repo = remote_repo.clone(other_repo_dir, shared=False)
         remote_repo_url = osp.basename(remote_repo.git_dir)  # git-daemon runs with appropriate `--base-path`.
         remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, remote_repo_url))
@@ -317,10 +317,10 @@ class TestRemote(TestBase):
             self._commit_random_file(rw_repo)
             remote.push(rw_repo.head.reference)
 
-            # Here I would expect to see remote-information about packing
-            # objects and so on. Unfortunately, this does not happen
-            # if we are redirecting the output - git explicitly checks for this
-            # and only provides progress information to ttys.
+            # Here I would expect to see remote-information about packing objects and so
+            # on. Unfortunately, this does not happen if we are redirecting the output -
+            # git explicitly checks for this and only provides progress information to
+            # ttys.
             res = fetch_and_test(other_origin)
         finally:
             rmtree(other_repo_dir)
@@ -333,8 +333,8 @@ class TestRemote(TestBase):
         try:
             lhead.reference = rw_repo.heads.master
         except AttributeError:
-            # If the author is on a non-master branch, the clones might not have
-            # a local master yet. We simply create it.
+            # If the author is on a non-master branch, the clones might not have a local
+            # master yet. We simply create it.
             lhead.reference = rw_repo.create_head("master")
         # END master handling
         lhead.reset(remote.refs.master, working_tree=True)
@@ -488,8 +488,8 @@ class TestRemote(TestBase):
             self._assert_push_and_pull(remote, rw_repo, remote_repo)
 
             # FETCH TESTING
-            # Only for remotes - local cases are the same or less complicated
-            # as additional progress information will never be emitted.
+            # Only for remotes - local cases are the same or less complicated as
+            # additional progress information will never be emitted.
             if remote.name == "daemon_origin":
                 self._do_test_fetch(remote, rw_repo, remote_repo, kill_after_timeout=10.0)
                 ran_fetch_test = True
@@ -508,7 +508,8 @@ class TestRemote(TestBase):
         # Verify we can handle prunes when fetching.
         # stderr lines look like this:  x [deleted]         (none)     -> origin/experiment-2012
         # These should just be skipped.
-        # If we don't have a manual checkout, we can't actually assume there are any non-master branches.
+        # If we don't have a manual checkout, we can't actually assume there are any
+        # non-master branches.
         remote_repo.create_head("myone_for_deletion")
         # Get the branch - to be pruned later
         origin.fetch()
@@ -812,8 +813,8 @@ class TestRemote(TestBase):
                 "fd::17/foo",
             ]
             for url in urls:
-                # The URL will be allowed into the command, but the command will
-                # fail since we don't have that protocol enabled in the Git config file.
+                # The URL will be allowed into the command, but the command will fail
+                # since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
                     remote.fetch(url, allow_unsafe_protocols=True)
                 assert not tmp_file.exists()
@@ -880,8 +881,8 @@ class TestRemote(TestBase):
                 "fd::17/foo",
             ]
             for url in urls:
-                # The URL will be allowed into the command, but the command will
-                # fail since we don't have that protocol enabled in the Git config file.
+                # The URL will be allowed into the command, but the command will fail
+                # since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
                     remote.pull(url, allow_unsafe_protocols=True)
                 assert not tmp_file.exists()
@@ -948,8 +949,8 @@ class TestRemote(TestBase):
                 "fd::17/foo",
             ]
             for url in urls:
-                # The URL will be allowed into the command, but the command will
-                # fail since we don't have that protocol enabled in the Git config file.
+                # The URL will be allowed into the command, but the command will fail
+                # since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
                     remote.push(url, allow_unsafe_protocols=True)
                 assert not tmp_file.exists()

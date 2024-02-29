@@ -19,8 +19,8 @@ class TestClone(TestBase):
         garbage_file = non_empty_dir / "not-empty"
         garbage_file.write_text("Garbage!")
 
-        # Verify that cloning into the non-empty dir fails while complaining about
-        # the target directory not being empty/non-existent.
+        # Verify that cloning into the non-empty dir fails while complaining about the
+        # target directory not being empty/non-existent.
         try:
             self.rorepo.clone(non_empty_dir)
         except git.GitCommandError as exc:
