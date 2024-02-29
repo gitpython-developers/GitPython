@@ -121,9 +121,9 @@ class Diffable:
             * If ``None``, we will be compared to the working tree.
             * If :class:`~git.index.base.Treeish`, it will be compared against the
               respective tree.
-            * If :class:`~Diffable.Index`, it will be compared against the index.
+            * If :class:`Diffable.Index`, it will be compared against the index.
             * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
-            * It defaults to :class:`~Diffable.Index` so that the method will not by
+            * It defaults to :class:`Diffable.Index` so that the method will not by
               default fail on bare repositories.
 
         :param paths:
@@ -280,11 +280,11 @@ class Diff:
     Working Tree Blobs:
 
         When comparing to working trees, the working tree blob will have a null hexsha
-        as a corresponding object does not yet exist. The mode will be null as well.
-        The path will be available, though.
+        as a corresponding object does not yet exist. The mode will be null as well. The
+        path will be available, though.
 
-        If it is listed in a diff, the working tree version of the file must
-        differ from the version in the index or tree, and hence has been modified.
+        If it is listed in a diff, the working tree version of the file must differ from
+        the version in the index or tree, and hence has been modified.
     """
 
     # Precompiled regex.
@@ -468,7 +468,8 @@ class Diff:
 
     @property
     def renamed(self) -> bool:
-        """
+        """Deprecated, use :attr:`renamed_file` instead.
+
         :return:
             ``True`` if the blob of our diff has been renamed
 
@@ -480,7 +481,7 @@ class Diff:
 
     @property
     def renamed_file(self) -> bool:
-        """:return: True if the blob of our diff has been renamed"""
+        """:return: ``True`` if the blob of our diff has been renamed"""
         return self.rename_from != self.rename_to
 
     @classmethod

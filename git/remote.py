@@ -338,7 +338,7 @@ class FetchInfo(IterableObj):
 
     @classmethod
     def refresh(cls) -> Literal[True]:
-        """This gets called by the refresh function (see the top level __init__)."""
+        """This gets called by the refresh function (see the top level ``__init__``)."""
         # Clear the old values in _flag_map.
         with contextlib.suppress(KeyError):
             del cls._flag_map["t"]
@@ -386,19 +386,22 @@ class FetchInfo(IterableObj):
         """Parse information from the given line as returned by ``git-fetch -v`` and
         return a new :class:`FetchInfo` object representing this information.
 
-        We can handle a line as follows:
-        "%c %-\\*s %-\\*s -> %s%s"
+        We can handle a line as follows::
 
-        Where c is either ' ', !, +, -, \\*, or =
-        ! means error
-        + means success forcing update
-        - means a tag was updated
-        * means birth of new branch or tag
-        = means the head was up to date (and not moved)
-        ' ' means a fast-forward
+            %c %-*s %-*s -> %s%s
 
-        fetch line is the corresponding line from FETCH_HEAD, like
-        acb0fa8b94ef421ad60c8507b634759a472cd56c    not-for-merge   branch '0.1.7RC' of /tmp/tmpya0vairemote_repo
+        Where ``c`` is either a space, ``!``, ``+``, ``-``, ``*``, or ``=``:
+
+        - '!' means error
+        - '+' means success forcing update
+        - '-' means a tag was updated
+        - '*' means birth of new branch or tag
+        - '=' means the head was up to date (and not moved)
+        - ' ' means a fast-forward
+
+        `fetch_line` is the corresponding line from FETCH_HEAD, like::
+
+            acb0fa8b94ef421ad60c8507b634759a472cd56c    not-for-merge   branch '0.1.7RC' of /tmp/tmpya0vairemote_repo
         """
         match = cls._re_fetch_result.match(line)
         if match is None:
@@ -625,7 +628,7 @@ class Remote(LazyMixin, IterableObj):
 
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator["Remote"]:
-        """:return: Iterator yielding Remote objects of the given repository"""
+        """:return: Iterator yielding :class:`Remote` objects of the given repository"""
         for section in repo.config_reader("repository").sections():
             if not section.startswith("remote "):
                 continue
@@ -639,7 +642,7 @@ class Remote(LazyMixin, IterableObj):
     def set_url(
         self, new_url: str, old_url: Optional[str] = None, allow_unsafe_protocols: bool = False, **kwargs: Any
     ) -> "Remote":
-        """Configure URLs on current remote (cf command ``git remote set-url``).
+        """Configure URLs on current remote (cf. command ``git remote set-url``).
 
         This command manages URLs on the remote.
 
@@ -1020,7 +1023,7 @@ class Remote(LazyMixin, IterableObj):
             facility.
 
         :param progress:
-            See :meth:`push` method.
+            See the :meth:`push` method.
 
         :param verbose:
             Boolean for verbose output.
@@ -1081,8 +1084,8 @@ class Remote(LazyMixin, IterableObj):
         allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
-        """Pull changes from the given branch, being the same as a fetch followed
-        by a merge of branch with your local branch.
+        """Pull changes from the given branch, being the same as a fetch followed by a
+        merge of branch with your local branch.
 
         :param refspec:
             See :meth:`fetch` method.
@@ -1157,7 +1160,7 @@ class Remote(LazyMixin, IterableObj):
 
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
-            should be killed. It is set to None by default.
+            should be killed. It is set to ``None`` by default.
 
         :param allow_unsafe_protocols:
             Allow unsafe protocols to be used, like ``ext``.

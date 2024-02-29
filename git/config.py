@@ -411,7 +411,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         not be used anymore afterwards.
 
         In Python 3, it's required to explicitly release locks and flush changes, as
-        :meth:`__del__` is not called deterministically anymore.
+        ``__del__`` is not called deterministically anymore.
         """
         # Checking for the lock here makes sure we do not raise during write()
         # in case an invalid parser was created who could not get a lock.
@@ -539,7 +539,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """List all paths that must be included to configuration.
 
         :return:
-            The list of paths, where each path is a tuple of ``(option, value)``.
+            The list of paths, where each path is a tuple of (option, value).
         """
         paths = []
 
@@ -590,9 +590,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         This will ignore files that cannot be read, possibly leaving an empty
         configuration.
-
-        :return:
-            Nothing
 
         :raise IOError:
             If a file cannot be handled.
@@ -765,7 +762,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     @property
     def read_only(self) -> bool:
-        """:return: True if this instance may change the configuration file"""
+        """:return: ``True`` if this instance may change the configuration file"""
         return self._read_only
 
     # FIXME: Figure out if default or return type can really include bool.
@@ -918,7 +915,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         return self
 
     def rename_section(self, section: str, new_name: str) -> "GitConfigParser":
-        """Rename the given section to new_name.
+        """Rename the given section to `new_name`.
 
         :raise ValueError:
             If:

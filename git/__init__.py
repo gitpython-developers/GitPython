@@ -127,7 +127,7 @@ def refresh(path: Optional[PathLike] = None) -> None:
         immediately, relative to the current directory.
 
     :note:
-        The *path* parameter is usually omitted and cannot be used to specify a custom
+        The `path` parameter is usually omitted and cannot be used to specify a custom
         command whose location is looked up in a path search on each call. See
         :meth:`Git.refresh <git.cmd.Git.refresh>` for details on how to achieve this.
 

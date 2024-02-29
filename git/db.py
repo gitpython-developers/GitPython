@@ -54,7 +54,8 @@ class GitCmdObjectDB(LooseObjectDB):
 
     def partial_to_complete_sha_hex(self, partial_hexsha: str) -> bytes:
         """
-        :return: Full binary 20 byte sha from the given partial hexsha
+        :return:
+            Full binary 20 byte sha from the given partial hexsha
 
         :raise gitdb.exc.AmbiguousObjectName:
 

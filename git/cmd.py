@@ -106,7 +106,7 @@ def handle_process_output(
     decode_streams: bool = True,
     kill_after_timeout: Union[None, float] = None,
 ) -> None:
-    """Register for notifications to learn that process output is ready to read, and
+    R"""Register for notifications to learn that process output is ready to read, and
     dispatch lines to the respective line handlers.
 
     This function returns once the finalizer returns.
@@ -126,8 +126,11 @@ def handle_process_output(
     :param decode_streams:
         Assume stdout/stderr streams are binary and decode them before pushing their
         contents to handlers.
-        Set this to ``False`` if ``universal_newlines == True`` (then streams are in
-        text mode) or if decoding must happen later (i.e. for :class:`~git.diff.Diff`s).
+
+        This defaults to ``True``. Set it to ``False``:
+
+        - if ``universal_newlines == True``, as then streams are in text mode, or
+        - if decoding must happen later, such as for :class:`~git.diff.Diff`\s.
 
     :param kill_after_timeout:
         :class:`float` or ``None``, Default = ``None``
@@ -379,15 +382,14 @@ class Git:
 
     :note:
         The git executable is actually found during the refresh step in the top level
-        :mod:`__init__`. It can also be changed by explicitly calling
-        :func:`git.refresh`.
+        ``__init__``. It can also be changed by explicitly calling :func:`git.refresh`.
     """
 
     _refresh_token = object()  # Since None would match an initial _version_info_token.
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level __init__).
+        """This gets called by the refresh function (see the top level ``__init__``).
 
         :param path:
             Optional path to the git executable. If not absolute, it is resolved
@@ -868,8 +870,7 @@ class Git:
         self.cat_file_all: Union[None, TBD] = None
 
     def __getattr__(self, name: str) -> Any:
-        """A convenience method as it allows to call the command as if it was
-        an object.
+        """A convenience method as it allows to call the command as if it was an object.
 
         :return:
             Callable object that will execute call :meth:`_call_process` with your
@@ -899,7 +900,7 @@ class Git:
     @property
     def version_info(self) -> Tuple[int, ...]:
         """
-        :return:  tuple with integers representing the major, minor and additional
+        :return: Tuple with integers representing the major, minor and additional
             version numbers as parsed from ``git version``. Up to four fields are used.
 
             This value is generated on demand and is cached.
@@ -1021,7 +1022,7 @@ class Git:
         :param output_stream:
             If set to a file-like object, data produced by the git command will be
             copied to the given stream instead of being returned as a string.
-            This feature only has any effect if `as_process` is False.
+            This feature only has any effect if `as_process` is ``False``.
 
         :param stdout_as_string:
             If ``False``, the command's standard output will be bytes. Otherwise, it
@@ -1030,10 +1031,10 @@ class Git:
 
         :param kill_after_timeout:
             Specifies a timeout in seconds for the git command, after which the process
-            should be killed. This will have no effect if `as_process` is set to True.
-            It is set to None by default and will let the process run until the timeout
-            is explicitly specified. Uses of this feature should be carefully
-            considered, due to the following limitations:
+            should be killed. This will have no effect if `as_process` is set to
+            ``True``. It is set to ``None`` by default and will let the process run
+            until the timeout is explicitly specified. Uses of this feature should be
+            carefully considered, due to the following limitations:
 
             1. This feature is not supported at all on Windows.
             2. Effectiveness may vary by operating system. ``ps --ppid`` is used to
@@ -1099,7 +1100,7 @@ class Git:
 
         :note:
            If you add additional keyword arguments to the signature of this method,
-           you must update the execute_kwargs tuple housed in this module.
+           you must update the ``execute_kwargs`` variable housed in this module.
         """
         # Remove password for the command if present.
         redacted_command = remove_password_if_present(command)
@@ -1420,9 +1421,10 @@ class Git:
         :param kwargs:
             Contains key-values for the following:
 
-            - The :meth:`execute()` kwds, as listed in :var:`execute_kwargs`.
+            - The :meth:`execute()` kwds, as listed in ``execute_kwargs``.
             - "Command options" to be converted by :meth:`transform_kwargs`.
-            - The ``insert_kwargs_after`` key which its value must match one of ``*args``.
+            - The ``insert_kwargs_after`` key which its value must match one of
+              ``*args``.
 
             It also contains any command options, to be appended after the matched arg.
 
