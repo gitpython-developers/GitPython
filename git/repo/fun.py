@@ -151,7 +151,7 @@ def name_to_object(
 
     :param return_ref:
         If ``True``, and name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise `~gitdb.exc.BadObject` o
+        instead of the object. Otherwise it will raise `~gitdb.exc.BadObject` or
         `~gitdb.exc.BadName`.
     """
     hexsha: Union[None, str, bytes] = None

@@ -102,9 +102,8 @@ class BlameEntry(NamedTuple):
 
 
 class Repo:
-    """Represents a git repository and allows you to query references, father
-    commit information, generate diffs, create and clone repositories, and query the
-    log.
+    """Represents a git repository and allows you to query references, create commit
+    information, generate diffs, create and clone repositories, and query the log.
 
     The following attributes are worth using:
 
@@ -112,8 +111,8 @@ class Repo:
       working tree directory if available or the ``.git`` directory in case of bare
       repositories.
 
-    * :attr:`working_tree_dir` is the working tree directory, but will return None if we
-      are a bare repository.
+    * :attr:`working_tree_dir` is the working tree directory, but will return ``None``
+      if we are a bare repository.
 
     * :attr:`git_dir` is the ``.git`` repository directory, which is always set.
     """
@@ -596,7 +595,7 @@ class Repo:
         return TagReference.create(self, path, ref, message, force, **kwargs)
 
     def delete_tag(self, *tags: TagReference) -> None:
-        """Delete the given tag references"""
+        """Delete the given tag references."""
         return TagReference.delete(self, *tags)
 
     def create_remote(self, name: str, url: str, **kwargs: Any) -> Remote:
@@ -775,7 +774,7 @@ class Repo:
     def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Commit_ish, None]]:
         R"""Find the closest common ancestor for the given revision
         (:class:`~git.objects.commit.Commit`\s, :class:`~git.refs.tag.Tag`\s,
-        :class:`git.refs.reference.Reference`\s, etc.).
+        :class:`~git.refs.reference.Reference`\s, etc.).
 
         :param rev:
             At least two revs to find the common ancestor for.
@@ -1030,7 +1029,7 @@ class Repo:
             If HEAD is detached.
 
         :return:
-            Head to the active branch
+            :class:`~git.refs.head.Head` to the active branch
         """
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
