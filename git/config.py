@@ -920,8 +920,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :raise ValueError:
             If:
 
-            * ``section`` doesn't exist.
-            * A section with ``new_name`` does already exist.
+            * `section` doesn't exist.
+            * A section with `new_name` does already exist.
 
         :return:
             This instance

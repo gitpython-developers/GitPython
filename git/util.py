@@ -1257,7 +1257,7 @@ class IterableObj(Protocol):
         keyword arguments, subclasses are obliged to to yield all items.
 
         :return:
-            :class:`~collections.abc.Iterator` yielding Items
+            Iterator yielding Items
         """
         raise NotImplementedError("To be implemented by Subclass")
 
