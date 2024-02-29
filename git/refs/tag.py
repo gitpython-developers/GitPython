@@ -109,7 +109,7 @@ class TagReference(Reference):
             The referenced object can be a commit, tree, or blob.
 
         :param logmsg:
-            If not None, the message will be used in your tag object. This will also
+            If not ``None``, the message will be used in your tag object. This will also
             create an additional tag object that allows to obtain that information,
             e.g.::
 
@@ -120,7 +120,7 @@ class TagReference(Reference):
             `logmsg` takes precedence if both are passed.
 
         :param force:
-            If True, force creation of a tag even though that tag already exists.
+            If ``True``, force creation of a tag even though that tag already exists.
 
         :param kwargs:
             Additional keyword arguments to be passed to ``git tag``.
