@@ -106,8 +106,7 @@ class TagReference(Reference):
 
         :param reference:
             A reference to the :class:`~git.objects.base.Object` you want to tag.
-            The referenced object can be a :class:`~git.objects.commit.Commit`,
-            :class:`~git.objects.tree.Tree`, or :class:`~git.objects.blob.Blob`.
+            The referenced object can be a commit, tree, or blob.
 
         :param logmsg:
             If not None, the message will be used in your tag object. This will also
