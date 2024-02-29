@@ -225,10 +225,10 @@ class SymbolicReference:
     ) -> Union[Tuple[str, None], Tuple[None, str]]:
         """
         :return:
-            (str(sha), str(target_ref_path)) if available, the sha the file at rela_path
-            points to, or ``None``.
+            *(str(sha), str(target_ref_path))*, where:
 
-            target_ref_path is the reference we point to, or ``None``.
+            * *sha* is of the file at rela_path points to if available, or ``None``.
+            * *target_ref_path* is the reference we point to, or ``None``.
         """
         if ref_path:
             cls._check_ref_name_valid(ref_path)
@@ -270,10 +270,11 @@ class SymbolicReference:
     @classmethod
     def _get_ref_info(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> Union[Tuple[str, None], Tuple[None, str]]:
         """
-        :return: (str(sha), str(target_ref_path)) if available, the sha the file at
-            rela_path points to, or None.
+        :return:
+            *(str(sha), str(target_ref_path))*, where:
 
-            target_ref_path is the reference we point to, or ``None``.
+            * *sha* is of the file at rela_path points to if available, or ``None``.
+            * *target_ref_path* is the reference we point to, or ``None``.
         """
         return cls._get_ref_info_helper(repo, ref_path)
 
@@ -290,9 +291,9 @@ class SymbolicReference:
     def _get_commit(self) -> "Commit":
         """
         :return:
-            Commit object we point to. This works for detached and non-detached
-            :class:`SymbolicReference` instances. The symbolic reference will be
-            dereferenced recursively.
+            :class:`~git.objects.commit.Commit` object we point to. This works for
+            detached and non-detached :class:`SymbolicReference` instances. The symbolic
+            reference will be dereferenced recursively.
         """
         obj = self._get_object()
         if obj.type == "tag":
