@@ -30,10 +30,6 @@ class GitCmdObjectDB(LooseObjectDB):
     objects, pack files and an alternates file.
 
     It will create objects only in the loose object database.
-
-    :note:
-        For now, we use the git command to do all the lookup, just until we have packs
-        and the other implementations.
     """
 
     def __init__(self, root_path: PathLike, git: "Git") -> None:
