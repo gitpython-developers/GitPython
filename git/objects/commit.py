@@ -298,7 +298,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             The :class:`~git.repo.base.Repo`.
 
         :param rev:
-            Revision specifier, see git-rev-parse for viable options.
+            Revision specifier. See git-rev-parse for viable options.
 
         :param paths:
             An optional path or list of paths. If set only :class:`Commit`\s that
@@ -309,7 +309,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
             * ``max_count`` is the maximum number of commits to fetch.
             * ``skip`` is the number of commits to skip.
-            * ``since`` all commits since e.g. '1970-01-01'.
+            * ``since`` selects all commits since some date, e.g. ``"1970-01-01"``.
 
         :return:
             Iterator yielding :class:`Commit` items.
@@ -380,12 +380,13 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def trailers(self) -> Dict[str, str]:
         """Deprecated. Get the trailers of the message as a dictionary.
 
-        :note: This property is deprecated, please use either :attr:`trailers_list` or
-            :attr:`trailers_dict``.
+        :note:
+            This property is deprecated, please use either :attr:`trailers_list` or
+            :attr:`trailers_dict`.
 
         :return:
-            Dictionary containing whitespace stripped trailer information. Only contains
-            the latest instance of each trailer key.
+            Dictionary containing whitespace stripped trailer information.
+            Only contains the latest instance of each trailer key.
         """
         return {k: v[0] for k, v in self.trailers_dict.items()}
 
@@ -539,7 +540,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         author_date: Union[None, str, datetime.datetime] = None,
         commit_date: Union[None, str, datetime.datetime] = None,
     ) -> "Commit":
-        """Commit the given tree, creating a commit object.
+        """Commit the given tree, creating a :class:`Commit` object.
 
         :param repo:
             :class:`~git.repo.base.Repo` object the commit should be part of.

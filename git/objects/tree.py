@@ -166,7 +166,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     Tree as a list:
 
-    * Access a specific blob using the ``tree['filename']`` notation.
+    * Access a specific blob using the ``tree["filename"]`` notation.
     * You may likewise access by index, like ``blob = tree[0]``.
     """
 
@@ -215,8 +215,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # END handle attribute
 
     def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]) -> Iterator[IndexObjUnion]:
-        """Iterable yields tuples of (binsha, mode, name), which will be converted
-        to the respective object representation.
+        """Iterable yields tuples of (binsha, mode, name), which will be converted to
+        the respective object representation.
         """
         for binsha, mode, name in iterable:
             path = join_path(self.path, name)
@@ -338,8 +338,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
         """
         :return:
-            :class:`~git.util.IterableList`IterableList with the results of the
-            traversal as produced by :meth:`traverse`
+            :class:`~git.util.IterableList` with the results of the traversal as
+            produced by :meth:`traverse`
 
             Tree -> IterableList[Union[Submodule, Tree, Blob]]
         """

@@ -186,8 +186,8 @@ def traverse_trees_recursive(
         given tree.
 
     :param tree_shas:
-        Iterable of shas pointing to trees. All trees must be on the same level. A
-        tree-sha may be ``None`` in which case ``None``.
+        Iterable of shas pointing to trees. All trees must be on the same level.
+        A tree-sha may be ``None``, in which case ``None``.
 
     :param path_prefix:
         A prefix to be added to the returned paths on this level.

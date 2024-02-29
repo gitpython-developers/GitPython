@@ -474,7 +474,7 @@ class Traversable(Protocol):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[Union["Traversable", "Blob"]], Iterator[TraversedTup]]:
-        """Iterator yielding items found when traversing self.
+        """Iterator yielding items found when traversing `self`.
 
         :param predicate:
             A function ``f(i,d)`` that returns ``False`` if item i at depth ``d`` should
@@ -485,9 +485,10 @@ class Traversable(Protocol):
             item ``i`` at depth ``d``. Item ``i`` will not be returned.
 
         :param depth:
-            Defines at which level the iteration should not go deeper if -1, there is no
-            limit if 0, you would effectively only get self, the root of the iteration
-            i.e. if 1, you would only get the first level of predecessors/successors.
+            Defines at which level the iteration should not go deeper if -1. There is no
+            limit if 0, you would effectively only get `self`, the root of the
+            iteration. If 1, you would only get the first level of
+            predecessors/successors.
 
         :param branch_first:
             If ``True``, items will be returned branch first, otherwise depth first.
@@ -497,8 +498,8 @@ class Traversable(Protocol):
             encountered several times. Loops are prevented that way.
 
         :param ignore_self:
-            If ``True``, self will be ignored and automatically pruned from the result.
-            Otherwise it will be the first item to be returned. If `as_edge` is
+            If ``True``, `self` will be ignored and automatically pruned from the
+            result. Otherwise it will be the first item to be returned. If `as_edge` is
             ``True``, the source of the first edge is ``None``.
 
         :param as_edge:
@@ -507,7 +508,7 @@ class Traversable(Protocol):
             destination.
 
         :return:
-            Iterator yielding items found when traversing self::
+            Iterator yielding items found when traversing `self`::
 
                 Commit -> Iterator[Union[Commit, Tuple[Commit, Commit]] Submodule ->
                 Iterator[Submodule, Tuple[Submodule, Submodule]] Tree ->

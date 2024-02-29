@@ -98,7 +98,7 @@ class Object(LazyMixin):
             New object instance of a type appropriate to represent the given binary sha1
 
         :param sha1:
-            20 byte binary sha1
+            20 byte binary sha1.
         """
         if sha1 == cls.NULL_BIN_SHA:
             # The NULL binsha is always the root commit.
