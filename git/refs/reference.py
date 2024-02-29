@@ -65,7 +65,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
             e.g. ``refs/heads/master``.
 
         :param check_path:
-            If False, you can provide any path.
+            If ``False``, you can provide any path.
             Otherwise the path must start with the default path prefix of this type.
         """
         if check_path and not str(path).startswith(self._common_path_default + "/"):
@@ -141,8 +141,9 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         *args: Any,
         **kwargs: Any,
     ) -> Iterator[T_References]:
-        """Equivalent to SymbolicReference.iter_items, but will return non-detached
-        references as well."""
+        """Equivalent to
+        :meth:`SymbolicReference.iter_items <git.refs.symbolic.SymbolicReference.iter_items>`,
+        but will return non-detached references as well."""
         return cls._iter_items(repo, common_path)
 
     # }END interface

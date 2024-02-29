@@ -63,7 +63,7 @@ class SymbolicReference:
     This does not point to a specific commit, but to another
     :class:`~git.refs.head.Head`, which itself specifies a commit.
 
-    A typical example for a symbolic reference is ``HEAD``.
+    A typical example for a symbolic reference is :class:`~git.refs.head.HEAD`.
     """
 
     __slots__ = ("repo", "path")
@@ -115,8 +115,8 @@ class SymbolicReference:
 
     @classmethod
     def _iter_packed_refs(cls, repo: "Repo") -> Iterator[Tuple[str, str]]:
-        """Return an iterator yielding pairs of sha1/path pairs (as strings)
-        for the corresponding refs.
+        """Return an iterator yielding pairs of sha1/path pairs (as strings) for the
+        corresponding refs.
 
         :note:
             The packed refs file will be kept open as long as we iterate.
@@ -226,9 +226,9 @@ class SymbolicReference:
         """
         :return:
             (str(sha), str(target_ref_path)) if available, the sha the file at rela_path
-            points to, or None.
+            points to, or ``None``.
 
-            target_ref_path is the reference we point to, or None.
+            target_ref_path is the reference we point to, or ``None``.
         """
         if ref_path:
             cls._check_ref_name_valid(ref_path)
@@ -273,7 +273,7 @@ class SymbolicReference:
         :return: (str(sha), str(target_ref_path)) if available, the sha the file at
             rela_path points to, or None.
 
-            target_ref_path is the reference we point to, or None.
+            target_ref_path is the reference we point to, or ``None``.
         """
         return cls._get_ref_info_helper(repo, ref_path)
 
@@ -313,7 +313,7 @@ class SymbolicReference:
         :class:`~git.objects.commit.Commit`.
 
         :raise ValueError:
-            If `commit` is not a :class:`~git.objects.commit.Commit` object or doesn't
+            If `commit` is not a :class:`~git.objects.commit.Commit` object, nor does it
             point to a commit.
 
         :return:
@@ -357,7 +357,7 @@ class SymbolicReference:
             to.
 
         :param logmsg:
-            If not None, the message will be used in the reflog entry to be written.
+            If not ``None``, the message will be used in the reflog entry to be written.
             Otherwise the reflog is not altered.
 
         :note:
@@ -491,8 +491,8 @@ class SymbolicReference:
     def is_valid(self) -> bool:
         """
         :return:
-            True if the reference is valid, hence it can be read and points to a valid
-            object or reference.
+            ``True`` if the reference is valid, hence it can be read and points to a
+            valid object or reference.
         """
         try:
             self.object
@@ -505,7 +505,7 @@ class SymbolicReference:
     def is_detached(self) -> bool:
         """
         :return:
-            True if we are a detached reference, hence we point to a specific commit
+            ``True`` if we are a detached reference, hence we point to a specific commit
             instead to another reference.
         """
         try:
@@ -565,7 +565,7 @@ class SymbolicReference:
     def log_entry(self, index: int) -> "RefLogEntry":
         """
         :return:
-            RefLogEntry at the given index
+            :class:`~git.refs.log.RefLogEntry` at the given index
 
         :param index:
             Python list compatible positive or negative index.
@@ -582,7 +582,7 @@ class SymbolicReference:
         """
         :return:
             String with a full repository-relative path which can be used to initialize
-            a Reference instance, for instance by using
+            a :class:`~git.refs.reference.Reference` instance, for instance by using
             :meth:`Reference.from_path <git.refs.reference.Reference.from_path>`.
         """
         if isinstance(path, SymbolicReference):
@@ -666,7 +666,7 @@ class SymbolicReference:
     ) -> T_References:
         """Internal method used to create a new symbolic reference.
 
-        If `resolve` is False, the reference will be taken as is, creating a proper
+        If `resolve` is ``False``, the reference will be taken as is, creating a proper
         symbolic reference. Otherwise it will be resolved to the corresponding object
         and a detached symbolic reference will be created instead.
         """
@@ -722,12 +722,12 @@ class SymbolicReference:
             If it is a commit-ish, the symbolic ref will be detached.
 
         :param force:
-            If True, force creation even if a symbolic reference with that name already
-            exists. Raise :class:`OSError` otherwise.
+            If ``True``, force creation even if a symbolic reference with that name
+            already exists. Raise :class:`OSError` otherwise.
 
         :param logmsg:
-            If not None, the message to append to the reflog.
-            If None, no reflog entry is written.
+            If not ``None``, the message to append to the reflog.
+            If ``None``, no reflog entry is written.
 
         :return:
             Newly created symbolic reference
@@ -751,8 +751,8 @@ class SymbolicReference:
             In case this is a symbolic ref, there is no implied prefix.
 
         :param force:
-            If True, the rename will succeed even if a head with the target name already
-            exists. It will be overwritten in that case.
+            If ``True``, the rename will succeed even if a head with the target name
+            already exists. It will be overwritten in that case.
 
         :return:
             self
@@ -847,8 +847,8 @@ class SymbolicReference:
         :param common_path:
             Optional keyword argument to the path which is to be shared by all returned
             Ref objects.
-            Defaults to class specific portion if None, ensuring that only refs suitable
-            for the actual class are returned.
+            Defaults to class specific portion if ``None``, ensuring that only refs
+            suitable for the actual class are returned.
 
         :return:
             A list of :class:`SymbolicReference`, each guaranteed to be a symbolic ref

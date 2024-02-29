@@ -36,8 +36,8 @@ def strip_quotes(string: str) -> str:
 
 
 class HEAD(SymbolicReference):
-    """Special case of a SymbolicReference representing the repository's
-    HEAD reference."""
+    """Special case of a SymbolicReference representing the repository's HEAD
+    reference."""
 
     _HEAD_NAME = "HEAD"
     _ORIG_HEAD_NAME = "ORIG_HEAD"
@@ -66,22 +66,21 @@ class HEAD(SymbolicReference):
         paths: Union[PathLike, Sequence[PathLike], None] = None,
         **kwargs: Any,
     ) -> "HEAD":
-        """Reset our HEAD to the given commit optionally synchronizing
-        the index and working tree. The reference we refer to will be set to commit as
-        well.
+        """Reset our HEAD to the given commit optionally synchronizing the index and
+        working tree. The reference we refer to will be set to commit as well.
 
         :param commit:
             :class:`~git.objects.commit.Commit`, :class:`~git.refs.reference.Reference`,
             or string identifying a revision we should reset HEAD to.
 
         :param index:
-            If True, the index will be set to match the given commit.
+            If ``True``, the index will be set to match the given commit.
             Otherwise it will not be touched.
 
         :param working_tree:
-            If True, the working tree will be forcefully adjusted to match the given
+            If ``True``, the working tree will be forcefully adjusted to match the given
             commit, possibly overwriting uncommitted changes without warning.
-            If `working_tree` is True, `index` must be True as well.
+            If `working_tree` is ``True``, `index` must be ``True`` as well.
 
         :param paths:
             Single path or list of paths relative to the git root directory
@@ -90,7 +89,8 @@ class HEAD(SymbolicReference):
         :param kwargs:
             Additional arguments passed to ``git reset``.
 
-        :return: self
+        :return:
+            self
         """
         mode: Union[str, None]
         mode = "--soft"
@@ -151,8 +151,8 @@ class Head(Reference):
         """Delete the given heads.
 
         :param force:
-            If True, the heads will be deleted even if they are not yet merged into the
-            main development stream. Default False.
+            If ``True``, the heads will be deleted even if they are not yet merged into
+            the main development stream. Default ``False``.
         """
         flag = "-d"
         if force:
@@ -193,7 +193,7 @@ class Head(Reference):
     def tracking_branch(self) -> Union["RemoteReference", None]:
         """
         :return:
-            The remote reference we are tracking, or None if we are not a tracking
+            The remote reference we are tracking, or ``None`` if we are not a tracking
             branch.
         """
         from .remote import RemoteReference
@@ -219,14 +219,14 @@ class Head(Reference):
             The prefix ``refs/heads`` is implied.
 
         :param force:
-            If True, the rename will succeed even if a head with the target name
+            If ``True``, the rename will succeed even if a head with the target name
             already exists.
 
         :return:
             self
 
         :note:
-            Respects the ref log as git commands are used.
+            Respects the ref log, as git commands are used.
         """
         flag = "-m"
         if force:
@@ -244,8 +244,8 @@ class Head(Reference):
         The command will fail if changed working tree files would be overwritten.
 
         :param force:
-            If True, changes to the index and the working tree will be discarded.
-            If False, :class:`~git.exc.GitCommandError` will be raised in that
+            If ``True``, changes to the index and the working tree will be discarded.
+            If ``False``, :class:`~git.exc.GitCommandError` will be raised in that
             situation.
 
         :param kwargs:

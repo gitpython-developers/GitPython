@@ -56,7 +56,7 @@ class RemoteReference(Head):
         """Delete the given remote references.
 
         :note:
-            kwargs are given for comparability with the base class method as we
+            `kwargs` are given for comparability with the base class method as we
             should not narrow the signature.
         """
         repo.git.branch("-d", "-r", *refs)

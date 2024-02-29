@@ -104,7 +104,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
         tz_offset: int,
         message: str,
     ) -> "RefLogEntry":  # skipcq: PYL-W0621
-        """:return: New instance of a RefLogEntry"""
+        """:return: New instance of a :class:`RefLogEntry`"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
         # END check types
@@ -112,7 +112,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
 
     @classmethod
     def from_line(cls, line: bytes) -> "RefLogEntry":
-        """:return: New RefLogEntry instance from the given revlog line.
+        """:return: New :class:`RefLogEntry` instance from the given revlog line.
 
         :param line:
             Line bytes without trailing newline
@@ -311,7 +311,7 @@ class RefLog(List[RefLogEntry], Serializable):
         :param config_reader:
             Configuration reader of the repository - used to obtain user information.
             May also be an :class:`~git.util.Actor` instance identifying the committer
-            directly or None.
+            directly or ``None``.
 
         :param filepath:
             Full path to the log file.
@@ -326,7 +326,7 @@ class RefLog(List[RefLogEntry], Serializable):
             Message describing the change to the reference.
 
         :param write:
-            If True, the changes will be written right away.
+            If ``True``, the changes will be written right away.
             Otherwise the change will not be written.
 
         :return:
