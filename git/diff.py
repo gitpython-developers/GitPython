@@ -112,8 +112,8 @@ class Diffable:
         create_patch: bool = False,
         **kwargs: Any,
     ) -> "DiffIndex":
-        """Create diffs between two items being trees, trees and index or an
-        index and the working tree. Detects renames automatically.
+        """Create diffs between two items being trees, trees and index or an index and
+        the working tree. Detects renames automatically.
 
         :param other:
             This the item to compare us with.

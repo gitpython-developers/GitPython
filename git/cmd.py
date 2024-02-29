@@ -127,10 +127,10 @@ def handle_process_output(
         Assume stdout/stderr streams are binary and decode them before pushing their
         contents to handlers.
 
-        This defaults to ``True``. Set it to ``False``:
+        This defaults to ``True``. Set it to ``False`` if:
 
-        - if ``universal_newlines == True``, as then streams are in text mode, or
-        - if decoding must happen later, such as for :class:`~git.diff.Diff`\s.
+        - ``universal_newlines == True``, as then streams are in text mode, or
+        - decoding must happen later, such as for :class:`~git.diff.Diff`\s.
 
     :param kill_after_timeout:
         :class:`float` or ``None``, Default = ``None``
@@ -1085,13 +1085,15 @@ class Git:
             specify may not be the same ones.
 
         :return:
-            * str(output) if extended_output = False (Default)
-            * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
+            * str(output), if `extended_output` is ``False`` (Default)
+            * tuple(int(status), str(stdout), str(stderr)),
+              if `extended_output` is ``True``
 
             If `output_stream` is ``True``, the stdout value will be your output stream:
 
-            * output_stream if extended_output = False
-            * tuple(int(status), output_stream, str(stderr)) if extended_output = True
+            * output_stream, if `extended_output` is ``False``
+            * tuple(int(status), output_stream, str(stderr)),
+              if `extended_output` is ``True``
 
             Note that git is executed with ``LC_MESSAGES="C"`` to ensure consistent
             output regardless of system language.
