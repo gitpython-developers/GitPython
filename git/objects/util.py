@@ -88,14 +88,16 @@ ZERO = timedelta(0)
 
 
 def mode_str_to_int(modestr: Union[bytes, str]) -> int:
-    """
+    """Convert mode bits from an octal mode string to an integer mode for git.
+
     :param modestr:
-        String like 755 or 644 or 100644 - only the last 6 chars will be used.
+        String like ``755`` or ``644`` or ``100644`` - only the last 6 chars will be
+        used.
 
     :return:
-        String identifying a mode compatible to the mode methods ids of the
-        stat module regarding the rwx permissions for user, group and other,
-        special flags and file system flags, such as whether it is a symlink.
+        String identifying a mode compatible to the mode methods ids of the :mod:`stat`
+        module regarding the rwx permissions for user, group and other, special flags
+        and file system flags, such as whether it is a symlink.
     """
     mode = 0
     for iteration, char in enumerate(reversed(modestr[-6:])):
@@ -108,13 +110,17 @@ def mode_str_to_int(modestr: Union[bytes, str]) -> int:
 def get_object_type_by_name(
     object_type_name: bytes,
 ) -> Union[Type["Commit"], Type["TagObject"], Type["Tree"], Type["Blob"]]:
-    """
-    :return: A type suitable to handle the given object type name.
-        Use the type to create new instances.
+    """Retrieve the Python class GitPython uses to represent a kind of Git object.
 
-    :param object_type_name: Member of TYPES
+    :return:
+        A type suitable to handle the given as `object_type_name`.
+        This type can be called create new instances.
 
-    :raise ValueError: If object_type_name is unknown
+    :param object_type_name:
+        Member of :attr:`Object.TYPES <git.objects.base.Object.TYPES>`.
+
+    :raise ValueError:
+        If `object_type_name` is unknown.
     """
     if object_type_name == b"commit":
         from . import commit
@@ -137,10 +143,11 @@ def get_object_type_by_name(
 
 
 def utctz_to_altz(utctz: str) -> int:
-    """Convert a git timezone offset into a timezone offset west of
-    UTC in seconds (compatible with :attr:`time.altzone`).
+    """Convert a git timezone offset into a timezone offset west of UTC in seconds
+    (compatible with :attr:`time.altzone`).
 
-    :param utctz: git utc timezone string, e.g. +0200
+    :param utctz:
+        git utc timezone string, e.g. +0200
     """
     int_utctz = int(utctz)
     seconds = (abs(int_utctz) // 100) * 3600 + (abs(int_utctz) % 100) * 60
@@ -148,9 +155,11 @@ def utctz_to_altz(utctz: str) -> int:
 
 
 def altz_to_utctz_str(altz: float) -> str:
-    """Convert a timezone offset west of UTC in seconds into a Git timezone offset string.
+    """Convert a timezone offset west of UTC in seconds into a Git timezone offset
+    string.
 
-    :param altz: Timezone offset in seconds west of UTC
+    :param altz:
+        Timezone offset in seconds west of UTC.
     """
     hours = abs(altz) // 3600
     minutes = (abs(altz) % 3600) // 60
@@ -160,9 +169,11 @@ def altz_to_utctz_str(altz: float) -> str:
 
 def verify_utctz(offset: str) -> str:
     """
-    :raise ValueError: If offset is incorrect
+    :raise ValueError:
+        If `offset` is incorrect.
 
-    :return: offset
+    :return:
+        `offset`
     """
     fmt_exc = ValueError("Invalid timezone offset format: %s" % offset)
     if len(offset) != 5:
@@ -197,7 +208,8 @@ utc = tzoffset(0, "UTC")
 
 
 def from_timestamp(timestamp: float, tz_offset: float) -> datetime:
-    """Convert a timestamp + tz_offset into an aware datetime instance."""
+    """Convert a `timestamp` + `tz_offset` into an aware :class:`~datetime.datetime`
+    instance."""
     utc_dt = datetime.fromtimestamp(timestamp, utc)
     try:
         local_dt = utc_dt.astimezone(tzoffset(tz_offset))
@@ -207,20 +219,22 @@ def from_timestamp(timestamp: float, tz_offset: float) -> datetime:
 
 
 def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
-    """
-    Parse the given date as one of the following:
+    """Parse the given date as one of the following:
 
         * Aware datetime instance
         * Git internal format: timestamp offset
-        * RFC 2822: Thu, 07 Apr 2005 22:13:13 +0200.
-        * ISO 8601 2005-04-07T22:13:13
+        * RFC 2822: ``Thu, 07 Apr 2005 22:13:13 +0200``
+        * ISO 8601: ``2005-04-07T22:13:13``
             The T can be a space as well.
 
-    :return: Tuple(int(timestamp_UTC), int(offset)), both in seconds since epoch
+    :return:
+        Tuple(int(timestamp_UTC), int(offset)), both in seconds since epoch
 
-    :raise ValueError: If the format could not be understood
+    :raise ValueError:
+        If the format could not be understood.
 
-    :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
+    :note:
+        Date can also be ``YYYY.MM.DD``, ``MM/DD/YYYY`` and ``DD.MM.YYYY``.
     """
     if isinstance(string_date, datetime):
         if string_date.tzinfo:
@@ -314,7 +328,8 @@ def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
 
         author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
 
-    :return: [Actor, int_seconds_since_epoch, int_timezone_offset]
+    :return:
+        [Actor, int_seconds_since_epoch, int_timezone_offset]
     """
     actor, epoch, offset = "", "0", "0"
     m = _re_actor_epoch.search(line)
@@ -336,8 +351,8 @@ class ProcessStreamAdapter:
     """Class wiring all calls to the contained Process instance.
 
     Use this type to hide the underlying process to provide access only to a specified
-    stream. The process is usually wrapped into an AutoInterrupt class to kill
-    it if the instance goes out of scope.
+    stream. The process is usually wrapped into an :class:`~git.cmd.Git.AutoInterrupt`
+    class to kill it if the instance goes out of scope.
     """
 
     __slots__ = ("_proc", "_stream")
@@ -352,14 +367,18 @@ class ProcessStreamAdapter:
 
 @runtime_checkable
 class Traversable(Protocol):
-    """Simple interface to perform depth-first or breadth-first traversals
-    in one direction.
+    """Simple interface to perform depth-first or breadth-first traversals in one
+    direction.
 
     Subclasses only need to implement one function.
 
-    Instances of the Subclass must be hashable.
+    Instances of the subclass must be hashable.
 
-    Defined subclasses = [Commit, Tree, SubModule]
+    Defined subclasses:
+
+    * :class:`Commit <git.objects.Commit>`
+    * :class:`Tree <git.objects.tree.Tree>`
+    * :class:`Submodule <git.objects.submodule.base.Submodule>`
     """
 
     __slots__ = ()
@@ -368,7 +387,7 @@ class Traversable(Protocol):
     @abstractmethod
     def _get_intermediate_items(cls, item: Any) -> Sequence["Traversable"]:
         """
-        Returns:
+        :return:
             Tuple of items connected to the given item.
             Must be implemented in subclass.
 
@@ -382,7 +401,7 @@ class Traversable(Protocol):
     def list_traverse(self, *args: Any, **kwargs: Any) -> Any:
         """Traverse self and collect all items found.
 
-        Calling this directly only the abstract base class, including via a ``super()``
+        Calling this directly on the abstract base class, including via a ``super()``
         proxy, is deprecated. Only overridden implementations should be called.
         """
         warnings.warn(
@@ -399,20 +418,24 @@ class Traversable(Protocol):
     ) -> IterableList[Union["Commit", "Submodule", "Tree", "Blob"]]:
         """Traverse self and collect all items found.
 
-        :return: IterableList with the results of the traversal as produced by
-            :meth:`traverse`::
+        :return:
+            :class:`~git.util.IterableList` with the results of the traversal as
+            produced by :meth:`traverse`::
 
-                Commit -> IterableList['Commit']
-                Submodule ->  IterableList['Submodule']
-                Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
+                Commit -> IterableList[Commit]
+                Submodule ->  IterableList[Submodule]
+                Tree -> IterableList[Union[Submodule, Tree, Blob]]
         """
         # Commit and Submodule have id.__attribute__ as IterableObj.
         # Tree has id.__attribute__ inherited from IndexObject.
         if isinstance(self, Has_id_attribute):
             id = self._id_attribute_
         else:
-            id = ""  # Shouldn't reach here, unless Traversable subclass created with no _id_attribute_.
-            # Could add _id_attribute_ to Traversable, or make all Traversable also Iterable?
+            # Shouldn't reach here, unless Traversable subclass created with no
+            # _id_attribute_.
+            id = ""
+            # Could add _id_attribute_ to Traversable, or make all Traversable also
+            # Iterable?
 
         if not as_edge:
             out: IterableList[Union["Commit", "Submodule", "Tree", "Blob"]] = IterableList(id)
@@ -451,48 +474,52 @@ class Traversable(Protocol):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[Union["Traversable", "Blob"]], Iterator[TraversedTup]]:
-        """Iterator yielding items found when traversing self.
+        """Iterator yielding items found when traversing `self`.
 
-        :param predicate: f(i,d) returns False if item i at depth d should not be
-            included in the result.
+        :param predicate:
+            A function ``f(i,d)`` that returns ``False`` if item i at depth ``d`` should
+            not be included in the result.
 
         :param prune:
-            f(i,d) return True if the search should stop at item i at depth d. Item i
-            will not be returned.
+            A function ``f(i,d)`` that returns ``True`` if the search should stop at
+            item ``i`` at depth ``d``. Item ``i`` will not be returned.
 
         :param depth:
-            Defines at which level the iteration should not go deeper if -1, there is no
-            limit if 0, you would effectively only get self, the root of the iteration
-            i.e. if 1, you would only get the first level of predecessors/successors
+            Defines at which level the iteration should not go deeper if -1. There is no
+            limit if 0, you would effectively only get `self`, the root of the
+            iteration. If 1, you would only get the first level of
+            predecessors/successors.
 
         :param branch_first:
-            if True, items will be returned branch first, otherwise depth first
+            If ``True``, items will be returned branch first, otherwise depth first.
 
         :param visit_once:
-            if True, items will only be returned once, although they might be
+            If ``True``, items will only be returned once, although they might be
             encountered several times. Loops are prevented that way.
 
         :param ignore_self:
-            if True, self will be ignored and automatically pruned from the result.
-            Otherwise it will be the first item to be returned. If as_edge is True, the
-            source of the first edge is None
+            If ``True``, `self` will be ignored and automatically pruned from the
+            result. Otherwise it will be the first item to be returned. If `as_edge` is
+            ``True``, the source of the first edge is ``None``.
 
         :param as_edge:
-            if True, return a pair of items, first being the source, second the
+            If ``True``, return a pair of items, first being the source, second the
             destination, i.e. tuple(src, dest) with the edge spanning from source to
-            destination
+            destination.
 
-        :return: Iterator yielding items found when traversing self::
+        :return:
+            Iterator yielding items found when traversing `self`::
 
-                Commit -> Iterator[Union[Commit, Tuple[Commit, Commit]]
-                Submodule -> Iterator[Submodule, Tuple[Submodule, Submodule]]
-                Tree -> Iterator[Union[Blob, Tree, Submodule,
-                                        Tuple[Union[Submodule, Tree], Union[Blob, Tree, Submodule]]]
+                Commit -> Iterator[Union[Commit, Tuple[Commit, Commit]] Submodule ->
+                Iterator[Submodule, Tuple[Submodule, Submodule]] Tree ->
+                Iterator[Union[Blob, Tree, Submodule,
+                                        Tuple[Union[Submodule, Tree], Union[Blob, Tree,
+                                        Submodule]]]
 
-                ignore_self=True is_edge=True -> Iterator[item]
-                ignore_self=True is_edge=False --> Iterator[item]
-                ignore_self=False is_edge=True -> Iterator[item] | Iterator[Tuple[src, item]]
-                ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]
+                ignore_self=True is_edge=True -> Iterator[item] ignore_self=True
+                is_edge=False --> Iterator[item] ignore_self=False is_edge=True ->
+                Iterator[item] | Iterator[Tuple[src, item]] ignore_self=False
+                is_edge=False -> Iterator[Tuple[src, item]]
         """
 
         visited = set()
@@ -526,7 +553,9 @@ class Traversable(Protocol):
                 visited.add(item)
 
             rval: Union[TraversedTup, "Traversable", "Blob"]
-            if as_edge:  # If as_edge return (src, item) unless rrc is None (e.g. for first item).
+            if as_edge:
+                # If as_edge return (src, item) unless rrc is None
+                # (e.g. for first item).
                 rval = (src, item)
             else:
                 rval = item
@@ -549,7 +578,8 @@ class Traversable(Protocol):
 
 @runtime_checkable
 class Serializable(Protocol):
-    """Defines methods to serialize and deserialize objects from and into a data stream."""
+    """Defines methods to serialize and deserialize objects from and into a data
+    stream."""
 
     __slots__ = ()
 
@@ -557,11 +587,14 @@ class Serializable(Protocol):
     def _serialize(self, stream: "BytesIO") -> "Serializable":
         """Serialize the data of this object into the given data stream.
 
-        :note: A serialized object would :meth:`_deserialize` into the same object.
+        :note:
+            A serialized object would :meth:`_deserialize` into the same object.
 
-        :param stream: a file-like object
+        :param stream:
+            A file-like object.
 
-        :return: self
+        :return:
+            self
         """
         raise NotImplementedError("To be implemented in subclass")
 
@@ -569,9 +602,11 @@ class Serializable(Protocol):
     def _deserialize(self, stream: "BytesIO") -> "Serializable":
         """Deserialize all information regarding this object from the stream.
 
-        :param stream: a file-like object
+        :param stream:
+            A file-like object.
 
-        :return: self
+        :return:
+            self
         """
         raise NotImplementedError("To be implemented in subclass")
 

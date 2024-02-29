@@ -111,10 +111,11 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
     """Read a boolean flag from an environment variable on Windows.
 
     :return:
-        On Windows, the flag, or the ``default`` value if absent or ambiguous.
+        On Windows, the flag, or the `default` value if absent or ambiguous.
         On all other operating systems, ``False``.
 
-    :note: This only accesses the environment on Windows.
+    :note:
+        This only accesses the environment on Windows.
     """
     if os.name != "nt":
         return False
@@ -151,8 +152,8 @@ T = TypeVar("T")
 
 
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
-    """Methods with this decorator raise :class:`.exc.InvalidGitRepositoryError` if they
-    encounter a bare repository."""
+    """Methods with this decorator raise
+    :class:`~git.exc.InvalidGitRepositoryError` if they encounter a bare repository."""
 
     from .exc import InvalidGitRepositoryError
 
@@ -200,13 +201,16 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
 def rmtree(path: PathLike) -> None:
     """Remove the given directory tree recursively.
 
-    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files
-        that couldn't be deleted are read-only. Windows will not remove them in that
-        case.
+    :note:
+        We use :func:`shutil.rmtree` but adjust its behaviour to see whether files that
+        couldn't be deleted are read-only. Windows will not remove them in that case.
     """
 
     def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
-        """Callback for :func:`shutil.rmtree`. Works either as ``onexc`` or ``onerror``."""
+        """Callback for :func:`shutil.rmtree`.
+
+        This works as either a ``onexc`` or ``onerror`` style callback.
+        """
         # Is the error an access error?
         os.chmod(path, stat.S_IWUSR)
 
@@ -228,7 +232,8 @@ def rmtree(path: PathLike) -> None:
 
 
 def rmfile(path: PathLike) -> None:
-    """Ensure file deleted also on *Windows* where read-only files need special treatment."""
+    """Ensure file deleted also on *Windows* where read-only files need special
+    treatment."""
     if osp.isfile(path):
         if os.name == "nt":
             os.chmod(path, 0o777)
@@ -236,10 +241,11 @@ def rmfile(path: PathLike) -> None:
 
 
 def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 * 1024) -> int:
-    """Copy all data from the source stream into the destination stream in chunks
-    of size chunk_size.
+    """Copy all data from the `source` stream into the `destination` stream in chunks
+    of size `chunk_size`.
 
-    :return: Number of bytes written
+    :return:
+        Number of bytes written
     """
     br = 0
     while True:
@@ -253,8 +259,8 @@ def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 *
 
 
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
-    R"""Join path tokens together similar to osp.join, but always use
-    '/' instead of possibly '\' on Windows."""
+    R"""Join path tokens together similar to osp.join, but always use ``/`` instead of
+    possibly ``\`` on Windows."""
     path = str(a)
     for b in p:
         b = str(b)
@@ -291,10 +297,10 @@ else:
 
 
 def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
-    R"""Like join_path, but makes sure an OS native path is returned.
+    R"""Like :func:`join_path`, but makes sure an OS native path is returned.
 
     This is only needed to play it safe on Windows and to ensure nice paths that only
-    use '\'.
+    use ``\``.
     """
     return to_native_path(join_path(a, *p))
 
@@ -302,10 +308,12 @@ def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
     """Make sure that the directory pointed to by path exists.
 
-    :param is_file: If True, ``path`` is assumed to be a file and handled correctly.
+    :param is_file:
+        If ``True``, `path` is assumed to be a file and handled correctly.
         Otherwise it must be a directory.
 
-    :return: True if the directory was created, False if it already existed.
+    :return:
+        ``True`` if the directory was created, ``False`` if it already existed.
     """
     if is_file:
         path = osp.dirname(path)
@@ -333,7 +341,8 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     :func:`is_cygwin_git`. When a search following all shell rules is needed,
     :func:`shutil.which` can be used instead.
 
-    :note: Neither this function nor :func:`shutil.which` will predict the effect of an
+    :note:
+        Neither this function nor :func:`shutil.which` will predict the effect of an
         executable search on a native Windows system due to a :class:`subprocess.Popen`
         call without ``shell=True``, because shell and non-shell executable search on
         Windows differ considerably.
@@ -473,12 +482,13 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
 
 
 def get_user_id() -> str:
-    """:return: string identifying the currently active system user as name@node"""
+    """:return: String identifying the currently active system user as ``name@node``"""
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
 def finalize_process(proc: Union[subprocess.Popen, "Git.AutoInterrupt"], **kwargs: Any) -> None:
-    """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+    """Wait for the process (clone, fetch, pull or push) and handle its errors
+    accordingly."""
     # TODO: No close proc-streams??
     proc.wait(**kwargs)
 
@@ -490,7 +500,7 @@ def expand_path(p: None, expand_vars: bool = ...) -> None:
 
 @overload
 def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
-    # improve these overloads when 3.5 dropped
+    # TODO: Support for Python 3.5 has been dropped, so these overloads can be improved.
     ...
 
 
@@ -541,10 +551,9 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 
 
 class RemoteProgress:
-    """
-    Handler providing an interface to parse progress information emitted by git-push
-    and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
-    """
+    """Handler providing an interface to parse progress information emitted by
+    ``git push`` and ``git fetch`` and to dispatch callbacks allowing subclasses to
+    react to the progress."""
 
     _num_op_codes: int = 9
     (
@@ -580,8 +589,8 @@ class RemoteProgress:
         self.other_lines: List[str] = []
 
     def _parse_progress_line(self, line: AnyStr) -> None:
-        """Parse progress information from the given line as retrieved by git-push
-        or git-fetch.
+        """Parse progress information from the given line as retrieved by ``git push``
+        or ``git fetch``.
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
@@ -685,8 +694,8 @@ class RemoteProgress:
     def new_message_handler(self) -> Callable[[str], None]:
         """
         :return:
-            A progress handler suitable for handle_process_output(), passing lines on to
-            this Progress handler in a suitable format
+            A progress handler suitable for :func:`~git.cmd.handle_process_output`,
+            passing lines on to this progress handler in a suitable format.
         """
 
         def handler(line: AnyStr) -> None:
@@ -712,25 +721,29 @@ class RemoteProgress:
         :param op_code:
             Integer allowing to be compared against Operation IDs and stage IDs.
 
-            Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation
-            ID as well as END. It may be that BEGIN and END are set at once in case only
-            one progress message was emitted due to the speed of the operation.
-            Between BEGIN and END, none of these flags will be set.
+            Stage IDs are :attr:`BEGIN` and :attr:`END`. :attr:`BEGIN` will only be set
+            once for each Operation ID as well as :attr:`END`. It may be that
+            :attr:`BEGIN` and :attr:`END` are set at once in case only one progress
+            message was emitted due to the speed of the operation. Between :attr:`BEGIN`
+            and :attr:`END`, none of these flags will be set.
 
-            Operation IDs are all held within the OP_MASK. Only one Operation ID will
-            be active per call.
+            Operation IDs are all held within the :attr:`OP_MASK`. Only one Operation ID
+            will be active per call.
 
-        :param cur_count: Current absolute count of items.
+        :param cur_count:
+            Current absolute count of items.
 
         :param max_count:
-            The maximum count of items we expect. It may be None in case there is
-            no maximum number of items or if it is (yet) unknown.
+            The maximum count of items we expect. It may be ``None`` in case there is no
+            maximum number of items or if it is (yet) unknown.
 
         :param message:
-            In case of the 'WRITING' operation, it contains the amount of bytes
+            In case of the :attr:`WRITING` operation, it contains the amount of bytes
             transferred. It may possibly be used for other purposes as well.
 
-        You may read the contents of the current line in ``self._cur_line``.
+        :note:
+            You may read the contents of the current line in
+            :attr:`self._cur_line <_cur_line>`.
         """
         pass
 
@@ -749,9 +762,9 @@ class CallableRemoteProgress(RemoteProgress):
 
 
 class Actor:
-    """Actors hold information about a person acting on the repository. They
-    can be committers and authors or anything with a name and an email as
-    mentioned in the git log entries."""
+    """Actors hold information about a person acting on the repository. They can be
+    committers and authors or anything with a name and an email as mentioned in the git
+    log entries."""
 
     # PRECOMPILED REGEX
     name_only_regex = re.compile(r"<(.*)>")
@@ -791,13 +804,15 @@ class Actor:
 
     @classmethod
     def _from_string(cls, string: str) -> "Actor":
-        """Create an Actor from a string.
+        """Create an :class:`Actor` from a string.
 
-        :param string: The string, which is expected to be in regular git format::
+        :param string:
+            The string, which is expected to be in regular git format::
 
-            John Doe <jdoe@example.com>
+                John Doe <jdoe@example.com>
 
-        :return: Actor
+        :return:
+            :class:`Actor`
         """
         m = cls.name_email_regex.search(string)
         if m:
@@ -855,29 +870,30 @@ class Actor:
     @classmethod
     def committer(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
         """
-        :return: Actor instance corresponding to the configured committer. It behaves
-            similar to the git implementation, such that the environment will override
-            configuration values of config_reader. If no value is set at all, it will be
-            generated.
+        :return:
+            :class:`Actor` instance corresponding to the configured committer. It
+            behaves similar to the git implementation, such that the environment will
+            override configuration values of `config_reader`. If no value is set at all,
+            it will be generated.
 
-        :param config_reader: ConfigReader to use to retrieve the values from in case
-            they are not set in the environment.
+        :param config_reader:
+            ConfigReader to use to retrieve the values from in case they are not set in
+            the environment.
         """
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
     def author(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
-        """Same as committer(), but defines the main author. It may be specified in the
-        environment, but defaults to the committer."""
+        """Same as :meth:`committer`, but defines the main author. It may be specified
+        in the environment, but defaults to the committer."""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 
 
 class Stats:
-    """
-    Represents stat information as presented by git at the end of a merge. It is
+    """Represents stat information as presented by git at the end of a merge. It is
     created from the output of a diff operation.
 
-    ``Example``::
+    Example::
 
      c = Commit( sha1 )
      s = c.stats
@@ -907,9 +923,10 @@ class Stats:
 
     @classmethod
     def _list_from_string(cls, repo: "Repo", text: str) -> "Stats":
-        """Create a Stat object from output retrieved by git-diff.
+        """Create a :class:`Stats` object from output retrieved by ``git diff``.
 
-        :return: git.Stat
+        :return:
+            :class:`git.Stats`
         """
 
         hsh: HSH_TD = {
@@ -934,13 +951,14 @@ class Stats:
 
 
 class IndexFileSHA1Writer:
-    """Wrapper around a file-like object that remembers the SHA1 of
-    the data written to it. It will write a sha when the stream is closed
-    or if the asked for explicitly using write_sha.
+    """Wrapper around a file-like object that remembers the SHA1 of the data written to
+    it. It will write a sha when the stream is closed or if asked for explicitly using
+    :meth:`write_sha`.
 
     Only useful to the index file.
 
-    :note: Based on the dulwich project.
+    :note:
+        Based on the dulwich project.
     """
 
     __slots__ = ("f", "sha1")
@@ -991,16 +1009,20 @@ class LockFile:
 
     def _has_lock(self) -> bool:
         """
-        :return: True if we have a lock and if the lockfile still exists
+        :return:
+            True if we have a lock and if the lockfile still exists
 
-        :raise AssertionError: If our lock-file does not exist
+        :raise AssertionError:
+            If our lock-file does not exist.
         """
         return self._owns_lock
 
     def _obtain_lock_or_raise(self) -> None:
-        """Create a lock file as flag for other instances, mark our instance as lock-holder.
+        """Create a lock file as flag for other instances, mark our instance as
+        lock-holder.
 
-        :raise IOError: If a lock was already present or a lock file could not be written
+        :raise IOError:
+            If a lock was already present or a lock file could not be written.
         """
         if self._has_lock():
             return
@@ -1021,7 +1043,9 @@ class LockFile:
 
     def _obtain_lock(self) -> None:
         """The default implementation will raise if a lock cannot be obtained.
-        Subclasses may override this method to provide a different implementation."""
+
+        Subclasses may override this method to provide a different implementation.
+        """
         return self._obtain_lock_or_raise()
 
     def _release_lock(self) -> None:
@@ -1029,8 +1053,8 @@ class LockFile:
         if not self._has_lock():
             return
 
-        # If someone removed our file beforehand, lets just flag this issue
-        # instead of failing, to make it more usable.
+        # If someone removed our file beforehand, lets just flag this issue instead of
+        # failing, to make it more usable.
         lfp = self._lock_file_path()
         try:
             rmfile(lfp)
@@ -1040,12 +1064,12 @@ class LockFile:
 
 
 class BlockingLockFile(LockFile):
-    """The lock file will block until a lock could be obtained, or fail after
-    a specified timeout.
+    """The lock file will block until a lock could be obtained, or fail after a
+    specified timeout.
 
-    :note: If the directory containing the lock was removed, an exception will
-        be raised during the blocking period, preventing hangs as the lock
-        can never be obtained.
+    :note:
+        If the directory containing the lock was removed, an exception will be raised
+        during the blocking period, preventing hangs as the lock can never be obtained.
     """
 
     __slots__ = ("_check_interval", "_max_block_time")
@@ -1062,14 +1086,15 @@ class BlockingLockFile(LockFile):
             Period of time to sleep until the lock is checked the next time.
             By default, it waits a nearly unlimited time.
 
-        :param max_block_time_s: Maximum amount of seconds we may lock.
+        :param max_block_time_s:
+            Maximum amount of seconds we may lock.
         """
         super().__init__(file_path)
         self._check_interval = check_interval_s
         self._max_block_time = max_block_time_s
 
     def _obtain_lock(self) -> None:
-        """This method blocks until it obtained the lock, or raises IOError if
+        """This method blocks until it obtained the lock, or raises :class:`IOError` if
         it ran out of time or if the parent directory was not available anymore.
 
         If this method returns, you are guaranteed to own the lock.
@@ -1105,23 +1130,32 @@ class BlockingLockFile(LockFile):
 
 
 class IterableList(List[T_IterableObj]):
-    """
-    List of iterable objects allowing to query an object by id or by named index::
+    """List of iterable objects allowing to query an object by id or by named index::
 
      heads = repo.heads
      heads.master
      heads['master']
      heads[0]
 
-    Iterable parent objects = [Commit, SubModule, Reference, FetchInfo, PushInfo]
-    Iterable via inheritance = [Head, TagReference, RemoteReference]
+    Iterable parent objects:
 
-    It requires an id_attribute name to be set which will be queried from its
+    * :class:`Commit <git.objects.Commit>`
+    * :class:`Submodule <git.objects.submodule.base.Submodule>`
+    * :class:`Reference <git.refs.reference.Reference>`
+    * :class:`FetchInfo <git.remote.FetchInfo>`
+    * :class:`PushInfo <git.remote.PushInfo>`
+
+    Iterable via inheritance:
+
+    * :class:`Head <git.refs.head.Head>`
+    * :class:`TagReference <git.refs.tag.TagReference>`
+    * :class:`RemoteReference <git.refs.remote.RemoteReference>`
+
+    This requires an ``id_attribute`` name to be set which will be queried from its
     contained items to have a means for comparison.
 
-    A prefix can be specified which is to be used in case the id returned by the
-    items always contains a prefix that does not matter to the user, so it
-    can be left out.
+    A prefix can be specified which is to be used in case the id returned by the items
+    always contains a prefix that does not matter to the user, so it can be left out.
     """
 
     __slots__ = ("_id_attr", "_prefix")
@@ -1198,7 +1232,14 @@ class IterableObj(Protocol):
     """Defines an interface for iterable items, so there is a uniform way to retrieve
     and iterate items within the git repository.
 
-    Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]
+    Subclasses:
+
+    * :class:`Submodule <git.objects.submodule.base.Submodule>`
+    * :class:`Commit <git.objects.Commit>`
+    * :class:`Reference <git.refs.reference.Reference>`
+    * :class:`PushInfo <git.remote.PushInfo>`
+    * :class:`FetchInfo <git.remote.FetchInfo>`
+    * :class:`Remote <git.remote.Remote>`
     """
 
     __slots__ = ()
@@ -1211,11 +1252,12 @@ class IterableObj(Protocol):
         # Return-typed to be compatible with subtypes e.g. Remote.
         """Find (all) items of this type.
 
-        Subclasses can specify ``args`` and ``kwargs`` differently, and may use them for
+        Subclasses can specify `args` and `kwargs` differently, and may use them for
         filtering. However, when the method is called with no additional positional or
         keyword arguments, subclasses are obliged to to yield all items.
 
-        :return: Iterator yielding Items
+        :return:
+            Iterator yielding Items
         """
         raise NotImplementedError("To be implemented by Subclass")
 
@@ -1225,11 +1267,13 @@ class IterableObj(Protocol):
 
         For more information about the arguments, see :meth:`iter_items`.
 
-        :note: Favor the :meth:`iter_items` method as it will avoid eagerly collecting
-            all items. When there are many items, that can slow performance and increase
+        :note:
+            Favor the :meth:`iter_items` method as it will avoid eagerly collecting all
+            items. When there are many items, that can slow performance and increase
             memory usage.
 
-        :return: list(Item,...) list of item instances
+        :return:
+            list(Item,...) list of item instances
         """
         out_list: IterableList = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
@@ -1272,7 +1316,8 @@ class Iterable(metaclass=IterableClassWatcher):
 
         See :meth:`IterableObj.iter_items` for details on usage.
 
-        :return: Iterator yielding Items
+        :return:
+            Iterator yielding Items
         """
         raise NotImplementedError("To be implemented by Subclass")
 
@@ -1284,7 +1329,8 @@ class Iterable(metaclass=IterableClassWatcher):
 
         See :meth:`IterableObj.list_items` for details on usage.
 
-        :return: list(Item,...) list of item instances
+        :return:
+            list(Item,...) list of item instances
         """
         out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))

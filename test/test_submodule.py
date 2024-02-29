@@ -94,13 +94,15 @@ class TestSubmodule(TestBase):
         # The module is not checked-out yet.
         self.assertRaises(InvalidGitRepositoryError, sm.module)
 
-        # ...which is why we can't get the branch either - it points into the module() repository.
+        # ...which is why we can't get the branch either - it points into the module()
+        # repository.
         self.assertRaises(InvalidGitRepositoryError, getattr, sm, "branch")
 
         # branch_path works, as it's just a string.
         assert isinstance(sm.branch_path, str)
 
-        # Some commits earlier we still have a submodule, but it's at a different commit.
+        # Some commits earlier we still have a submodule, but it's at a different
+        # commit.
         smold = next(Submodule.iter_items(rwrepo, self.k_subm_changed))
         assert smold.binsha != sm.binsha
         assert smold != sm  # the name changed
@@ -141,11 +143,12 @@ class TestSubmodule(TestBase):
         smold.set_parent_commit(self.k_subm_changed + "~1")
         assert smold.binsha != sm.binsha
 
-        # Raises if the sm didn't exist in new parent - it keeps its
-        # parent_commit unchanged.
+        # Raises if the sm didn't exist in new parent - it keeps its parent_commit
+        # unchanged.
         self.assertRaises(ValueError, smold.set_parent_commit, self.k_no_subm_tag)
 
-        # TEST TODO: If a path is in the .gitmodules file, but not in the index, it raises.
+        # TODO: Test that, if a path is in the .gitmodules file, but not in the index,
+        # then it raises.
 
         # TEST UPDATE
         ##############
@@ -196,8 +199,8 @@ class TestSubmodule(TestBase):
 
             # INTERLEAVE ADD TEST
             #####################
-            # url must match the one in the existing repository (if submodule name suggests a new one)
-            # or we raise.
+            # url must match the one in the existing repository (if submodule name
+            # suggests a new one) or we raise.
             self.assertRaises(
                 ValueError,
                 Submodule.add,
@@ -228,7 +231,8 @@ class TestSubmodule(TestBase):
             assert not csm.module_exists()
             csm_repopath = csm.path
 
-            # Adjust the path of the submodules module to point to the local destination.
+            # Adjust the path of the submodules module to point to the local
+            # destination.
             new_csmclone_path = Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path, csm.path))
             with csm.config_writer() as writer:
                 writer.set_value("url", new_csmclone_path)
@@ -249,7 +253,8 @@ class TestSubmodule(TestBase):
             # This flushed in a sub-submodule.
             assert len(list(rwrepo.iter_submodules())) == 2
 
-            # Reset both heads to the previous version, verify that to_latest_revision works.
+            # Reset both heads to the previous version, verify that to_latest_revision
+            # works.
             smods = (sm.module(), csm.module())
             for repo in smods:
                 repo.head.reset("HEAD~2", working_tree=1)
@@ -296,8 +301,8 @@ class TestSubmodule(TestBase):
             # Must delete something.
             self.assertRaises(ValueError, csm.remove, module=False, configuration=False)
 
-            # module() is supposed to point to gitdb, which has a child-submodule whose URL is still pointing
-            # to GitHub. To save time, we will change it to:
+            # module() is supposed to point to gitdb, which has a child-submodule whose
+            # URL is still pointing to GitHub. To save time, we will change it to:
             csm.set_parent_commit(csm.repo.head.commit)
             with csm.config_writer() as cw:
                 cw.set_value("url", self._small_repo_url())
@@ -399,8 +404,8 @@ class TestSubmodule(TestBase):
             rwrepo.index.commit("my submod commit")
             assert len(rwrepo.submodules) == 2
 
-            # Needs update, as the head changed. It thinks it's in the history
-            # of the repo otherwise.
+            # Needs update, as the head changed.
+            # It thinks it's in the history of the repo otherwise.
             nsm.set_parent_commit(rwrepo.head.commit)
             osm.set_parent_commit(rwrepo.head.commit)
 
@@ -434,7 +439,8 @@ class TestSubmodule(TestBase):
 
             # REMOVE 'EM ALL
             ################
-            # If a submodule's repo has no remotes, it can't be added without an explicit url.
+            # If a submodule's repo has no remotes, it can't be added without an
+            # explicit url.
             osmod = osm.module()
 
             osm.remove(module=False)
@@ -510,7 +516,8 @@ class TestSubmodule(TestBase):
 
         # TEST UPDATE
         #############
-        # Set up a commit that removes existing, adds new and modifies existing submodules.
+        # Set up a commit that removes existing, adds new and modifies existing
+        # submodules.
         rm = RootModule(rwrepo)
         assert len(rm.children()) == 1
 
@@ -534,13 +541,15 @@ class TestSubmodule(TestBase):
         sm.update(recursive=False)
         assert sm.module_exists()
         with sm.config_writer() as writer:
-            writer.set_value("path", fp)  # Change path to something with prefix AFTER url change.
+            # Change path to something with prefix AFTER url change.
+            writer.set_value("path", fp)
 
-        # Update doesn't fail, because list_items ignores the wrong path in such situations.
+        # Update doesn't fail, because list_items ignores the wrong path in such
+        # situations.
         rm.update(recursive=False)
 
-        # Move it properly - doesn't work as it its path currently points to an indexentry
-        # which doesn't exist (move it to some path, it doesn't matter here).
+        # Move it properly - doesn't work as it its path currently points to an
+        # indexentry which doesn't exist (move it to some path, it doesn't matter here).
         self.assertRaises(InvalidGitRepositoryError, sm.move, pp)
         # Reset the path(cache) to where it was, now it works.
         sm.path = prep
@@ -588,23 +597,27 @@ class TestSubmodule(TestBase):
         rm.update(recursive=False, dry_run=True, force_remove=True)
         assert osp.isdir(smp)
 
-        # When removing submodules, we may get new commits as nested submodules are auto-committing changes
-        # to allow deletions without force, as the index would be dirty otherwise.
+        # When removing submodules, we may get new commits as nested submodules are
+        # auto-committing changes to allow deletions without force, as the index would
+        # be dirty otherwise.
         # QUESTION: Why does this seem to work in test_git_submodule_compatibility() ?
         self.assertRaises(InvalidGitRepositoryError, rm.update, recursive=False, force_remove=False)
         rm.update(recursive=False, force_remove=True)
         assert not osp.isdir(smp)
 
-        # 'Apply work' to the nested submodule and ensure this is not removed/altered during updates
-        # Need to commit first, otherwise submodule.update wouldn't have a reason to change the head.
+        # 'Apply work' to the nested submodule and ensure this is not removed/altered
+        # during updates. We need to commit first, otherwise submodule.update wouldn't
+        # have a reason to change the head.
         touch(osp.join(nsm.module().working_tree_dir, "new-file"))
-        # We cannot expect is_dirty to even run as we wouldn't reset a head to the same location.
+        # We cannot expect is_dirty to even run as we wouldn't reset a head to the same
+        # location.
         assert nsm.module().head.commit.hexsha == nsm.hexsha
         nsm.module().index.add([nsm])
         nsm.module().index.commit("added new file")
         rm.update(recursive=False, dry_run=True, progress=prog)  # Would not change head, and thus doesn't fail.
-        # Everything we can do from now on will trigger the 'future' check, so no is_dirty() check will even run.
-        # This would only run if our local branch is in the past and we have uncommitted changes.
+        # Everything we can do from now on will trigger the 'future' check, so no
+        # is_dirty() check will even run. This would only run if our local branch is in
+        # the past and we have uncommitted changes.
 
         prev_commit = nsm.module().head.commit
         rm.update(recursive=False, dry_run=False, progress=prog)
@@ -616,8 +629,8 @@ class TestSubmodule(TestBase):
 
         # Change url...
         # =============
-        # ...to the first repository. This way we have a fast checkout, and a completely different
-        # repository at the different url.
+        # ...to the first repository. This way we have a fast checkout, and a completely
+        # different repository at the different url.
         nsm.set_parent_commit(csmremoved)
         nsmurl = Git.polish_url(osp.join(self.rorepo.working_tree_dir, rsmsp[0]))
         with nsm.config_writer() as writer:
@@ -637,16 +650,15 @@ class TestSubmodule(TestBase):
         assert len(rwrepo.submodules) == 1
         assert not rwrepo.submodules[0].children()[0].module_exists(), "nested submodule should not be checked out"
 
-        # Add the submodule's changed commit to the index, which is what the
-        # user would do.
-        # Beforehand, update our instance's binsha with the new one.
+        # Add the submodule's changed commit to the index, which is what the user would
+        # do. Beforehand, update our instance's binsha with the new one.
         nsm.binsha = nsm.module().head.commit.binsha
         rwrepo.index.add([nsm])
 
         # Change branch.
         # ==============
-        # We only have one branch, so we switch to a virtual one, and back
-        # to the current one to trigger the difference.
+        # We only have one branch, so we switch to a virtual one, and back to the
+        # current one to trigger the difference.
         cur_branch = nsm.branch
         nsmm = nsm.module()
         prev_commit = nsmm.head.commit
@@ -808,8 +820,8 @@ class TestSubmodule(TestBase):
         smm.git.add(Git.polish_url(fp))
         smm.git.commit(m="new file added")
 
-        # Submodules are retrieved from the current commit's tree, therefore we can't really get a new submodule
-        # object pointing to the new submodule commit.
+        # Submodules are retrieved from the current commit's tree, therefore we can't
+        # really get a new submodule object pointing to the new submodule commit.
         sm_too = parent.submodules["module_moved"]
         assert parent.head.commit.tree[sm.path].binsha == sm.binsha
         assert sm_too.binsha == sm.binsha, "cached submodule should point to the same commit as updated one"
@@ -848,8 +860,9 @@ class TestSubmodule(TestBase):
 
         # END assert_exists
 
-        # As git is backwards compatible itself, it would still recognize what we do here... unless we really
-        # muss it up. That's the only reason why the test is still here...
+        # As git is backwards compatible itself, it would still recognize what we do
+        # here... unless we really muss it up. That's the only reason why the test is
+        # still here...
         assert len(parent.git.submodule().splitlines()) == 1
 
         module_repo_path = osp.join(sm.module().working_tree_dir, ".git")
@@ -885,7 +898,8 @@ class TestSubmodule(TestBase):
         assert_exists(csm)
 
         # Rename nested submodule.
-        # This name would move itself one level deeper - needs special handling internally.
+        # This name would move itself one level deeper - needs special handling
+        # internally.
         new_name = csm.name + "/mine"
         assert csm.rename(new_name).name == new_name
         assert_exists(csm)
@@ -1011,13 +1025,15 @@ class TestSubmodule(TestBase):
         sm_source_repo.index.add([new_file])
         sm.repo.index.commit("added new file")
 
-        # Change designated submodule checkout branch to the new upstream feature branch.
+        # Change designated submodule checkout branch to the new upstream feature
+        # branch.
         with sm.config_writer() as smcw:
             smcw.set_value("branch", sm_fb.name)
         assert sm.repo.is_dirty(index=True, working_tree=False)
         sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb)
 
-        # Verify submodule update with feature branch that leaves currently checked out branch in it's past.
+        # Verify submodule update with feature branch that leaves currently checked out
+        # branch in it's past.
         sm_mod = sm.module()
         prev_commit = sm_mod.commit()
         assert sm_mod.head.ref.name == "master"
@@ -1029,7 +1045,8 @@ class TestSubmodule(TestBase):
         assert sm_mod.head.ref.name == sm_fb.name
         assert sm_mod.commit() == sm_fb.commit
 
-        # Create new branch which is in our past, and thus seemingly unrelated to the currently checked out one.
+        # Create new branch which is in our past, and thus seemingly unrelated to the
+        # currently checked out one.
         # To make it even 'harder', we shall fork and create a new commit.
         sm_pfb = sm_source_repo.create_head("past-feature", commit="HEAD~20")
         sm_pfb.checkout()
@@ -1043,8 +1060,8 @@ class TestSubmodule(TestBase):
 
         # Test submodule updates - must fail if submodule is dirty.
         touch(osp.join(sm_mod.working_tree_dir, "unstaged file"))
-        # This doesn't fail as our own submodule binsha didn't change, and the reset is only triggered if
-        # to_latest_revision is True.
+        # This doesn't fail as our own submodule binsha didn't change, and the reset is
+        # only triggered if to_latest_revision is True.
         parent_repo.submodule_update(to_latest_revision=False)
         assert sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
         assert sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
@@ -1184,8 +1201,8 @@ class TestSubmodule(TestBase):
                 "fd::/foo",
             ]
             for url in urls:
-                # The URL will be allowed into the command, but the command will
-                # fail since we don't have that protocol enabled in the Git config file.
+                # The URL will be allowed into the command, but the command will fail
+                # since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
                     Submodule.add(rw_repo, "new", "new", url, allow_unsafe_protocols=True)
                 assert not tmp_file.exists()
@@ -1269,8 +1286,8 @@ class TestSubmodule(TestBase):
             ]
             for url in urls:
                 submodule = Submodule(rw_repo, b"\0" * 20, name="new", path="new", url=url)
-                # The URL will be allowed into the command, but the command will
-                # fail since we don't have that protocol enabled in the Git config file.
+                # The URL will be allowed into the command, but the command will fail
+                # since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
                     submodule.update(allow_unsafe_protocols=True)
                 assert not tmp_file.exists()

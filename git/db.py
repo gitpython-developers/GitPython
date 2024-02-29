@@ -30,9 +30,6 @@ class GitCmdObjectDB(LooseObjectDB):
     objects, pack files and an alternates file.
 
     It will create objects only in the loose object database.
-
-    :note: For now, we use the git command to do all the lookup, just until we
-        have packs and the other implementations.
     """
 
     def __init__(self, root_path: PathLike, git: "Git") -> None:
@@ -53,13 +50,16 @@ class GitCmdObjectDB(LooseObjectDB):
 
     def partial_to_complete_sha_hex(self, partial_hexsha: str) -> bytes:
         """
-        :return: Full binary 20 byte sha from the given partial hexsha
+        :return:
+            Full binary 20 byte sha from the given partial hexsha
 
-        :raise AmbiguousObjectName:
-        :raise BadObject:
+        :raise gitdb.exc.AmbiguousObjectName:
 
-        :note: Currently we only raise :class:`BadObject` as git does not communicate
-            AmbiguousObjects separately.
+        :raise gitdb.exc.BadObject:
+
+        :note:
+            Currently we only raise :class:`~gitdb.exc.BadObject` as git does not
+            communicate ambiguous objects separately.
         """
         try:
             hexsha, _typename, _size = self._git.get_object_header(partial_hexsha)

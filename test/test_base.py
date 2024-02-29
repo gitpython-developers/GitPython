@@ -72,7 +72,10 @@ class TestBase(_TestBase):
                 self.assertEqual(item, item.stream_data(tmpfile))
                 tmpfile.seek(0)
                 self.assertEqual(tmpfile.read(), data)
-            os.remove(tmpfile.name)  # Do it this way so we can inspect the file on failure.
+
+            # Remove the file this way, instead of with a context manager or "finally",
+            # so it is only removed on success, and we can inspect the file on failure.
+            os.remove(tmpfile.name)
         # END for each object type to create
 
         # Each has a unique sha.
@@ -132,8 +135,8 @@ class TestBase(_TestBase):
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the Python implementation.
             rw_repo.index.add([file_path])
-            # However, when the test winds down, rmtree fails to delete this file, which is recognized
-            # as ??? only.
+            # However, when the test winds down, rmtree fails to delete this file, which
+            # is recognized as ??? only.
         else:
             # On POSIX, we can just add Unicode files without problems.
             rw_repo.git.add(rw_repo.working_dir)

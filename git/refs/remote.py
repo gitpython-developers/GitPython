@@ -47,22 +47,22 @@ class RemoteReference(Head):
         # super is Reference
         return super().iter_items(repo, common_path)
 
-    # The Head implementation of delete also accepts strs, but this
-    # implementation does not.  mypy doesn't have a way of representing
-    # tightening the types of arguments in subclasses and recommends Any or
-    # "type: ignore".  (See https://github.com/python/typing/issues/241)
+    # The Head implementation of delete also accepts strs, but this implementation does
+    # not. mypy doesn't have a way of representing tightening the types of arguments in
+    # subclasses and recommends Any or "type: ignore".
+    # (See: https://github.com/python/typing/issues/241)
     @classmethod
     def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore
         """Delete the given remote references.
 
         :note:
-            kwargs are given for comparability with the base class method as we
+            `kwargs` are given for comparability with the base class method as we
             should not narrow the signature.
         """
         repo.git.branch("-d", "-r", *refs)
-        # The official deletion method will ignore remote symbolic refs - these
-        # are generally ignored in the refs/ folder. We don't though
-        # and delete remainders manually.
+        # The official deletion method will ignore remote symbolic refs - these are
+        # generally ignored in the refs/ folder. We don't though and delete remainders
+        # manually.
         for ref in refs:
             try:
                 os.remove(os.path.join(repo.common_dir, ref.path))
@@ -76,5 +76,5 @@ class RemoteReference(Head):
 
     @classmethod
     def create(cls, *args: Any, **kwargs: Any) -> NoReturn:
-        """Raises TypeError. Defined so the create method is disabled."""
+        """Raise :class:`TypeError`. Defined so the ``create`` method is disabled."""
         raise TypeError("Cannot explicitly create remote references")

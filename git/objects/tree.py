@@ -54,10 +54,12 @@ __all__ = ("TreeModifier", "Tree")
 
 
 class TreeModifier:
-    """A utility class providing methods to alter the underlying cache in a list-like fashion.
+    """A utility class providing methods to alter the underlying cache in a list-like
+    fashion.
 
-    Once all adjustments are complete, the _cache, which really is a reference to
-    the cache of a tree, will be sorted. This ensures it will be in a serializable state.
+    Once all adjustments are complete, the :attr:`_cache`, which really is a reference
+    to the cache of a tree, will be sorted. This ensures it will be in a serializable
+    state.
     """
 
     __slots__ = ("_cache",)
@@ -78,10 +80,11 @@ class TreeModifier:
     def set_done(self) -> "TreeModifier":
         """Call this method once you are done modifying the tree information.
 
-        This may be called several times, but be aware that each call will cause
-        a sort operation.
+        This may be called several times, but be aware that each call will cause a sort
+        operation.
 
-        :return self:
+        :return:
+            self
         """
         self._cache.sort(key=lambda x: (x[2] + "/") if x[1] == Tree.tree_id << 12 else x[2])
         return self
@@ -93,17 +96,21 @@ class TreeModifier:
         """Add the given item to the tree.
 
         If an item with the given name already exists, nothing will be done, but a
-        ValueError will be raised if the sha and mode of the existing item do not match
-        the one you add, unless force is True
+        :class:`ValueError` will be raised if the sha and mode of the existing item do
+        not match the one you add, unless `force` is ``True``.
 
-        :param sha: The 20 or 40 byte sha of the item to add
+        :param sha:
+            The 20 or 40 byte sha of the item to add.
 
-        :param mode: int representing the stat compatible mode of the item
+        :param mode:
+            :class:`int` representing the stat-compatible mode of the item.
 
-        :param force: If True, an item with your name and information will overwrite any
-            existing item with the same name, no matter which information it has
+        :param force:
+            If ``True``, an item with your name and information will overwrite any
+            existing item with the same name, no matter which information it has.
 
-        :return: self
+        :return:
+            self
         """
         if "/" in name:
             raise ValueError("Name must not contain '/' characters")
@@ -136,7 +143,8 @@ class TreeModifier:
 
         For more information on the parameters, see :meth:`add`.
 
-        :param binsha: 20 byte binary sha
+        :param binsha:
+            20 byte binary sha.
         """
         assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
         tree_cache = (binsha, mode, name)
@@ -153,15 +161,13 @@ class TreeModifier:
 
 
 class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
-    """Tree objects represent an ordered list of Blobs and other Trees.
+    R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
+    other :class:`~git.objects.tree.Tree`\s.
 
-    ``Tree as a list``::
+    Tree as a list:
 
-        Access a specific blob using the
-        tree['filename'] notation.
-
-        You may as well access by index
-        blob = tree[0]
+    * Access a specific blob using the ``tree["filename"]`` notation.
+    * You may likewise access by index, like ``blob = tree[0]``.
     """
 
     type: Literal["tree"] = "tree"
@@ -209,8 +215,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # END handle attribute
 
     def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]) -> Iterator[IndexObjUnion]:
-        """Iterable yields tuples of (binsha, mode, name), which will be converted
-        to the respective object representation.
+        """Iterable yields tuples of (binsha, mode, name), which will be converted to
+        the respective object representation.
         """
         for binsha, mode, name in iterable:
             path = join_path(self.path, name)
@@ -223,8 +229,12 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     def join(self, file: str) -> IndexObjUnion:
         """Find the named object in this tree's contents.
 
-        :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
-        :raise KeyError: if given file or tree does not exist in tree
+        :return:
+            :class:`~git.objects.blob.Blob`, :class:`~git.objects.tree.Tree`,
+            or :class:`~git.objects.submodule.base.Submodule`
+
+        :raise KeyError:
+            If the given file or tree does not exist in this tree.
         """
         msg = "Blob or Tree named %r not found"
         if "/" in file:
@@ -264,20 +274,24 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     @property
     def trees(self) -> List["Tree"]:
-        """:return: list(Tree, ...) list of trees directly below this tree"""
+        """:return: list(Tree, ...) List of trees directly below this tree"""
         return [i for i in self if i.type == "tree"]
 
     @property
     def blobs(self) -> List[Blob]:
-        """:return: list(Blob, ...) list of blobs directly below this tree"""
+        """:return: list(Blob, ...) List of blobs directly below this tree"""
         return [i for i in self if i.type == "blob"]
 
     @property
     def cache(self) -> TreeModifier:
         """
-        :return: An object allowing to modify the internal cache. This can be used
-            to change the tree's contents. When done, make sure you call ``set_done``
-            on the tree modifier, or serialization behaviour will be incorrect.
+        :return:
+            An object allowing modification of the internal cache. This can be used to
+            change the tree's contents. When done, make sure you call
+            :meth:`~TreeModifier.set_done` on the tree modifier, or serialization
+            behaviour will be incorrect.
+
+        :note:
             See :class:`TreeModifier` for more information on how to alter the cache.
         """
         return TreeModifier(self._cache)
@@ -292,12 +306,13 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]]:
-        """For documentation, see util.Traversable._traverse().
+        """For documentation, see
+        `Traversable._traverse() <git.objects.util.Traversable._traverse>`.
 
-        Trees are set to ``visit_once = False`` to gain more performance in the traversal.
+        Trees are set to ``visit_once = False`` to gain more performance in the
+        traversal.
         """
 
-        # """
         # # To typecheck instead of using cast.
         # import itertools
         # def is_tree_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Union['Tree', 'Blob', 'Submodule']]]]:
@@ -306,7 +321,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # ret = super().traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
         # ret_tup = itertools.tee(ret, 2)
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
-        # return ret_tup[0]"""
+        # return ret_tup[0]
+
         return cast(
             Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
             super()._traverse(
@@ -321,9 +337,11 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
         """
-        :return: IterableList with the results of the traversal as produced by
-            traverse()
-            Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
+        :return:
+            :class:`~git.util.IterableList` with the results of the traversal as
+            produced by :meth:`traverse`
+
+            Tree -> IterableList[Union[Submodule, Tree, Blob]]
         """
         return super()._list_traverse(*args, **kwargs)
 
@@ -375,9 +393,10 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     def _serialize(self, stream: "BytesIO") -> "Tree":
         """Serialize this tree into the stream. Assumes sorted tree data.
 
-        .. note:: We will assume our tree data to be in a sorted state. If this is not
-            the case, serialization will not generate a correct tree representation as
-            these are assumed to be sorted by algorithms.
+        :note:
+            We will assume our tree data to be in a sorted state. If this is not the
+            case, serialization will not generate a correct tree representation as these
+            are assumed to be sorted by algorithms.
         """
         tree_to_stream(self._cache, stream.write)
         return self

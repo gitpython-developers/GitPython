@@ -63,7 +63,7 @@ class SymbolicReference:
     This does not point to a specific commit, but to another
     :class:`~git.refs.head.Head`, which itself specifies a commit.
 
-    A typical example for a symbolic reference is ``HEAD``.
+    A typical example for a symbolic reference is :class:`~git.refs.head.HEAD`.
     """
 
     __slots__ = ("repo", "path")
@@ -100,8 +100,8 @@ class SymbolicReference:
     def name(self) -> str:
         """
         :return:
-            In case of symbolic references, the shortest assumable name
-            is the path itself.
+            In case of symbolic references, the shortest assumable name is the path
+            itself.
         """
         return str(self.path)
 
@@ -115,10 +115,11 @@ class SymbolicReference:
 
     @classmethod
     def _iter_packed_refs(cls, repo: "Repo") -> Iterator[Tuple[str, str]]:
-        """Return an iterator yielding pairs of sha1/path pairs (as strings)
-        for the corresponding refs.
+        """Return an iterator yielding pairs of sha1/path pairs (as strings) for the
+        corresponding refs.
 
-        :note: The packed refs file will be kept open as long as we iterate.
+        :note:
+            The packed refs file will be kept open as long as we iterate.
         """
         try:
             with open(cls._get_packed_refs_path(repo), "rt", encoding="UTF-8") as fp:
@@ -155,10 +156,12 @@ class SymbolicReference:
     @classmethod
     def dereference_recursive(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> str:
         """
-        :return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
-            intermediate references as required
+        :return:
+            hexsha stored in the reference at the given `ref_path`, recursively
+            dereferencing all intermediate references as required
 
-        :param repo: The repository containing the reference at ref_path
+        :param repo:
+            The repository containing the reference at `ref_path`.
         """
 
         while True:
@@ -221,10 +224,11 @@ class SymbolicReference:
         cls, repo: "Repo", ref_path: Union[PathLike, None]
     ) -> Union[Tuple[str, None], Tuple[None, str]]:
         """
-        :return: (str(sha), str(target_ref_path)) if available, the sha the file at
-            rela_path points to, or None.
+        :return:
+            *(str(sha), str(target_ref_path))*, where:
 
-            target_ref_path is the reference we point to, or None.
+            * *sha* is of the file at rela_path points to if available, or ``None``.
+            * *target_ref_path* is the reference we point to, or ``None``.
         """
         if ref_path:
             cls._check_ref_name_valid(ref_path)
@@ -266,18 +270,19 @@ class SymbolicReference:
     @classmethod
     def _get_ref_info(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> Union[Tuple[str, None], Tuple[None, str]]:
         """
-        :return: (str(sha), str(target_ref_path)) if available, the sha the file at
-            rela_path points to, or None.
+        :return:
+            *(str(sha), str(target_ref_path))*, where:
 
-            target_ref_path is the reference we point to, or None.
+            * *sha* is of the file at rela_path points to if available, or ``None``.
+            * *target_ref_path* is the reference we point to, or ``None``.
         """
         return cls._get_ref_info_helper(repo, ref_path)
 
     def _get_object(self) -> Commit_ish:
         """
         :return:
-            The object our ref currently refers to. Refs can be cached, they will
-            always point to the actual object as it gets re-created on each query.
+            The object our ref currently refers to. Refs can be cached, they will always
+            point to the actual object as it gets re-created on each query.
         """
         # We have to be dynamic here as we may be a tag which can point to anything.
         # Our path will be resolved to the hexsha which will be used accordingly.
@@ -286,9 +291,9 @@ class SymbolicReference:
     def _get_commit(self) -> "Commit":
         """
         :return:
-            Commit object we point to. This works for detached and non-detached
-            :class:`SymbolicReference` instances. The symbolic reference will be
-            dereferenced recursively.
+            :class:`~git.objects.commit.Commit` object we point to. This works for
+            detached and non-detached :class:`SymbolicReference` instances. The symbolic
+            reference will be dereferenced recursively.
         """
         obj = self._get_object()
         if obj.type == "tag":
@@ -305,11 +310,15 @@ class SymbolicReference:
         commit: Union[Commit, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
-        """As set_object, but restricts the type of object to be a Commit.
+        """Like :meth:`set_object`, but restricts the type of object to be a
+        :class:`~git.objects.commit.Commit`.
 
-        :raise ValueError: If commit is not a :class:`~git.objects.commit.Commit` object
-            or doesn't point to a commit
-        :return: self
+        :raise ValueError:
+            If `commit` is not a :class:`~git.objects.commit.Commit` object, nor does it
+            point to a commit.
+
+        :return:
+            self
         """
         # Check the type - assume the best if it is a base-string.
         invalid_type = False
@@ -339,18 +348,25 @@ class SymbolicReference:
         object: Union[Commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
-        """Set the object we point to, possibly dereference our symbolic reference first.
-        If the reference does not exist, it will be created.
+        """Set the object we point to, possibly dereference our symbolic reference
+        first. If the reference does not exist, it will be created.
 
-        :param object: A refspec, a :class:`SymbolicReference` or an
-            :class:`~git.objects.base.Object` instance.
-            :class:`SymbolicReference` instances will be dereferenced beforehand to
-            obtain the object they point to.
-        :param logmsg: If not None, the message will be used in the reflog entry to be
-            written. Otherwise the reflog is not altered.
-        :note: Plain :class:`SymbolicReference` instances may not actually point to
-            objects by convention.
-        :return: self
+        :param object:
+            A refspec, a :class:`SymbolicReference` or an
+            :class:`~git.objects.base.Object` instance. :class:`SymbolicReference`
+            instances will be dereferenced beforehand to obtain the object they point
+            to.
+
+        :param logmsg:
+            If not ``None``, the message will be used in the reflog entry to be written.
+            Otherwise the reflog is not altered.
+
+        :note:
+            Plain :class:`SymbolicReference` instances may not actually point to objects
+            by convention.
+
+        :return:
+            self
         """
         if isinstance(object, SymbolicReference):
             object = object.object  # @ReservedAssignment
@@ -374,10 +390,13 @@ class SymbolicReference:
 
     def _get_reference(self) -> "SymbolicReference":
         """
-        :return: Reference Object we point to
+        :return:
+            :class:`~git.refs.reference.Reference` object we point to
 
-        :raise TypeError: If this symbolic reference is detached, hence it doesn't point
-            to a reference, but to a commit"""
+        :raise TypeError:
+            If this symbolic reference is detached, hence it doesn't point to a
+            reference, but to a commit.
+        """
         sha, target_ref_path = self._get_ref_info(self.repo, self.path)
         if target_ref_path is None:
             raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
@@ -388,10 +407,13 @@ class SymbolicReference:
         ref: Union[Commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
-        """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
-        Otherwise an Object, given as Object instance or refspec, is assumed and if valid,
-        will be set which effectively detaches the reference if it was a purely
-        symbolic one.
+        """Set ourselves to the given `ref`.
+
+        It will stay a symbol if the ref is a :class:`~git.refs.reference.Reference`.
+
+        Otherwise an Object, given as :class:`~git.objects.base.Object` instance or
+        refspec, is assumed and if valid, will be set which effectively detaches the
+        reference if it was a purely symbolic one.
 
         :param ref:
             A :class:`SymbolicReference` instance, an :class:`~git.objects.base.Object`
@@ -399,15 +421,18 @@ class SymbolicReference:
             :class:`SymbolicReference` instance, we will point to it. Everything else is
             dereferenced to obtain the actual object.
 
-        :param logmsg: If set to a string, the message will be used in the reflog.
+        :param logmsg:
+            If set to a string, the message will be used in the reflog.
             Otherwise, a reflog entry is not written for the changed reference.
             The previous commit of the entry will be the commit we point to now.
 
             See also: :meth:`log_append`
 
-        :return: self
+        :return:
+            self
 
-        :note: This symbolic reference will not be dereferenced. For that, see
+        :note:
+            This symbolic reference will not be dereferenced. For that, see
             :meth:`set_object`.
         """
         write_value = None
@@ -467,8 +492,8 @@ class SymbolicReference:
     def is_valid(self) -> bool:
         """
         :return:
-            True if the reference is valid, hence it can be read and points to
-            a valid object or reference.
+            ``True`` if the reference is valid, hence it can be read and points to a
+            valid object or reference.
         """
         try:
             self.object
@@ -481,7 +506,7 @@ class SymbolicReference:
     def is_detached(self) -> bool:
         """
         :return:
-            True if we are a detached reference, hence we point to a specific commit
+            ``True`` if we are a detached reference, hence we point to a specific commit
             instead to another reference.
         """
         try:
@@ -492,11 +517,13 @@ class SymbolicReference:
 
     def log(self) -> "RefLog":
         """
-        :return: RefLog for this reference. Its last entry reflects the latest change
-            applied to this reference.
+        :return:
+            :class:`~git.refs.log.RefLog` for this reference.
+            Its last entry reflects the latest change applied to this reference.
 
-        .. note:: As the log is parsed every time, its recommended to cache it for use
-            instead of calling this method repeatedly. It should be considered read-only.
+        :note:
+            As the log is parsed every time, its recommended to cache it for use instead
+            of calling this method repeatedly. It should be considered read-only.
         """
         return RefLog.from_file(RefLog.path(self))
 
@@ -508,11 +535,17 @@ class SymbolicReference:
     ) -> "RefLogEntry":
         """Append a logentry to the logfile of this ref.
 
-        :param oldbinsha: Binary sha this ref used to point to.
-        :param message: A message describing the change.
-        :param newbinsha: The sha the ref points to now. If None, our current commit sha
-            will be used.
-        :return: The added :class:`~git.refs.log.RefLogEntry` instance.
+        :param oldbinsha:
+            Binary sha this ref used to point to.
+
+        :param message:
+            A message describing the change.
+
+        :param newbinsha:
+            The sha the ref points to now. If None, our current commit sha will be used.
+
+        :return:
+            The added :class:`~git.refs.log.RefLogEntry` instance.
         """
         # NOTE: We use the committer of the currently active commit - this should be
         # correct to allow overriding the committer on a per-commit level.
@@ -532,21 +565,25 @@ class SymbolicReference:
 
     def log_entry(self, index: int) -> "RefLogEntry":
         """
-        :return: RefLogEntry at the given index
+        :return:
+            :class:`~git.refs.log.RefLogEntry` at the given index
 
-        :param index: Python list compatible positive or negative index
+        :param index:
+            Python list compatible positive or negative index.
 
-        .. note:: This method must read part of the reflog during execution, hence
-            it should be used sparingly, or only if you need just one index.
-            In that case, it will be faster than the :meth:`log` method.
+        :note:
+            This method must read part of the reflog during execution, hence it should
+            be used sparingly, or only if you need just one index. In that case, it will
+            be faster than the :meth:`log` method.
         """
         return RefLog.entry_at(RefLog.path(self), index)
 
     @classmethod
     def to_full_path(cls, path: Union[PathLike, "SymbolicReference"]) -> PathLike:
         """
-        :return: string with a full repository-relative path which can be used to initialize
-            a Reference instance, for instance by using
+        :return:
+            String with a full repository-relative path which can be used to initialize
+            a :class:`~git.refs.reference.Reference` instance, for instance by using
             :meth:`Reference.from_path <git.refs.reference.Reference.from_path>`.
         """
         if isinstance(path, SymbolicReference):
@@ -566,8 +603,8 @@ class SymbolicReference:
             Repository to delete the reference from.
 
         :param path:
-            Short or full path pointing to the reference, e.g. ``refs/myreference``
-            or just ``myreference``, hence ``refs/`` is implied.
+            Short or full path pointing to the reference, e.g. ``refs/myreference`` or
+            just ``myreference``, hence ``refs/`` is implied.
             Alternatively the symbolic reference to be deleted.
         """
         full_ref_path = cls.to_full_path(path)
@@ -586,10 +623,10 @@ class SymbolicReference:
                         line = line_bytes.decode(defenc)
                         _, _, line_ref = line.partition(" ")
                         line_ref = line_ref.strip()
-                        # Keep line if it is a comment or if the ref to delete is not
-                        # in the line.
-                        # If we deleted the last line and this one is a tag-reference object,
-                        # we drop it as well.
+                        # Keep line if it is a comment or if the ref to delete is not in
+                        # the line.
+                        # If we deleted the last line and this one is a tag-reference
+                        # object, we drop it as well.
                         if (line.startswith("#") or full_ref_path != line_ref) and (
                             not dropped_last_line or dropped_last_line and not line.startswith("^")
                         ):
@@ -604,8 +641,8 @@ class SymbolicReference:
 
                 # Write the new lines.
                 if made_change:
-                    # Binary writing is required, otherwise Windows will
-                    # open the file in text mode and change LF to CRLF!
+                    # Binary writing is required, otherwise Windows will open the file
+                    # in text mode and change LF to CRLF!
                     with open(pack_file_path, "wb") as fd:
                         fd.writelines(line.encode(defenc) for line in new_lines)
 
@@ -630,10 +667,9 @@ class SymbolicReference:
     ) -> T_References:
         """Internal method used to create a new symbolic reference.
 
-        If `resolve` is False, the reference will be taken as is, creating
-        a proper symbolic reference. Otherwise it will be resolved to the
-        corresponding object and a detached symbolic reference will be created
-        instead.
+        If `resolve` is ``False``, the reference will be taken as is, creating a proper
+        symbolic reference. Otherwise it will be resolved to the corresponding object
+        and a detached symbolic reference will be created instead.
         """
         git_dir = _git_dir(repo, path)
         full_ref_path = cls.to_full_path(path)
@@ -679,28 +715,30 @@ class SymbolicReference:
             Repository to create the reference in.
 
         :param path:
-            Full path at which the new symbolic reference is supposed to be
-            created at, e.g. ``NEW_HEAD`` or ``symrefs/my_new_symref``.
+            Full path at which the new symbolic reference is supposed to be created at,
+            e.g. ``NEW_HEAD`` or ``symrefs/my_new_symref``.
 
         :param reference:
             The reference which the new symbolic reference should point to.
             If it is a commit-ish, the symbolic ref will be detached.
 
         :param force:
-            If True, force creation even if a symbolic reference with that name already exists.
-            Raise :class:`OSError` otherwise.
+            If ``True``, force creation even if a symbolic reference with that name
+            already exists. Raise :class:`OSError` otherwise.
 
         :param logmsg:
-            If not None, the message to append to the reflog. Otherwise no reflog
-            entry is written.
+            If not ``None``, the message to append to the reflog.
+            If ``None``, no reflog entry is written.
 
-        :return: Newly created symbolic Reference
+        :return:
+            Newly created symbolic reference
 
         :raise OSError:
-            If a (Symbolic)Reference with the same name but different contents
-            already exists.
+            If a (Symbolic)Reference with the same name but different contents already
+            exists.
 
-        :note: This does not alter the current HEAD, index or working tree.
+        :note:
+            This does not alter the current HEAD, index or working tree.
         """
         return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, logmsg)
 
@@ -708,17 +746,20 @@ class SymbolicReference:
         """Rename self to a new path.
 
         :param new_path:
-            Either a simple name or a full path, e.g. ``new_name`` or ``features/new_name``.
+            Either a simple name or a full path, e.g. ``new_name`` or
+            ``features/new_name``.
             The prefix ``refs/`` is implied for references and will be set as needed.
             In case this is a symbolic ref, there is no implied prefix.
 
         :param force:
-            If True, the rename will succeed even if a head with the target name
+            If ``True``, the rename will succeed even if a head with the target name
             already exists. It will be overwritten in that case.
 
-        :return: self
+        :return:
+            self
 
-        :raise OSError: If a file at path but with different contents already exists.
+        :raise OSError:
+            If a file at path but with different contents already exists.
         """
         new_path = self.to_full_path(new_path)
         if self.path == new_path:
@@ -801,13 +842,14 @@ class SymbolicReference:
     ) -> Iterator[T_References]:
         """Find all refs in the repository.
 
-        :param repo: is the Repo
+        :param repo:
+            The :class:`~git.repo.base.Repo`.
 
         :param common_path:
             Optional keyword argument to the path which is to be shared by all returned
             Ref objects.
-            Defaults to class specific portion if None, ensuring that only refs suitable
-            for the actual class are returned.
+            Defaults to class specific portion if ``None``, ensuring that only refs
+            suitable for the actual class are returned.
 
         :return:
             A list of :class:`SymbolicReference`, each guaranteed to be a symbolic ref
@@ -821,13 +863,13 @@ class SymbolicReference:
 
     @classmethod
     def from_path(cls: Type[T_References], repo: "Repo", path: PathLike) -> T_References:
-        """
-        Make a symbolic reference from a path.
+        """Make a symbolic reference from a path.
 
-        :param path: Full ``.git``-directory-relative path name to the Reference to
-            instantiate.
+        :param path:
+            Full ``.git``-directory-relative path name to the Reference to instantiate.
 
-        :note: Use :meth:`to_full_path` if you only have a partial path of a known
+        :note:
+            Use :meth:`to_full_path` if you only have a partial path of a known
             Reference type.
 
         :return:

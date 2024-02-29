@@ -36,8 +36,8 @@ def strip_quotes(string: str) -> str:
 
 
 class HEAD(SymbolicReference):
-    """Special case of a SymbolicReference representing the repository's
-    HEAD reference."""
+    """Special case of a SymbolicReference representing the repository's HEAD
+    reference."""
 
     _HEAD_NAME = "HEAD"
     _ORIG_HEAD_NAME = "ORIG_HEAD"
@@ -52,8 +52,9 @@ class HEAD(SymbolicReference):
 
     def orig_head(self) -> SymbolicReference:
         """
-        :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained
-            to contain the previous value of HEAD.
+        :return:
+            :class:`~git.refs.symbolic.SymbolicReference` pointing at the ORIG_HEAD,
+            which is maintained to contain the previous value of HEAD.
         """
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
@@ -65,31 +66,31 @@ class HEAD(SymbolicReference):
         paths: Union[PathLike, Sequence[PathLike], None] = None,
         **kwargs: Any,
     ) -> "HEAD":
-        """Reset our HEAD to the given commit optionally synchronizing
-        the index and working tree. The reference we refer to will be set to
-        commit as well.
+        """Reset our HEAD to the given commit optionally synchronizing the index and
+        working tree. The reference we refer to will be set to commit as well.
 
         :param commit:
-            Commit object, Reference Object or string identifying a revision we
-            should reset HEAD to.
+            :class:`~git.objects.commit.Commit`, :class:`~git.refs.reference.Reference`,
+            or string identifying a revision we should reset HEAD to.
 
         :param index:
-            If True, the index will be set to match the given commit. Otherwise
-            it will not be touched.
+            If ``True``, the index will be set to match the given commit.
+            Otherwise it will not be touched.
 
         :param working_tree:
-            If True, the working tree will be forcefully adjusted to match the given
+            If ``True``, the working tree will be forcefully adjusted to match the given
             commit, possibly overwriting uncommitted changes without warning.
-            If `working_tree` is True, `index` must be True as well.
+            If `working_tree` is ``True``, `index` must be ``True`` as well.
 
         :param paths:
             Single path or list of paths relative to the git root directory
             that are to be reset. This allows to partially reset individual files.
 
         :param kwargs:
-            Additional arguments passed to git-reset.
+            Additional arguments passed to ``git reset``.
 
-        :return: self
+        :return:
+            self
         """
         mode: Union[str, None]
         mode = "--soft"
@@ -123,8 +124,8 @@ class HEAD(SymbolicReference):
 
 
 class Head(Reference):
-    """A Head is a named reference to a Commit. Every Head instance contains a name
-    and a Commit object.
+    """A Head is a named reference to a :class:`~git.objects.commit.Commit`. Every Head
+    instance contains a name and a :class:`~git.objects.commit.Commit` object.
 
     Examples::
 
@@ -150,9 +151,8 @@ class Head(Reference):
         """Delete the given heads.
 
         :param force:
-            If True, the heads will be deleted even if they are not yet merged into
-            the main development stream.
-            Default False
+            If ``True``, the heads will be deleted even if they are not yet merged into
+            the main development stream. Default ``False``.
         """
         flag = "-d"
         if force:
@@ -163,9 +163,11 @@ class Head(Reference):
         """Configure this branch to track the given remote reference. This will
         alter this branch's configuration accordingly.
 
-        :param remote_reference: The remote reference to track or None to untrack
-            any references.
-        :return: self
+        :param remote_reference:
+            The remote reference to track or None to untrack any references.
+
+        :return:
+            self
         """
         from .remote import RemoteReference
 
@@ -190,8 +192,10 @@ class Head(Reference):
 
     def tracking_branch(self) -> Union["RemoteReference", None]:
         """
-        :return: The remote_reference we are tracking, or None if we are
-            not a tracking branch."""
+        :return:
+            The remote reference we are tracking, or ``None`` if we are not a tracking
+            branch.
+        """
         from .remote import RemoteReference
 
         reader = self.config_reader()
@@ -211,16 +215,18 @@ class Head(Reference):
         """Rename self to a new path.
 
         :param new_path:
-            Either a simple name or a path, i.e. new_name or features/new_name.
-            The prefix refs/heads is implied.
+            Either a simple name or a path, e.g. ``new_name`` or ``features/new_name``.
+            The prefix ``refs/heads`` is implied.
 
         :param force:
-            If True, the rename will succeed even if a head with the target name
+            If ``True``, the rename will succeed even if a head with the target name
             already exists.
 
-        :return: self
+        :return:
+            self
 
-        :note: Respects the ref log as git commands are used.
+        :note:
+            Respects the ref log, as git commands are used.
         """
         flag = "-m"
         if force:
@@ -238,8 +244,8 @@ class Head(Reference):
         The command will fail if changed working tree files would be overwritten.
 
         :param force:
-            If True, changes to the index and the working tree will be discarded.
-            If False, :class:`~git.exc.GitCommandError` will be raised in that
+            If ``True``, changes to the index and the working tree will be discarded.
+            If ``False``, :class:`~git.exc.GitCommandError` will be raised in that
             situation.
 
         :param kwargs:
@@ -247,15 +253,15 @@ class Head(Reference):
             ``b="new_branch"`` to create a new branch at the given spot.
 
         :return:
-            The active branch after the checkout operation, usually self unless
-            a new branch has been created.
+            The active branch after the checkout operation, usually self unless a new
+            branch has been created.
             If there is no active branch, as the HEAD is now detached, the HEAD
             reference will be returned instead.
 
         :note:
-            By default it is only allowed to checkout heads - everything else
-            will leave the HEAD detached which is allowed and possible, but remains
-            a special state that some tools might not be able to handle.
+            By default it is only allowed to checkout heads - everything else will leave
+            the HEAD detached which is allowed and possible, but remains a special state
+            that some tools might not be able to handle.
         """
         kwargs["f"] = force
         if kwargs["f"] is False:
@@ -279,15 +285,17 @@ class Head(Reference):
 
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """
-        :return: A configuration parser instance constrained to only read
-            this instance's values.
+        :return:
+            A configuration parser instance constrained to only read this instance's
+            values.
         """
         return self._config_parser(read_only=True)
 
     def config_writer(self) -> SectionConstraint[GitConfigParser]:
         """
-        :return: A configuration writer instance with read-and write access
-            to options of this head.
+        :return:
+            A configuration writer instance with read-and write access to options of
+            this head.
         """
         return self._config_parser(read_only=False)
 

@@ -25,8 +25,8 @@ class TestObjDBPerformance(TestBigRepoR):
 
     @with_rw_repo("HEAD", bare=True)
     def test_large_data_streaming(self, rwrepo):
-        # TODO: This part overlaps with the same file in gitdb.test.performance.test_stream.
-        # It should be shared if possible.
+        # TODO: This part overlaps with the same file in
+        # gitdb.test.performance.test_stream. It should be shared if possible.
         ldb = LooseObjectDB(osp.join(rwrepo.git_dir, "objects"))
 
         for randomize in range(2):

@@ -3,8 +3,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Module containing IndexFile, an Index implementation facilitating all kinds of index
-manipulations such as querying and merging."""
+"""Module containing :class:`IndexFile`, an Index implementation facilitating all kinds
+of index manipulations such as querying and merging."""
 
 import contextlib
 import datetime
@@ -101,10 +101,12 @@ __all__ = ("IndexFile", "CheckoutError", "StageType")
 def _named_temporary_file_for_subprocess(directory: PathLike) -> Generator[str, None, None]:
     """Create a named temporary file git subprocesses can open, deleting it afterward.
 
-    :param directory: The directory in which the file is created.
+    :param directory:
+        The directory in which the file is created.
 
-    :return: A context manager object that creates the file and provides its name on
-        entry, and deletes it on exit.
+    :return:
+        A context manager object that creates the file and provides its name on entry,
+        and deletes it on exit.
     """
     if os.name == "nt":
         fd, name = tempfile.mkstemp(dir=directory)
@@ -123,21 +125,21 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     git command function calls wherever possible.
 
     This provides custom merging facilities allowing to merge without actually changing
-    your index or your working tree. This way you can perform own test-merges based
-    on the index only without having to deal with the working copy. This is useful
-    in case of partial working trees.
+    your index or your working tree. This way you can perform your own test merges based
+    on the index only without having to deal with the working copy. This is useful in
+    case of partial working trees.
 
-    ``Entries``
+    Entries:
 
-    The index contains an entries dict whose keys are tuples of type IndexEntry
-    to facilitate access.
+        The index contains an entries dict whose keys are tuples of type
+        :class:`~git.index.typ.IndexEntry` to facilitate access.
 
-    You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
+        You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
 
-        index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
+            index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
 
-    Make sure you use index.write() once you are done manipulating the index directly
-    before operating on it using the git command.
+    Make sure you use :meth:`index.write() <write>` once you are done manipulating the
+    index directly before operating on it using the git command.
     """
 
     __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
@@ -149,9 +151,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     """Flags for a submodule."""
 
     def __init__(self, repo: "Repo", file_path: Union[PathLike, None] = None) -> None:
-        """Initialize this Index instance, optionally from the given ``file_path``.
+        """Initialize this Index instance, optionally from the given `file_path`.
 
-        If no file_path is given, we will be created from the current index file.
+        If no `file_path` is given, we will be created from the current index file.
 
         If a stream is not given, the stream will be initialized from the current
         repository's index on demand.
@@ -209,7 +211,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return self
 
     def _entries_sorted(self) -> List[IndexEntry]:
-        """:return: list of entries, in a sorted fashion, first by path, then by stage"""
+        """:return: List of entries, in a sorted fashion, first by path, then by stage"""
         return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
     def _serialize(self, stream: IO, ignore_extension_data: bool = False) -> "IndexFile":
@@ -230,25 +232,22 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         """Write the current state to our file path or to the given one.
 
         :param file_path:
-            If None, we will write to our stored file path from which we have
-            been initialized. Otherwise we write to the given file path.
-            Please note that this will change the file_path of this index to
-            the one you gave.
+            If ``None``, we will write to our stored file path from which we have been
+            initialized. Otherwise we write to the given file path. Please note that
+            this will change the `file_path` of this index to the one you gave.
 
         :param ignore_extension_data:
-            If True, the TREE type extension data read in the index will not
-            be written to disk. NOTE that no extension data is actually written.
-            Use this if you have altered the index and
-            would like to use git-write-tree afterwards to create a tree
-            representing your written changes.
-            If this data is present in the written index, git-write-tree
+            If ``True``, the TREE type extension data read in the index will not be
+            written to disk. NOTE that no extension data is actually written.
+            Use this if you have altered the index and would like to use
+            ``git write-tree`` afterwards to create a tree representing your written
+            changes. If this data is present in the written index, ``git write-tree``
             will instead write the stored/cached tree.
-            Alternatively, use IndexFile.write_tree() to handle this case
-            automatically.
+            Alternatively, use :meth:`write_tree` to handle this case automatically.
         """
         # Make sure we have our entries read before getting a write lock.
-        # Otherwise it would be done when streaming. This can happen if one
-        # doesn't change the index, but writes it right away.
+        # Otherwise it would be done when streaming.
+        # This can happen if one doesn't change the index, but writes it right away.
         self.entries
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
@@ -268,28 +267,28 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     @post_clear_cache
     @default_index
     def merge_tree(self, rhs: Treeish, base: Union[None, Treeish] = None) -> "IndexFile":
-        """Merge the given rhs treeish into the current index, possibly taking
+        """Merge the given `rhs` treeish into the current index, possibly taking
         a common base treeish into account.
 
-        As opposed to the :func:`IndexFile.from_tree` method, this allows you to use an
-        already existing tree as the left side of the merge.
+        As opposed to the :func:`from_tree` method, this allows you to use an already
+        existing tree as the left side of the merge.
 
         :param rhs:
             Treeish reference pointing to the 'other' side of the merge.
 
         :param base:
-            Optional treeish reference pointing to the common base of 'rhs' and this
+            Optional treeish reference pointing to the common base of `rhs` and this
             index which equals lhs.
 
         :return:
             self (containing the merge and possibly unmerged entries in case of
             conflicts)
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
             If there is a merge conflict. The error will be raised at the first
             conflicting path. If you want to have proper merge resolution to be done by
             yourself, you have to commit the changed index (or make a valid tree from
-            it) and retry with a three-way index.from_tree call.
+            it) and retry with a three-way :meth:`index.from_tree <from_tree>` call.
         """
         # -i : ignore working tree status
         # --aggressive : handle more merge cases
@@ -308,15 +307,16 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         This method behaves like ``git-read-tree --aggressive`` when doing the merge.
 
-        :param repo: The repository treeish are located in.
+        :param repo:
+            The repository treeish are located in.
 
         :param tree_sha:
             20 byte or 40 byte tree sha or tree objects.
 
         :return:
-            New IndexFile instance. Its path will be undefined.
-            If you intend to write such a merged Index, supply an alternate file_path
-            to its 'write' method.
+            New :class:`IndexFile` instance. Its path will be undefined.
+            If you intend to write such a merged Index, supply an alternate
+            ``file_path`` to its :meth:`write` method.
         """
         tree_sha_bytes: List[bytes] = [to_bin_sha(str(t)) for t in tree_sha]
         base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
@@ -335,37 +335,40 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     @classmethod
     def from_tree(cls, repo: "Repo", *treeish: Treeish, **kwargs: Any) -> "IndexFile":
-        """Merge the given treeish revisions into a new index which is returned.
+        R"""Merge the given treeish revisions into a new index which is returned.
         The original index will remain unaltered.
 
         :param repo:
             The repository treeish are located in.
 
         :param treeish:
-            One, two or three Tree Objects, Commits or 40 byte hexshas. The result
-            changes according to the amount of trees.
-            If 1 Tree is given, it will just be read into a new index
-            If 2 Trees are given, they will be merged into a new index using a
-            two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
-            one. It behaves like a fast-forward.
-            If 3 Trees are given, a 3-way merge will be performed with the first tree
-            being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree,
-            tree 3 is the 'other' one.
+            One, two or three :class:`~git.objects.tree.Tree` objects,
+            :class:`~git.objects.commit.Commit`\s or 40 byte hexshas.
+
+            The result changes according to the amount of trees:
+
+            1. If 1 Tree is given, it will just be read into a new index.
+            2. If 2 Trees are given, they will be merged into a new index using a two
+               way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
+               one. It behaves like a fast-forward.
+            3. If 3 Trees are given, a 3-way merge will be performed with the first tree
+               being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current'
+               tree, tree 3 is the 'other' one.
 
         :param kwargs:
-            Additional arguments passed to git-read-tree.
+            Additional arguments passed to ``git read-tree``.
 
         :return:
-            New IndexFile instance. It will point to a temporary index location which
-            does not exist anymore. If you intend to write such a merged Index, supply
-            an alternate file_path to its 'write' method.
+            New :class:`IndexFile` instance. It will point to a temporary index location
+            which does not exist anymore. If you intend to write such a merged Index,
+            supply an alternate ``file_path`` to its :meth:`write` method.
 
         :note:
-            In the three-way merge case, --aggressive will be specified to automatically
-            resolve more cases in a commonly correct manner. Specify trivial=True as kwarg
-            to override that.
+            In the three-way merge case, ``--aggressive`` will be specified to
+            automatically resolve more cases in a commonly correct manner. Specify
+            ``trivial=True`` as a keyword argument to override that.
 
-            As the underlying git-read-tree command takes into account the current
+            As the underlying ``git read-tree`` command takes into account the current
             index, it will be temporarily moved out of the way to prevent any unexpected
             interference.
         """
@@ -387,8 +390,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             arg_list.append("--index-output=%s" % tmp_index)
             arg_list.extend(treeish)
 
-            # Move the current index out of the way - otherwise the merge may fail
-            # as it considers existing entries. Moving it essentially clears the index.
+            # Move the current index out of the way - otherwise the merge may fail as it
+            # considers existing entries. Moving it essentially clears the index.
             # Unfortunately there is no 'soft' way to do it.
             # The TemporaryFileSwap ensures the original file gets put back.
             with TemporaryFileSwap(join_path_native(repo.git_dir, "index")):
@@ -402,12 +405,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     @unbare_repo
     def _iter_expand_paths(self: "IndexFile", paths: Sequence[PathLike]) -> Iterator[PathLike]:
-        """Expand the directories in list of paths to the corresponding paths accordingly.
+        """Expand the directories in list of paths to the corresponding paths
+        accordingly.
 
         :note:
-            git will add items multiple times even if a glob overlapped
-            with manually specified paths or if paths where specified multiple
-            times - we respect that and do not prune.
+            git will add items multiple times even if a glob overlapped with manually
+            specified paths or if paths where specified multiple times - we respect that
+            and do not prune.
         """
 
         def raise_exc(e: Exception) -> NoReturn:
@@ -436,11 +440,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             if not os.path.exists(abs_path) and ("?" in abs_path or "*" in abs_path or "[" in abs_path):
                 resolved_paths = glob.glob(abs_path)
                 # not abs_path in resolved_paths:
-                #   a glob() resolving to the same path we are feeding it with
-                #   is a glob() that failed to resolve. If we continued calling
-                #   ourselves we'd endlessly recurse. If the condition below
-                #   evaluates to true then we are likely dealing with a file
-                #   whose name contains wildcard characters.
+                #   A glob() resolving to the same path we are feeding it with is a
+                #   glob() that failed to resolve. If we continued calling ourselves
+                #   we'd endlessly recurse. If the condition below evaluates to true
+                #   then we are likely dealing with a file whose name contains wildcard
+                #   characters.
                 if abs_path not in resolved_paths:
                     for f in self._iter_expand_paths(glob.glob(abs_path)):
                         yield str(f).replace(rs, "")
@@ -468,22 +472,27 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         fprogress: Callable[[PathLike, bool, PathLike], None],
         read_from_stdout: bool = True,
     ) -> Union[None, str]:
-        """Write path to proc.stdin and make sure it processes the item, including progress.
+        """Write path to ``proc.stdin`` and make sure it processes the item, including
+        progress.
 
-        :return: stdout string
+        :return:
+            stdout string
 
-        :param read_from_stdout: if True, proc.stdout will be read after the item
-            was sent to stdin. In that case, it will return None.
+        :param read_from_stdout:
+            If ``True``, ``proc.stdout`` will be read after the item was sent to stdin.
+            In that case, it will return ``None``.
 
-        :note: There is a bug in git-update-index that prevents it from sending
-            reports just in time. This is why we have a version that tries to
-            read stdout and one which doesn't. In fact, the stdout is not
-            important as the piped-in files are processed anyway and just in time.
+        :note:
+            There is a bug in git-update-index that prevents it from sending reports
+            just in time. This is why we have a version that tries to read stdout and
+            one which doesn't. In fact, the stdout is not important as the piped-in
+            files are processed anyway and just in time.
 
-        :note: Newlines are essential here, gits behaviour is somewhat inconsistent
-            on this depending on the version, hence we try our best to deal with
-            newlines carefully. Usually the last newline will not be sent, instead
-            we will close stdin to break the pipe.
+        :note:
+            Newlines are essential here, git's behaviour is somewhat inconsistent on
+            this depending on the version, hence we try our best to deal with newlines
+            carefully. Usually the last newline will not be sent, instead we will close
+            stdin to break the pipe.
         """
         fprogress(filepath, False, item)
         rval: Union[None, str] = None
@@ -506,12 +515,14 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         self, predicate: Callable[[Tuple[StageType, Blob]], bool] = lambda t: True
     ) -> Iterator[Tuple[StageType, Blob]]:
         """
-        :return: Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
+        :return:
+            Iterator yielding tuples of :class:`~git.objects.blob.Blob` objects and
+            stages, tuple(stage, Blob).
 
         :param predicate:
-            Function(t) returning True if tuple(stage, Blob) should be yielded by the
-            iterator. A default filter, the BlobFilter, allows you to yield blobs
-            only if they match a given list of paths.
+            Function(t) returning ``True`` if tuple(stage, Blob) should be yielded by
+            the iterator. A default filter, the `~git.index.typ.BlobFilter`, allows you
+            to yield blobs only if they match a given list of paths.
         """
         for entry in self.entries.values():
             blob = entry.to_blob(self.repo)
@@ -524,14 +535,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def unmerged_blobs(self) -> Dict[PathLike, List[Tuple[StageType, Blob]]]:
         """
         :return:
-            Dict(path : list( tuple( stage, Blob, ...))), being
-            a dictionary associating a path in the index with a list containing
-            sorted stage/blob pairs.
+            Dict(path : list(tuple(stage, Blob, ...))), being a dictionary associating a
+            path in the index with a list containing sorted stage/blob pairs.
 
         :note:
-            Blobs that have been removed in one side simply do not exist in the
-            given stage. I.e. a file removed on the 'other' branch whose entries
-            are at stage 3 will not have a stage 3 entry.
+            Blobs that have been removed in one side simply do not exist in the given
+            stage. That is, a file removed on the 'other' branch whose entries are at
+            stage 3 will not have a stage 3 entry.
         """
         is_unmerged_blob = lambda t: t[0] != 0
         path_map: Dict[PathLike, List[Tuple[StageType, Blob]]] = {}
@@ -553,12 +563,14 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         This will effectively remove the index entries of the respective path at all
         non-null stages and add the given blob as new stage null blob.
 
-        For each path there may only be one blob, otherwise a ValueError will be raised
-        claiming the path is already at stage 0.
+        For each path there may only be one blob, otherwise a :class:`ValueError` will
+        be raised claiming the path is already at stage 0.
 
-        :raise ValueError: if one of the blobs already existed at stage 0
+        :raise ValueError:
+            If one of the blobs already existed at stage 0.
 
-        :return: self
+        :return:
+            self
 
         :note:
             You will have to write the index manually once you are done, i.e.
@@ -588,28 +600,33 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         """Reread the contents of our index file, discarding all cached information
         we might have.
 
-        :note: This is a possibly dangerous operations as it will discard your changes
-            to index.entries.
+        :note:
+            This is a possibly dangerous operations as it will discard your changes to
+            :attr:`index.entries <entries>`.
 
-        :return: self
+        :return:
+            self
         """
         self._delete_entries_cache()
         # Allows to lazily reread on demand.
         return self
 
     def write_tree(self) -> Tree:
-        """Write this index to a corresponding Tree object into the repository's
-        object database and return it.
+        """Write this index to a corresponding :class:`~git.objects.tree.Tree` object
+        into the repository's object database and return it.
 
-        :return: Tree object representing this index.
+        :return:
+            :class:`~git.objects.tree.Tree` object representing this index.
 
-        :note: The tree will be written even if one or more objects the tree refers to
-            does not yet exist in the object database. This could happen if you added
-            Entries to the index directly.
+        :note:
+            The tree will be written even if one or more objects the tree refers to does
+            not yet exist in the object database. This could happen if you added entries
+            to the index directly.
 
-        :raise ValueError: if there are no entries in the cache
+        :raise ValueError:
+            If there are no entries in the cache.
 
-        :raise UnmergedEntriesError:
+        :raise git.exc.UnmergedEntriesError:
         """
         # We obtain no lock as we just flush our contents to disk as tree.
         # If we are a new index, the entries access will load our data accordingly.
@@ -620,8 +637,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # Copy changed trees only.
         mdb.stream_copy(mdb.sha_iter(), self.repo.odb)
 
-        # Note: Additional deserialization could be saved if write_tree_from_cache
-        # would return sorted tree entries.
+        # Note: Additional deserialization could be saved if write_tree_from_cache would
+        # return sorted tree entries.
         root_tree = Tree(self.repo, binsha, path="")
         root_tree._cache = tree_items
         return root_tree
@@ -639,8 +656,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     def _to_relative_path(self, path: PathLike) -> PathLike:
         """
-        :return: Version of path relative to our git directory or raise ValueError
-            if it is not within our git directory"""
+        :return:
+            Version of path relative to our git directory or raise :class:`ValueError`
+            if it is not within our git directory.
+
+        :raise ValueError:
+        """
         if not osp.isabs(path):
             return path
         if self.repo.bare:
@@ -672,8 +693,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return paths, entries
 
     def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
-        """Store file at filepath in the database and return the base index entry
-        Needs the git_working_dir decorator active ! This must be assured in the calling code"""
+        """Store file at filepath in the database and return the base index entry.
+
+        :note:
+            This needs the :func:`~git.index.util.git_working_dir` decorator active!
+            This must be ensured in the calling code.
+        """
         st = os.lstat(filepath)  # Handles non-symlinks as well.
         if S_ISLNK(st.st_mode):
             # In PY3, readlink is a string, but we need bytes.
@@ -744,8 +769,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         write: bool = True,
         write_extension_data: bool = False,
     ) -> List[BaseIndexEntry]:
-        """Add files from the working tree, specific blobs or BaseIndexEntries
-        to the index.
+        R"""Add files from the working tree, specific blobs, or
+        :class:`~git.index.typ.BaseIndexEntry`\s to the index.
 
         :param items:
             Multiple types of items are supported, types can be mixed within one call.
@@ -753,9 +778,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             relative or absolute.
 
             - path string
+
                 Strings denote a relative or absolute path into the repository pointing
-                to an existing file, e.g., CHANGES, lib/myfile.ext,
-                '/home/gitrepo/lib/myfile.ext'.
+                to an existing file, e.g., ``CHANGES``, `lib/myfile.ext``,
+                ``/home/gitrepo/lib/myfile.ext``.
 
                 Absolute paths must start with working tree directory of this index's
                 repository to be considered valid. For example, if it was initialized
@@ -769,11 +795,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 directories like ``lib``, which will add all the files within the
                 directory and subdirectories.
 
-                This equals a straight git-add.
+                This equals a straight ``git add``.
 
                 They are added at stage 0.
 
-            - Blob or Submodule object
+            - :class:~`git.objects.blob.Blob` or :class:`~git.objects.submodule.base.Submodule` object
+
                 Blobs are added as they are assuming a valid mode is set.
 
                 The file they refer to may or may not exist in the file system, but must
@@ -786,55 +813,62 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 The handling now very much equals the way string paths are processed,
                 except that the mode you have set will be kept. This allows you to
                 create symlinks by settings the mode respectively and writing the target
-                of the symlink directly into the file. This equals a default
-                Linux-Symlink which is not dereferenced automatically, except that it
-                can be created on filesystems not supporting it as well.
+                of the symlink directly into the file. This equals a default Linux
+                symlink which is not dereferenced automatically, except that it can be
+                created on filesystems not supporting it as well.
 
-                Please note that globs or directories are not allowed in Blob objects.
+                Please note that globs or directories are not allowed in
+                :class:`~git.objects.blob.Blob` objects.
 
                 They are added at stage 0.
 
-            - BaseIndexEntry or type
-                Handling equals the one of Blob objects, but the stage may be explicitly
-                set. Please note that Index Entries require binary sha's.
+            - :class:`~git.index.typ.BaseIndexEntry` or type
+
+                Handling equals the one of :class:~`git.objects.blob.Blob` objects, but
+                the stage may be explicitly set. Please note that Index Entries require
+                binary sha's.
 
         :param force:
             **CURRENTLY INEFFECTIVE**
-            If True, otherwise ignored or excluded files will be added anyway.
-            As opposed to the git-add command, we enable this flag by default
-            as the API user usually wants the item to be added even though
-            they might be excluded.
+            If ``True``, otherwise ignored or excluded files will be added anyway. As
+            opposed to the ``git add`` command, we enable this flag by default as the
+            API user usually wants the item to be added even though they might be
+            excluded.
 
         :param fprogress:
-            Function with signature f(path, done=False, item=item) called for each
-            path to be added, one time once it is about to be added where done==False
-            and once after it was added where done=True.
-            item is set to the actual item we handle, either a Path or a BaseIndexEntry
-            Please note that the processed path is not guaranteed to be present
-            in the index already as the index is currently being processed.
+            Function with signature ``f(path, done=False, item=item)`` called for each
+            path to be added, one time once it is about to be added where ``done=False``
+            and once after it was added where ``done=True``.
+
+            ``item`` is set to the actual item we handle, either a path or a
+            :class:`~git.index.typ.BaseIndexEntry`.
+
+            Please note that the processed path is not guaranteed to be present in the
+            index already as the index is currently being processed.
 
         :param path_rewriter:
-            Function with signature (string) func(BaseIndexEntry) function returning a
-            path for each passed entry which is the path to be actually recorded for the
-            object created from entry.path. This allows you to write an index which is
-            not identical to the layout of the actual files on your hard-disk. If not
-            None and ``items`` contain plain paths, these paths will be converted to
-            Entries beforehand and passed to the path_rewriter. Please note that
-            entry.path is relative to the git repository.
+            Function, with signature ``(string) func(BaseIndexEntry)``, returning a path
+            for each passed entry which is the path to be actually recorded for the
+            object created from :attr:`entry.path <git.index.typ.BaseIndexEntry.path>`.
+            This allows you to write an index which is not identical to the layout of
+            the actual files on your hard-disk. If not ``None`` and `items` contain
+            plain paths, these paths will be converted to Entries beforehand and passed
+            to the path_rewriter. Please note that ``entry.path`` is relative to the git
+            repository.
 
         :param write:
-            If True, the index will be written once it was altered. Otherwise
-            the changes only exist in memory and are not available to git commands.
+            If ``True``, the index will be written once it was altered. Otherwise the
+            changes only exist in memory and are not available to git commands.
 
         :param write_extension_data:
-            If True, extension data will be written back to the index. This can lead to
-            issues in case it is containing the 'TREE' extension, which will cause the
-            `git commit` command to write an old tree, instead of a new one representing
-            the now changed index.
+            If ``True``, extension data will be written back to the index. This can lead
+            to issues in case it is containing the 'TREE' extension, which will cause
+            the ``git commit`` command to write an old tree, instead of a new one
+            representing the now changed index.
 
             This doesn't matter if you use :meth:`IndexFile.commit`, which ignores the
-            `TREE` extension altogether. You should set it to True if you intend to use
-            :meth:`IndexFile.commit` exclusively while maintaining support for
+            'TREE' extension altogether. You should set it to ``True`` if you intend to
+            use :meth:`IndexFile.commit` exclusively while maintaining support for
             third-party extensions. Besides that, you can usually safely ignore the
             built-in extensions when using GitPython on repositories that are not
             handled manually at all.
@@ -843,18 +877,20 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             http://opensource.apple.com/source/Git/Git-26/src/git-htmldocs/technical/index-format.txt
 
         :return:
-            List(BaseIndexEntries) representing the entries just actually added.
+            List of :class:`~git.index.typ.BaseIndexEntry`\s representing the entries
+            just actually added.
 
         :raise OSError:
-            If a supplied Path did not exist. Please note that BaseIndexEntry
-            Objects that do not have a null sha will be added even if their paths
-            do not exist.
+            If a supplied path did not exist. Please note that
+            :class:`~git.index.typ.BaseIndexEntry` objects that do not have a null sha
+            will be added even if their paths do not exist.
         """
-        # Sort the entries into strings and Entries. Blobs are converted to entries automatically.
+        # Sort the entries into strings and Entries.
+        # Blobs are converted to entries automatically.
         # Paths can be git-added. For everything else we use git-update-index.
         paths, entries = self._preprocess_add_items(items)
         entries_added: List[BaseIndexEntry] = []
-        # This code needs a working tree, therefore we try not to run it unless required.
+        # This code needs a working tree, so we try not to run it unless required.
         # That way, we are OK on a bare repository as well.
         # If there are no paths, the rewriter has nothing to do either.
         if paths:
@@ -897,7 +933,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # END null_entry handling
 
             # REWRITE PATHS
-            # If we have to rewrite the entries, do so now, after we have generated all object sha's.
+            # If we have to rewrite the entries, do so now, after we have generated all
+            # object sha's.
             if path_rewriter:
                 for i, e in enumerate(entries):
                     entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
@@ -955,41 +992,44 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         working_tree: bool = False,
         **kwargs: Any,
     ) -> List[str]:
-        """Remove the given items from the index and optionally from
-        the working tree as well.
+        R"""Remove the given items from the index and optionally from the working tree
+        as well.
 
         :param items:
             Multiple types of items are supported which may be be freely mixed.
 
             - path string
+
                 Remove the given path at all stages. If it is a directory, you must
-                specify the r=True keyword argument to remove all file entries
-                below it. If absolute paths are given, they will be converted
-                to a path relative to the git repository directory containing
-                the working tree
+                specify the ``r=True`` keyword argument to remove all file entries below
+                it. If absolute paths are given, they will be converted to a path
+                relative to the git repository directory containing the working tree
 
-                The path string may include globs, such as \\*.c.
+                The path string may include globs, such as ``*.c``.
 
-            - Blob Object
+            - :class:~`git.objects.blob.Blob` object
+
                 Only the path portion is used in this case.
 
-            - BaseIndexEntry or compatible type
-                The only relevant information here Yis the path. The stage is ignored.
+            - :class:`~git.index.typ.BaseIndexEntry` or compatible type
+
+                The only relevant information here is the path. The stage is ignored.
 
         :param working_tree:
-            If True, the entry will also be removed from the working tree, physically
-            removing the respective file. This may fail if there are uncommitted changes
-            in it.
+            If ``True``, the entry will also be removed from the working tree,
+            physically removing the respective file. This may fail if there are
+            uncommitted changes in it.
 
         :param kwargs:
-            Additional keyword arguments to be passed to git-rm, such
-            as 'r' to allow recursive removal of
+            Additional keyword arguments to be passed to ``git rm``, such as ``r`` to
+            allow recursive removal.
 
         :return:
-            List(path_string, ...) list of repository relative paths that have
-            been removed effectively.
-            This is interesting to know in case you have provided a directory or
-            globs. Paths are relative to the repository.
+            List(path_string, ...) list of repository relative paths that have been
+            removed effectively.
+
+            This is interesting to know in case you have provided a directory or globs.
+            Paths are relative to the repository.
         """
         args = []
         if not working_tree:
@@ -1013,28 +1053,38 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         **kwargs: Any,
     ) -> List[Tuple[str, str]]:
         """Rename/move the items, whereas the last item is considered the destination of
-        the move operation. If the destination is a file, the first item (of two)
-        must be a file as well. If the destination is a directory, it may be preceded
-        by one or more directories or files.
+        the move operation.
+
+        If the destination is a file, the first item (of two) must be a file as well.
+
+        If the destination is a directory, it may be preceded by one or more directories
+        or files.
 
         The working tree will be affected in non-bare repositories.
 
-        :parma items:
+        :param items:
             Multiple types of items are supported, please see the :meth:`remove` method
             for reference.
+
         :param skip_errors:
-            If True, errors such as ones resulting from missing source files will
-            be skipped.
+            If ``True``, errors such as ones resulting from missing source files will be
+            skipped.
+
         :param kwargs:
-            Additional arguments you would like to pass to git-mv, such as dry_run
-            or force.
+            Additional arguments you would like to pass to ``git mv``, such as
+            ``dry_run`` or ``force``.
 
-        :return: List(tuple(source_path_string, destination_path_string), ...)
-            A list of pairs, containing the source file moved as well as its
-            actual destination. Relative to the repository root.
+        :return:
+            List(tuple(source_path_string, destination_path_string), ...)
 
-        :raise ValueError: If only one item was given
-        :raise GitCommandError: If git could not handle your request
+            A list of pairs, containing the source file moved as well as its actual
+            destination. Relative to the repository root.
+
+        :raise ValueError:
+            If only one item was given.
+
+        :raise git.exc.GitCommandError:
+            If git could not handle your request.
         """
         args = []
         if skip_errors:
@@ -1047,13 +1097,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         was_dry_run = kwargs.pop("dry_run", kwargs.pop("n", None))
         kwargs["dry_run"] = True
 
-        # First execute rename in dryrun so the command tells us what it actually does
+        # First execute rename in dry run so the command tells us what it actually does
         # (for later output).
         out = []
         mvlines = self.repo.git.mv(args, paths, **kwargs).splitlines()
 
-        # Parse result - first 0:n/2 lines are 'checking ', the remaining ones
-        # are the 'renaming' ones which we parse.
+        # Parse result - first 0:n/2 lines are 'checking ', the remaining ones are the
+        # 'renaming' ones which we parse.
         for ln in range(int(len(mvlines) / 2), len(mvlines)):
             tokens = mvlines[ln].split(" to ")
             assert len(tokens) == 2, "Too many tokens in %s" % mvlines[ln]
@@ -1066,7 +1116,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # Either prepare for the real run, or output the dry-run result.
         if was_dry_run:
             return out
-        # END handle dryrun
+        # END handle dry run
 
         # Now apply the actual operation.
         kwargs.pop("dry_run")
@@ -1085,17 +1135,22 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         commit_date: Union[datetime.datetime, str, None] = None,
         skip_hooks: bool = False,
     ) -> Commit:
-        """Commit the current default index file, creating a Commit object.
+        """Commit the current default index file, creating a
+        :class:`~git.objects.commit.Commit` object.
 
         For more information on the arguments, see
         :meth:`Commit.create_from_tree <git.objects.commit.Commit.create_from_tree>`.
 
-        :note: If you have manually altered the :attr:`entries` member of this instance,
-               don't forget to :meth:`write` your changes to disk beforehand.
-               Passing ``skip_hooks=True`` is the equivalent of using ``-n``
-               or ``--no-verify`` on the command line.
+        :note:
+            If you have manually altered the :attr:`entries` member of this instance,
+            don't forget to :meth:`write` your changes to disk beforehand.
 
-        :return: :class:`Commit` object representing the new commit
+        :note:
+            Passing ``skip_hooks=True`` is the equivalent of using ``-n`` or
+            ``--no-verify`` on the command line.
+
+        :return:
+            :class:`~git.objects.commit.Commit` object representing the new commit
         """
         if not skip_hooks:
             run_commit_hook("pre-commit", self)
@@ -1160,44 +1215,49 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         """Check out the given paths or all files from the version known to the index
         into the working tree.
 
-        :note: Be sure you have written pending changes using the :meth:`write` method
-            in case you have altered the entries dictionary directly.
+        :note:
+            Be sure you have written pending changes using the :meth:`write` method in
+            case you have altered the entries dictionary directly.
 
         :param paths:
-            If None, all paths in the index will be checked out. Otherwise an iterable
-            of relative or absolute paths or a single path pointing to files or directories
-            in the index is expected.
+            If ``None``, all paths in the index will be checked out.
+            Otherwise an iterable of relative or absolute paths or a single path
+            pointing to files or directories in the index is expected.
 
         :param force:
-            If True, existing files will be overwritten even if they contain local modifications.
-            If False, these will trigger a :class:`CheckoutError`.
+            If ``True``, existing files will be overwritten even if they contain local
+            modifications.
+            If ``False``, these will trigger a :class:`~git.exc.CheckoutError`.
 
         :param fprogress:
-            see :func:`IndexFile.add` for signature and explanation.
-            The provided progress information will contain None as path and item if no
-            explicit paths are given. Otherwise progress information will be send
+            See :meth:`IndexFile.add` for signature and explanation.
+
+            The provided progress information will contain ``None`` as path and item if
+            no explicit paths are given. Otherwise progress information will be send
             prior and after a file has been checked out.
 
         :param kwargs:
-            Additional arguments to be passed to git-checkout-index.
+            Additional arguments to be passed to ``git checkout-index``.
 
         :return:
-            iterable yielding paths to files which have been checked out and are
+            Iterable yielding paths to files which have been checked out and are
             guaranteed to match the version stored in the index.
 
-        :raise exc.CheckoutError:
-            If at least one file failed to be checked out. This is a summary,
-            hence it will checkout as many files as it can anyway.
-            If one of files or directories do not exist in the index
-            ( as opposed to the  original git command who ignores them ).
-            Raise GitCommandError if error lines could not be parsed - this truly is
-            an exceptional state.
+        :raise git.exc.CheckoutError:
+            * If at least one file failed to be checked out. This is a summary, hence it
+              will checkout as many files as it can anyway.
+            * If one of files or directories do not exist in the index (as opposed to
+              the original git command, which ignores them).
 
-        .. note:: The checkout is limited to checking out the files in the
-            index. Files which are not in the index anymore and exist in
-            the working tree will not be deleted. This behaviour is fundamentally
-            different to *head.checkout*, i.e. if you want git-checkout like behaviour,
-            use head.checkout instead of index.checkout.
+        :raise git.exc.GitCommandError:
+            If error lines could not be parsed - this truly is an exceptional state.
+
+        :note:
+            The checkout is limited to checking out the files in the index. Files which
+            are not in the index anymore and exist in the working tree will not be
+            deleted. This behaviour is fundamentally different to ``head.checkout``,
+            i.e. if you want ``git checkout`` like behaviour, use ``head.checkout``
+            instead of ``index.checkout``.
         """
         args = ["--index"]
         if force:
@@ -1276,9 +1336,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             if isinstance(paths, str):
                 paths = [paths]
 
-            # Make sure we have our entries loaded before we start checkout_index,
-            # which will hold a lock on it. We try to get the lock as well during
-            # our entries initialization.
+            # Make sure we have our entries loaded before we start checkout_index, which
+            # will hold a lock on it. We try to get the lock as well during our entries
+            # initialization.
             self.entries
 
             args.append("--stdin")
@@ -1339,40 +1399,51 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         head: bool = False,
         **kwargs: Any,
     ) -> "IndexFile":
-        """Reset the index to reflect the tree at the given commit. This will not
-        adjust our HEAD reference as opposed to HEAD.reset by default.
+        """Reset the index to reflect the tree at the given commit. This will not adjust
+        our HEAD reference by default, as opposed to
+        :meth:`HEAD.reset <git.refs.head.HEAD.reset>`.
 
         :param commit:
-            Revision, Reference or Commit specifying the commit we should represent.
-            If you want to specify a tree only, use IndexFile.from_tree and overwrite
-            the default index.
+            Revision, :class:`~git.refs.reference.Reference` or
+            :class:`~git.objects.commit.Commit` specifying the commit we should
+            represent.
+
+            If you want to specify a tree only, use :meth:`IndexFile.from_tree` and
+            overwrite the default index.
 
         :param working_tree:
-            If True, the files in the working tree will reflect the changed index.
-            If False, the working tree will not be touched
+            If ``True``, the files in the working tree will reflect the changed index.
+            If ``False``, the working tree will not be touched.
             Please note that changes to the working copy will be discarded without
-            warning !
+            warning!
 
         :param head:
-            If True, the head will be set to the given commit. This is False by default,
-            but if True, this method behaves like HEAD.reset.
+            If ``True``, the head will be set to the given commit. This is ``False`` by
+            default, but if ``True``, this method behaves like
+            :meth:`HEAD.reset <git.refs.head.HEAD.reset>`.
 
-        :param paths: if given as an iterable of absolute or repository-relative paths,
-            only these will be reset to their state at the given commit-ish.
+        :param paths:
+            If given as an iterable of absolute or repository-relative paths, only these
+            will be reset to their state at the given commit-ish.
             The paths need to exist at the commit, otherwise an exception will be
             raised.
 
         :param kwargs:
-            Additional keyword arguments passed to git-reset
+            Additional keyword arguments passed to ``git reset``.
 
-        .. note:: IndexFile.reset, as opposed to HEAD.reset, will not delete any files
-            in order to maintain a consistent working tree. Instead, it will just
-            check out the files according to their state in the index.
-            If you want git-reset like behaviour, use *HEAD.reset* instead.
+        :note:
+            :meth:`IndexFile.reset`, as opposed to
+            :meth:`HEAD.reset <git.refs.head.HEAD.reset>`, will not delete any files in
+            order to maintain a consistent working tree. Instead, it will just check out
+            the files according to their state in the index.
+            If you want ``git reset``-like behaviour, use
+            :meth:`HEAD.reset <git.refs.head.HEAD.reset>` instead.
 
-        :return: self"""
-        # What we actually want to do is to merge the tree into our existing
-        # index, which is what git-read-tree does.
+        :return:
+            self
+        """
+        # What we actually want to do is to merge the tree into our existing index,
+        # which is what git-read-tree does.
         new_inst = type(self).from_tree(self.repo, commit)
         if not paths:
             self.entries = new_inst.entries
@@ -1413,14 +1484,15 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         create_patch: bool = False,
         **kwargs: Any,
     ) -> git_diff.DiffIndex:
-        """Diff this index against the working copy or a Tree or Commit object.
+        """Diff this index against the working copy or a :class:`~git.objects.tree.Tree`
+        or :class:`~git.objects.commit.Commit` object.
 
         For documentation of the parameters and return values, see
         :meth:`Diffable.diff <git.diff.Diffable.diff>`.
 
         :note:
-            Will only work with indices that represent the default git index as
-            they have not been initialized with a stream.
+            Will only work with indices that represent the default git index as they
+            have not been initialized with a stream.
         """
 
         # Only run if we are the default repository index.
@@ -1430,9 +1502,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if other is self.Index:
             return git_diff.DiffIndex()
 
-        # Index against anything but None is a reverse diff with the respective
-        # item. Handle existing -R flags properly. Transform strings to the object
-        # so that we can call diff on it.
+        # Index against anything but None is a reverse diff with the respective item.
+        # Handle existing -R flags properly.
+        # Transform strings to the object so that we can call diff on it.
         if isinstance(other, str):
             other = self.repo.rev_parse(other)
         # END object conversion

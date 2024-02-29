@@ -37,7 +37,9 @@ __all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):
-    """An Object which may be Blobs, Trees, Commits and Tags."""
+    """An Object which may be :class:`~git.objects.blob.Blob`,
+    :class:`~git.objects.tree.Tree`, :class:`~git.objects.commit.Commit` or
+    `~git.objects.tag.TagObject`."""
 
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
@@ -55,11 +57,14 @@ class Object(LazyMixin):
 
     def __init__(self, repo: "Repo", binsha: bytes):
         """Initialize an object by identifying it by its binary sha.
-        All keyword arguments will be set on demand if None.
 
-        :param repo: repository this object is located in
+        All keyword arguments will be set on demand if ``None``.
 
-        :param binsha: 20 byte SHA1
+        :param repo:
+            Repository this object is located in.
+
+        :param binsha:
+            20 byte SHA1
         """
         super().__init__()
         self.repo = repo
@@ -72,24 +77,28 @@ class Object(LazyMixin):
     @classmethod
     def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> Commit_ish:
         """
-        :return: New :class:`Object`` instance of a type appropriate to the object type
-            behind `id`. The id of the newly created object will be a binsha even though
-            the input id may have been a Reference or Rev-Spec.
+        :return:
+            New :class:`Object` instance of a type appropriate to the object type behind
+            `id`. The id of the newly created object will be a binsha even though the
+            input id may have been a `~git.refs.reference.Reference` or rev-spec.
 
-        :param id: reference, rev-spec, or hexsha
+        :param id:
+            :class:`~git.refs.reference.Reference`, rev-spec, or hexsha.
 
-        :note: This cannot be a ``__new__`` method as it would always call
-            :meth:`__init__` with the input id which is not necessarily a binsha.
+        :note:
+            This cannot be a ``__new__`` method as it would always call :meth:`__init__`
+            with the input id which is not necessarily a binsha.
         """
         return repo.rev_parse(str(id))
 
     @classmethod
     def new_from_sha(cls, repo: "Repo", sha1: bytes) -> Commit_ish:
         """
-        :return: new object instance of a type appropriate to represent the given
-            binary sha1
+        :return:
+            New object instance of a type appropriate to represent the given binary sha1
 
-        :param sha1: 20 byte binary sha1
+        :param sha1:
+            20 byte binary sha1.
         """
         if sha1 == cls.NULL_BIN_SHA:
             # The NULL binsha is always the root commit.
@@ -110,13 +119,13 @@ class Object(LazyMixin):
             super()._set_cache_(attr)
 
     def __eq__(self, other: Any) -> bool:
-        """:return: True if the objects have the same SHA1"""
+        """:return: ``True`` if the objects have the same SHA1"""
         if not hasattr(other, "binsha"):
             return False
         return self.binsha == other.binsha
 
     def __ne__(self, other: Any) -> bool:
-        """:return: True if the objects do not have the same SHA1"""
+        """:return: ``True`` if the objects do not have the same SHA1"""
         if not hasattr(other, "binsha"):
             return True
         return self.binsha != other.binsha
@@ -126,11 +135,11 @@ class Object(LazyMixin):
         return hash(self.binsha)
 
     def __str__(self) -> str:
-        """:return: string of our SHA1 as understood by all git commands"""
+        """:return: String of our SHA1 as understood by all git commands"""
         return self.hexsha
 
     def __repr__(self) -> str:
-        """:return: string with pythonic representation of our object"""
+        """:return: String with pythonic representation of our object"""
         return '<git.%s "%s">' % (self.__class__.__name__, self.hexsha)
 
     @property
@@ -142,17 +151,22 @@ class Object(LazyMixin):
     @property
     def data_stream(self) -> "OStream":
         """
-        :return: File Object compatible stream to the uncompressed raw data of the object
+        :return:
+            File-object compatible stream to the uncompressed raw data of the object
 
-        :note: Returned streams must be read in order.
+        :note:
+            Returned streams must be read in order.
         """
         return self.repo.odb.stream(self.binsha)
 
     def stream_data(self, ostream: "OStream") -> "Object":
         """Write our data directly to the given output stream.
 
-        :param ostream: File object compatible stream object.
-        :return: self
+        :param ostream:
+            File-object compatible stream object.
+
+        :return:
+            self
         """
         istream = self.repo.odb.stream(self.binsha)
         stream_copy(istream, ostream)
@@ -160,8 +174,9 @@ class Object(LazyMixin):
 
 
 class IndexObject(Object):
-    """Base for all objects that can be part of the index file, namely Tree, Blob and
-    SubModule objects."""
+    """Base for all objects that can be part of the index file, namely
+    :class:`~git.objects.tree.Tree`, :class:`~git.objects.blob.Blob` and
+    :class:`~git.objects.submodule.base.Submodule` objects."""
 
     __slots__ = ("path", "mode")
 
@@ -175,16 +190,22 @@ class IndexObject(Object):
         mode: Union[None, int] = None,
         path: Union[None, PathLike] = None,
     ) -> None:
-        """Initialize a newly instanced IndexObject.
+        """Initialize a newly instanced :class:`IndexObject`.
 
-        :param repo: The :class:`~git.repo.base.Repo` we are located in.
-        :param binsha: 20 byte sha1.
+        :param repo:
+            The :class:`~git.repo.base.Repo` we are located in.
+
+        :param binsha:
+            20 byte sha1.
+
         :param mode:
-            The stat compatible file mode as int, use the :mod:`stat` module to evaluate
-            the information.
+            The stat-compatible file mode as :class:`int`.
+            Use the :mod:`stat` module to evaluate the information.
+
         :param path:
             The path to the file in the file system, relative to the git repository
             root, like ``file.ext`` or ``folder/other.ext``.
+
         :note:
             Path may not be set if the index object has been created directly, as it
             cannot be retrieved without knowing the parent tree.
@@ -198,8 +219,8 @@ class IndexObject(Object):
     def __hash__(self) -> int:
         """
         :return:
-            Hash of our path as index items are uniquely identifiable by path, not
-            by their data!
+            Hash of our path as index items are uniquely identifiable by path, not by
+            their data!
         """
         return hash(self.path)
 
@@ -226,7 +247,8 @@ class IndexObject(Object):
             Absolute path to this index object in the file system (as opposed to the
             :attr:`path` field which is a path relative to the git repository).
 
-            The returned path will be native to the system and contains '\' on Windows.
+            The returned path will be native to the system and contains ``\`` on
+            Windows.
         """
         if self.repo.working_tree_dir is not None:
             return join_path_native(self.repo.working_tree_dir, self.path)

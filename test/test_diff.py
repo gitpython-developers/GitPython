@@ -271,18 +271,18 @@ class TestDiff(TestBase):
         self.assertEqual(res[10].b_rawpath, b"path/\x80-invalid-unicode-path.txt")
 
         # The "Moves"
-        # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
-        # verifying that it's not "a/a/" that shows up, see the fixture data.
-        self.assertEqual(res[11].a_path, "a/with spaces")  # NOTE: path a/ here legit!
-        self.assertEqual(res[11].b_path, "b/with some spaces")  # NOTE: path b/ here legit!
+        # NOTE: The path prefixes "a/" and "b/" here are legit! We're actually verifying
+        # that it's not "a/a/" that shows up; see the fixture data.
+        self.assertEqual(res[11].a_path, "a/with spaces")  # NOTE: path "a/"" legit!
+        self.assertEqual(res[11].b_path, "b/with some spaces")  # NOTE: path "b/"" legit!
         self.assertEqual(res[12].a_path, "a/ending in a space ")
         self.assertEqual(res[12].b_path, "b/ending with space ")
         self.assertEqual(res[13].a_path, 'a/"with-quotes"')
         self.assertEqual(res[13].b_path, 'b/"with even more quotes"')
 
     def test_diff_patch_format(self):
-        # Test all of the 'old' format diffs for completeness - it should at least
-        # be able to deal with it.
+        # Test all of the 'old' format diffs for completeness - it should at least be
+        # able to deal with it.
         fixtures = (
             "diff_2",
             "diff_2f",
@@ -345,8 +345,9 @@ class TestDiff(TestBase):
         repo.create_tag("2")
 
         diff = repo.commit("1").diff(repo.commit("2"))[0]
-        # If diff is unable to find the commit hashes (looks in wrong repo) the *_blob.size
-        # property will be a string containing exception text, an int indicates success.
+        # If diff is unable to find the commit hashes (looks in wrong repo) the
+        # *_blob.size property will be a string containing exception text, an int
+        # indicates success.
         self.assertIsInstance(diff.a_blob.size, int)
         self.assertIsInstance(diff.b_blob.size, int)
 
@@ -392,9 +393,9 @@ class TestDiff(TestBase):
             # END for each other side
         # END for each commit
 
-        # Assert that we could always find at least one instance of the members we
-        # can iterate in the diff index - if not this indicates its not working correctly
-        # or our test does not span the whole range of possibilities.
+        # Assert that we could always find at least one instance of the members we can
+        # iterate in the diff index - if not this indicates its not working correctly or
+        # our test does not span the whole range of possibilities.
         for key, value in assertion_map.items():
             self.assertIsNotNone(value, "Did not find diff for %s" % key)
         # END for each iteration type

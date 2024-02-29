@@ -346,17 +346,20 @@ class TestBase(TestCase):
     """Base class providing default functionality to all tests such as:
 
     - Utility functions provided by the TestCase base of the unittest method such as::
+
         self.fail("todo")
         self.assertRaises(...)
 
     - Class level repository which is considered read-only as it is shared among
       all test cases in your type.
+
       Access it using::
-      self.rorepo  # 'ro' stands for read-only
+
+        self.rorepo  # 'ro' stands for read-only
 
       The rorepo is in fact your current project's git repo. If you refer to specific
-      shas for your objects, be sure you choose some that are part of the immutable portion
-      of the project history (so that tests don't fail for others).
+      shas for your objects, be sure you choose some that are part of the immutable
+      portion of the project history (so that tests don't fail for others).
     """
 
     def _small_repo_url(self):
@@ -383,8 +386,8 @@ class TestBase(TestCase):
 
     def _make_file(self, rela_path, data, repo=None):
         """
-        Create a file at the given path relative to our repository, filled
-        with the given data.
+        Create a file at the given path relative to our repository, filled with the
+        given data.
 
         :return: An absolute path to the created file.
         """

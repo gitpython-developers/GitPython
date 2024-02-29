@@ -14,8 +14,8 @@ from .submodule.root import *  # noqa: F403
 from .tag import *  # noqa: F403
 from .tree import *  # noqa: F403
 
-# Fix import dependency - add IndexObject to the util module, so that it can be
-# imported by the submodule.base.
+# Fix import dependency - add IndexObject to the util module, so that it can be imported
+# by the submodule.base.
 smutil.IndexObject = IndexObject  # type: ignore[attr-defined]  # noqa: F405
 smutil.Object = Object  # type: ignore[attr-defined]  # noqa: F405
 del smutil

@@ -1,7 +1,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Standalone functions to accompany the index implementation and make it more versatile."""
+"""Standalone functions to accompany the index implementation and make it more
+versatile."""
 
 from io import BytesIO
 import os
@@ -78,10 +79,16 @@ def _has_file_extension(path: str) -> str:
 def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     """Run the commit hook of the given name. Silently ignore hooks that do not exist.
 
-    :param name: name of hook, like 'pre-commit'
-    :param index: IndexFile instance
-    :param args: Arguments passed to hook file
-    :raises HookExecutionError:
+    :param name:
+        Name of hook, like ``pre-commit``.
+
+    :param index:
+        :class:`~git.index.base.IndexFile` instance.
+
+    :param args:
+        Arguments passed to hook file.
+
+    :raise git.exc.HookExecutionError:
     """
     hp = hook_path(name, index.repo.git_dir)
     if not os.access(hp, os.X_OK):
@@ -121,8 +128,8 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
 
 
 def stat_mode_to_index_mode(mode: int) -> int:
-    """Convert the given mode from a stat call to the corresponding index mode
-    and return it."""
+    """Convert the given mode from a stat call to the corresponding index mode and
+    return it."""
     if S_ISLNK(mode):  # symlinks
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:  # submodules
@@ -138,16 +145,19 @@ def write_cache(
 ) -> None:
     """Write the cache represented by entries to a stream.
 
-    :param entries: **sorted** list of entries
+    :param entries:
+        **Sorted** list of entries.
 
-    :param stream: stream to wrap into the AdapterStreamCls - it is used for
-        final output.
+    :param stream:
+        Stream to wrap into the AdapterStreamCls - it is used for final output.
 
-    :param ShaStreamCls: Type to use when writing to the stream. It produces a sha
-        while writing to it, before the data is passed on to the wrapped stream
+    :param ShaStreamCls:
+        Type to use when writing to the stream. It produces a sha while writing to it,
+        before the data is passed on to the wrapped stream.
 
-    :param extension_data: any kind of data to write as a trailer, it must begin
-        a 4 byte identifier, followed by its size (4 bytes).
+    :param extension_data:
+        Any kind of data to write as a trailer, it must begin a 4 byte identifier,
+        followed by its size (4 bytes).
     """
     # Wrap the stream into a compatible writer.
     stream_sha = ShaStreamCls(stream)
@@ -197,7 +207,7 @@ def write_cache(
 
 
 def read_header(stream: IO[bytes]) -> Tuple[int, int]:
-    """Return tuple(version_long, num_entries) from the given stream"""
+    """Return tuple(version_long, num_entries) from the given stream."""
     type_id = stream.read(4)
     if type_id != b"DIRC":
         raise AssertionError("Invalid index file header: %r" % type_id)
@@ -210,9 +220,13 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
 
 
 def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, int]:
-    """:return: Key suitable to be used for the index.entries dictionary
+    """
+    :return:
+        Key suitable to be used for the
+        :attr:`index.entries <git.index.base.IndexFile.entries>` dictionary.
 
-    :param entry: One instance of type BaseIndexEntry or the path and the stage
+    :param entry:
+        One instance of type BaseIndexEntry or the path and the stage.
     """
 
     # def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
@@ -234,12 +248,14 @@ def read_cache(
 ) -> Tuple[int, Dict[Tuple[PathLike, int], "IndexEntry"], bytes, bytes]:
     """Read a cache file from the given stream.
 
-    :return: tuple(version, entries_dict, extension_data, content_sha)
+    :return:
+        tuple(version, entries_dict, extension_data, content_sha)
 
-      * version is the integer version number.
-      * entries dict is a dictionary which maps IndexEntry instances to a path at a stage.
-      * extension_data is '' or 4 bytes of type + 4 bytes of size + size bytes.
-      * content_sha is a 20 byte sha on all cache file contents.
+        * *version* is the integer version number.
+        * *entries_dict* is a dictionary which maps IndexEntry instances to a path at a
+          stage.
+        * *extension_data* is ``""`` or 4 bytes of type + 4 bytes of size + size bytes.
+        * *content_sha* is a 20 byte sha on all cache file contents.
     """
     version, num_entries = read_header(stream)
     count = 0
@@ -285,15 +301,25 @@ def read_cache(
 def write_tree_from_cache(
     entries: List[IndexEntry], odb: "GitCmdObjectDB", sl: slice, si: int = 0
 ) -> Tuple[bytes, List["TreeCacheTup"]]:
-    """Create a tree from the given sorted list of entries and put the respective
+    R"""Create a tree from the given sorted list of entries and put the respective
     trees into the given object database.
 
-    :param entries: **Sorted** list of IndexEntries
-    :param odb: Object database to store the trees in
-    :param si: Start index at which we should start creating subtrees
-    :param sl: Slice indicating the range we should process on the entries list
-    :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
-        tree entries being a tuple of hexsha, mode, name
+    :param entries:
+        **Sorted** list of :class:`~git.index.typ.IndexEntry`\s.
+
+    :param odb:
+        Object database to store the trees in.
+
+    :param si:
+        Start index at which we should start creating subtrees.
+
+    :param sl:
+        Slice indicating the range we should process on the entries list.
+
+    :return:
+        tuple(binsha, list(tree_entry, ...))
+
+        A tuple of a sha and a list of tree entries being a tuple of hexsha, mode, name.
     """
     tree_items: List["TreeCacheTup"] = []
 
@@ -346,15 +372,17 @@ def _tree_entry_to_baseindexentry(tree_entry: "TreeCacheTup", stage: int) -> Bas
 
 
 def aggressive_tree_merge(odb: "GitCmdObjectDB", tree_shas: Sequence[bytes]) -> List[BaseIndexEntry]:
-    """
-    :return: List of BaseIndexEntries representing the aggressive merge of the given
-        trees. All valid entries are on stage 0, whereas the conflicting ones are left
-        on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree,
-        2 to our tree and 3 to 'their' tree.
+    R"""
+    :return:
+        List of :class:`~git.index.typ.BaseIndexEntry`\s representing the aggressive
+        merge of the given trees. All valid entries are on stage 0, whereas the
+        conflicting ones are left on stage 1, 2 or 3, whereas stage 1 corresponds to the
+        common ancestor tree, 2 to our tree and 3 to 'their' tree.
 
-    :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas.
-        If 1 or two, the entries will effectively correspond to the last given tree.
-        If 3 are given, a 3 way merge is performed.
+    :param tree_shas:
+        1, 2 or 3 trees as identified by their binary 20 byte shas. If 1 or two, the
+        entries will effectively correspond to the last given tree. If 3 are given, a 3
+        way merge is performed.
     """
     out: List[BaseIndexEntry] = []
 

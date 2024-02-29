@@ -34,8 +34,8 @@ unpack = struct.unpack
 
 
 class TemporaryFileSwap:
-    """Utility class moving a file to a temporary location within the same directory
-    and moving it back on to where on object deletion."""
+    """Utility class moving a file to a temporary location within the same directory and
+    moving it back on to where on object deletion."""
 
     __slots__ = ("file_path", "tmp_file_path")
 
@@ -65,13 +65,10 @@ class TemporaryFileSwap:
 
 
 def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
-    """Decorator for functions that alter the index using the git command. This would
-    invalidate our possibly existing entries dictionary which is why it must be
-    deleted to allow it to be lazily reread later.
+    """Decorator for functions that alter the index using the git command.
 
-    :note:
-        This decorator will not be required once all functions are implemented
-        natively which in fact is possible, but probably not feasible performance wise.
+    When a git command alters the index, this invalidates our possibly existing entries
+    dictionary, which is why it must be deleted to allow it to be lazily reread later.
     """
 
     @wraps(func)

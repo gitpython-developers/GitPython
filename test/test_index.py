@@ -219,8 +219,7 @@ class TestIndex(TestBase):
         self._fprogress_map[path] = curval + 1
 
     def _fprogress_add(self, path, done, item):
-        """Called as progress func - we keep track of the proper
-        call order"""
+        """Called as progress func - we keep track of the proper call order."""
         assert item is not None
         self._fprogress(path, done, item)
 
@@ -385,17 +384,17 @@ class TestIndex(TestBase):
 
         # FAKE MERGE
         #############
-        # Add a change with a NULL sha that should conflict with next_commit. We
-        # pretend there was a change, but we do not even bother adding a proper
-        # sha for it (which makes things faster of course).
+        # Add a change with a NULL sha that should conflict with next_commit. We pretend
+        # there was a change, but we do not even bother adding a proper sha for it
+        # (which makes things faster of course).
         manifest_fake_entry = BaseIndexEntry((manifest_entry[0], b"\0" * 20, 0, manifest_entry[3]))
         # Try write flag.
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
-        # Add actually resolves the null-hex-sha for us as a feature, but we can
-        # edit the index manually.
+        # Add actually resolves the null-hex-sha for us as a feature, but we can edit
+        # the index manually.
         assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA
-        # We must operate on the same index for this! It's a bit problematic as
-        # it might confuse people.
+        # We must operate on the same index for this! It's a bit problematic as it might
+        # confuse people.
         index = rw_repo.index
         index.entries[manifest_key] = IndexEntry.from_base(manifest_fake_entry)
         index.write()
@@ -404,19 +403,20 @@ class TestIndex(TestBase):
         # Write an unchanged index (just for the fun of it).
         rw_repo.index.write()
 
-        # A three way merge would result in a conflict and fails as the command will
-        # not overwrite any entries in our index and hence leave them unmerged. This is
+        # A three way merge would result in a conflict and fails as the command will not
+        # overwrite any entries in our index and hence leave them unmerged. This is
         # mainly a protection feature as the current index is not yet in a tree.
         self.assertRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
 
-        # The only way to get the merged entries is to safe the current index away into a tree,
-        # which is like a temporary commit for us. This fails as well as the NULL sha does not
-        # have a corresponding object.
+        # The only way to get the merged entries is to safe the current index away into
+        # a tree, which is like a temporary commit for us. This fails as well as the
+        # NULL sha does not have a corresponding object.
         # NOTE: missing_ok is not a kwarg anymore, missing_ok is always true.
         # self.assertRaises(GitCommandError, index.write_tree)
 
-        # If missing objects are okay, this would work though (they are always okay now).
-        # As we can't read back the tree with NULL_SHA, we rather set it to something else.
+        # If missing objects are okay, this would work though (they are always okay
+        # now). As we can't read back the tree with NULL_SHA, we rather set it to
+        # something else.
         index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])
         tree = index.write_tree()
 
@@ -428,7 +428,7 @@ class TestIndex(TestBase):
 
     @with_rw_repo("0.1.6")
     def test_index_file_diffing(self, rw_repo):
-        # Default Index instance points to our index.
+        # Default IndexFile instance points to our index.
         index = IndexFile(rw_repo)
         assert index.path is not None
         assert len(index.entries)
@@ -439,8 +439,8 @@ class TestIndex(TestBase):
         # Could sha it, or check stats.
 
         # Test diff.
-        # Resetting the head will leave the index in a different state, and the
-        # diff will yield a few changes.
+        # Resetting the head will leave the index in a different state, and the diff
+        # will yield a few changes.
         cur_head_commit = rw_repo.head.reference.commit
         rw_repo.head.reset("HEAD~6", index=True, working_tree=False)
 
@@ -956,10 +956,10 @@ class TestIndex(TestBase):
 
     @with_rw_repo("HEAD", bare=True)
     def test_index_bare_add(self, rw_bare_repo):
-        # Something is wrong after cloning to a bare repo, reading the
-        # property rw_bare_repo.working_tree_dir will return '/tmp'
-        # instead of throwing the Exception we are expecting. This is
-        # a quick hack to make this test fail when expected.
+        # Something is wrong after cloning to a bare repo, reading the property
+        # rw_bare_repo.working_tree_dir will return '/tmp' instead of throwing the
+        # Exception we are expecting. This is a quick hack to make this test fail when
+        # expected.
         assert rw_bare_repo.working_tree_dir is None
         assert rw_bare_repo.bare
         contents = b"This is a BytesIO file"
@@ -984,7 +984,8 @@ class TestIndex(TestBase):
 
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
-        # NOTE: fp is not a Unicode object in Python 2 (which is the source of the problem).
+        # NOTE: fp is not a Unicode object in Python 2
+        # (which is the source of the problem).
         fp = osp.join(rw_dir, "ø.txt")
         with open(fp, "wb") as fs:
             fs.write("content of ø".encode("utf-8"))

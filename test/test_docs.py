@@ -19,8 +19,9 @@ class Tutorials(TestBase):
     def tearDown(self):
         gc.collect()
 
-    # ACTUALLY skipped by git.util.rmtree (in local onerror function), from the last call to it via
-    # git.objects.submodule.base.Submodule.remove (at "handle separate bare repository"), line 1062.
+    # ACTUALLY skipped by git.util.rmtree (in local onerror function), from the last
+    # call to it via git.objects.submodule.base.Submodule.remove
+    # (at "handle separate bare repository"), line 1062.
     #
     # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
@@ -31,8 +32,8 @@ class Tutorials(TestBase):
         from git import Repo
 
         # rorepo is a Repo instance pointing to the git-python repository.
-        # For all you know, the first argument to Repo is a path to the repository
-        # you want to work with.
+        # For all you know, the first argument to Repo is a path to the repository you
+        # want to work with.
         repo = Repo(self.rorepo.working_tree_dir)
         assert not repo.bare
         # ![1-test_init_repo_object]
@@ -149,8 +150,8 @@ class Tutorials(TestBase):
         assert origin.exists()
         for fetch_info in origin.fetch(progress=MyProgressPrinter()):
             print("Updated %s to %s" % (fetch_info.ref, fetch_info.commit))
-        # Create a local branch at the latest fetched master. We specify the name statically, but you have all
-        # information to do it programmatically as well.
+        # Create a local branch at the latest fetched master. We specify the name
+        # statically, but you have all information to do it programmatically as well.
         bare_master = bare_repo.create_head("master", origin.refs.master)
         bare_repo.head.set_reference(bare_master)
         assert not bare_repo.delete_remote(origin).exists()
@@ -188,9 +189,9 @@ class Tutorials(TestBase):
         # submodules
 
         # [14-test_init_repo_object]
-        # Create a new submodule and check it out on the spot, setup to track master branch of `bare_repo`.
-        # As our GitPython repository has submodules already that point to GitHub, make sure we don't
-        # interact with them.
+        # Create a new submodule and check it out on the spot, setup to track master
+        # branch of `bare_repo`. As our GitPython repository has submodules already that
+        # point to GitHub, make sure we don't interact with them.
         for sm in cloned_repo.submodules:
             assert not sm.remove().exists()  # after removal, the sm doesn't exist anymore
         sm = cloned_repo.create_submodule("mysubrepo", "path/to/subrepo", url=bare_repo.git_dir, branch="master")
@@ -424,8 +425,8 @@ class Tutorials(TestBase):
         with origin.config_writer as cw:
             cw.set("pushurl", "other_url")
 
-        # Please note that in Python 2, writing origin.config_writer.set(...) is totally safe.
-        # In py3 __del__ calls can be delayed, thus not writing changes in time.
+        # Please note that in Python 2, writing origin.config_writer.set(...) is totally
+        # safe. In py3 __del__ calls can be delayed, thus not writing changes in time.
         # ![26-test_references_and_objects]
 
         # [27-test_references_and_objects]
@@ -462,7 +463,8 @@ class Tutorials(TestBase):
         # ![29-test_references_and_objects]
 
         # [30-test_references_and_objects]
-        # Check out the branch using git-checkout. It will fail as the working tree appears dirty.
+        # Check out the branch using git-checkout.
+        # It will fail as the working tree appears dirty.
         self.assertRaises(git.GitCommandError, repo.heads.master.checkout)
         repo.heads.past_branch.checkout()
         # ![30-test_references_and_objects]

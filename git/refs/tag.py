@@ -1,6 +1,13 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+"""Provides a :class:`~git.refs.reference.Reference`-based type for lightweight tags.
+
+This defines the :class:`TagReference` class (and its alias :class:`Tag`), which
+represents lightweight tags. For annotated tags (which are git objects), see the
+:mod:`git.objects.tag` module.
+"""
+
 from .reference import Reference
 
 __all__ = ["TagReference", "Tag"]
@@ -43,7 +50,8 @@ class TagReference(Reference):
     def commit(self) -> "Commit":  # type: ignore[override]  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
-        :raise ValueError: If the tag points to a tree or blob
+        :raise ValueError:
+            If the tag points to a tree or blob.
         """
         obj = self.object
         while obj.type != "commit":
@@ -63,8 +71,10 @@ class TagReference(Reference):
     @property
     def tag(self) -> Union["TagObject", None]:
         """
-        :return: Tag object this tag ref points to or None in case
-            we are a lightweight tag"""
+        :return:
+            Tag object this tag ref points to, or ``None`` in case we are a lightweight
+            tag
+        """
         obj = self.object
         if obj.type == "tag":
             return obj
@@ -87,31 +97,36 @@ class TagReference(Reference):
     ) -> "TagReference":
         """Create a new tag reference.
 
+        :param repo:
+            The :class:`~git.repo.base.Repo` to create the tag in.
+
         :param path:
             The name of the tag, e.g. ``1.0`` or ``releases/1.0``.
             The prefix ``refs/tags`` is implied.
 
-        :param ref:
+        :param reference:
             A reference to the :class:`~git.objects.base.Object` you want to tag.
-            The Object can be a commit, tree or blob.
+            The referenced object can be a commit, tree, or blob.
 
         :param logmsg:
-            If not None, the message will be used in your tag object. This will also
-            create an additional tag object that allows to obtain that information, e.g.::
+            If not ``None``, the message will be used in your tag object. This will also
+            create an additional tag object that allows to obtain that information,
+            e.g.::
 
                 tagref.tag.message
 
         :param message:
-            Synonym for the `logmsg` parameter.
-            Included for backwards compatibility. `logmsg` takes precedence if both are passed.
+            Synonym for the `logmsg` parameter. Included for backwards compatibility.
+            `logmsg` takes precedence if both are passed.
 
         :param force:
-            If True, force creation of a tag even though that tag already exists.
+            If ``True``, force creation of a tag even though that tag already exists.
 
         :param kwargs:
-            Additional keyword arguments to be passed to git-tag.
+            Additional keyword arguments to be passed to ``git tag``.
 
-        :return: A new TagReference.
+        :return:
+            A new :class:`TagReference`.
         """
         if "ref" in kwargs and kwargs["ref"]:
             reference = kwargs["ref"]

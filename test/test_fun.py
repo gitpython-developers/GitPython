@@ -35,7 +35,8 @@ class TestFun(TestBase):
         # END assert entry matches fully
 
     def test_aggressive_tree_merge(self):
-        # Head tree with additions, removals and modification compared to its predecessor.
+        # Head tree with additions, removals and modification compared to its
+        # predecessor.
         odb = self.rorepo.odb
         HC = self.rorepo.commit("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
         H = HC.tree
