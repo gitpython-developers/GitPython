@@ -72,7 +72,8 @@ class TagReference(Reference):
     def tag(self) -> Union["TagObject", None]:
         """
         :return:
-            Tag object this tag ref points to or None in case we are a lightweight tag
+            Tag object this tag ref points to, or ``None`` in case we are a lightweight
+            tag
         """
         obj = self.object
         if obj.type == "tag":
@@ -96,13 +97,17 @@ class TagReference(Reference):
     ) -> "TagReference":
         """Create a new tag reference.
 
+        :param repo:
+            The :class:`~git.repo.base.Repo` to create the tag in.
+
         :param path:
             The name of the tag, e.g. ``1.0`` or ``releases/1.0``.
             The prefix ``refs/tags`` is implied.
 
-        :param ref:
+        :param reference:
             A reference to the :class:`~git.objects.base.Object` you want to tag.
-            The Object can be a commit, tree or blob.
+            The referenced object can be a :class:`~git.objects.commit.Commit`,
+            :class:`~git.objects.tree.Tree`, or :class:`~git.objects.blob.Blob`.
 
         :param logmsg:
             If not None, the message will be used in your tag object. This will also
