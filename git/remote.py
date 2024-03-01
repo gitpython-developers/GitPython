@@ -338,9 +338,10 @@ class FetchInfo(IterableObj):
 
     @classmethod
     def refresh(cls) -> Literal[True]:
-        """This gets called by the :func:`git.refresh` function.
+        """Update information about which ``git fetch`` flags are supported by the git
+        executable being used.
 
-        See the top level ``__init__.py``.
+        Called by the :func:`git.refresh` function in the top level ``__init__``.
         """
         # Clear the old values in _flag_map.
         with contextlib.suppress(KeyError):
