@@ -1018,6 +1018,7 @@ class TestRemote(TestBase):
         # Cleanup branch
         Head.delete(remote_repo, bad_branch_name)
 
+
 class TestTimeouts(TestBase):
     @with_rw_repo("HEAD", bare=False)
     def test_timeout_funcs(self, repo):
