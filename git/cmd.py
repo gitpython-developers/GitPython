@@ -1491,7 +1491,9 @@ class Git:
     def _parse_object_header(self, header_line: str) -> Tuple[str, str, int]:
         """
         :param header_line:
-            <hex_sha> type_string size_as_int
+            A line of the form::
+
+                <hex_sha> type_string size_as_int
 
         :return:
             (hex_sha, type_string, size_as_int)
@@ -1581,7 +1583,7 @@ class Git:
         return (hexsha, typename, size, data)
 
     def stream_object_data(self, ref: str) -> Tuple[str, str, int, "Git.CatFileContentStream"]:
-        """Similar to :meth:`get_object_header`, but returns the data as a stream.
+        """Similar to :meth:`get_object_data`, but returns the data as a stream.
 
         :return:
             (hexsha, type_string, size_as_int, stream)
