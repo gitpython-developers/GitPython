@@ -389,7 +389,9 @@ class Git:
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level ``__init__``).
+        """This gets called by the :func:`git.refresh` function.
+
+        See the top level ``__init__.py``.
 
         :param path:
             Optional path to the git executable. If not absolute, it is resolved

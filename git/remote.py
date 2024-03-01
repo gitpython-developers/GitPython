@@ -338,7 +338,10 @@ class FetchInfo(IterableObj):
 
     @classmethod
     def refresh(cls) -> Literal[True]:
-        """This gets called by the refresh function (see the top level ``__init__``)."""
+        """This gets called by the :func:`git.refresh` function.
+
+        See the top level ``__init__.py``.
+        """
         # Clear the old values in _flag_map.
         with contextlib.suppress(KeyError):
             del cls._flag_map["t"]
