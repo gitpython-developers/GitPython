@@ -230,6 +230,30 @@ Repo.Functions
    :undoc-members:
    :special-members:
 
+Compat
+------
+
+.. automodule:: git.compat
+   :members:
+   :undoc-members:
+   :special-members:
+
+DB
+--
+
+.. automodule:: git.db
+   :members:
+   :undoc-members:
+   :special-members:
+
+Types
+-----
+
+.. automodule:: git.types
+   :members:
+   :undoc-members:
+   :special-members:
+
 Util
 ----
 
