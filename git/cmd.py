@@ -393,9 +393,6 @@ class Git:
 
         Called by the :func:`git.refresh` function in the top level ``__init__``.
 
-        This gets called by the :func:`git.refresh` function in the top-level
-        ``__init__``.
-
         :param path:
             Optional path to the git executable. If not absolute, it is resolved
             immediately, relative to the current directory. (See note below.)
