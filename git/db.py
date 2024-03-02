@@ -38,11 +38,12 @@ class GitCmdObjectDB(LooseObjectDB):
         self._git = git
 
     def info(self, binsha: bytes) -> OInfo:
+        """Get a git object header (using git itself)."""
         hexsha, typename, size = self._git.get_object_header(bin_to_hex(binsha))
         return OInfo(hex_to_bin(hexsha), typename, size)
 
     def stream(self, binsha: bytes) -> OStream:
-        """For now, all lookup is done by git itself"""
+        """Get git object data as a stream supporting ``read()`` (using git itself)."""
         hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(binsha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
 
