@@ -72,19 +72,27 @@ ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], 
 
 
 def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None) -> None:
-    """For use in exhaustive checking of literal or Enum in if/else chain.
+    """For use in exhaustive checking of a literal or enum in if/else chains.
 
-    Should only be reached if all members not handled OR attempt to pass non-members through chain.
+    A call to this function should only be reached if not all members are handled, or if
+    an attempt is made to pass non-members through the chain.
 
-    If all members handled, type is Empty. Otherwise, will cause mypy error.
+    :param inp:
+        If all members are handled, the argument for `inp` will have the
+        :class:`~typing.Never`/:class:`~typing.NoReturn` type. Otherwise, the type will
+        mismatch and cause a mypy error.
 
-    If non-members given, should cause mypy error at variable creation.
+    :param raise_error:
+        If ``True``, will also raise :class:`ValueError` with a general "unhandled
+        literal" message, or the exception object passed as `exc`.
 
-    If raise_error is True, will also raise AssertionError or the Exception passed to exc.
+    :param exc:
+        It not ``None``, this should be an already-constructed exception object, to be
+        raised if `raise_error` is ``True``.
     """
     if raise_error:
         if exc is None:
-            raise ValueError(f"An unhandled Literal ({inp}) in an if/else chain was found")
+            raise ValueError(f"An unhandled literal ({inp!r}) in an if/else chain was found")
         else:
             raise exc
 
