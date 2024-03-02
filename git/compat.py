@@ -61,7 +61,7 @@ This is deprecated because it clearer to write out :attr:`os.name` or
 
 :note:
     For macOS (Darwin), ``os.name == "posix"`` as in other Unix-like systems, while
-    ``sys.platform == "darwin"`.
+    ``sys.platform == "darwin"``.
 """
 
 defenc = sys.getfilesystemencoding()
