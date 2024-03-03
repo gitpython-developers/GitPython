@@ -60,8 +60,12 @@ __all__ = ("Commit",)
 class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     """Wraps a git commit object.
 
-    This class will act lazily on some of its attributes and will query the value on
-    demand only if it involves calling the git binary.
+    See gitglossary(7) on "commit object":
+    https://git-scm.com/docs/gitglossary#def_commit_object
+
+    :note:
+        This class will act lazily on some of its attributes and will query the value on
+        demand only if it involves calling the git binary.
     """
 
     # ENVIRONMENT VARIABLES

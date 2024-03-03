@@ -164,6 +164,9 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
     other :class:`Tree`\s.
 
+    See gitglossary(7) on "tree object":
+    https://git-scm.com/docs/gitglossary#def_tree_object
+
     Subscripting is supported, as with a list or dict:
 
     * Access a specific blob using the ``tree["filename"]`` notation.

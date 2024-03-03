@@ -12,7 +12,10 @@ __all__ = ("Blob",)
 
 
 class Blob(base.IndexObject):
-    """A Blob encapsulates a git blob object."""
+    """A Blob encapsulates a git blob object.
+
+    See gitglossary(7) on "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+    """
 
     DEFAULT_MIME_TYPE = "text/plain"
     type: Literal["blob"] = "blob"

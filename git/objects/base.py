@@ -37,9 +37,33 @@ __all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):
-    """An Object which may be :class:`~git.objects.blob.Blob`,
-    :class:`~git.objects.tree.Tree`, :class:`~git.objects.commit.Commit` or
-    `~git.objects.tag.TagObject`."""
+    """Base class for classes representing kinds of git objects.
+
+    The following leaf classes represent specific kinds of git objects:
+
+    * :class:`Blob <git.objects.blob.Blob>`
+    * :class:`Tree <git.objects.tree.Tree>`
+    * :class:`Commit <git.objects.commit.Commit>`
+    * :class:`TagObject <git.objects.tag.TagObject>`
+
+    See gitglossary(7) on:
+
+    * "object": https://git-scm.com/docs/gitglossary#def_object
+    * "object type": https://git-scm.com/docs/gitglossary#def_object_type
+    * "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+    * "tree object": https://git-scm.com/docs/gitglossary#def_tree_object
+    * "commit object": https://git-scm.com/docs/gitglossary#def_commit_object
+    * "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
+
+    :note:
+        See the :class:`git.types.Commit_ish` union type.
+
+    :note:
+        :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
+        rooted at this :class:`Object` class, even though submodules are not really a
+        kind of git object.
+
+    """
 
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
@@ -54,6 +78,20 @@ class Object(LazyMixin):
     __slots__ = ("repo", "binsha", "size")
 
     type: Union[Lit_commit_ish, None] = None
+    """String identifying (a concrete :class:`Object` subtype for) a kind of git object.
+
+    The subtypes that this may name correspond to the kinds of git objects that exist,
+    i.e., the objects that may be present in a git repository.
+
+    :note:
+        Most subclasses represent specific types of git objects and override this class
+        attribute accordingly. This attribute is ``None`` in the :class:`Object` base
+        class, as well as the :class:`IndexObject` intermediate subclass, but never
+        ``None`` in concrete leaf subclasses representing specific kinds of git objects.
+
+    :note:
+        See also :class:`~git.types.Commit_ish`.
+    """
 
     def __init__(self, repo: "Repo", binsha: bytes):
         """Initialize an object by identifying it by its binary sha.
@@ -174,9 +212,12 @@ class Object(LazyMixin):
 
 
 class IndexObject(Object):
-    """Base for all objects that can be part of the index file, namely
-    :class:`~git.objects.tree.Tree`, :class:`~git.objects.blob.Blob` and
-    :class:`~git.objects.submodule.base.Submodule` objects."""
+    """Base for all objects that can be part of the index file.
+
+    The classes representing kinds of git objects that can be part of the index file are
+    :class:`~git.objects.tree.Tree and :class:`~git.objects.blob.Blob`. In addition,
+    :class:`~git.objects.submodule.base.Submodule` is also a subclass.
+    """
 
     __slots__ = ("path", "mode")
 
