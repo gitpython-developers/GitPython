@@ -53,8 +53,58 @@ TBD = Any
 _T = TypeVar("_T")
 
 Tree_ish = Union["Commit", "Tree"]
+"""Union of :class:`~git.objects.base.Object`-based types that are inherently tree-ish.
+
+See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-ish
+
+:note:
+    This union comprises **only** the :class:`~git.objects.commit.Commit` and
+    :class:`~git.objects.tree.Tree` classes, **all** of whose instances are tree-ish.
+    This is done because of the way GitPython uses it as a static type annotation.
+
+    :class:`~git.objects.tag.TagObject`, some but not all of whose instances are
+    tree-ish (those representing git tag objects that ultimately resolve to a tree or
+    commit), is not covered as part of this union type.
+"""
+
 Commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
+"""Union of the :class:`~git.objects.base.Object`-based types that represent kinds of
+git objects. This union is often usable where a commit-ish is expected, but is not
+actually limited to types representing commit-ish git objects.
+
+See gitglossary(7) on:
+
+* "commit-ish": https://git-scm.com/docs/gitglossary#def_commit-ish
+* "object type": https://git-scm.com/docs/gitglossary#def_object_type
+
+:note:
+    This union comprises **more** classes than those whose instances really represent
+    commit-ish git objects:
+
+    * A :class:`~git.objects.commit.Commit` is of course always
+      commit-ish, and a :class:`~git.objects.tag.TagObject` is commit-ish if, when
+      peeled (recursively followed), a :class:`~git.objects.commit.Commit` is obtained.
+    * However, :class:`~git.objects.blob.Blob` and :class:`~git.objects.tree.Tree` are
+      also included, and they represent git objects that are never really commit-ish.
+
+    This is an inversion of the situation with :class:`Tree_ish`, which is narrower than
+    all tree-ish objects. It is done for practical reasons including backward
+    compatibility.
+"""
+
 Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
+"""Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes.
+
+See :class:`Object.type <git.objects.base.Object.type>`.
+
+:note:
+    See also :class:`Commit_ish`, a union of the the :class:`~git.objects.base.Object`
+    subtypes associated with these literal strings.
+
+:note:
+    As noted in :class:`Commit_ish`, this is not limited to types of git objects that
+    are actually commit-ish.
+"""
 
 # Config_levels ---------------------------------------------------------
 
