@@ -45,12 +45,11 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
 
-    # from git.refs import SymbolicReference
-
 TBD = Any
 """Alias of :class:`~typing.Any`, when a type hint is meant to become more specific."""
 
 _T = TypeVar("_T")
+"""Type variable used internally in GitPython."""
 
 Tree_ish = Union["Commit", "Tree"]
 """Union of :class:`~git.objects.base.Object`-based types that are inherently tree-ish.
