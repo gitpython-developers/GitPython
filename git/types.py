@@ -160,12 +160,24 @@ def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, 
 
 
 class Files_TD(TypedDict):
+    """Dictionary with stat counts for the diff of a particular file.
+
+    For the :class:`~git.util.Stats.files` attribute of :class:`~git.util.Stats`
+    objects.
+    """
+
     insertions: int
     deletions: int
     lines: int
 
 
 class Total_TD(TypedDict):
+    """Dictionary with total stats from any number of files.
+
+    For the :class:`~git.util.Stats.total` attribute of :class:`~git.util.Stats`
+    objects.
+    """
+
     insertions: int
     deletions: int
     lines: int
@@ -173,6 +185,8 @@ class Total_TD(TypedDict):
 
 
 class HSH_TD(TypedDict):
+    """Dictionary carrying the same information as a :class:`~git.util.Stats` object."""
+
     total: Total_TD
     files: Dict[PathLike, Files_TD]
 
