@@ -39,6 +39,7 @@ else:
 #     from typing_extensions import TypeGuard  # noqa: F401
 
 PathLike = Union[str, "os.PathLike[str]"]
+"""A :class:`str` (Unicode) based file or directory path."""
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -47,6 +48,8 @@ if TYPE_CHECKING:
     # from git.refs import SymbolicReference
 
 TBD = Any
+"""Alias of :class:`~typing.Any`, when a type hint is meant to become more specific."""
+
 _T = TypeVar("_T")
 
 Tree_ish = Union["Commit", "Tree"]
@@ -56,17 +59,27 @@ Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
 # Config_levels ---------------------------------------------------------
 
 Lit_config_levels = Literal["system", "global", "user", "repository"]
+"""Type of literal strings naming git configuration levels.
 
-# Progress parameter type alias -----------------------------------------
+Such a string identifies what level, or scope, a git configuration variables is in.
+"""
 
-CallableProgress = Optional[Callable[[int, Union[str, float], Union[str, float, None], str], None]]
+ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
+"""Static type of a tuple of the four strings representing configuration levels."""
 
 # def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
 #     # return inp in get_args(Lit_config_level)  # only py >= 3.8
 #     return inp in ("system", "user", "global", "repository")
 
+# Progress parameter type alias -----------------------------------------
 
-ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
+CallableProgress = Optional[Callable[[int, Union[str, float], Union[str, float, None], str], None]]
+"""General type of a progress reporter for cloning.
+
+This is the type of a function or other callable that reports the progress of a clone,
+when passed as a ``progress`` argument to :meth:`Repo.clone <git.repo.base.Repo.clone>`
+or :meth:`Repo.clone_from <git.repo.base.Repo.clone_from>`.
+"""
 
 # -----------------------------------------------------------------------------------
 
