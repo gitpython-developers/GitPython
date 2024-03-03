@@ -162,7 +162,7 @@ class TreeModifier:
 
 class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
-    other :class:`~git.objects.tree.Tree`\s.
+    other :class:`Tree`\s.
 
     Tree as a list:
 
@@ -230,8 +230,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         """Find the named object in this tree's contents.
 
         :return:
-            :class:`~git.objects.blob.Blob`, :class:`~git.objects.tree.Tree`,
-            or :class:`~git.objects.submodule.base.Submodule`
+            :class:`~git.objects.blob.Blob`, :class:`Tree`, or
+            :class:`~git.objects.submodule.base.Submodule`
 
         :raise KeyError:
             If the given file or tree does not exist in this tree.
