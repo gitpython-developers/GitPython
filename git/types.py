@@ -111,7 +111,7 @@ See the :class:`Object.type <git.objects.base.Object.type>` attribute.
 Lit_config_levels = Literal["system", "global", "user", "repository"]
 """Type of literal strings naming git configuration levels.
 
-Such a string identifies what level, or scope, a git configuration variable is in.
+These strings relate to which file a git configuration variable is in.
 """
 
 ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
