@@ -33,11 +33,6 @@ else:
         runtime_checkable,
     )
 
-# if sys.version_info >= (3, 10):
-#     from typing import TypeGuard  # noqa: F401
-# else:
-#     from typing_extensions import TypeGuard  # noqa: F401
-
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
@@ -116,10 +111,6 @@ These strings relate to which file a git configuration variable is in.
 
 ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
 """Static type of a tuple of the four strings representing configuration levels."""
-
-# def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-#     # return inp in get_args(Lit_config_level)  # only py >= 3.8
-#     return inp in ("system", "user", "global", "repository")
 
 # Progress parameter type alias -----------------------------------------
 
