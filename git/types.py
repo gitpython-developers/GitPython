@@ -194,9 +194,13 @@ class HSH_TD(TypedDict):
 
 @runtime_checkable
 class Has_Repo(Protocol):
+    """Protocol for having a :attr:`repo` attribute, the repository to operate on."""
+
     repo: "Repo"
 
 
 @runtime_checkable
 class Has_id_attribute(Protocol):
+    """Protocol for having :attr:`_id_attribute_` used in iteration and traversal."""
+
     _id_attribute_: str
