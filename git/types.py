@@ -38,12 +38,12 @@ else:
 # else:
 #     from typing_extensions import TypeGuard  # noqa: F401
 
-PathLike = Union[str, "os.PathLike[str]"]
-"""A :class:`str` (Unicode) based file or directory path."""
-
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
+
+PathLike = Union[str, "os.PathLike[str]"]
+"""A :class:`str` (Unicode) based file or directory path."""
 
 TBD = Any
 """Alias of :class:`~typing.Any`, when a type hint is meant to become more specific."""
