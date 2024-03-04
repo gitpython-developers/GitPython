@@ -80,9 +80,9 @@ See gitglossary(7) on:
     This union comprises **more** classes than those whose instances really represent
     commit-ish git objects:
 
-    * A :class:`~git.objects.commit.Commit` is of course always
-      commit-ish, and a :class:`~git.objects.tag.TagObject` is commit-ish if, when
-      peeled (recursively followed), a :class:`~git.objects.commit.Commit` is obtained.
+    * A :class:`~git.objects.commit.Commit` is of course always commit-ish, and a
+      :class:`~git.objects.tag.TagObject` is commit-ish if, when peeled (recursively
+      followed), a :class:`~git.objects.commit.Commit` is obtained.
     * However, :class:`~git.objects.blob.Blob` and :class:`~git.objects.tree.Tree` are
       also included, and they represent git objects that are never really commit-ish.
 
@@ -92,9 +92,10 @@ See gitglossary(7) on:
 """
 
 Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
-"""Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes.
+"""Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes
+representing kinds of git objects.
 
-See :class:`Object.type <git.objects.base.Object.type>`.
+See the :class:`Object.type <git.objects.base.Object.type>` attribute.
 
 :note:
     See also :class:`Commit_ish`, a union of the the :class:`~git.objects.base.Object`
@@ -110,7 +111,7 @@ See :class:`Object.type <git.objects.base.Object.type>`.
 Lit_config_levels = Literal["system", "global", "user", "repository"]
 """Type of literal strings naming git configuration levels.
 
-Such a string identifies what level, or scope, a git configuration variables is in.
+Such a string identifies what level, or scope, a git configuration variable is in.
 """
 
 ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
