@@ -63,6 +63,9 @@ class Object(LazyMixin):
         rooted at this :class:`Object` class, even though submodules are not really a
         type of git object.
 
+    :note:
+        This :class:`Object` class should not be confused with :class:`object` (the root
+        of the class hierarchy in Python).
     """
 
     NULL_HEX_SHA = "0" * 40
