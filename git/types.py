@@ -67,9 +67,9 @@ See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-
 """
 
 Commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
-"""Union of the :class:`~git.objects.base.Object`-based types that represent kinds of
-git objects. This union is often usable where a commit-ish is expected, but is not
-actually limited to types representing commit-ish git objects.
+"""Union of the :class:`~git.objects.base.Object`-based types that represent git object
+types. This union is often usable where a commit-ish is expected, but is not actually
+limited to types representing commit-ish git objects.
 
 See gitglossary(7) on:
 
@@ -93,7 +93,7 @@ See gitglossary(7) on:
 
 Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
 """Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes
-representing kinds of git objects.
+representing git object types.
 
 See the :class:`Object.type <git.objects.base.Object.type>` attribute.
 

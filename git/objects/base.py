@@ -37,7 +37,7 @@ __all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):
-    """Base class for classes representing kinds of git objects.
+    """Base class for classes representing git object types.
 
     The following leaf classes represent specific kinds of git objects:
 
@@ -61,7 +61,7 @@ class Object(LazyMixin):
     :note:
         :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
         rooted at this :class:`Object` class, even though submodules are not really a
-        kind of git object.
+        type of git object.
 
     """
 
@@ -78,7 +78,7 @@ class Object(LazyMixin):
     __slots__ = ("repo", "binsha", "size")
 
     type: Union[Lit_commit_ish, None] = None
-    """String identifying (a concrete :class:`Object` subtype for) a kind of git object.
+    """String identifying (a concrete :class:`Object` subtype for) a git object type.
 
     The subtypes that this may name correspond to the kinds of git objects that exist,
     i.e., the objects that may be present in a git repository.
@@ -87,7 +87,7 @@ class Object(LazyMixin):
         Most subclasses represent specific types of git objects and override this class
         attribute accordingly. This attribute is ``None`` in the :class:`Object` base
         class, as well as the :class:`IndexObject` intermediate subclass, but never
-        ``None`` in concrete leaf subclasses representing specific kinds of git objects.
+        ``None`` in concrete leaf subclasses representing specific git object types.
 
     :note:
         See also :class:`~git.types.Commit_ish`.
@@ -214,9 +214,10 @@ class Object(LazyMixin):
 class IndexObject(Object):
     """Base for all objects that can be part of the index file.
 
-    The classes representing kinds of git objects that can be part of the index file are
+    The classes representing git object types that can be part of the index file are
     :class:`~git.objects.tree.Tree and :class:`~git.objects.blob.Blob`. In addition,
-    :class:`~git.objects.submodule.base.Submodule` is also a subclass.
+    :class:`~git.objects.submodule.base.Submodule`, which is not really a git object
+    type but can be part of an index file, is also a subclass.
     """
 
     __slots__ = ("path", "mode")
