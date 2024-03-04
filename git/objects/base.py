@@ -31,7 +31,7 @@ IndexObjUnion = Union["Tree", "Blob", "Submodule"]
 # --------------------------------------------------------------------------
 
 
-_assertion_msg_format = "Created object %r whose python type %r disagrees with the actual git object type %r"
+# _assertion_msg_format = "Created object %r whose python type %r disagrees with the actual git object type %r"
 
 __all__ = ("Object", "IndexObject")
 
