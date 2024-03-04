@@ -3,7 +3,12 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Utilities to help provide compatibility with Python 3."""
+"""Utilities to help provide compatibility with Python 3.
+
+This module exists for historical reasons. Code outside GitPython may make use of public
+members of this module, but is unlikely to benefit from doing so. GitPython continues to
+use some of these utilities, in some cases for compatibility across different platforms.
+"""
 
 import locale
 import os
