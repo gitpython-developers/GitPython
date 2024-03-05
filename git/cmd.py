@@ -850,10 +850,10 @@ class Git:
         """Initialize this instance with:
 
         :param working_dir:
-           Git directory we should work in. If ``None``, we always work in the current
-           directory as returned by :func:`os.getcwd`.
-           This is meant to be the working tree directory if available, or the
-           ``.git`` directory in case of bare repositories.
+            Git directory we should work in. If ``None``, we always work in the current
+            directory as returned by :func:`os.getcwd`.
+            This is meant to be the working tree directory if available, or the
+            ``.git`` directory in case of bare repositories.
         """
         super().__init__()
         self._working_dir = expand_path(working_dir)
@@ -1103,8 +1103,8 @@ class Git:
         :raise git.exc.GitCommandError:
 
         :note:
-           If you add additional keyword arguments to the signature of this method,
-           you must update the ``execute_kwargs`` variable housed in this module.
+            If you add additional keyword arguments to the signature of this method, you
+            must update the ``execute_kwargs`` variable housed in this module.
         """
         # Remove password for the command if present.
         redacted_command = remove_password_if_present(command)
@@ -1438,7 +1438,7 @@ class Git:
 
         turns into::
 
-           git rev-list max-count 10 --header master
+            git rev-list max-count 10 --header master
 
         :return:
             Same as :meth:`execute`. If no args are given, used :meth:`execute`'s
