@@ -891,7 +891,7 @@ class Remote(LazyMixin, IterableObj):
             None,
             progress_handler,
             finalizer=None,
-            decode_streams=False,
+            decode_streams=True,
             kill_after_timeout=kill_after_timeout,
         )
 
@@ -1068,7 +1068,7 @@ class Remote(LazyMixin, IterableObj):
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_fetch_options)
 
         proc = self.repo.git.fetch(
-            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
+            "--", self, *args, as_process=True, with_stdout=False, v=verbose, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
