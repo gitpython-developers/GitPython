@@ -74,7 +74,7 @@ class SymbolicReference:
     _remote_common_path_default = "refs/remotes"
     _id_attribute_ = "name"
 
-    def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False):
+    def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
         self.path = path
 
