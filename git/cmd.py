@@ -749,7 +749,7 @@ class Git:
         rest to ensure the underlying stream continues to work.
         """
 
-        __slots__: Tuple[str, ...] = ("_stream", "_nbr", "_size")
+        __slots__ = ("_stream", "_nbr", "_size")
 
         def __init__(self, size: int, stream: IO[bytes]) -> None:
             self._stream = stream
