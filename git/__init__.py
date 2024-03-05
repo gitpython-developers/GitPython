@@ -58,7 +58,7 @@ __all__ = [  # noqa: F405
     "RepositoryDirtyError",
     "RootModule",
     "RootUpdateProgress",
-    "Sequence",  # Deprecated - import this from `typing` instead.
+    "Sequence",  # Deprecated - import from `typing`, or `collections.abc` in 3.9+.
     "StageType",
     "Stats",
     "Submodule",
