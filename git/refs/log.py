@@ -164,7 +164,7 @@ class RefLog(List[RefLogEntry], Serializable):
         inst = super().__new__(cls)
         return inst
 
-    def __init__(self, filepath: Union[PathLike, None] = None):
+    def __init__(self, filepath: Union[PathLike, None] = None) -> None:
         """Initialize this instance with an optional filepath, from which we will
         initialize our data. The path is also used to write changes back using the
         :meth:`write` method."""

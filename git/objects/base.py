@@ -55,7 +55,7 @@ class Object(LazyMixin):
 
     type: Union[Lit_commit_ish, None] = None
 
-    def __init__(self, repo: "Repo", binsha: bytes):
+    def __init__(self, repo: "Repo", binsha: bytes) -> None:
         """Initialize an object by identifying it by its binary sha.
 
         All keyword arguments will be set on demand if ``None``.

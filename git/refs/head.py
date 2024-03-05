@@ -44,7 +44,7 @@ class HEAD(SymbolicReference):
 
     __slots__ = ()
 
-    def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME):
+    def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME) -> None:
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super().__init__(repo, path)

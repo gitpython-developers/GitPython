@@ -917,7 +917,7 @@ class Stats:
 
     __slots__ = ("total", "files")
 
-    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]):
+    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]) -> None:
         self.total = total
         self.files = files
 

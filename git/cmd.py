@@ -846,7 +846,7 @@ class Git:
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir: Union[None, PathLike] = None):
+    def __init__(self, working_dir: Union[None, PathLike] = None) -> None:
         """Initialize this instance with:
 
         :param working_dir:
