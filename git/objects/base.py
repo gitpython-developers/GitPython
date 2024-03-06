@@ -30,9 +30,6 @@ IndexObjUnion = Union["Tree", "Blob", "Submodule"]
 
 # --------------------------------------------------------------------------
 
-
-# _assertion_msg_format = "Created object %r whose python type %r disagrees with the actual git object type %r"
-
 __all__ = ("Object", "IndexObject")
 
 
@@ -154,8 +151,7 @@ class Object(LazyMixin):
         """Retrieve object information."""
         if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
-            self.size = oinfo.size  # type:  int
-            # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
+            self.size = oinfo.size  # type: int
         else:
             super()._set_cache_(attr)
 
