@@ -1134,7 +1134,7 @@ class Git:
         if inline_env is not None:
             env.update(inline_env)
 
-        if os.name == "nt":
+        if sys.platform == "win32":
             cmd_not_found_exception = OSError
             if kill_after_timeout is not None:
                 raise GitCommandError(
@@ -1179,35 +1179,38 @@ class Git:
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        def kill_process(pid: int) -> None:
-            """Callback to kill a process."""
-            if os.name == "nt":
-                raise AssertionError("Bug: This callback would be ineffective and unsafe on Windows, stopping.")
-            p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
-            child_pids = []
-            if p.stdout is not None:
-                for line in p.stdout:
-                    if len(line.split()) > 0:
-                        local_pid = (line.split())[0]
-                        if local_pid.isdigit():
-                            child_pids.append(int(local_pid))
-            try:
-                os.kill(pid, signal.SIGKILL)
-                for child_pid in child_pids:
-                    try:
-                        os.kill(child_pid, signal.SIGKILL)
-                    except OSError:
-                        pass
-                kill_check.set()  # Tell the main routine that the process was killed.
-            except OSError:
-                # It is possible that the process gets completed in the duration after
-                # timeout happens and before we try to kill the process.
-                pass
-            return
+        if sys.platform != "win32" and kill_after_timeout is not None:
 
-        # END kill_process
+            def kill_process(pid: int) -> None:
+                """Callback to kill a process.
 
-        if kill_after_timeout is not None:
+                This callback implementation would be ineffective and unsafe on Windows.
+                """
+                p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
+                child_pids = []
+                if p.stdout is not None:
+                    for line in p.stdout:
+                        if len(line.split()) > 0:
+                            local_pid = (line.split())[0]
+                            if local_pid.isdigit():
+                                child_pids.append(int(local_pid))
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    for child_pid in child_pids:
+                        try:
+                            os.kill(child_pid, signal.SIGKILL)
+                        except OSError:
+                            pass
+                    # Tell the main routine that the process was killed.
+                    kill_check.set()
+                except OSError:
+                    # It is possible that the process gets completed in the duration
+                    # after timeout happens and before we try to kill the process.
+                    pass
+                return
+
+            # END kill_process
+
             kill_check = threading.Event()
             watchdog = threading.Timer(kill_after_timeout, kill_process, args=(proc.pid,))
 
@@ -1218,10 +1221,10 @@ class Git:
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
-                if kill_after_timeout is not None:
+                if sys.platform != "win32" and kill_after_timeout is not None:
                     watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
-                if kill_after_timeout is not None:
+                if sys.platform != "win32" and kill_after_timeout is not None:
                     watchdog.cancel()
                     if kill_check.is_set():
                         stderr_value = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
