@@ -257,10 +257,9 @@ def _safer_popen_windows(
     # When using a shell, the shell is the direct subprocess, so the variable must be
     # set in its environment, to affect its search behavior. (The "1" can be any value.)
     if shell:
-        safer_env = {} if env is None else dict(env)
-        safer_env["NoDefaultCurrentDirectoryInExePath"] = "1"
-    else:
-        safer_env = env
+        # The original may be immutable or reused by the caller. Make changes in a copy.
+        env = {} if env is None else dict(env)
+        env["NoDefaultCurrentDirectoryInExePath"] = "1"
 
     # When not using a shell, the current process does the search in a CreateProcessW
     # API call, so the variable must be set in our environment. With a shell, this is
@@ -273,7 +272,7 @@ def _safer_popen_windows(
         return Popen(
             command,
             shell=shell,
-            env=safer_env,
+            env=env,
             creationflags=creationflags,
             **kwargs,
         )
