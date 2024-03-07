@@ -84,12 +84,15 @@ class Diffable:
     compatible type.
 
     :note:
-        Subclasses require a repo member as it is the case for
-        :class:`~git.objects.base.Object` instances, for practical reasons we do not
+        Subclasses require a repo member, as it is the case for
+        :class:`~git.objects.base.Object` instances. For practical reasons we do not
         derive from :class:`~git.objects.base.Object`.
     """
 
     __slots__ = ()
+
+    repo: "Repo"
+    """Repository to operate on. Must be provided by subclass or sibling class."""
 
     class Index:
         """Stand-in indicating you want to diff against the index."""
@@ -168,9 +171,6 @@ class Diffable:
 
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
-
-        if hasattr(self, "Has_Repo"):
-            self.repo: "Repo" = self.repo
 
         diff_cmd = self.repo.git.diff
         if other is self.Index:
