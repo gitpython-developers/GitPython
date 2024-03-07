@@ -14,6 +14,7 @@ import os
 import signal
 from subprocess import Popen, PIPE, DEVNULL
 import subprocess
+import sys
 import threading
 from textwrap import dedent
 
@@ -220,67 +221,67 @@ def handle_process_output(
         finalizer(process)
 
 
-def _safer_popen_windows(
-    command: Union[str, Sequence[Any]],
-    *,
-    shell: bool = False,
-    env: Optional[Mapping[str, str]] = None,
-    **kwargs: Any,
-) -> Popen:
-    """Call :class:`subprocess.Popen` on Windows but don't include a CWD in the search.
-
-    This avoids an untrusted search path condition where a file like ``git.exe`` in a
-    malicious repository would be run when GitPython operates on the repository. The
-    process using GitPython may have an untrusted repository's working tree as its
-    current working directory. Some operations may temporarily change to that directory
-    before running a subprocess. In addition, while by default GitPython does not run
-    external commands with a shell, it can be made to do so, in which case the CWD of
-    the subprocess, which GitPython usually sets to a repository working tree, can
-    itself be searched automatically by the shell. This wrapper covers all those cases.
-
-    :note:
-        This currently works by setting the :envvar:`NoDefaultCurrentDirectoryInExePath`
-        environment variable during subprocess creation. It also takes care of passing
-        Windows-specific process creation flags, but that is unrelated to path search.
-
-    :note:
-        The current implementation contains a race condition on :attr:`os.environ`.
-        GitPython isn't thread-safe, but a program using it on one thread should ideally
-        be able to mutate :attr:`os.environ` on another, without unpredictable results.
-        See comments in https://github.com/gitpython-developers/GitPython/pull/1650.
-    """
-    # CREATE_NEW_PROCESS_GROUP is needed for some ways of killing it afterwards. See:
-    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-    # https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NEW_PROCESS_GROUP
-    creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-
-    # When using a shell, the shell is the direct subprocess, so the variable must be
-    # set in its environment, to affect its search behavior. (The "1" can be any value.)
-    if shell:
-        # The original may be immutable or reused by the caller. Make changes in a copy.
-        env = {} if env is None else dict(env)
-        env["NoDefaultCurrentDirectoryInExePath"] = "1"
-
-    # When not using a shell, the current process does the search in a CreateProcessW
-    # API call, so the variable must be set in our environment. With a shell, this is
-    # unnecessary, in versions where https://github.com/python/cpython/issues/101283 is
-    # patched. If that is unpatched, then in the rare case the ComSpec environment
-    # variable is unset, the search for the shell itself is unsafe. Setting
-    # NoDefaultCurrentDirectoryInExePath in all cases, as is done here, is simpler and
-    # protects against that. (As above, the "1" can be any value.)
-    with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
-        return Popen(
-            command,
-            shell=shell,
-            env=env,
-            creationflags=creationflags,
-            **kwargs,
-        )
-
-
 safer_popen: Callable[..., Popen]
 
-if os.name == "nt":
+if sys.platform == "win32":
+
+    def _safer_popen_windows(
+        command: Union[str, Sequence[Any]],
+        *,
+        shell: bool = False,
+        env: Optional[Mapping[str, str]] = None,
+        **kwargs: Any,
+    ) -> Popen:
+        """Call :class:`subprocess.Popen` on Windows but don't include a CWD in the search.
+
+        This avoids an untrusted search path condition where a file like ``git.exe`` in a
+        malicious repository would be run when GitPython operates on the repository. The
+        process using GitPython may have an untrusted repository's working tree as its
+        current working directory. Some operations may temporarily change to that directory
+        before running a subprocess. In addition, while by default GitPython does not run
+        external commands with a shell, it can be made to do so, in which case the CWD of
+        the subprocess, which GitPython usually sets to a repository working tree, can
+        itself be searched automatically by the shell. This wrapper covers all those cases.
+
+        :note:
+            This currently works by setting the :envvar:`NoDefaultCurrentDirectoryInExePath`
+            environment variable during subprocess creation. It also takes care of passing
+            Windows-specific process creation flags, but that is unrelated to path search.
+
+        :note:
+            The current implementation contains a race condition on :attr:`os.environ`.
+            GitPython isn't thread-safe, but a program using it on one thread should ideally
+            be able to mutate :attr:`os.environ` on another, without unpredictable results.
+            See comments in https://github.com/gitpython-developers/GitPython/pull/1650.
+        """
+        # CREATE_NEW_PROCESS_GROUP is needed for some ways of killing it afterwards. See:
+        # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+        # https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NEW_PROCESS_GROUP
+        creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+
+        # When using a shell, the shell is the direct subprocess, so the variable must be
+        # set in its environment, to affect its search behavior. (The "1" can be any value.)
+        if shell:
+            # The original may be immutable or reused by the caller. Make changes in a copy.
+            env = {} if env is None else dict(env)
+            env["NoDefaultCurrentDirectoryInExePath"] = "1"
+
+        # When not using a shell, the current process does the search in a CreateProcessW
+        # API call, so the variable must be set in our environment. With a shell, this is
+        # unnecessary, in versions where https://github.com/python/cpython/issues/101283 is
+        # patched. If that is unpatched, then in the rare case the ComSpec environment
+        # variable is unset, the search for the shell itself is unsafe. Setting
+        # NoDefaultCurrentDirectoryInExePath in all cases, as is done here, is simpler and
+        # protects against that. (As above, the "1" can be any value.)
+        with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
+            return Popen(
+                command,
+                shell=shell,
+                env=env,
+                creationflags=creationflags,
+                **kwargs,
+            )
+
     safer_popen = _safer_popen_windows
 else:
     safer_popen = Popen
