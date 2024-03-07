@@ -278,6 +278,8 @@ def _safer_popen_windows(
         )
 
 
+safer_popen: Callable[..., Popen]
+
 if os.name == "nt":
     safer_popen = _safer_popen_windows
 else:
