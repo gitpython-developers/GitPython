@@ -53,7 +53,7 @@ class Object(LazyMixin):
     * "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
 
     :note:
-        See the :class:`git.types.Commit_ish` union type.
+        See the :class:`~git.types.Commit_ish` union type.
 
     :note:
         :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
