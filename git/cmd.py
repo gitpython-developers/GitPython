@@ -1180,6 +1180,8 @@ class Git:
             return self.AutoInterrupt(proc, command)
 
         if sys.platform != "win32" and kill_after_timeout is not None:
+            # Help mypy figure out this is not None even when used inside communicate().
+            timeout = kill_after_timeout
 
             def kill_process(pid: int) -> None:
                 """Callback to kill a process.
@@ -1216,7 +1218,7 @@ class Git:
                 if kill_check.is_set():
                     err = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
                         " ".join(redacted_command),
-                        kill_after_timeout,
+                        timeout,
                     )
                     if not universal_newlines:
                         err = err.encode(defenc)
@@ -1225,7 +1227,7 @@ class Git:
             # END helpers
 
             kill_check = threading.Event()
-            watchdog = threading.Timer(kill_after_timeout, kill_process, args=(proc.pid,))
+            watchdog = threading.Timer(timeout, kill_process, args=(proc.pid,))
         else:
             communicate = proc.communicate
 
