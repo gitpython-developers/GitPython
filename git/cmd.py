@@ -1135,12 +1135,12 @@ class Git:
             env.update(inline_env)
 
         if sys.platform == "win32":
-            cmd_not_found_exception = OSError
             if kill_after_timeout is not None:
                 raise GitCommandError(
                     redacted_command,
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
+            cmd_not_found_exception = OSError
         else:
             cmd_not_found_exception = FileNotFoundError
         # END handle
@@ -1209,10 +1209,25 @@ class Git:
                     pass
                 return
 
-            # END kill_process
+            def communicate() -> Tuple[AnyStr, AnyStr]:
+                watchdog.start()
+                out, err = proc.communicate()
+                watchdog.cancel()
+                if kill_check.is_set():
+                    err = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
+                        " ".join(redacted_command),
+                        kill_after_timeout,
+                    )
+                    if not universal_newlines:
+                        err = err.encode(defenc)
+                return out, err
+
+            # END helpers
 
             kill_check = threading.Event()
             watchdog = threading.Timer(kill_after_timeout, kill_process, args=(proc.pid,))
+        else:
+            communicate = proc.communicate
 
         # Wait for the process to return.
         status = 0
@@ -1221,18 +1236,7 @@ class Git:
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
-                if sys.platform != "win32" and kill_after_timeout is not None:
-                    watchdog.start()
-                stdout_value, stderr_value = proc.communicate()
-                if sys.platform != "win32" and kill_after_timeout is not None:
-                    watchdog.cancel()
-                    if kill_check.is_set():
-                        stderr_value = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
-                            " ".join(redacted_command),
-                            kill_after_timeout,
-                        )
-                        if not universal_newlines:
-                            stderr_value = stderr_value.encode(defenc)
+                stdout_value, stderr_value = communicate()
                 # Strip trailing "\n".
                 if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore
                     stdout_value = stdout_value[:-1]
