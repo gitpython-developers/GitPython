@@ -5,7 +5,7 @@
 
 """Provides an :class:`~git.objects.base.Object`-based type for annotated tags.
 
-This defines the :class:`TagReference` class, which represents annotated tags.
+This defines the :class:`TagObject` class, which represents annotated tags.
 For lightweight tags, see the :mod:`git.refs.tag` module.
 """
 
