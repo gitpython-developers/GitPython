@@ -122,12 +122,21 @@ class Diffable:
             This the item to compare us with.
 
             * If ``None``, we will be compared to the working tree.
-            * If :class:`~git.index.base.Treeish`, it will be compared against the
-              respective tree.
-            * If :class:`Diffable.Index`, it will be compared against the index.
-            * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
-            * It defaults to :class:`Diffable.Index` so that the method will not by
-              default fail on bare repositories.
+
+            * If :class:`~git.types.Tree_ish`, it will be compared against the
+              respective tree. (See https://git-scm.com/docs/gitglossary#def_tree-ish.)
+              This can also be passed as a string.
+
+            * If :class:`Diffable.Index`, it will be compared against the index. Use the
+              type object :class:`Index` itself, without attempting to instantiate it.
+              (That is, you should treat :class:`Index` as an opqaue constant. Don't
+              rely on it being a class or even callable.)
+
+            * If :attr:`git.NULL_TREE <NULL_TREE>`, it will compare against the empty
+              tree.
+
+            This parameter defaults to :class:`Diffable.Index` (rather than ``None``) so
+            that the method will not by default fail on bare repositories.
 
         :param paths:
             This a list of paths or a single path to limit the diff to. It will only
@@ -143,7 +152,7 @@ class Diffable:
             sides of the diff.
 
         :return:
-            :class:`DiffIndex`
+            A :class:`DiffIndex` representing the computed diff.
 
         :note:
             On a bare repository, `other` needs to be provided as
