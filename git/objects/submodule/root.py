@@ -75,9 +75,9 @@ class RootModule(Submodule):
 
     # { Interface
 
-    def update(
+    def update(  # type: ignore[override]
         self,
-        previous_commit: Union[Commit_ish, None] = None,  # type: ignore[override]
+        previous_commit: Union[Commit_ish, None] = None,
         recursive: bool = True,
         force_remove: bool = False,
         init: bool = True,
