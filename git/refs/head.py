@@ -44,11 +44,13 @@ class HEAD(SymbolicReference):
 
     __slots__ = ()
 
+    # TODO: This can be removed once SymbolicReference.commit has static type hints.
+    commit: "Commit"
+
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME):
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super().__init__(repo, path)
-        self.commit: "Commit"
 
     def orig_head(self) -> SymbolicReference:
         """
