@@ -749,7 +749,14 @@ class RemoteProgress:
 
 
 class CallableRemoteProgress(RemoteProgress):
-    """An implementation forwarding updates to any callable."""
+    """A :class:`RemoteProgress` implementation forwarding updates to any callable.
+
+    :note:
+        Like direct instances of :class:`RemoteProgress`, instances of this
+        :class:`CallableRemoteProgress` class are not themselves directly callable.
+        Rather, instances of this class wrap a callable and forward to it. This should
+        therefore not be confused with :class:`git.types.CallableProgress`.
+    """
 
     __slots__ = ("_callable",)
 

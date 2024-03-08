@@ -115,11 +115,25 @@ ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], 
 # Progress parameter type alias -----------------------------------------
 
 CallableProgress = Optional[Callable[[int, Union[str, float], Union[str, float, None], str], None]]
-"""General type of a progress reporter for cloning.
+"""General type of a function or other callable used as a progress reporter for cloning.
 
 This is the type of a function or other callable that reports the progress of a clone,
 when passed as a ``progress`` argument to :meth:`Repo.clone <git.repo.base.Repo.clone>`
 or :meth:`Repo.clone_from <git.repo.base.Repo.clone_from>`.
+
+:note:
+    Those :meth:`~git.repo.base.Repo.clone` and :meth:`~git.repo.base.Repo.clone_from`
+    methods also accept :meth:`~git.util.RemoteProgress` instances, including instances
+    of its :meth:`~git.util.CallableRemoteProgress` subclass.
+
+:note:
+    Unlike objects that match this type, :meth:`~git.util.RemoteProgress` instances are
+    not directly callable, not even when they are instances of
+    :meth:`~git.util.CallableRemoteProgress`, which wraps a callable and forwards
+    information to it but is not itself callable.
+
+:note:
+    This type also allows ``None``, for cloning without reporting progress.
 """
 
 # -----------------------------------------------------------------------------------
