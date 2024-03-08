@@ -559,6 +559,9 @@ class Remote(LazyMixin, IterableObj):
         "--exec",
     ]
 
+    url: str  # Obtained dynamically from _config_reader. See __getattr__ below.
+    """The URL configured for the remote."""
+
     def __init__(self, repo: "Repo", name: str) -> None:
         """Initialize a remote instance.
 
@@ -570,7 +573,6 @@ class Remote(LazyMixin, IterableObj):
         """
         self.repo = repo
         self.name = name
-        self.url: str
 
     def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like ``remote.special(*args, **kwargs)`` to
