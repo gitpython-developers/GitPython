@@ -404,9 +404,7 @@ _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
 )
 
 
-def cygpath(path: str) -> str:
-    """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
-    path = str(path)  # Ensure is str and not AnyPath.
+def _cygpath(path: str) -> str:
     # Fix to use Paths when 3.5 dropped. Or to be just str if only for URLs?
     if not path.startswith(("/cygdrive", "//", "/proc/cygdrive")):
         for regex, parser, recurse in _cygpath_parsers:
@@ -420,6 +418,11 @@ def cygpath(path: str) -> str:
             path = _cygexpath(None, path)
 
     return path
+
+
+def cygpath(path: PathLike) -> str:
+    """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
+    return _cygpath(str(path))  # Ensure is str and not AnyPath.
 
 
 _decygpath_regex = re.compile(r"(?:/proc)?/cygdrive/(\w)(/.*)?")
