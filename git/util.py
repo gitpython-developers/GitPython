@@ -611,20 +611,6 @@ class RemoteProgress:
             self.error_lines.append(self._cur_line)
             return
 
-        # Find escape characters and cut them away - regex will not work with
-        # them as they are non-ASCII. As git might expect a tty, it will send them.
-        last_valid_index = None
-        for i, c in enumerate(reversed(line_str)):
-            if ord(c) < 32:
-                # its a slice index
-                last_valid_index = -i - 1
-            # END character was non-ASCII
-        # END for each character in line
-        if last_valid_index is not None:
-            line_str = line_str[:last_valid_index]
-        # END cut away invalid part
-        line_str = line_str.rstrip()
-
         cur_count, max_count = None, None
         match = self.re_op_relative.match(line_str)
         if match is None:
