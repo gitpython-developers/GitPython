@@ -218,7 +218,7 @@ class Repo:
             # Given how the tests are written, this seems more likely to catch Cygwin
             # git used from Windows than Windows git used from Cygwin. Therefore
             # changing to Cygwin-style paths is the relevant operation.
-            epath = cygpath(epath)
+            epath = cygpath(str(epath))
 
         epath = epath or path or os.getcwd()
         if not isinstance(epath, str):
