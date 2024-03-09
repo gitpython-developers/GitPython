@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os
 import re
 
 from git.cmd import handle_process_output
@@ -98,8 +99,9 @@ class Diffable:
         """Stand-in indicating you want to diff against the index."""
 
     def _process_diff_args(
-        self, args: List[Union[str, "Diffable", Type["Diffable.Index"], object]]
-    ) -> List[Union[str, "Diffable", Type["Diffable.Index"], object]]:
+        self,
+        args: List[Union[str, os.PathLike[str], "Diffable", Type["Index"]]],
+    ) -> List[Union[str, os.PathLike[str], "Diffable", Type["Index"]]]:
         """
         :return:
             Possibly altered version of the given args list.
@@ -110,7 +112,7 @@ class Diffable:
 
     def diff(
         self,
-        other: Union[Type["Index"], "Tree", "Commit", None, str, object] = Index,
+        other: Union[Type["Index"], "Tree", "Commit", str, None] = Index,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
@@ -159,7 +161,7 @@ class Diffable:
             :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
             :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
-        args: List[Union[PathLike, Diffable, Type["Diffable.Index"], object]] = []
+        args: List[Union[PathLike, Diffable, Type["Diffable.Index"]]] = []
         args.append("--abbrev=40")  # We need full shas.
         args.append("--full-index")  # Get full index paths, not only filenames.
 
@@ -195,7 +197,7 @@ class Diffable:
 
         args.insert(0, self)
 
-        # paths is a list here, or None.
+        # paths is a list or tuple here, or None.
         if paths:
             args.append("--")
             args.extend(paths)
