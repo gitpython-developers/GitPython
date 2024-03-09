@@ -28,7 +28,7 @@ from typing import (
     TYPE_CHECKING,
     cast,
 )
-from git.types import PathLike, Literal
+from git.types import Literal, PathLike, final
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -94,13 +94,14 @@ class Diffable:
     repo: "Repo"
     """Repository to operate on. Must be provided by subclass or sibling class."""
 
+    @final
     class Index:
         """Stand-in indicating you want to diff against the index."""
 
     def _process_diff_args(
         self,
-        args: List[Union[PathLike, "Diffable", Type["Index"]]],
-    ) -> List[Union[PathLike, "Diffable", Type["Index"]]]:
+        args: List[Union[PathLike, "Diffable"]],
+    ) -> List[Union[PathLike, "Diffable"]]:
         """
         :return:
             Possibly altered version of the given args list.
@@ -161,7 +162,7 @@ class Diffable:
             :class:`~git.objects.tree.Tree` or :class:`~git.objects.commit.Commit`, or a
             git command error will occur.
         """
-        args: List[Union[PathLike, Diffable, Type["Diffable.Index"]]] = []
+        args: List[Union[PathLike, Diffable]] = []
         args.append("--abbrev=40")  # We need full shas.
         args.append("--full-index")  # Get full index paths, not only filenames.
 
@@ -184,7 +185,7 @@ class Diffable:
             paths = [paths]
 
         diff_cmd = self.repo.git.diff
-        if other is self.Index:
+        if other is Diffable.Index:
             args.insert(0, "--cached")
         elif other is NULL_TREE:
             args.insert(0, "-r")  # Recursive diff-tree.
