@@ -3,7 +3,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import os
 import re
 
 from git.cmd import handle_process_output
@@ -100,8 +99,8 @@ class Diffable:
 
     def _process_diff_args(
         self,
-        args: List[Union[str, os.PathLike[str], "Diffable", Type["Index"]]],
-    ) -> List[Union[str, os.PathLike[str], "Diffable", Type["Index"]]]:
+        args: List[Union[PathLike, "Diffable", Type["Index"]]],
+    ) -> List[Union[PathLike, "Diffable", Type["Index"]]]:
         """
         :return:
             Possibly altered version of the given args list.

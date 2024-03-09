@@ -645,8 +645,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     def _process_diff_args(
         self,
-        args: List[Union[str, os.PathLike[str], "git_diff.Diffable", Type["git_diff.Diffable.Index"]]],
-    ) -> List[Union[str, os.PathLike[str], "git_diff.Diffable", Type["git_diff.Diffable.Index"]]]:
+        args: List[Union[PathLike, "git_diff.Diffable", Type["git_diff.Diffable.Index"]]],
+    ) -> List[Union[PathLike, "git_diff.Diffable", Type["git_diff.Diffable.Index"]]]:
         try:
             args.pop(args.index(self))
         except IndexError:
