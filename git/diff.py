@@ -157,8 +157,9 @@ class Diffable:
 
         :note:
             On a bare repository, `other` needs to be provided as
-            :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
-            :class:`~git.objects.commit.Commit`, or a git command error will occur.
+            :class:`~Diffable.Index`, or as an instance of
+            :class:`~git.objects.tree.Tree` or :class:`~git.objects.commit.Commit`, or a
+            git command error will occur.
         """
         args: List[Union[PathLike, Diffable, Type["Diffable.Index"]]] = []
         args.append("--abbrev=40")  # We need full shas.
