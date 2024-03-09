@@ -76,11 +76,10 @@ from typing import (
     Sequence,
     TYPE_CHECKING,
     Tuple,
-    Type,
     Union,
 )
 
-from git.types import Commit_ish, PathLike
+from git.types import Commit_ish, Literal, PathLike
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -1479,7 +1478,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     # @ default_index, breaks typing for some reason, copied into function
     def diff(
         self,
-        other: Union[Type["git_diff.Diffable.Index"], "Tree", "Commit", str, None] = git_diff.Diffable.Index,
+        other: Union[Literal[git_diff.DiffConstants.INDEX], "Tree", "Commit", str, None] = git_diff.INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,

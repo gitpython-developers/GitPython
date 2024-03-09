@@ -22,7 +22,6 @@ if sys.version_info >= (3, 8):
         TypedDict,
         Protocol,
         SupportsIndex as SupportsIndex,
-        final,
         runtime_checkable,
     )
 else:
@@ -31,7 +30,6 @@ else:
         SupportsIndex as SupportsIndex,
         TypedDict,
         Protocol,
-        final,
         runtime_checkable,
     )
 
