@@ -149,14 +149,30 @@ class Diffable:
     :const:`git.NULL_TREE` and :const:`git.diff.NULL_TREE`.
     """
 
-    INDEX = Index = INDEX
+    INDEX = INDEX
     """Stand-in indicating you want to diff against the index.
 
     See the :meth:`diff` method, which accepts this as a value of its ``other``
     parameter.
 
     This is the same as :const:`DiffConstants.INDEX`, and may also be accessed as
-    :const:`git.INDEX` and :const:`git.diff.INDEX`.
+    :const:`git.INDEX` and :const:`git.diff.INDEX`, as well as :class:`Diffable.INDEX`,
+    which is kept for backward compatibility (it is now defined an alias of this).
+    """
+
+    Index = INDEX
+    """Stand-in indicating you want to diff against the index
+    (same as :const:`~Diffable.INDEX`).
+
+    This is an alias of :const:`~Diffable.INDEX`, for backward compatibility. See
+    :const:`~Diffable.INDEX` and :meth:`diff` for details.
+
+    :note:
+        Although always meant for use as an opaque constant, this was formerly defined
+        as a class. Its usage is unchanged, but static type annotations that attempt
+        to permit only this object must be changed to avoid new mypy errors. This was
+        previously not possible to do, though ``Type[Diffable.Index]`` approximated it.
+        It is now possible to do precisely, using ``Literal[DiffConstants.INDEX]``.
     """
 
     def _process_diff_args(
@@ -213,10 +229,9 @@ class Diffable:
             A :class:`DiffIndex` representing the computed diff.
 
         :note:
-            On a bare repository, `other` needs to be provided as
-            :class:`~Diffable.Index`, or as an instance of
-            :class:`~git.objects.tree.Tree` or :class:`~git.objects.commit.Commit`, or a
-            git command error will occur.
+            On a bare repository, `other` needs to be provided as :const:`INDEX`, or as
+            an instance of :class:`~git.objects.tree.Tree` or
+            :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
         args: List[Union[PathLike, Diffable]] = []
         args.append("--abbrev=40")  # We need full shas.
