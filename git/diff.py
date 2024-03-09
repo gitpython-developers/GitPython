@@ -189,7 +189,7 @@ class Diffable:
 
     def diff(
         self,
-        other: Union[Literal[DiffConstants.INDEX], "Tree", "Commit", str, None] = INDEX,
+        other: Union[DiffConstants, "Tree", "Commit", str, None] = INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
