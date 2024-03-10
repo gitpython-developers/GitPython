@@ -6,17 +6,16 @@ import os
 from git.compat import defenc
 from git.objects import Object
 from git.objects.commit import Commit
+from git.refs.log import RefLog
 from git.util import (
+    LockedFD,
+    assure_directory_exists,
+    hex_to_bin,
     join_path,
     join_path_native,
     to_native_path_linux,
-    assure_directory_exists,
-    hex_to_bin,
-    LockedFD,
 )
-from gitdb.exc import BadObject, BadName
-
-from .log import RefLog
+from gitdb.exc import BadName, BadObject
 
 # typing ------------------------------------------------------------------
 
@@ -24,21 +23,21 @@ from typing import (
     Any,
     Iterator,
     List,
+    TYPE_CHECKING,
     Tuple,
     Type,
     TypeVar,
     Union,
-    TYPE_CHECKING,
     cast,
 )
-from git.types import Old_commit_ish, PathLike
+from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
-    from git.repo import Repo
-    from git.refs import Head, TagReference, RemoteReference, Reference
-    from .log import RefLogEntry
     from git.config import GitConfigParser
     from git.objects.commit import Actor
+    from git.refs import Head, TagReference, RemoteReference, Reference
+    from git.refs.log import RefLogEntry
+    from git.repo import Repo
 
 
 T_References = TypeVar("T_References", bound="SymbolicReference")
@@ -278,7 +277,7 @@ class SymbolicReference:
         """
         return cls._get_ref_info_helper(repo, ref_path)
 
-    def _get_object(self) -> Old_commit_ish:
+    def _get_object(self) -> AnyGitObject:
         """
         :return:
             The object our ref currently refers to. Refs can be cached, they will always
@@ -345,7 +344,7 @@ class SymbolicReference:
 
     def set_object(
         self,
-        object: Union[Old_commit_ish, "SymbolicReference", str],
+        object: Union[AnyGitObject, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
         """Set the object we point to, possibly dereference our symbolic reference
@@ -353,9 +352,12 @@ class SymbolicReference:
 
         :param object:
             A refspec, a :class:`SymbolicReference` or an
-            :class:`~git.objects.base.Object` instance. :class:`SymbolicReference`
-            instances will be dereferenced beforehand to obtain the object they point
-            to.
+            :class:`~git.objects.base.Object` instance.
+
+            * :class:`SymbolicReference` instances will be dereferenced beforehand to
+              obtain the git object they point to.
+            * :class:`~git.objects.base.Object` instances must represent git objects
+              (:class:`~git.types.AnyGitObject`).
 
         :param logmsg:
             If not ``None``, the message will be used in the reflog entry to be written.
@@ -404,22 +406,22 @@ class SymbolicReference:
 
     def set_reference(
         self,
-        ref: Union[Old_commit_ish, "SymbolicReference", str],
+        ref: Union[AnyGitObject, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
         """Set ourselves to the given `ref`.
 
-        It will stay a symbol if the ref is a :class:`~git.refs.reference.Reference`.
+        It will stay a symbol if the `ref` is a :class:`~git.refs.reference.Reference`.
 
-        Otherwise an Object, given as :class:`~git.objects.base.Object` instance or
-        refspec, is assumed and if valid, will be set which effectively detaches the
-        reference if it was a purely symbolic one.
+        Otherwise a git object, specified as a :class:`~git.objects.base.Object`
+        instance or refspec, is assumed. If it is valid, this reference will be set to
+        it, which effectively detaches the reference if it was a purely symbolic one.
 
         :param ref:
             A :class:`SymbolicReference` instance, an :class:`~git.objects.base.Object`
-            instance, or a refspec string. Only if the ref is a
-            :class:`SymbolicReference` instance, we will point to it. Everything else is
-            dereferenced to obtain the actual object.
+            instance (specifically an :class:`~git.types.AnyGitObject`), or a refspec
+            string. Only if the ref is a :class:`SymbolicReference` instance, we will
+            point to it. Everything else is dereferenced to obtain the actual object.
 
         :param logmsg:
             If set to a string, the message will be used in the reflog.

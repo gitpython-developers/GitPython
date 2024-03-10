@@ -34,29 +34,29 @@ from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
 from git.util import (
     Actor,
-    finalize_process,
     cygpath,
-    hex_to_bin,
     expand_path,
+    finalize_process,
+    hex_to_bin,
     remove_password_if_present,
 )
 
 from .fun import (
-    rev_parse,
-    is_git_dir,
     find_submodule_git_dir,
-    touch,
     find_worktree_git_dir,
+    is_git_dir,
+    rev_parse,
+    touch,
 )
 
 # typing ------------------------------------------------------
 
 from git.types import (
-    TBD,
-    PathLike,
-    Lit_config_levels,
-    Old_commit_ish,
     CallableProgress,
+    Commit_ish,
+    Lit_config_levels,
+    PathLike,
+    TBD,
     Tree_ish,
     assert_never,
 )
@@ -68,25 +68,25 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
+    TYPE_CHECKING,
     TextIO,
     Tuple,
     Type,
     Union,
-    NamedTuple,
     cast,
-    TYPE_CHECKING,
 )
 
 from git.types import ConfigLevels_Tup, TypedDict
 
 if TYPE_CHECKING:
-    from git.util import IterableList
-    from git.refs.symbolic import SymbolicReference
     from git.objects import Tree
     from git.objects.submodule.base import UpdateProgress
+    from git.refs.symbolic import SymbolicReference
     from git.remote import RemoteProgress
+    from git.util import IterableList
 
 # -----------------------------------------------------------
 
@@ -96,7 +96,7 @@ __all__ = ("Repo",)
 
 
 class BlameEntry(NamedTuple):
-    commit: Dict[str, "Commit"]
+    commit: Dict[str, Commit]
     linenos: range
     orig_path: Optional[str]
     orig_linenos: range
@@ -696,7 +696,7 @@ class Repo:
         """
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self, merge_includes=False)
 
-    def commit(self, rev: Union[str, Old_commit_ish, None] = None) -> Commit:
+    def commit(self, rev: Union[str, Commit_ish, None] = None) -> Commit:
         """The :class:`~git.objects.commit.Commit` object for the specified revision.
 
         :param rev:
@@ -772,7 +772,7 @@ class Repo:
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
-    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Old_commit_ish, None]]:
+    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Commit]:
         R"""Find the closest common ancestor for the given revision
         (:class:`~git.objects.commit.Commit`\s, :class:`~git.refs.tag.Tag`\s,
         :class:`~git.refs.reference.Reference`\s, etc.).
@@ -797,9 +797,9 @@ class Repo:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # END handle input
 
-        res: List[Union[Old_commit_ish, None]] = []
+        res: List[Commit] = []
         try:
-            lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
+            lines: List[str] = self.git.merge_base(*rev, **kwargs).splitlines()
         except GitCommandError as err:
             if err.status == 128:
                 raise
@@ -815,7 +815,7 @@ class Repo:
 
         return res
 
-    def is_ancestor(self, ancestor_rev: "Commit", rev: "Commit") -> bool:
+    def is_ancestor(self, ancestor_rev: Commit, rev: Commit) -> bool:
         """Check if a commit is an ancestor of another.
 
         :param ancestor_rev:

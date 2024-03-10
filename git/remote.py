@@ -44,11 +44,9 @@ from typing import (
 from git.types import PathLike, Literal, Old_commit_ish
 
 if TYPE_CHECKING:
-    from git.repo.base import Repo
+    from git.objects.commit import Commit
     from git.objects.submodule.base import UpdateProgress
-
-    # from git.objects.commit import Commit
-    # from git.objects import Blob, Tree, TagObject
+    from git.repo.base import Repo
 
 flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
@@ -381,7 +379,7 @@ class FetchInfo(IterableObj):
         return self.ref.name
 
     @property
-    def commit(self) -> Old_commit_ish:
+    def commit(self) -> "Commit":
         """:return: Commit of our remote ref"""
         return self.ref.commit
 

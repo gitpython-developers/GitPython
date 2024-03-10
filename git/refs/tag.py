@@ -14,14 +14,15 @@ __all__ = ["TagReference", "Tag"]
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Type, Union, TYPE_CHECKING
-from git.types import Old_commit_ish, PathLike
+from typing import Any, TYPE_CHECKING, Type, Union
+
+from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.objects import Commit
     from git.objects import TagObject
     from git.refs import SymbolicReference
+    from git.repo import Repo
 
 
 # ------------------------------------------------------------------------------
@@ -82,7 +83,7 @@ class TagReference(Reference):
 
     # Make object read-only. It should be reasonably hard to adjust an existing tag.
     @property
-    def object(self) -> Old_commit_ish:  # type: ignore[override]
+    def object(self) -> AnyGitObject:  # type: ignore[override]
         return Reference._get_object(self)
 
     @classmethod
