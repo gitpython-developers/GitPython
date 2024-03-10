@@ -107,19 +107,12 @@ __all__ = [
 _logger = logging.getLogger(__name__)
 
 
-def _read_win_env_flag(name: str, default: bool) -> bool:
-    """Read a boolean flag from an environment variable on Windows.
+def _read_env_flag(name: str, default: bool) -> bool:
+    """Read a boolean flag from an environment variable.
 
     :return:
-        On Windows, the flag, or the `default` value if absent or ambiguous.
-        On all other operating systems, ``False``.
-
-    :note:
-        This only accesses the environment on Windows.
+        The flag, or the `default` value if absent or ambiguous.
     """
-    if sys.platform != "win32":
-        return False
-
     try:
         value = os.environ[name]
     except KeyError:
@@ -138,6 +131,19 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
         return True
     _logger.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
     return default
+
+
+def _read_win_env_flag(name: str, default: bool) -> bool:
+    """Read a boolean flag from an environment variable on Windows.
+
+    :return:
+        On Windows, the flag, or the `default` value if absent or ambiguous.
+        On all other operating systems, ``False``.
+
+    :note:
+        This only accesses the environment on Windows.
+    """
+    return sys.platform == "win32" and _read_env_flag(name, default)
 
 
 #: We need an easy way to see if Appveyor TCs start failing,
