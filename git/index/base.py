@@ -1500,7 +1500,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if self._file_path != self._index_path():
             raise AssertionError("Cannot call %r on indices that do not represent the default git index" % self.diff())
         # Index against index is always empty.
-        if other is self.Index:
+        if other is self.INDEX:
             return git_diff.DiffIndex()
 
         # Index against anything but None is a reverse diff with the respective item.
@@ -1514,12 +1514,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # Invert the existing R flag.
             cur_val = kwargs.get("R", False)
             kwargs["R"] = not cur_val
-            return other.diff(self.Index, paths, create_patch, **kwargs)
+            return other.diff(self.INDEX, paths, create_patch, **kwargs)
         # END diff against other item handling
 
         # If other is not None here, something is wrong.
         if other is not None:
-            raise ValueError("other must be None, Diffable.Index, a Tree or Commit, was %r" % other)
+            raise ValueError("other must be None, Diffable.INDEX, a Tree or Commit, was %r" % other)
 
         # Diff against working copy - can be handled by superclass natively.
         return super().diff(other, paths, create_patch, **kwargs)
