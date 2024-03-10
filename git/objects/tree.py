@@ -329,8 +329,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return cast(
             Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
             super()._traverse(
-                predicate,
-                prune,
+                predicate,  # type: ignore[arg-type]
+                prune,  # type: ignore[arg-type]
                 depth,
                 branch_first,
                 visit_once,
