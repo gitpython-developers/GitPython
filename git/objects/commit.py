@@ -112,14 +112,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         encoding: Union[str, None] = None,
         gpgsig: Union[str, None] = None,
     ) -> None:
-        R"""Instantiate a new :class:`Commit`. All keyword arguments taking ``None`` as
+        """Instantiate a new :class:`Commit`. All keyword arguments taking ``None`` as
         default will be implicitly set on first query.
 
         :param binsha:
             20 byte sha1.
-
-        :param parents: tuple(Commit, ...)
-            A tuple of commit ids or actual :class:`Commit`\s.
 
         :param tree:
             A :class:`~git.objects.tree.Tree` object.
