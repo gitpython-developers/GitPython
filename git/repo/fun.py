@@ -6,34 +6,30 @@
 from __future__ import annotations
 
 import os
-import stat
+import os.path as osp
 from pathlib import Path
+import stat
 from string import digits
 
+from git.cmd import Git
 from git.exc import WorkTreeRepositoryUnsupported
 from git.objects import Object
 from git.refs import SymbolicReference
 from git.util import hex_to_bin, bin_to_hex, cygpath
-from gitdb.exc import (
-    BadObject,
-    BadName,
-)
-
-import os.path as osp
-from git.cmd import Git
+from gitdb.exc import BadName, BadObject
 
 # Typing ----------------------------------------------------------------------
 
-from typing import Union, Optional, cast, TYPE_CHECKING
-from git.types import Old_commit_ish
+from typing import Optional, TYPE_CHECKING, Union, cast, overload
+
+from git.types import AnyGitObject, Literal, Old_commit_ish, PathLike
 
 if TYPE_CHECKING:
-    from git.types import PathLike
-    from .base import Repo
     from git.db import GitCmdObjectDB
-    from git.refs.reference import Reference
     from git.objects import Commit, TagObject, Blob, Tree
+    from git.refs.reference import Reference
     from git.refs.tag import Tag
+    from .base import Repo
 
 # ----------------------------------------------------------------------------
 
@@ -56,7 +52,7 @@ def touch(filename: str) -> str:
     return filename
 
 
-def is_git_dir(d: "PathLike") -> bool:
+def is_git_dir(d: PathLike) -> bool:
     """This is taken from the git setup.c:is_git_directory function.
 
     :raise git.exc.WorkTreeRepositoryUnsupported:
@@ -79,7 +75,7 @@ def is_git_dir(d: "PathLike") -> bool:
     return False
 
 
-def find_worktree_git_dir(dotgit: "PathLike") -> Optional[str]:
+def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
     """Search for a gitdir for this worktree."""
     try:
         statbuf = os.stat(dotgit)
@@ -98,7 +94,7 @@ def find_worktree_git_dir(dotgit: "PathLike") -> Optional[str]:
     return None
 
 
-def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
+def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     """Search for a submodule repo."""
     if is_git_dir(d):
         return d
@@ -141,9 +137,17 @@ def short_to_long(odb: "GitCmdObjectDB", hexsha: str) -> Optional[bytes]:
     # END exception handling
 
 
-def name_to_object(
-    repo: "Repo", name: str, return_ref: bool = False
-) -> Union[SymbolicReference, "Commit", "TagObject", "Blob", "Tree"]:
+@overload
+def name_to_object(repo: "Repo", name: str, return_ref: Literal[False] = ...) -> AnyGitObject:
+    ...
+
+
+@overload
+def name_to_object(repo: "Repo", name: str, return_ref: Literal[True]) -> Union[AnyGitObject, SymbolicReference]:
+    ...
+
+
+def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[AnyGitObject, SymbolicReference]:
     """
     :return:
         Object specified by the given name - hexshas (short and long) as well as
@@ -151,8 +155,8 @@ def name_to_object(
 
     :param return_ref:
         If ``True``, and name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise `~gitdb.exc.BadObject` or
-        `~gitdb.exc.BadName`.
+        instead of the object. Otherwise it will raise :class:`~gitdb.exc.BadObject` or
+        :class:`~gitdb.exc.BadName`.
     """
     hexsha: Union[None, str, bytes] = None
 
@@ -201,7 +205,7 @@ def name_to_object(
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
 
-def deref_tag(tag: "Tag") -> "TagObject":
+def deref_tag(tag: "Tag") -> AnyGitObject:
     """Recursively dereference a tag and return the resulting object."""
     while True:
         try:
@@ -212,7 +216,7 @@ def deref_tag(tag: "Tag") -> "TagObject":
     return tag
 
 
-def to_commit(obj: Object) -> Union["Commit", "TagObject"]:
+def to_commit(obj: Object) -> "Commit":
     """Convert the given object to a commit if possible and return it."""
     if obj.type == "tag":
         obj = deref_tag(obj)
