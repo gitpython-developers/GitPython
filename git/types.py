@@ -46,6 +46,33 @@ TBD = Any
 _T = TypeVar("_T")
 """Type variable used internally in GitPython."""
 
+AnyGitObject = Union["Commit", "Tree", "TagObject", "Blob"]
+"""Union of the :class:`~git.objects.base.Object`-based types that represent actual git
+object types.
+
+As noted in :class:`~git.objects.base.Object`, which has further details, these are:
+
+* :class:`Blob <git.objects.blob.Blob>`
+* :class:`Tree <git.objects.tree.Tree>`
+* :class:`Commit <git.objects.commit.Commit>`
+* :class:`TagObject <git.objects.tag.TagObject>`
+
+Those GitPython classes represent the four git object types, per gitglossary(7):
+
+* "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+* "tree object": https://git-scm.com/docs/gitglossary#def_tree_object
+* "commit object": https://git-scm.com/docs/gitglossary#def_commit_object
+* "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
+
+For more general information on git objects and their types as git understands them:
+
+* "object": https://git-scm.com/docs/gitglossary#def_object
+* "object type": https://git-scm.com/docs/gitglossary#def_object_type
+
+:note:
+    See also the :class:`Tree_ish` and :class:`Commit_ish` unions.
+"""
+
 Tree_ish = Union["Commit", "Tree"]
 """Union of :class:`~git.objects.base.Object`-based types that are inherently tree-ish.
 
@@ -54,13 +81,40 @@ See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-
 :note:
     This union comprises **only** the :class:`~git.objects.commit.Commit` and
     :class:`~git.objects.tree.Tree` classes, **all** of whose instances are tree-ish.
-    This is done because of the way GitPython uses it as a static type annotation.
+    This has been done because of the way GitPython uses it as a static type annotation.
 
     :class:`~git.objects.tag.TagObject`, some but not all of whose instances are
     tree-ish (those representing git tag objects that ultimately resolve to a tree or
     commit), is not covered as part of this union type.
+
+:note:
+    See also the :class:`AnyGitObject` union of all four classes corresponding to git
+    object types.
 """
 
+Commit_ish = Union["Commit", "TagObject"]
+"""Union of :class:`~git.objects.base.Object`-based types that are sometimes commit-ish.
+
+See gitglossary(7) on "commit-ish": https://git-scm.com/docs/gitglossary#def_commit-ish
+
+:note:
+    :class:`~git.objects.commit.Commit` is the only class whose instances are all
+    commit-ish. This union type includes :class:`~git.objects.commit.Commit`, but also
+    :class:`~git.objects.tag.TagObject`, only **some** of whose instances are
+    commit-ish. Whether a particular :class:`~git.objects.tag.TagObject` peels
+    (recursively dereferences) to a commit can in general only be known at runtime.
+
+:note:
+    This is an inversion of the situation with :class:`Tree_ish`. This union is broader
+    than all commit-ish objects, while :class:`Tree_ish` is narrower than all tree-ish
+    objects.
+
+:note:
+    See also the :class:`AnyGitObject` union of all four classes corresponding to git
+    object types.
+"""
+
+# FIXME: Replace uses with AnyGitObject and Commit_ish, and remove this.
 Old_commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
 """Union of the :class:`~git.objects.base.Object`-based types that represent git object
 types. This union is often usable where a commit-ish is expected, but is not actually
