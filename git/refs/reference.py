@@ -150,7 +150,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     # { Remote Interface
 
-    @property  # type: ignore  # mypy cannot deal with properties with an extra decorator (2021-04-21).
+    @property
     @require_remote_ref_path
     def remote_name(self) -> str:
         """
@@ -162,7 +162,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         # /refs/remotes/<remote name>/<branch_name>
         return tokens[2]
 
-    @property  # type: ignore  # mypy cannot deal with properties with an extra decorator (2021-04-21).
+    @property
     @require_remote_ref_path
     def remote_head(self) -> str:
         """

@@ -619,7 +619,7 @@ class TraversableIterableObj(IterableObj, Traversable):
     def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:
         return super()._list_traverse(*args, **kwargs)
 
-    @overload  # type: ignore
+    @overload
     def traverse(self: T_TIobj) -> Iterator[T_TIobj]:
         ...
 

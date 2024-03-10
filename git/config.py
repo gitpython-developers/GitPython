@@ -344,9 +344,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             configuration files.
         """
         cp.RawConfigParser.__init__(self, dict_type=_OMD)
-        self._dict: Callable[..., _OMD]  # type: ignore   # mypy/typeshed bug?
+        self._dict: Callable[..., _OMD]
         self._defaults: _OMD
-        self._sections: _OMD  # type: ignore  # mypy/typeshed bug?
+        self._sections: _OMD
 
         # Used in Python 3. Needs to stay in sync with sections for underlying
         # implementation to work.

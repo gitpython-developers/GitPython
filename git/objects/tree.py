@@ -300,7 +300,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return TreeModifier(self._cache)
 
     def traverse(
-        self,  # type: ignore[override]
+        self,
         predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
         prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
         depth: int = -1,
@@ -331,7 +331,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             super()._traverse(
                 predicate,
                 prune,
-                depth,  # type: ignore
+                depth,
                 branch_first,
                 visit_once,
                 ignore_self,

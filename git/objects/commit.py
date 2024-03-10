@@ -292,7 +292,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def iter_items(
         cls,
         repo: "Repo",
-        rev: Union[str, "Commit", "SymbolicReference"],  # type: ignore
+        rev: Union[str, "Commit", "SymbolicReference"],
         paths: Union[PathLike, Sequence[PathLike]] = "",
         **kwargs: Any,
     ) -> Iterator["Commit"]:
