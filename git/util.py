@@ -117,7 +117,7 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
     :note:
         This only accesses the environment on Windows.
     """
-    if os.name != "nt":
+    if sys.platform != "win32":
         return False
 
     try:
@@ -223,7 +223,7 @@ def rmtree(path: PathLike) -> None:
                 raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    if os.name != "nt":
+    if sys.platform != "win32":
         shutil.rmtree(path)
     elif sys.version_info >= (3, 12):
         shutil.rmtree(path, onexc=handler)
@@ -235,7 +235,7 @@ def rmfile(path: PathLike) -> None:
     """Ensure file deleted also on *Windows* where read-only files need special
     treatment."""
     if osp.isfile(path):
-        if os.name == "nt":
+        if sys.platform == "win32":
             os.chmod(path, 0o777)
         os.remove(path)
 
@@ -276,7 +276,7 @@ def join_path(a: PathLike, *p: PathLike) -> PathLike:
     return path
 
 
-if os.name == "nt":
+if sys.platform == "win32":
 
     def to_native_path_windows(path: PathLike) -> PathLike:
         path = str(path)
@@ -328,7 +328,7 @@ def _get_exe_extensions() -> Sequence[str]:
     PATHEXT = os.environ.get("PATHEXT", None)
     if PATHEXT:
         return tuple(p.upper() for p in PATHEXT.split(os.pathsep))
-    elif os.name == "nt":
+    elif sys.platform == "win32":
         return (".BAT", "COM", ".EXE")
     else:
         return ()
@@ -354,7 +354,9 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
         return (
             osp.isfile(fpath)
             and os.access(fpath, os.X_OK)
-            and (os.name != "nt" or not winprog_exts or any(fpath.upper().endswith(ext) for ext in winprog_exts))
+            and (
+                sys.platform != "win32" or not winprog_exts or any(fpath.upper().endswith(ext) for ext in winprog_exts)
+            )
         )
 
     progs = []
@@ -451,8 +453,8 @@ def is_cygwin_git(git_executable: PathLike) -> bool:
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if os.name == "nt":
-        # This is Windows-native Python, since Cygwin has os.name == "posix".
+    if sys.platform == "win32":
+        # This is Windows-native Python, since Cygwin has sys.platform == "cygwin".
         return False
 
     if git_executable is None:

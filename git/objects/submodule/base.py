@@ -7,6 +7,7 @@ import logging
 import os
 import os.path as osp
 import stat
+import sys
 import uuid
 
 import git
@@ -401,7 +402,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         git_file = osp.join(working_tree_dir, ".git")
         rela_path = osp.relpath(module_abspath, start=working_tree_dir)
-        if os.name == "nt" and osp.isfile(git_file):
+        if sys.platform == "win32" and osp.isfile(git_file):
             os.remove(git_file)
         with open(git_file, "wb") as fp:
             fp.write(("gitdir: %s" % rela_path).encode(defenc))

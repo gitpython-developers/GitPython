@@ -12,6 +12,7 @@ import os.path as osp
 from pathlib import Path
 import re
 import shlex
+import sys
 import warnings
 
 import gitdb
@@ -336,10 +337,10 @@ class Repo:
             # they are collected by the garbage collector, thus preventing deletion.
             # TODO: Find these references and ensure they are closed and deleted
             # synchronously rather than forcing a gc collection.
-            if os.name == "nt":
+            if sys.platform == "win32":
                 gc.collect()
             gitdb.util.mman.collect()
-            if os.name == "nt":
+            if sys.platform == "win32":
                 gc.collect()
 
     def __eq__(self, rhs: object) -> bool:
@@ -618,7 +619,7 @@ class Repo:
             git_dir = self.git_dir
         # We do not support an absolute path of the gitconfig on Windows.
         # Use the global config instead.
-        if os.name == "nt" and config_level == "system":
+        if sys.platform == "win32" and config_level == "system":
             config_level = "global"
 
         if config_level == "system":

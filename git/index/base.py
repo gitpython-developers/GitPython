@@ -13,6 +13,7 @@ from io import BytesIO
 import os
 from stat import S_ISLNK
 import subprocess
+import sys
 import tempfile
 
 from git.compat import (
@@ -107,7 +108,7 @@ def _named_temporary_file_for_subprocess(directory: PathLike) -> Generator[str, 
         A context manager object that creates the file and provides its name on entry,
         and deletes it on exit.
     """
-    if os.name == "nt":
+    if sys.platform == "win32":
         fd, name = tempfile.mkstemp(dir=directory)
         os.close(fd)
         try:

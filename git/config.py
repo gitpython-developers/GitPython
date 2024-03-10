@@ -246,7 +246,7 @@ class _OMD(OrderedDict_OMD):
 def get_config_path(config_level: Lit_config_levels) -> str:
     # We do not support an absolute path of the gitconfig on Windows.
     # Use the global config instead.
-    if os.name == "nt" and config_level == "system":
+    if sys.platform == "win32" and config_level == "system":
         config_level = "global"
 
     if config_level == "system":
