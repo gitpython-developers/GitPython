@@ -16,7 +16,7 @@ from .util import get_object_type_by_name
 
 from typing import Any, TYPE_CHECKING, Union
 
-from git.types import PathLike, Old_commit_ish, Lit_old_commit_ish
+from git.types import GitObjectTypeString, Old_commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -36,7 +36,7 @@ __all__ = ("Object", "IndexObject")
 class Object(LazyMixin):
     """Base class for classes representing git object types.
 
-    The following leaf classes represent specific kinds of git objects:
+    The following four leaf classes represent specific kinds of git objects:
 
     * :class:`Blob <git.objects.blob.Blob>`
     * :class:`Tree <git.objects.tree.Tree>`
@@ -53,12 +53,14 @@ class Object(LazyMixin):
     * "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
 
     :note:
-        See the :class:`~git.types.Old_commit_ish` union type.
+        See the :class:`~git.types.AnyGitObject` union type of the four leaf subclasses
+        that represent actual git object types.
 
     :note:
         :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
         rooted at this :class:`Object` class, even though submodules are not really a
-        type of git object.
+        type of git object. (This also applies to its
+        :class:`~git.objects.submodule.root.RootModule` subclass.)
 
     :note:
         This :class:`Object` class should not be confused with :class:`object` (the root
@@ -77,7 +79,7 @@ class Object(LazyMixin):
 
     __slots__ = ("repo", "binsha", "size")
 
-    type: Union[Lit_old_commit_ish, None] = None
+    type: Union[GitObjectTypeString, None] = None
     """String identifying (a concrete :class:`Object` subtype for) a git object type.
 
     The subtypes that this may name correspond to the kinds of git objects that exist,
@@ -90,7 +92,7 @@ class Object(LazyMixin):
         ``None`` in concrete leaf subclasses representing specific git object types.
 
     :note:
-        See also :class:`~git.types.Old_commit_ish`.
+        See also :class:`~git.types.GitObjectTypeString`.
     """
 
     def __init__(self, repo: "Repo", binsha: bytes):

@@ -114,6 +114,18 @@ See gitglossary(7) on "commit-ish": https://git-scm.com/docs/gitglossary#def_com
     object types.
 """
 
+GitObjectTypeString = Literal["commit", "tag", "blob", "tree"]
+"""Literal strings identifying git object types and the
+:class:`~git.objects.base.Object`-based types that represent them.
+
+See the :attr:`Object.type <git.objects.base.Object.type>` attribute. These are its
+values in :class:`~git.objects.base.Object` subclasses that represent git objects. These
+literals therefore correspond to the types in the :class:`AnyGitObject` union.
+
+These are the same strings git itself uses to identify its four object types. See
+gitglossary(7) on "object type": https://git-scm.com/docs/gitglossary#def_object_type
+"""
+
 # FIXME: Replace uses with AnyGitObject and Commit_ish, and remove this.
 Old_commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
 """Union of the :class:`~git.objects.base.Object`-based types that represent git object
@@ -140,6 +152,8 @@ See gitglossary(7) on:
     compatibility.
 """
 
+# FIXME: After replacing the one use with GitObjectTypeString, define Lit_commit_ish
+#        somehow (it is a breaking change to remove it entirely). Maybe deprecate it.
 Lit_old_commit_ish = Literal["commit", "tag", "blob", "tree"]
 """Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes
 representing git object types.
