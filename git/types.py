@@ -61,7 +61,7 @@ See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-
     commit), is not covered as part of this union type.
 """
 
-Commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
+Old_commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
 """Union of the :class:`~git.objects.base.Object`-based types that represent git object
 types. This union is often usable where a commit-ish is expected, but is not actually
 limited to types representing commit-ish git objects.
@@ -86,18 +86,18 @@ See gitglossary(7) on:
     compatibility.
 """
 
-Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
+Lit_old_commit_ish = Literal["commit", "tag", "blob", "tree"]
 """Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes
 representing git object types.
 
 See the :class:`Object.type <git.objects.base.Object.type>` attribute.
 
 :note:
-    See also :class:`Commit_ish`, a union of the the :class:`~git.objects.base.Object`
+    See also :class:`Old_commit_ish`, a union of the the :class:`~git.objects.base.Object`
     subtypes associated with these literal strings.
 
 :note:
-    As noted in :class:`Commit_ish`, this is not limited to types of git objects that
+    As noted in :class:`Old_commit_ish`, this is not limited to types of git objects that
     are actually commit-ish.
 """
 

@@ -25,7 +25,7 @@ from git.cmd import Git
 # Typing ----------------------------------------------------------------------
 
 from typing import Union, Optional, cast, TYPE_CHECKING
-from git.types import Commit_ish
+from git.types import Old_commit_ish
 
 if TYPE_CHECKING:
     from git.types import PathLike
@@ -249,7 +249,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
         raise NotImplementedError("commit by message search (regex)")
     # END handle search
 
-    obj: Union[Commit_ish, "Reference", None] = None
+    obj: Union[Old_commit_ish, "Reference", None] = None
     ref = None
     output_type = "commit"
     start = 0
@@ -271,7 +271,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 if token == "@":
                     ref = cast("Reference", name_to_object(repo, rev[:start], return_ref=True))
                 else:
-                    obj = cast(Commit_ish, name_to_object(repo, rev[:start]))
+                    obj = cast(Old_commit_ish, name_to_object(repo, rev[:start]))
                 # END handle token
             # END handle refname
         else:
@@ -296,7 +296,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 pass  # Default.
             elif output_type == "tree":
                 try:
-                    obj = cast(Commit_ish, obj)
+                    obj = cast(Old_commit_ish, obj)
                     obj = to_commit(obj).tree
                 except (AttributeError, ValueError):
                     pass  # Error raised later.
@@ -369,7 +369,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
         parsed_to = start
         # Handle hierarchy walk.
         try:
-            obj = cast(Commit_ish, obj)
+            obj = cast(Old_commit_ish, obj)
             if token == "~":
                 obj = to_commit(obj)
                 for _ in range(num):
@@ -398,7 +398,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
 
     # Still no obj? It's probably a simple name.
     if obj is None:
-        obj = cast(Commit_ish, name_to_object(repo, rev))
+        obj = cast(Old_commit_ish, name_to_object(repo, rev))
         parsed_to = lr
     # END handle simple name
 

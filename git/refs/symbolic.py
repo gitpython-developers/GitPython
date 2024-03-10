@@ -31,7 +31,7 @@ from typing import (
     TYPE_CHECKING,
     cast,
 )
-from git.types import Commit_ish, PathLike
+from git.types import Old_commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -278,7 +278,7 @@ class SymbolicReference:
         """
         return cls._get_ref_info_helper(repo, ref_path)
 
-    def _get_object(self) -> Commit_ish:
+    def _get_object(self) -> Old_commit_ish:
         """
         :return:
             The object our ref currently refers to. Refs can be cached, they will always
@@ -345,7 +345,7 @@ class SymbolicReference:
 
     def set_object(
         self,
-        object: Union[Commit_ish, "SymbolicReference", str],
+        object: Union[Old_commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
         """Set the object we point to, possibly dereference our symbolic reference
@@ -404,7 +404,7 @@ class SymbolicReference:
 
     def set_reference(
         self,
-        ref: Union[Commit_ish, "SymbolicReference", str],
+        ref: Union[Old_commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
         """Set ourselves to the given `ref`.

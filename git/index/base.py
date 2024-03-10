@@ -80,7 +80,7 @@ from typing import (
     Union,
 )
 
-from git.types import Commit_ish, Literal, PathLike
+from git.types import Old_commit_ish, Literal, PathLike
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -1127,7 +1127,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def commit(
         self,
         message: str,
-        parent_commits: Union[Commit_ish, None] = None,
+        parent_commits: Union[Old_commit_ish, None] = None,
         head: bool = True,
         author: Union[None, "Actor"] = None,
         committer: Union[None, "Actor"] = None,

@@ -55,7 +55,7 @@ from git.types import (
     TBD,
     PathLike,
     Lit_config_levels,
-    Commit_ish,
+    Old_commit_ish,
     CallableProgress,
     Tree_ish,
     assert_never,
@@ -696,7 +696,7 @@ class Repo:
         """
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self, merge_includes=False)
 
-    def commit(self, rev: Union[str, Commit_ish, None] = None) -> Commit:
+    def commit(self, rev: Union[str, Old_commit_ish, None] = None) -> Commit:
         """The :class:`~git.objects.commit.Commit` object for the specified revision.
 
         :param rev:
@@ -772,7 +772,7 @@ class Repo:
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
-    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Commit_ish, None]]:
+    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Old_commit_ish, None]]:
         R"""Find the closest common ancestor for the given revision
         (:class:`~git.objects.commit.Commit`\s, :class:`~git.refs.tag.Tag`\s,
         :class:`~git.refs.reference.Reference`\s, etc.).
@@ -797,7 +797,7 @@ class Repo:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # END handle input
 
-        res: List[Union[Commit_ish, None]] = []
+        res: List[Union[Old_commit_ish, None]] = []
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:

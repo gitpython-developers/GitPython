@@ -45,7 +45,7 @@ from .util import (
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
-from git.types import Commit_ish, Literal, PathLike, TBD
+from git.types import Old_commit_ish, Literal, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile
@@ -112,7 +112,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         mode: Union[int, None] = None,
         path: Union[PathLike, None] = None,
         name: Union[str, None] = None,
-        parent_commit: Union[Commit_ish, None] = None,
+        parent_commit: Union[Old_commit_ish, None] = None,
         url: Union[str, None] = None,
         branch_path: Union[PathLike, None] = None,
     ) -> None:
@@ -213,7 +213,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _config_parser(
-        cls, repo: "Repo", parent_commit: Union[Commit_ish, None], read_only: bool
+        cls, repo: "Repo", parent_commit: Union[Old_commit_ish, None], read_only: bool
     ) -> SubmoduleConfigParser:
         """
         :return:
@@ -264,7 +264,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END for each name to delete
 
     @classmethod
-    def _sio_modules(cls, parent_commit: Commit_ish) -> BytesIO:
+    def _sio_modules(cls, parent_commit: Old_commit_ish) -> BytesIO:
         """
         :return:
             Configuration file as :class:`~io.BytesIO` - we only access it through the
@@ -277,7 +277,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _config_parser_constrained(self, read_only: bool) -> SectionConstraint:
         """:return: Config parser constrained to our submodule in read or write mode"""
         try:
-            pc: Union["Commit_ish", None] = self.parent_commit
+            pc: Union["Old_commit_ish", None] = self.parent_commit
         except ValueError:
             pc = None
         # END handle empty parent repository
@@ -1242,7 +1242,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return self
 
-    def set_parent_commit(self, commit: Union[Commit_ish, None], check: bool = True) -> "Submodule":
+    def set_parent_commit(self, commit: Union[Old_commit_ish, None], check: bool = True) -> "Submodule":
         """Set this instance to use the given commit whose tree is supposed to
         contain the ``.gitmodules`` blob.
 
@@ -1495,7 +1495,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self._url
 
     @property
-    def parent_commit(self) -> "Commit_ish":
+    def parent_commit(self) -> "Old_commit_ish":
         """
         :return:
             :class:`~git.objects.commit.Commit` instance with the tree containing the
@@ -1557,7 +1557,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def iter_items(
         cls,
         repo: "Repo",
-        parent_commit: Union[Commit_ish, str] = "HEAD",
+        parent_commit: Union[Old_commit_ish, str] = "HEAD",
         *Args: Any,
         **kwargs: Any,
     ) -> Iterator["Submodule"]:

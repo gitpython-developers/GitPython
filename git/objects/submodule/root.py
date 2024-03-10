@@ -12,7 +12,7 @@ import logging
 
 from typing import TYPE_CHECKING, Union
 
-from git.types import Commit_ish
+from git.types import Old_commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -77,7 +77,7 @@ class RootModule(Submodule):
 
     def update(  # type: ignore[override]
         self,
-        previous_commit: Union[Commit_ish, None] = None,
+        previous_commit: Union[Old_commit_ish, None] = None,
         recursive: bool = True,
         force_remove: bool = False,
         init: bool = True,

@@ -16,7 +16,7 @@ from .util import get_object_type_by_name
 
 from typing import Any, TYPE_CHECKING, Union
 
-from git.types import PathLike, Commit_ish, Lit_commit_ish
+from git.types import PathLike, Old_commit_ish, Lit_old_commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -53,7 +53,7 @@ class Object(LazyMixin):
     * "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
 
     :note:
-        See the :class:`~git.types.Commit_ish` union type.
+        See the :class:`~git.types.Old_commit_ish` union type.
 
     :note:
         :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
@@ -77,7 +77,7 @@ class Object(LazyMixin):
 
     __slots__ = ("repo", "binsha", "size")
 
-    type: Union[Lit_commit_ish, None] = None
+    type: Union[Lit_old_commit_ish, None] = None
     """String identifying (a concrete :class:`Object` subtype for) a git object type.
 
     The subtypes that this may name correspond to the kinds of git objects that exist,
@@ -90,7 +90,7 @@ class Object(LazyMixin):
         ``None`` in concrete leaf subclasses representing specific git object types.
 
     :note:
-        See also :class:`~git.types.Commit_ish`.
+        See also :class:`~git.types.Old_commit_ish`.
     """
 
     def __init__(self, repo: "Repo", binsha: bytes):
@@ -113,7 +113,7 @@ class Object(LazyMixin):
         )
 
     @classmethod
-    def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> Commit_ish:
+    def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> Old_commit_ish:
         """
         :return:
             New :class:`Object` instance of a type appropriate to the object type behind
@@ -130,7 +130,7 @@ class Object(LazyMixin):
         return repo.rev_parse(str(id))
 
     @classmethod
-    def new_from_sha(cls, repo: "Repo", sha1: bytes) -> Commit_ish:
+    def new_from_sha(cls, repo: "Repo", sha1: bytes) -> Old_commit_ish:
         """
         :return:
             New object instance of a type appropriate to represent the given binary sha1

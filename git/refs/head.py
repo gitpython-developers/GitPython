@@ -17,7 +17,7 @@ from .reference import Reference
 
 from typing import Any, Sequence, Union, TYPE_CHECKING
 
-from git.types import PathLike, Commit_ish
+from git.types import PathLike, Old_commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -62,7 +62,7 @@ class HEAD(SymbolicReference):
 
     def reset(
         self,
-        commit: Union[Commit_ish, SymbolicReference, str] = "HEAD",
+        commit: Union[Old_commit_ish, SymbolicReference, str] = "HEAD",
         index: bool = True,
         working_tree: bool = False,
         paths: Union[PathLike, Sequence[PathLike], None] = None,

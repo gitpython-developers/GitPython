@@ -11,7 +11,7 @@ from .symbolic import SymbolicReference, T_References
 # typing ------------------------------------------------------------------
 
 from typing import Any, Callable, Iterator, Type, Union, TYPE_CHECKING
-from git.types import Commit_ish, PathLike, _T
+from git.types import Old_commit_ish, PathLike, _T
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -81,7 +81,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     # @ReservedAssignment
     def set_object(
         self,
-        object: Union[Commit_ish, "SymbolicReference", str],
+        object: Union[Old_commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "Reference":
         """Special version which checks if the head-log needs an update as well.
