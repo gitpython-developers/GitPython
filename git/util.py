@@ -448,25 +448,7 @@ def decygpath(path: PathLike) -> str:
 _is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
-@overload
-def is_cygwin_git(git_executable: None) -> Literal[False]:
-    ...
-
-
-@overload
-def is_cygwin_git(git_executable: PathLike) -> bool:
-    ...
-
-
-def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if sys.platform == "win32":
-        # This is Windows-native Python, since Cygwin has sys.platform == "cygwin".
-        return False
-
-    if git_executable is None:
-        return False
-
-    git_executable = str(git_executable)
+def _is_cygwin_git(git_executable: str) -> bool:
     is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
     if is_cygwin is None:
         is_cygwin = False
@@ -487,6 +469,25 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
         _is_cygwin_cache[git_executable] = is_cygwin
 
     return is_cygwin
+
+
+@overload
+def is_cygwin_git(git_executable: None) -> Literal[False]:
+    ...
+
+
+@overload
+def is_cygwin_git(git_executable: PathLike) -> bool:
+    ...
+
+
+def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
+    if sys.platform == "win32":  # TODO: See if we can use `sys.platform != "cygwin"`.
+        return False
+    elif git_executable is None:
+        return False
+    else:
+        return _is_cygwin_git(str(git_executable))
 
 
 def get_user_id() -> str:
