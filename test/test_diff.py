@@ -12,7 +12,7 @@ import tempfile
 import ddt
 import pytest
 
-from git import NULL_TREE, Diff, DiffIndex, GitCommandError, Repo, Submodule
+from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
@@ -352,7 +352,7 @@ class TestDiff(TestBase):
         self.assertIsInstance(diff.b_blob.size, int)
 
     def test_diff_interface(self):
-        # Test a few variations of the main diff routine.
+        """Test a few variations of the main diff routine."""
         assertion_map = {}
         for i, commit in enumerate(self.rorepo.iter_commits("0.1.6", max_count=2)):
             diff_item = commit
@@ -360,7 +360,7 @@ class TestDiff(TestBase):
                 diff_item = commit.tree
             # END use tree every second item
 
-            for other in (None, NULL_TREE, commit.Index, commit.parents[0]):
+            for other in (None, NULL_TREE, commit.INDEX, commit.parents[0]):
                 for paths in (None, "CHANGES", ("CHANGES", "lib")):
                     for create_patch in range(2):
                         diff_index = diff_item.diff(other=other, paths=paths, create_patch=create_patch)
@@ -406,10 +406,22 @@ class TestDiff(TestBase):
         diff_index = c.diff(cp, ["does/not/exist"])
         self.assertEqual(len(diff_index), 0)
 
+    def test_diff_interface_stability(self):
+        """Test that the Diffable.Index redefinition should not break compatibility."""
+        self.assertIs(
+            Diffable.Index,
+            Diffable.INDEX,
+            "The old and new class attribute names must be aliases.",
+        )
+        self.assertIs(
+            type(Diffable.INDEX).__eq__,
+            object.__eq__,
+            "Equality comparison must be reference-based.",
+        )
+
     @with_rw_directory
     def test_rename_override(self, rw_dir):
-        """Test disabling of diff rename detection"""
-
+        """Test disabling of diff rename detection."""
         # Create and commit file_a.txt.
         repo = Repo.init(rw_dir)
         file_a = osp.join(rw_dir, "file_a.txt")
