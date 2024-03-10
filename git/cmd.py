@@ -264,22 +264,19 @@ if sys.platform == "win32":
         creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
         # When using a shell, the shell is the direct subprocess, so the variable must
-        # be set in its environment, to affect its search behavior. (The "1" can be any
-        # value.)
+        # be set in its environment, to affect its search behavior.
         if shell:
-            # The original may be immutable or reused by the caller. Make changes in a
-            # copy.
+            # The original may be immutable, or the caller may reuse it. Mutate a copy.
             env = {} if env is None else dict(env)
-            env["NoDefaultCurrentDirectoryInExePath"] = "1"
+            env["NoDefaultCurrentDirectoryInExePath"] = "1"  # The "1" can be an value.
 
         # When not using a shell, the current process does the search in a
         # CreateProcessW API call, so the variable must be set in our environment. With
-        # a shell, this is unnecessary, in versions where
-        # https://github.com/python/cpython/issues/101283 is patched. If that is
-        # unpatched, then in the rare case the ComSpec environment variable is unset,
-        # the search for the shell itself is unsafe. Setting
-        # NoDefaultCurrentDirectoryInExePath in all cases, as is done here, is simpler
-        # and protects against that. (As above, the "1" can be any value.)
+        # a shell, that's unnecessary if https://github.com/python/cpython/issues/101283
+        # is patched. In Python versions where it is unpatched, and in the rare case the
+        # ComSpec environment variable is unset, the search for the shell itself is
+        # unsafe. Setting NoDefaultCurrentDirectoryInExePath in all cases, as done here,
+        # is simpler and protects against that. (As above, the "1" can be any value.)
         with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
             return Popen(
                 command,
