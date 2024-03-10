@@ -309,7 +309,7 @@ class TestRepo(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=(
             "File not created. A separate Windows command may be needed. This and the "
             "currently passing test test_clone_unsafe_options must be adjusted in the "
@@ -388,7 +388,7 @@ class TestRepo(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=(
             "File not created. A separate Windows command may be needed. This and the "
             "currently passing test test_clone_from_unsafe_options must be adjusted in the "
@@ -1389,7 +1389,7 @@ class TestRepo(TestBase):
         self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=R"fatal: could not create leading directories of '--upload-pack=touch C:\Users\ek\AppData\Local\Temp\tmpnantqizc\pwn': Invalid argument",  # noqa: E501
         raises=GitCommandError,
     )

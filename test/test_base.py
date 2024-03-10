@@ -130,7 +130,7 @@ class TestBase(_TestBase):
         with open(file_path, "wb") as fp:
             fp.write(b"something")
 
-        if os.name == "nt":
+        if sys.platform == "win32":
             # On Windows, there is no way this works, see images on:
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the Python implementation.

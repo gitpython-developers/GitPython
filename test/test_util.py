@@ -149,7 +149,7 @@ class TestRmtree:
         mocker.patch.object(pathlib.Path, "chmod")
 
     @pytest.mark.skipif(
-        os.name != "nt",
+        sys.platform != "win32",
         reason="PermissionError is only ever wrapped on Windows",
     )
     def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
@@ -168,7 +168,7 @@ class TestRmtree:
         "hide_windows_known_errors",
         [
             pytest.param(False),
-            pytest.param(True, marks=pytest.mark.skipif(os.name == "nt", reason="We would wrap on Windows")),
+            pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="We would wrap on Windows")),
         ],
     )
     def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
@@ -214,7 +214,7 @@ class TestEnvParsing:
         return ast.literal_eval(output)
 
     @pytest.mark.skipif(
-        os.name != "nt",
+        sys.platform != "win32",
         reason="These environment variables are only used on Windows.",
     )
     @pytest.mark.parametrize(
@@ -410,7 +410,7 @@ class TestUtils(TestBase):
             elapsed = time.time() - start
 
         extra_time = 0.02
-        if os.name == "nt" or sys.platform == "cygwin":
+        if sys.platform in {"win32", "cygwin"}:
             extra_time *= 6  # Without this, we get indeterministic failures on Windows.
         elif sys.platform == "darwin":
             extra_time *= 18  # The situation on macOS is similar, but with more delay.

@@ -4,9 +4,9 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-import os
 import os.path as osp
 import shutil
+import sys
 import tempfile
 
 import ddt
@@ -309,7 +309,7 @@ class TestDiff(TestBase):
         self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason='"Access is denied" when tearDown calls shutil.rmtree',
         raises=PermissionError,
     )

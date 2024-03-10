@@ -4,10 +4,10 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-import os
 import os.path as osp
 from pathlib import Path
 import random
+import sys
 import tempfile
 from unittest import skipIf
 
@@ -769,7 +769,7 @@ class TestRemote(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=R"Multiple '\' instead of '/' in remote.url make it differ from expected value",
         raises=AssertionError,
     )
@@ -832,7 +832,7 @@ class TestRemote(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=(
             "File not created. A separate Windows command may be needed. This and the "
             "currently passing test test_fetch_unsafe_options must be adjusted in the "
@@ -900,7 +900,7 @@ class TestRemote(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=(
             "File not created. A separate Windows command may be needed. This and the "
             "currently passing test test_pull_unsafe_options must be adjusted in the "
@@ -974,7 +974,7 @@ class TestRemote(TestBase):
                 assert not tmp_file.exists()
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason=(
             "File not created. A separate Windows command may be needed. This and the "
             "currently passing test test_push_unsafe_options must be adjusted in the "

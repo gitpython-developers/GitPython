@@ -987,7 +987,7 @@ class TestSubmodule(TestBase):
         # This is needed to work around a PermissionError on Windows, resembling others,
         # except new in Python 3.12. (*Maybe* this could be due to changes in CPython's
         # garbage collector detailed in https://github.com/python/cpython/issues/97922.)
-        if os.name == "nt" and sys.version_info >= (3, 12):
+        if sys.platform == "win32" and sys.version_info >= (3, 12):
             gc.collect()
 
         new_path = "renamed/myname"
@@ -1071,7 +1071,7 @@ class TestSubmodule(TestBase):
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
 
-    @skipUnless(os.name == "nt", "Specifically for Windows.")
+    @skipUnless(sys.platform == "win32", "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo:
             working_tree_dir = "D:\\"
