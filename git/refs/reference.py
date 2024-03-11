@@ -1,23 +1,19 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from git.util import (
-    LazyMixin,
-    IterableObj,
-)
+from git.util import IterableObj, LazyMixin
 from .symbolic import SymbolicReference, T_References
-
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Callable, Iterator, Type, Union, TYPE_CHECKING
-from git.types import Old_commit_ish, PathLike, _T
+from typing import Any, Callable, Iterator, TYPE_CHECKING, Type, Union
+
+from git.types import AnyGitObject, PathLike, _T
 
 if TYPE_CHECKING:
     from git.repo import Repo
 
 # ------------------------------------------------------------------------------
-
 
 __all__ = ["Reference"]
 
@@ -81,7 +77,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     # @ReservedAssignment
     def set_object(
         self,
-        object: Union[Old_commit_ish, "SymbolicReference", str],
+        object: Union[AnyGitObject, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "Reference":
         """Special version which checks if the head-log needs an update as well.

@@ -15,14 +15,14 @@ from .reference import Reference
 
 # typing ---------------------------------------------------
 
-from typing import Any, Sequence, Union, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING, Union
 
-from git.types import PathLike, Old_commit_ish
+from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.objects import Commit
     from git.refs import RemoteReference
+    from git.repo import Repo
 
 # -------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ class HEAD(SymbolicReference):
 
     def reset(
         self,
-        commit: Union[Old_commit_ish, SymbolicReference, str] = "HEAD",
+        commit: Union[Commit_ish, SymbolicReference, str] = "HEAD",
         index: bool = True,
         working_tree: bool = False,
         paths: Union[PathLike, Sequence[PathLike], None] = None,
@@ -99,7 +99,7 @@ class HEAD(SymbolicReference):
         if index:
             mode = "--mixed"
 
-            # Tt appears some git versions declare mixed and paths deprecated.
+            # It appears some git versions declare mixed and paths deprecated.
             # See http://github.com/Byron/GitPython/issues#issue/2.
             if paths:
                 mode = None
