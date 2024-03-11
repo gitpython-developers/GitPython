@@ -1060,7 +1060,7 @@ class TestIndex(TestBase):
         # from a venv may not run when copied outside of it, and a global interpreter
         # won't run when copied to a different location if it was installed from the
         # Microsoft Store. So we make a new venv in rw_dir and use its interpreter.
-        venv = VirtualEnvironment(rw_dir, need_pip=False)
+        venv = VirtualEnvironment(rw_dir, with_pip=False)
         shutil.copy(venv.python, Path(rw_dir, shell_name))
         shutil.copy(fixture_path("polyglot"), hook_path("polyglot", repo.git_dir))
         payload = Path(rw_dir, "payload.txt")
