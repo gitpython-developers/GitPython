@@ -22,11 +22,11 @@ from gitdb.exc import BadName, BadObject
 
 from typing import Optional, TYPE_CHECKING, Union, cast, overload
 
-from git.types import AnyGitObject, Literal, Old_commit_ish, PathLike
+from git.types import AnyGitObject, Literal, PathLike
 
 if TYPE_CHECKING:
     from git.db import GitCmdObjectDB
-    from git.objects import Commit, TagObject, Blob, Tree
+    from git.objects import Commit, TagObject
     from git.refs.reference import Reference
     from git.refs.tag import Tag
     from .base import Repo
@@ -227,12 +227,18 @@ def to_commit(obj: Object) -> "Commit":
     return obj
 
 
-def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
-    """
+def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
+    """Parse a revision string. Like ``git rev-parse``.
+
     :return:
-        `~git.objects.base.Object` at the given revision, either
-        `~git.objects.commit.Commit`, `~git.refs.tag.Tag`, `~git.objects.tree.Tree` or
-        `~git.objects.blob.Blob`.
+        `~git.objects.base.Object` at the given revision.
+
+        This may be any type of git object:
+
+        * :class:`Commit <git.objects.commit.Commit>`
+        * :class:`TagObject <git.objects.tag.TagObject>`
+        * :class:`Tree <git.objects.tree.Tree>`
+        * :class:`Blob <git.objects.blob.Blob>`
 
     :param rev:
         ``git rev-parse``-compatible revision specification as string. Please see
@@ -253,7 +259,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
         raise NotImplementedError("commit by message search (regex)")
     # END handle search
 
-    obj: Union[Old_commit_ish, "Reference", None] = None
+    obj: Optional[AnyGitObject] = None
     ref = None
     output_type = "commit"
     start = 0
@@ -275,12 +281,10 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 if token == "@":
                     ref = cast("Reference", name_to_object(repo, rev[:start], return_ref=True))
                 else:
-                    obj = cast(Old_commit_ish, name_to_object(repo, rev[:start]))
+                    obj = name_to_object(repo, rev[:start])
                 # END handle token
             # END handle refname
         else:
-            assert obj is not None
-
             if ref is not None:
                 obj = cast("Commit", ref.commit)
             # END handle ref
@@ -300,7 +304,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 pass  # Default.
             elif output_type == "tree":
                 try:
-                    obj = cast(Old_commit_ish, obj)
+                    obj = cast(AnyGitObject, obj)
                     obj = to_commit(obj).tree
                 except (AttributeError, ValueError):
                     pass  # Error raised later.
@@ -373,7 +377,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
         parsed_to = start
         # Handle hierarchy walk.
         try:
-            obj = cast(Old_commit_ish, obj)
+            obj = cast(AnyGitObject, obj)
             if token == "~":
                 obj = to_commit(obj)
                 for _ in range(num):
@@ -402,7 +406,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
 
     # Still no obj? It's probably a simple name.
     if obj is None:
-        obj = cast(Old_commit_ish, name_to_object(repo, rev))
+        obj = name_to_object(repo, rev)
         parsed_to = lr
     # END handle simple name
 
