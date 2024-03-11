@@ -29,7 +29,6 @@ warn_unreachable = true
 show_error_codes = true
 implicit_reexport = true
 # strict = true
-
 # TODO: Remove when 'gitdb' is fully annotated.
 exclude = ["^git/ext/gitdb"]
 [[tool.mypy.overrides]]
@@ -47,3 +46,40 @@ omit = ["*/git/ext/*"]
 line-length = 120
 target-version = ["py37"]
 extend-exclude = "git/ext/gitdb"
+
+[tool.ruff]
+target-version = "py37"
+line-length = 120
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "git/ext/",
+    "doc",
+    "build",
+    "dist",
+]
+# Enable Pyflakes `E` and `F` codes by default.
+lint.select = [
+    "E",
+    "W", # see: https://pypi.org/project/pycodestyle
+    "F", # see: https://pypi.org/project/pyflakes
+#    "I", #see: https://pypi.org/project/isort/
+#    "S", # see: https://pypi.org/project/flake8-bandit
+#    "UP", # see: https://docs.astral.sh/ruff/rules/#pyupgrade-up
+]
+lint.extend-select = [
+    "A",    # see: https://pypi.org/project/flake8-builtins
+    "B",    # see: https://pypi.org/project/flake8-bugbear
+    "C4",   # see: https://pypi.org/project/flake8-comprehensions
+    "TCH004", # see: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
+]
+lint.ignore = [
+    "E203", "W503"
+]
+lint.ignore-init-module-imports = true
+lint.unfixable = ["F401"]
+
+#[tool.ruff.lint.per-file-ignores]
+#"setup.py" = ["ANN202", "ANN401"]
+#"docs/source/conf.py" = ["A001", "D103"]
+#"src/**" = ["ANN401"]
+#"tests/**" = ["S101", "ANN001", "ANN201", "ANN202", "ANN401"]
