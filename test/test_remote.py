@@ -1002,6 +1002,22 @@ class TestRemote(TestBase):
                 assert tmp_file.exists()
                 tmp_file.unlink()
 
+    @with_rw_and_rw_remote_repo("0.1.6")
+    def test_fetch_unsafe_branch_name(self, rw_repo, remote_repo):
+        # Create branch with a name containing a NBSP
+        bad_branch_name = f"branch_with_{chr(160)}_nbsp"
+        Head.create(remote_repo, bad_branch_name)
+
+        # Fetch and get branches
+        remote = rw_repo.remote("origin")
+        branches = remote.fetch()
+
+        # Test for truncated branch name in branches
+        assert f"origin/{bad_branch_name}" in [b.name for b in branches]
+
+        # Cleanup branch
+        Head.delete(remote_repo, bad_branch_name)
+
 
 class TestTimeouts(TestBase):
     @with_rw_repo("HEAD", bare=False)
