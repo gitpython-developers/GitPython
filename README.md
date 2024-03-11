@@ -187,7 +187,7 @@ The same linting, and running tests on all the different supported Python versio
 Specific tools:
 
 - Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
-- Configuration for `flake8` is in the `./.flake8` file.
+- Configuration for `ruff` is in the `pyproject.toml` file.
 
 Orchestration tools:
 
