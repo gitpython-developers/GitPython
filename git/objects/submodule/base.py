@@ -44,7 +44,12 @@ from .util import (
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
-from git.types import Commit_ish, Literal, PathLike, TBD
+from git.types import Commit_ish, PathLike, TBD
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from git.index import IndexFile
