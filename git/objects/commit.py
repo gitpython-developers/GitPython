@@ -753,7 +753,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
-        self.parents = []
+        self.parents = []  # type: List[Commit]
         next_line = None
         while True:
             parent_line = readline()
