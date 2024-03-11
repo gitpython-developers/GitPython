@@ -79,8 +79,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     # INVARIANTS
     default_encoding = "UTF-8"
 
-    # object configuration
     type: Literal["commit"] = "commit"
+
     __slots__ = (
         "tree",
         "author",
@@ -94,7 +94,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         "encoding",
         "gpgsig",
     )
+
     _id_attribute_ = "hexsha"
+
+    parents: Sequence["Commit"]
 
     def __init__(
         self,
@@ -753,7 +756,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
-        self.parents = []  # type: List[Commit]
+        self.parents = []
         next_line = None
         while True:
             parent_line = readline()
