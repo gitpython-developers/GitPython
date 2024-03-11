@@ -42,11 +42,6 @@ source = ["git"]
 include = ["*/git/*"]
 omit = ["*/git/ext/*"]
 
-[tool.black]
-line-length = 120
-target-version = ["py37"]
-extend-exclude = "git/ext/gitdb"
-
 [tool.ruff]
 target-version = "py37"
 line-length = 120

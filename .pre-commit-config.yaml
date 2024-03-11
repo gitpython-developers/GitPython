@@ -1,24 +1,10 @@
 repos:
-- repo: https://github.com/psf/black-pre-commit-mirror
-  rev: 23.9.1
-  hooks:
-  - id: black
-    alias: black-check
-    name: black (check)
-    args: [--check, --diff]
-    exclude: ^git/ext/
-    stages: [manual]
-
-  - id: black
-    alias: black-format
-    name: black (format)
-    exclude: ^git/ext/
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.3.0
   hooks:
-  #- id: ruff-format  # todo: eventually replace Black with Ruff for consistency
-  #  args: ["--preview"]
+  - id: ruff-format
+    exclude: ^git/ext/
   - id: ruff
     args: ["--fix"]
     exclude: ^doc|^git/ext/
