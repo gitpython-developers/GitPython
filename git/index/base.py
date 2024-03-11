@@ -11,23 +11,16 @@ import datetime
 import glob
 from io import BytesIO
 import os
+import os.path as osp
 from stat import S_ISLNK
 import subprocess
 import sys
 import tempfile
 
-from git.compat import (
-    force_bytes,
-    defenc,
-)
-from git.exc import GitCommandError, CheckoutError, GitError, InvalidGitRepositoryError
-from git.objects import (
-    Blob,
-    Submodule,
-    Tree,
-    Object,
-    Commit,
-)
+from git.compat import defenc, force_bytes
+import git.diff as git_diff
+from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError
+from git.objects import Blob, Commit, Object, Submodule, Tree
 from git.objects.util import Serializable
 from git.util import (
     LazyMixin,
@@ -41,24 +34,17 @@ from git.util import (
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
 
-import git.diff as git_diff
-import os.path as osp
-
 from .fun import (
-    entry_key,
-    write_cache,
-    read_cache,
-    aggressive_tree_merge,
-    write_tree_from_cache,
-    stat_mode_to_index_mode,
     S_IFGITLINK,
+    aggressive_tree_merge,
+    entry_key,
+    read_cache,
     run_commit_hook,
+    stat_mode_to_index_mode,
+    write_cache,
+    write_tree_from_cache,
 )
-from .typ import (
-    BaseIndexEntry,
-    IndexEntry,
-    StageType,
-)
+from .typ import BaseIndexEntry, IndexEntry, StageType
 from .util import TemporaryFileSwap, post_clear_cache, default_index, git_working_dir
 
 # typing -----------------------------------------------------------------------------
@@ -80,12 +66,13 @@ from typing import (
     Union,
 )
 
-from git.types import Old_commit_ish, Literal, PathLike
+from git.types import Literal, PathLike
 
 if TYPE_CHECKING:
     from subprocess import Popen
-    from git.repo import Repo
+
     from git.refs.reference import Reference
+    from git.repo import Repo
     from git.util import Actor
 
 
@@ -1127,7 +1114,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def commit(
         self,
         message: str,
-        parent_commits: Union[Old_commit_ish, None] = None,
+        parent_commits: Union[List[Commit], None] = None,
         head: bool = True,
         author: Union[None, "Actor"] = None,
         committer: Union[None, "Actor"] = None,
