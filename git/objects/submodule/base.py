@@ -45,12 +45,13 @@ from .util import (
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
-from git.types import Old_commit_ish, Literal, PathLike, TBD
+from git.types import Commit_ish, Literal, Old_commit_ish, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile
-    from git.repo import Repo
+    from git.objects.commit import Commit
     from git.refs import Head
+    from git.repo import Repo
 
 # -----------------------------------------------------------------------------
 
@@ -99,7 +100,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     """Submodule flags. Submodules are directories with link-status."""
 
     type: Literal["submodule"] = "submodule"  # type: ignore
-    """This is a bogus type for base class compatibility."""
+    """This is a bogus type string for base class compatibility."""
 
     __slots__ = ("_parent_commit", "_url", "_branch_path", "_name", "__weakref__")
 
@@ -1242,7 +1243,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return self
 
-    def set_parent_commit(self, commit: Union[Old_commit_ish, None], check: bool = True) -> "Submodule":
+    def set_parent_commit(self, commit: Union[Commit_ish, str, None], check: bool = True) -> "Submodule":
         """Set this instance to use the given commit whose tree is supposed to
         contain the ``.gitmodules`` blob.
 
@@ -1495,7 +1496,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self._url
 
     @property
-    def parent_commit(self) -> "Old_commit_ish":
+    def parent_commit(self) -> "Commit":
         """
         :return:
             :class:`~git.objects.commit.Commit` instance with the tree containing the
@@ -1557,8 +1558,8 @@ class Submodule(IndexObject, TraversableIterableObj):
     def iter_items(
         cls,
         repo: "Repo",
-        parent_commit: Union[Old_commit_ish, str] = "HEAD",
-        *Args: Any,
+        parent_commit: Union[Commit_ish, str] = "HEAD",
+        *args: Any,
         **kwargs: Any,
     ) -> Iterator["Submodule"]:
         """
