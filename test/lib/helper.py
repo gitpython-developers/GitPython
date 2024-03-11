@@ -403,13 +403,13 @@ class VirtualEnvironment:
 
     __slots__ = ("_env_dir",)
 
-    def __init__(self, env_dir, *, with_pip):
+    def __init__(self, env_dir, *, need_pip):
         if os.name == "nt":
             self._env_dir = osp.realpath(env_dir)
-            venv.create(self.env_dir, symlinks=False, with_pip=with_pip)
+            venv.create(self.env_dir, symlinks=False, with_pip=need_pip, upgrade_deps=need_pip)
         else:
             self._env_dir = env_dir
-            venv.create(self.env_dir, symlinks=True, with_pip=with_pip)
+            venv.create(self.env_dir, symlinks=True, with_pip=need_pip, upgrade_deps=need_pip)
 
     @property
     def env_dir(self):

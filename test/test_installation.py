@@ -64,7 +64,7 @@ class TestInstallation(TestBase):
 
     @staticmethod
     def _set_up_venv(rw_dir):
-        venv = VirtualEnvironment(rw_dir, with_pip=True)
+        venv = VirtualEnvironment(rw_dir, need_pip=True)
         os.symlink(
             os.path.dirname(os.path.dirname(__file__)),
             venv.sources,
