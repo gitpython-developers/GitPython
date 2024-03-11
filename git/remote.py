@@ -93,22 +93,19 @@ def add_progress(
 
 
 @overload
-def to_progress_instance(progress: None) -> RemoteProgress:
-    ...
+def to_progress_instance(progress: None) -> RemoteProgress: ...
 
 
 @overload
-def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress:
-    ...
+def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress: ...
 
 
 @overload
-def to_progress_instance(progress: RemoteProgress) -> RemoteProgress:
-    ...
+def to_progress_instance(progress: RemoteProgress) -> RemoteProgress: ...
 
 
 def to_progress_instance(
-    progress: Union[Callable[..., Any], RemoteProgress, None]
+    progress: Union[Callable[..., Any], RemoteProgress, None],
 ) -> Union[RemoteProgress, CallableRemoteProgress]:
     """Given the `progress` return a suitable object derived from
     :class:`~git.util.RemoteProgress`."""

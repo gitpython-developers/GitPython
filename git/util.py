@@ -441,13 +441,11 @@ _is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
 @overload
-def is_cygwin_git(git_executable: None) -> Literal[False]:
-    ...
+def is_cygwin_git(git_executable: None) -> Literal[False]: ...
 
 
 @overload
-def is_cygwin_git(git_executable: PathLike) -> bool:
-    ...
+def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
@@ -494,8 +492,7 @@ def finalize_process(proc: Union[subprocess.Popen, "Git.AutoInterrupt"], **kwarg
 
 
 @overload
-def expand_path(p: None, expand_vars: bool = ...) -> None:
-    ...
+def expand_path(p: None, expand_vars: bool = ...) -> None: ...
 
 
 @overload
