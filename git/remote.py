@@ -41,7 +41,7 @@ from typing import (
     overload,
 )
 
-from git.types import PathLike, Literal, Old_commit_ish
+from git.types import AnyGitObject, Literal, PathLike
 
 if TYPE_CHECKING:
     from git.objects.commit import Commit
@@ -194,7 +194,7 @@ class PushInfo(IterableObj):
         self.summary = summary
 
     @property
-    def old_commit(self) -> Union[str, SymbolicReference, Old_commit_ish, None]:
+    def old_commit(self) -> Union["Commit", None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
@@ -360,7 +360,7 @@ class FetchInfo(IterableObj):
         ref: SymbolicReference,
         flags: int,
         note: str = "",
-        old_commit: Union[Old_commit_ish, None] = None,
+        old_commit: Union[AnyGitObject, None] = None,
         remote_ref_path: Optional[PathLike] = None,
     ) -> None:
         """Initialize a new instance."""
@@ -436,7 +436,7 @@ class FetchInfo(IterableObj):
 
         # Parse operation string for more info.
         # This makes no sense for symbolic refs, but we parse it anyway.
-        old_commit: Union[Old_commit_ish, None] = None
+        old_commit: Union[AnyGitObject, None] = None
         is_tag_operation = False
         if "rejected" in operation:
             flags |= cls.REJECTED
