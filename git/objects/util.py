@@ -439,7 +439,7 @@ class Traversable(Protocol):
 
         if not as_edge:
             out: IterableList[Union["Commit", "Submodule", "Tree", "Blob"]] = IterableList(id)
-            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))
+            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))  # noqa: B026
             return out
             # Overloads in subclasses (mypy doesn't allow typing self: subclass).
             # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]

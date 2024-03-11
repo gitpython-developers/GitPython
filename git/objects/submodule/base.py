@@ -1445,7 +1445,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         try:
             try:
-                self.path
+                self.path  # noqa: B018
                 return True
             except Exception:
                 return False

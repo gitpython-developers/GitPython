@@ -496,7 +496,7 @@ class SymbolicReference:
             valid object or reference.
         """
         try:
-            self.object
+            self.object  # noqa: B018
         except (OSError, ValueError):
             return False
         else:
@@ -510,7 +510,7 @@ class SymbolicReference:
             instead to another reference.
         """
         try:
-            self.ref
+            self.ref  # noqa: B018
             return False
         except TypeError:
             return True
