@@ -156,11 +156,13 @@ To test, run:
 pytest
 ```
 
-To lint, and apply automatic code formatting, run:
+To lint, and apply some linting fixes as well as automatic code formatting, run:
 
 ```sh
 pre-commit run --all-files
 ```
+
+This includes the linting and autoformatting done by Ruff, as well as some other checks.
 
 To typecheck, run:
 
@@ -170,7 +172,7 @@ mypy -p git
 
 #### CI (and tox)
 
-The same linting, and running tests on all the different supported Python versions, will be performed:
+Style and formatting checks, and running tests on all the different supported Python versions, will be performed:
 
 - Upon submitting a pull request.
 - On each push, *if* you have a fork with GitHub Actions enabled.
@@ -178,10 +180,12 @@ The same linting, and running tests on all the different supported Python versio
 
 #### Configuration files
 
-Specific tools:
+Specific tools are all configured in the `./pyproject.toml` file:
 
-- Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
-- Configuration for `ruff` is in the `pyproject.toml` file.
+- `pytest` (test runner)
+- `coverage.py` (code coverage)
+- `ruff` (linter and formatter)
+- `mypy` (type checker)
 
 Orchestration tools:
 
