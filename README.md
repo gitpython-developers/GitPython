@@ -165,9 +165,6 @@ To lint, and apply automatic code formatting, run:
 pre-commit run --all-files
 ```
 
-- Linting without modifying code can be done with: `make lint`
-- Auto-formatting without other lint checks can be done with: `black .`
-
 To typecheck, run:
 
 ```bash
