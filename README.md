@@ -145,11 +145,8 @@ Ensure testing libraries are installed. This is taken care of already if you ins
 pip install -e ".[test]"
 ```
 
-Otherwise, you can run:
-
-```sh
-pip install -r test-requirements.txt
-```
+If you had installed with a command like `pip install -e .` instead, you can still run
+the above command to add the testing dependencies.
 
 #### Test commands
 
