@@ -17,6 +17,7 @@ def _read_content(path: str) -> str:
 version = _read_content("VERSION").strip()
 requirements = _read_content("requirements.txt").splitlines()
 test_requirements = _read_content("test-requirements.txt").splitlines()
+doc_requirements = _read_content("doc/requirements.txt").splitlines()
 long_description = _read_content("README.md")
 
 
@@ -75,7 +76,10 @@ setup(
     package_dir={"git": "git"},
     python_requires=">=3.7",
     install_requires=requirements,
-    extras_require={"test": test_requirements},
+    extras_require={
+        "test": test_requirements,
+        "doc": doc_requirements,
+    },
     zip_safe=False,
     long_description=long_description,
     long_description_content_type="text/markdown",
