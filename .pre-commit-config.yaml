@@ -1,7 +1,6 @@
 repos:
-
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.0
+  rev: v0.3.2
   hooks:
   - id: ruff-format
     exclude: ^git/ext/
@@ -10,14 +9,14 @@ repos:
     exclude: ^git/ext/
 
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.9.0.5
+  rev: v0.9.0.6
   hooks:
   - id: shellcheck
     args: [--color]
     exclude: ^test/fixtures/polyglot$|^git/ext/
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.5.0
   hooks:
   - id: check-toml
   - id: check-yaml
