@@ -2,6 +2,7 @@
 
 import os
 import sys
+from pathlib import Path
 from typing import Sequence
 
 from setuptools import setup, find_packages
@@ -9,17 +10,14 @@ from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
 
 
-with open(os.path.join(os.path.dirname(__file__), "VERSION"), encoding="utf-8") as ver_file:
-    VERSION = ver_file.readline().strip()
+def _read_content(path: str) -> str:
+    return (Path(__file__).parent / path).read_text(encoding="utf-8")
 
-with open("requirements.txt", encoding="utf-8") as reqs_file:
-    requirements = reqs_file.read().splitlines()
 
-with open("test-requirements.txt", encoding="utf-8") as reqs_file:
-    test_requirements = reqs_file.read().splitlines()
-
-with open("README.md", encoding="utf-8") as rm_file:
-    long_description = rm_file.read()
+version = _read_content("VERSION").strip()
+requirements = _read_content("requirements.txt").splitlines()
+test_requirements = _read_content("test-requirements.txt").splitlines()
+long_description = _read_content("README.md")
 
 
 class build_py(_build_py):
@@ -50,7 +48,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename) as f:
             for line in f:
                 if "__version__ =" in line:
-                    line = line.replace('"git"', "'%s'" % VERSION)
+                    line = line.replace('"git"', "'%s'" % version)
                     found = True
                 out.append(line)
     except OSError:
@@ -66,7 +64,7 @@ def _stamp_version(filename: str) -> None:
 setup(
     name="GitPython",
     cmdclass={"build_py": build_py, "sdist": sdist},
-    version=VERSION,
+    version=version,
     description="GitPython is a Python library used to interact with Git repositories",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
