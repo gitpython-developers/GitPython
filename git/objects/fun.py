@@ -152,13 +152,11 @@ def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir:
 
 
 @overload
-def _to_full_path(item: None, path_prefix: str) -> None:
-    ...
+def _to_full_path(item: None, path_prefix: str) -> None: ...
 
 
 @overload
-def _to_full_path(item: EntryTup, path_prefix: str) -> EntryTup:
-    ...
+def _to_full_path(item: EntryTup, path_prefix: str) -> EntryTup: ...
 
 
 def _to_full_path(item: EntryTupOrNone, path_prefix: str) -> EntryTupOrNone:

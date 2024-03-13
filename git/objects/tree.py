@@ -188,7 +188,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     _map_id_to_type: Dict[int, Type[IndexObjUnion]] = {
         commit_id: Submodule,
         blob_id: Blob,
-        symlink_id: Blob
+        symlink_id: Blob,
         # Tree ID added once Tree is defined.
     }
 

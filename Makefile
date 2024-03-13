@@ -1,10 +1,7 @@
-.PHONY: all lint clean release force_release
+.PHONY: all clean release force_release
 
 all:
 	@awk -F: '/^[[:alpha:]].*:/ && !/^all:/ {print $$1}' Makefile
-
-lint:
-	SKIP=black-format pre-commit run --all-files --hook-stage manual
 
 clean:
 	rm -rf build/ dist/ .eggs/ .tox/
