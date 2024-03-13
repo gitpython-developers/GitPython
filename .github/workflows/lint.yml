@@ -14,5 +14,3 @@ jobs:
         python-version: "3.x"
 
     - uses: pre-commit/action@v3.0.1
-      with:
-        extra_args: --all-files --hook-stage manual
