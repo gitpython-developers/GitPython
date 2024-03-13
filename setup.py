@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import os
+import sys
 from typing import Sequence
+
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
-import os
-import sys
+
 
 with open(os.path.join(os.path.dirname(__file__), "VERSION"), encoding="utf-8") as ver_file:
     VERSION = ver_file.readline().strip()
