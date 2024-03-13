@@ -48,7 +48,6 @@ line-length = 120
 # Exclude a variety of commonly ignored directories.
 exclude = [
     "git/ext/",
-    "doc",
     "build",
     "dist",
 ]
