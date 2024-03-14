@@ -42,10 +42,19 @@ from .util import (
 
 # typing ----------------------------------------------------------------------
 
-from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
-from typing import Any, Iterator, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    Mapping,
+    Sequence,
+    TYPE_CHECKING,
+    Union,
+    cast,
+)
 
-from git.types import Commit_ish, Literal, Old_commit_ish, PathLike, TBD
+from git.types import Commit_ish, Literal, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile
@@ -113,7 +122,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         mode: Union[int, None] = None,
         path: Union[PathLike, None] = None,
         name: Union[str, None] = None,
-        parent_commit: Union[Old_commit_ish, None] = None,
+        parent_commit: Union["Commit", None] = None,
         url: Union[str, None] = None,
         branch_path: Union[PathLike, None] = None,
     ) -> None:
@@ -145,7 +154,6 @@ class Submodule(IndexObject, TraversableIterableObj):
         if url is not None:
             self._url = url
         if branch_path is not None:
-            # assert isinstance(branch_path, str)
             self._branch_path = branch_path
         if name is not None:
             self._name = name
@@ -214,7 +222,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _config_parser(
-        cls, repo: "Repo", parent_commit: Union[Old_commit_ish, None], read_only: bool
+        cls, repo: "Repo", parent_commit: Union["Commit", None], read_only: bool
     ) -> SubmoduleConfigParser:
         """
         :return:
@@ -265,7 +273,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END for each name to delete
 
     @classmethod
-    def _sio_modules(cls, parent_commit: Old_commit_ish) -> BytesIO:
+    def _sio_modules(cls, parent_commit: "Commit") -> BytesIO:
         """
         :return:
             Configuration file as :class:`~io.BytesIO` - we only access it through the
@@ -278,7 +286,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _config_parser_constrained(self, read_only: bool) -> SectionConstraint:
         """:return: Config parser constrained to our submodule in read or write mode"""
         try:
-            pc: Union["Old_commit_ish", None] = self.parent_commit
+            pc = self.parent_commit
         except ValueError:
             pc = None
         # END handle empty parent repository
