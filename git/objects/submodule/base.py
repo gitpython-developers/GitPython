@@ -39,7 +39,6 @@ from .util import (
     sm_section,
 )
 
-
 # typing ----------------------------------------------------------------------
 
 from typing import (
@@ -54,12 +53,12 @@ from typing import (
     cast,
 )
 
-from git.types import Commit_ish, PathLike, TBD
-
-try:
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
+else:
     from typing_extensions import Literal
+
+from git.types import Commit_ish, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile

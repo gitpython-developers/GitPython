@@ -4,12 +4,13 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from mimetypes import guess_type
+import sys
+
 from . import base
 
-
-try:
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
+else:
     from typing_extensions import Literal
 
 __all__ = ("Blob",)

@@ -3,17 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from git.util import IterableList, join_path
+import sys
+
 import git.diff as git_diff
-from git.util import to_bin_sha
+from git.util import IterableList, join_path, to_bin_sha
 
-from . import util
-from .base import IndexObject, IndexObjUnion
+from .base import IndexObjUnion, IndexObject
 from .blob import Blob
-from .submodule.base import Submodule
-
 from .fun import tree_entries_from_data, tree_to_stream
-
+from .submodule.base import Submodule
+from . import util
 
 # typing -------------------------------------------------
 
@@ -25,22 +24,22 @@ from typing import (
     Iterator,
     List,
     Tuple,
+    TYPE_CHECKING,
     Type,
     Union,
     cast,
-    TYPE_CHECKING,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from git.types import PathLike
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 if TYPE_CHECKING:
-    from git.repo import Repo
     from io import BytesIO
+    from git.repo import Repo
 
 TreeCacheTup = Tuple[bytes, int, str]
 

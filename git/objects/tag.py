@@ -9,6 +9,8 @@ This defines the :class:`TagObject` class, which represents annotated tags.
 For lightweight tags, see the :mod:`git.refs.tag` module.
 """
 
+import sys
+
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
 from ..util import hex_to_bin
@@ -16,9 +18,9 @@ from ..compat import defenc
 
 from typing import List, TYPE_CHECKING, Union
 
-try:
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
+else:
     from typing_extensions import Literal
 
 if TYPE_CHECKING:

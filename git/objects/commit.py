@@ -3,57 +3,57 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+from collections import defaultdict
 import datetime
+from io import BytesIO
+import logging
+import os
 import re
 from subprocess import Popen, PIPE
+import sys
+from time import altzone, daylight, localtime, time, timezone
+
 from gitdb import IStream
-from git.util import hex_to_bin, Actor, Stats, finalize_process
-from git.diff import Diffable
 from git.cmd import Git
+from git.diff import Diffable
+from git.util import hex_to_bin, Actor, Stats, finalize_process
 
 from .tree import Tree
-from . import base
 from .util import (
     Serializable,
     TraversableIterableObj,
-    parse_date,
     altz_to_utctz_str,
-    parse_actor_and_date,
     from_timestamp,
+    parse_actor_and_date,
+    parse_date,
 )
-
-from time import time, daylight, altzone, timezone, localtime
-import os
-from io import BytesIO
-import logging
-from collections import defaultdict
-
+from . import base
 
 # typing ------------------------------------------------------------------
 
 from typing import (
     Any,
+    Dict,
     IO,
     Iterator,
     List,
     Sequence,
     Tuple,
-    Union,
     TYPE_CHECKING,
+    Union,
     cast,
-    Dict,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from git.types import PathLike
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.refs import SymbolicReference
+    from git.repo import Repo
 
 # ------------------------------------------------------------------------
 
