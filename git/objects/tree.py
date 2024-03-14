@@ -391,7 +391,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return False
 
     def __reversed__(self) -> Iterator[IndexObjUnion]:
-        return reversed(self._iter_convert_to_object(self._cache))  # type: ignore
+        return reversed(self._iter_convert_to_object(self._cache))  # type: ignore[call-overload]
 
     def _serialize(self, stream: "BytesIO") -> "Tree":
         """Serialize this tree into the stream. Assumes sorted tree data.

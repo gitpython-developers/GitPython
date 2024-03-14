@@ -108,7 +108,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     k_default_mode = stat.S_IFDIR | stat.S_IFLNK
     """Submodule flags. Submodules are directories with link-status."""
 
-    type: Literal["submodule"] = "submodule"  # type: ignore
+    type: Literal["submodule"] = "submodule"  # type: ignore[assignment]
     """This is a bogus type string for base class compatibility."""
 
     __slots__ = ("_parent_commit", "_url", "_branch_path", "_name", "__weakref__")

@@ -172,7 +172,7 @@ def handle_process_output(
         p_stdout = process.proc.stdout if process.proc else None
         p_stderr = process.proc.stderr if process.proc else None
     else:
-        process = cast(Popen, process)  # type: ignore [redundant-cast]
+        process = cast(Popen, process)  # type: ignore[redundant-cast]
         cmdline = getattr(process, "args", "")
         p_stdout = process.stdout
         p_stderr = process.stderr
@@ -215,7 +215,7 @@ def handle_process_output(
                     error_str = error_str.encode()
                 # We ignore typing on the next line because mypy does not like the way
                 # we inferred that stderr takes str or bytes.
-                stderr_handler(error_str)  # type: ignore
+                stderr_handler(error_str)  # type: ignore[arg-type]
 
     if finalizer:
         finalizer(process)
@@ -1244,9 +1244,9 @@ class Git:
             if output_stream is None:
                 stdout_value, stderr_value = communicate()
                 # Strip trailing "\n".
-                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore
+                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore[arg-type]
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith(newline):  # type: ignore
+                if stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
 
                 status = proc.returncode
@@ -1256,7 +1256,7 @@ class Git:
                 stdout_value = proc.stdout.read()
                 stderr_value = proc.stderr.read()
                 # Strip trailing "\n".
-                if stderr_value.endswith(newline):  # type: ignore
+                if stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling

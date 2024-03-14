@@ -636,7 +636,7 @@ class Repo:
             else:
                 return osp.normpath(osp.join(repo_dir, "config"))
         else:
-            assert_never(  # type:ignore[unreachable]
+            assert_never(  # type: ignore[unreachable]
                 config_level,
                 ValueError(f"Invalid configuration level: {config_level!r}"),
             )

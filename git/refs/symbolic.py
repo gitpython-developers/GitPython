@@ -387,8 +387,17 @@ class SymbolicReference:
         # set the commit on our reference
         return self._get_reference().set_object(object, logmsg)
 
-    commit = property(_get_commit, set_commit, doc="Query or set commits directly")  # type: ignore
-    object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
+    commit = property(
+        _get_commit,
+        set_commit,  # type: ignore[arg-type]
+        doc="Query or set commits directly",
+    )
+
+    object = property(
+        _get_object,
+        set_object,  # type: ignore[arg-type]
+        doc="Return the object our ref currently refers to",
+    )
 
     def _get_reference(self) -> "SymbolicReference":
         """
@@ -488,7 +497,11 @@ class SymbolicReference:
 
     # Aliased reference
     reference: Union["Head", "TagReference", "RemoteReference", "Reference"]
-    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
+    reference = property(  # type: ignore[assignment]
+        _get_reference,
+        set_reference,  # type: ignore[arg-type]
+        doc="Returns the Reference we point to",
+    )
     ref = reference
 
     def is_valid(self) -> bool:

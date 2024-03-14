@@ -517,7 +517,7 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
     if isinstance(p, pathlib.Path):
         return p.resolve()
     try:
-        p = osp.expanduser(p)  # type: ignore
+        p = osp.expanduser(p)  # type: ignore[arg-type]
         if expand_vars:
             p = osp.expandvars(p)
         return osp.normpath(osp.abspath(p))
@@ -1209,7 +1209,7 @@ class IterableList(List[T_IterableObj]):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore[override]
         assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
 
         if isinstance(index, int):

@@ -692,5 +692,13 @@ class TraversableIterableObj(IterableObj, Traversable):
 
         return cast(
             Union[Iterator[T_TIobj], Iterator[Tuple[Union[None, T_TIobj], T_TIobj]]],
-            super()._traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge),  # type: ignore
+            super()._traverse(
+                predicate,  # type: ignore[arg-type]
+                prune,  # type: ignore[arg-type]
+                depth,
+                branch_first,
+                visit_once,
+                ignore_self,
+                as_edge,
+            ),
         )
