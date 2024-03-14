@@ -14,6 +14,7 @@ import os
 import signal
 from subprocess import Popen, PIPE, DEVNULL
 import subprocess
+import sys
 import threading
 from textwrap import dedent
 
@@ -171,7 +172,7 @@ def handle_process_output(
         p_stdout = process.proc.stdout if process.proc else None
         p_stderr = process.proc.stderr if process.proc else None
     else:
-        process = cast(Popen, process)  # type: ignore [redundant-cast]
+        process = cast(Popen, process)  # type: ignore[redundant-cast]
         cmdline = getattr(process, "args", "")
         p_stdout = process.stdout
         p_stderr = process.stderr
@@ -214,72 +215,77 @@ def handle_process_output(
                     error_str = error_str.encode()
                 # We ignore typing on the next line because mypy does not like the way
                 # we inferred that stderr takes str or bytes.
-                stderr_handler(error_str)  # type: ignore
+                stderr_handler(error_str)  # type: ignore[arg-type]
 
     if finalizer:
         finalizer(process)
 
 
-def _safer_popen_windows(
-    command: Union[str, Sequence[Any]],
-    *,
-    shell: bool = False,
-    env: Optional[Mapping[str, str]] = None,
-    **kwargs: Any,
-) -> Popen:
-    """Call :class:`subprocess.Popen` on Windows but don't include a CWD in the search.
+safer_popen: Callable[..., Popen]
 
-    This avoids an untrusted search path condition where a file like ``git.exe`` in a
-    malicious repository would be run when GitPython operates on the repository. The
-    process using GitPython may have an untrusted repository's working tree as its
-    current working directory. Some operations may temporarily change to that directory
-    before running a subprocess. In addition, while by default GitPython does not run
-    external commands with a shell, it can be made to do so, in which case the CWD of
-    the subprocess, which GitPython usually sets to a repository working tree, can
-    itself be searched automatically by the shell. This wrapper covers all those cases.
+if sys.platform == "win32":
 
-    :note:
-        This currently works by setting the :envvar:`NoDefaultCurrentDirectoryInExePath`
-        environment variable during subprocess creation. It also takes care of passing
-        Windows-specific process creation flags, but that is unrelated to path search.
+    def _safer_popen_windows(
+        command: Union[str, Sequence[Any]],
+        *,
+        shell: bool = False,
+        env: Optional[Mapping[str, str]] = None,
+        **kwargs: Any,
+    ) -> Popen:
+        """Call :class:`subprocess.Popen` on Windows but don't include a CWD in the
+        search.
 
-    :note:
-        The current implementation contains a race condition on :attr:`os.environ`.
-        GitPython isn't thread-safe, but a program using it on one thread should ideally
-        be able to mutate :attr:`os.environ` on another, without unpredictable results.
-        See comments in https://github.com/gitpython-developers/GitPython/pull/1650.
-    """
-    # CREATE_NEW_PROCESS_GROUP is needed for some ways of killing it afterwards. See:
-    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-    # https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NEW_PROCESS_GROUP
-    creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+        This avoids an untrusted search path condition where a file like ``git.exe`` in
+        a malicious repository would be run when GitPython operates on the repository.
+        The process using GitPython may have an untrusted repository's working tree as
+        its current working directory. Some operations may temporarily change to that
+        directory before running a subprocess. In addition, while by default GitPython
+        does not run external commands with a shell, it can be made to do so, in which
+        case the CWD of the subprocess, which GitPython usually sets to a repository
+        working tree, can itself be searched automatically by the shell. This wrapper
+        covers all those cases.
 
-    # When using a shell, the shell is the direct subprocess, so the variable must be
-    # set in its environment, to affect its search behavior. (The "1" can be any value.)
-    if shell:
-        safer_env = {} if env is None else dict(env)
-        safer_env["NoDefaultCurrentDirectoryInExePath"] = "1"
-    else:
-        safer_env = env
+        :note:
+            This currently works by setting the
+            :envvar:`NoDefaultCurrentDirectoryInExePath` environment variable during
+            subprocess creation. It also takes care of passing Windows-specific process
+            creation flags, but that is unrelated to path search.
 
-    # When not using a shell, the current process does the search in a CreateProcessW
-    # API call, so the variable must be set in our environment. With a shell, this is
-    # unnecessary, in versions where https://github.com/python/cpython/issues/101283 is
-    # patched. If that is unpatched, then in the rare case the ComSpec environment
-    # variable is unset, the search for the shell itself is unsafe. Setting
-    # NoDefaultCurrentDirectoryInExePath in all cases, as is done here, is simpler and
-    # protects against that. (As above, the "1" can be any value.)
-    with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
-        return Popen(
-            command,
-            shell=shell,
-            env=safer_env,
-            creationflags=creationflags,
-            **kwargs,
-        )
+        :note:
+            The current implementation contains a race condition on :attr:`os.environ`.
+            GitPython isn't thread-safe, but a program using it on one thread should
+            ideally be able to mutate :attr:`os.environ` on another, without
+            unpredictable results. See comments in:
+            https://github.com/gitpython-developers/GitPython/pull/1650
+        """
+        # CREATE_NEW_PROCESS_GROUP is needed for some ways of killing it afterwards.
+        # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+        # https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NEW_PROCESS_GROUP
+        creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
 
+        # When using a shell, the shell is the direct subprocess, so the variable must
+        # be set in its environment, to affect its search behavior.
+        if shell:
+            # The original may be immutable, or the caller may reuse it. Mutate a copy.
+            env = {} if env is None else dict(env)
+            env["NoDefaultCurrentDirectoryInExePath"] = "1"  # The "1" can be an value.
 
-if os.name == "nt":
+        # When not using a shell, the current process does the search in a
+        # CreateProcessW API call, so the variable must be set in our environment. With
+        # a shell, that's unnecessary if https://github.com/python/cpython/issues/101283
+        # is patched. In Python versions where it is unpatched, and in the rare case the
+        # ComSpec environment variable is unset, the search for the shell itself is
+        # unsafe. Setting NoDefaultCurrentDirectoryInExePath in all cases, as done here,
+        # is simpler and protects against that. (As above, the "1" can be any value.)
+        with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
+            return Popen(
+                command,
+                shell=shell,
+                env=env,
+                creationflags=creationflags,
+                **kwargs,
+            )
+
     safer_popen = _safer_popen_windows
 else:
     safer_popen = Popen
@@ -1119,13 +1125,13 @@ class Git:
         if inline_env is not None:
             env.update(inline_env)
 
-        if os.name == "nt":
-            cmd_not_found_exception = OSError
+        if sys.platform == "win32":
             if kill_after_timeout is not None:
                 raise GitCommandError(
                     redacted_command,
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
+            cmd_not_found_exception = OSError
         else:
             cmd_not_found_exception = FileNotFoundError
         # END handle
@@ -1164,37 +1170,57 @@ class Git:
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        def kill_process(pid: int) -> None:
-            """Callback to kill a process."""
-            if os.name == "nt":
-                raise AssertionError("Bug: This callback would be ineffective and unsafe on Windows, stopping.")
-            p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
-            child_pids = []
-            if p.stdout is not None:
-                for line in p.stdout:
-                    if len(line.split()) > 0:
-                        local_pid = (line.split())[0]
-                        if local_pid.isdigit():
-                            child_pids.append(int(local_pid))
-            try:
-                os.kill(pid, signal.SIGKILL)
-                for child_pid in child_pids:
-                    try:
-                        os.kill(child_pid, signal.SIGKILL)
-                    except OSError:
-                        pass
-                kill_check.set()  # Tell the main routine that the process was killed.
-            except OSError:
-                # It is possible that the process gets completed in the duration after
-                # timeout happens and before we try to kill the process.
-                pass
-            return
+        if sys.platform != "win32" and kill_after_timeout is not None:
+            # Help mypy figure out this is not None even when used inside communicate().
+            timeout = kill_after_timeout
 
-        # END kill_process
+            def kill_process(pid: int) -> None:
+                """Callback to kill a process.
 
-        if kill_after_timeout is not None:
+                This callback implementation would be ineffective and unsafe on Windows.
+                """
+                p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
+                child_pids = []
+                if p.stdout is not None:
+                    for line in p.stdout:
+                        if len(line.split()) > 0:
+                            local_pid = (line.split())[0]
+                            if local_pid.isdigit():
+                                child_pids.append(int(local_pid))
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                    for child_pid in child_pids:
+                        try:
+                            os.kill(child_pid, signal.SIGKILL)
+                        except OSError:
+                            pass
+                    # Tell the main routine that the process was killed.
+                    kill_check.set()
+                except OSError:
+                    # It is possible that the process gets completed in the duration
+                    # after timeout happens and before we try to kill the process.
+                    pass
+                return
+
+            def communicate() -> Tuple[AnyStr, AnyStr]:
+                watchdog.start()
+                out, err = proc.communicate()
+                watchdog.cancel()
+                if kill_check.is_set():
+                    err = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
+                        " ".join(redacted_command),
+                        timeout,
+                    )
+                    if not universal_newlines:
+                        err = err.encode(defenc)
+                return out, err
+
+            # END helpers
+
             kill_check = threading.Event()
-            watchdog = threading.Timer(kill_after_timeout, kill_process, args=(proc.pid,))
+            watchdog = threading.Timer(timeout, kill_process, args=(proc.pid,))
+        else:
+            communicate = proc.communicate
 
         # Wait for the process to return.
         status = 0
@@ -1203,22 +1229,11 @@ class Git:
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
-                if kill_after_timeout is not None:
-                    watchdog.start()
-                stdout_value, stderr_value = proc.communicate()
-                if kill_after_timeout is not None:
-                    watchdog.cancel()
-                    if kill_check.is_set():
-                        stderr_value = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
-                            " ".join(redacted_command),
-                            kill_after_timeout,
-                        )
-                        if not universal_newlines:
-                            stderr_value = stderr_value.encode(defenc)
+                stdout_value, stderr_value = communicate()
                 # Strip trailing "\n".
-                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore
+                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore[arg-type]
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith(newline):  # type: ignore
+                if stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
 
                 status = proc.returncode
@@ -1228,7 +1243,7 @@ class Git:
                 stdout_value = proc.stdout.read()
                 stderr_value = proc.stderr.read()
                 # Strip trailing "\n".
-                if stderr_value.endswith(newline):  # type: ignore
+                if stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling

@@ -14,6 +14,7 @@ import re
 import shutil
 from stat import S_ISLNK, ST_MODE
 import subprocess
+import sys
 import tempfile
 
 import ddt
@@ -124,7 +125,7 @@ class WinBashStatus:
         in System32; Popen finds it even if a shell would run another one, as on CI.
         (Without WSL, System32 may still have bash.exe; users sometimes put it there.)
         """
-        if os.name != "nt":
+        if sys.platform != "win32":
             return cls.Inapplicable()
 
         try:
@@ -561,7 +562,7 @@ class TestIndex(TestBase):
     # END num existing helper
 
     @pytest.mark.xfail(
-        os.name == "nt" and Git().config("core.symlinks") == "true",
+        sys.platform == "win32" and Git().config("core.symlinks") == "true",
         reason="Assumes symlinks are not created on Windows and opens a symlink to a nonexistent target.",
         raises=FileNotFoundError,
     )
@@ -754,7 +755,7 @@ class TestIndex(TestBase):
         self.assertNotEqual(entries[0].hexsha, null_hex_sha)
 
         # Add symlink.
-        if os.name != "nt":
+        if sys.platform != "win32":
             for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
                 basename = "my_real_symlink"
 
@@ -812,7 +813,7 @@ class TestIndex(TestBase):
         index.checkout(fake_symlink_path)
 
         # On Windows, we currently assume we will never get symlinks.
-        if os.name == "nt":
+        if sys.platform == "win32":
             # Symlinks should contain the link as text (which is what a
             # symlink actually is).
             with open(fake_symlink_path, "rt") as fd:
@@ -1043,7 +1044,7 @@ class TestIndex(TestBase):
     def test_hook_uses_shell_not_from_cwd(self, rw_dir, case):
         (chdir_to_repo,) = case
 
-        shell_name = "bash.exe" if os.name == "nt" else "sh"
+        shell_name = "bash.exe" if sys.platform == "win32" else "sh"
         maybe_chdir = cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext()
         repo = Repo.init(rw_dir)
 

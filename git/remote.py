@@ -41,14 +41,12 @@ from typing import (
     overload,
 )
 
-from git.types import PathLike, Literal, Commit_ish
+from git.types import AnyGitObject, Literal, PathLike
 
 if TYPE_CHECKING:
-    from git.repo.base import Repo
+    from git.objects.commit import Commit
     from git.objects.submodule.base import UpdateProgress
-
-    # from git.objects.commit import Commit
-    # from git.objects import Blob, Tree, TagObject
+    from git.repo.base import Repo
 
 flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
@@ -193,7 +191,7 @@ class PushInfo(IterableObj):
         self.summary = summary
 
     @property
-    def old_commit(self) -> Union[str, SymbolicReference, Commit_ish, None]:
+    def old_commit(self) -> Union["Commit", None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
@@ -359,7 +357,7 @@ class FetchInfo(IterableObj):
         ref: SymbolicReference,
         flags: int,
         note: str = "",
-        old_commit: Union[Commit_ish, None] = None,
+        old_commit: Union[AnyGitObject, None] = None,
         remote_ref_path: Optional[PathLike] = None,
     ) -> None:
         """Initialize a new instance."""
@@ -378,7 +376,7 @@ class FetchInfo(IterableObj):
         return self.ref.name
 
     @property
-    def commit(self) -> Commit_ish:
+    def commit(self) -> "Commit":
         """:return: Commit of our remote ref"""
         return self.ref.commit
 
@@ -435,7 +433,7 @@ class FetchInfo(IterableObj):
 
         # Parse operation string for more info.
         # This makes no sense for symbolic refs, but we parse it anyway.
-        old_commit: Union[Commit_ish, None] = None
+        old_commit: Union[AnyGitObject, None] = None
         is_tag_operation = False
         if "rejected" in operation:
             flags |= cls.REJECTED
@@ -556,6 +554,9 @@ class Remote(LazyMixin, IterableObj):
         "--exec",
     ]
 
+    url: str  # Obtained dynamically from _config_reader. See __getattr__ below.
+    """The URL configured for the remote."""
+
     def __init__(self, repo: "Repo", name: str) -> None:
         """Initialize a remote instance.
 
@@ -567,7 +568,6 @@ class Remote(LazyMixin, IterableObj):
         """
         self.repo = repo
         self.name = name
-        self.url: str
 
     def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like ``remote.special(*args, **kwargs)`` to

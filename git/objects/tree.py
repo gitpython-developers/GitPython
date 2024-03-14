@@ -3,17 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from git.util import IterableList, join_path
+import sys
+
 import git.diff as git_diff
-from git.util import to_bin_sha
+from git.util import IterableList, join_path, to_bin_sha
 
-from . import util
-from .base import IndexObject, IndexObjUnion
+from .base import IndexObjUnion, IndexObject
 from .blob import Blob
-from .submodule.base import Submodule
-
 from .fun import tree_entries_from_data, tree_to_stream
-
+from .submodule.base import Submodule
+from . import util
 
 # typing -------------------------------------------------
 
@@ -25,22 +24,22 @@ from typing import (
     Iterator,
     List,
     Tuple,
+    TYPE_CHECKING,
     Type,
     Union,
     cast,
-    TYPE_CHECKING,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from git.types import PathLike
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 if TYPE_CHECKING:
-    from git.repo import Repo
     from io import BytesIO
+    from git.repo import Repo
 
 TreeCacheTup = Tuple[bytes, int, str]
 
@@ -167,9 +166,12 @@ class TreeModifier:
 
 class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
-    other :class:`~git.objects.tree.Tree`\s.
+    other :class:`Tree`\s.
 
-    Tree as a list:
+    See gitglossary(7) on "tree object":
+    https://git-scm.com/docs/gitglossary#def_tree_object
+
+    Subscripting is supported, as with a list or dict:
 
     * Access a specific blob using the ``tree["filename"]`` notation.
     * You may likewise access by index, like ``blob = tree[0]``.
@@ -235,8 +237,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         """Find the named object in this tree's contents.
 
         :return:
-            :class:`~git.objects.blob.Blob`, :class:`~git.objects.tree.Tree`,
-            or :class:`~git.objects.submodule.base.Submodule`
+            :class:`~git.objects.blob.Blob`, :class:`Tree`, or
+            :class:`~git.objects.submodule.base.Submodule`
 
         :raise KeyError:
             If the given file or tree does not exist in this tree.
@@ -302,7 +304,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return TreeModifier(self._cache)
 
     def traverse(
-        self,  # type: ignore[override]
+        self,
         predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
         prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
         depth: int = -1,
@@ -331,9 +333,9 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return cast(
             Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
             super()._traverse(
-                predicate,
-                prune,
-                depth,  # type: ignore
+                predicate,  # type: ignore[arg-type]
+                prune,  # type: ignore[arg-type]
+                depth,
                 branch_first,
                 visit_once,
                 ignore_self,
@@ -393,7 +395,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return False
 
     def __reversed__(self) -> Iterator[IndexObjUnion]:
-        return reversed(self._iter_convert_to_object(self._cache))  # type: ignore
+        return reversed(self._iter_convert_to_object(self._cache))  # type: ignore[call-overload]
 
     def _serialize(self, stream: "BytesIO") -> "Tree":
         """Serialize this tree into the stream. Assumes sorted tree data.

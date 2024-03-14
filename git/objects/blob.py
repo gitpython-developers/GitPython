@@ -4,19 +4,23 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from mimetypes import guess_type
+import sys
+
 from . import base
 
-
-try:
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
+else:
     from typing_extensions import Literal
 
 __all__ = ("Blob",)
 
 
 class Blob(base.IndexObject):
-    """A Blob encapsulates a git blob object."""
+    """A Blob encapsulates a git blob object.
+
+    See gitglossary(7) on "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+    """
 
     DEFAULT_MIME_TYPE = "text/plain"
     type: Literal["blob"] = "blob"

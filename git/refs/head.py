@@ -15,14 +15,14 @@ from .reference import Reference
 
 # typing ---------------------------------------------------
 
-from typing import Any, Sequence, Union, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING, Union
 
-from git.types import PathLike, Commit_ish
+from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.objects import Commit
     from git.refs import RemoteReference
+    from git.repo import Repo
 
 # -------------------------------------------------------------------
 
@@ -44,11 +44,13 @@ class HEAD(SymbolicReference):
 
     __slots__ = ()
 
+    # TODO: This can be removed once SymbolicReference.commit has static type hints.
+    commit: "Commit"
+
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME) -> None:
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super().__init__(repo, path)
-        self.commit: "Commit"
 
     def orig_head(self) -> SymbolicReference:
         """
@@ -97,7 +99,7 @@ class HEAD(SymbolicReference):
         if index:
             mode = "--mixed"
 
-            # Tt appears some git versions declare mixed and paths deprecated.
+            # It appears some git versions declare mixed and paths deprecated.
             # See http://github.com/Byron/GitPython/issues#issue/2.
             if paths:
                 mode = None

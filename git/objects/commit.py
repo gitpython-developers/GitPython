@@ -3,57 +3,57 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+from collections import defaultdict
 import datetime
+from io import BytesIO
+import logging
+import os
 import re
 from subprocess import Popen, PIPE
+import sys
+from time import altzone, daylight, localtime, time, timezone
+
 from gitdb import IStream
-from git.util import hex_to_bin, Actor, Stats, finalize_process
-from git.diff import Diffable
 from git.cmd import Git
+from git.diff import Diffable
+from git.util import hex_to_bin, Actor, Stats, finalize_process
 
 from .tree import Tree
-from . import base
 from .util import (
     Serializable,
     TraversableIterableObj,
-    parse_date,
     altz_to_utctz_str,
-    parse_actor_and_date,
     from_timestamp,
+    parse_actor_and_date,
+    parse_date,
 )
-
-from time import time, daylight, altzone, timezone, localtime
-import os
-from io import BytesIO
-import logging
-from collections import defaultdict
-
+from . import base
 
 # typing ------------------------------------------------------------------
 
 from typing import (
     Any,
+    Dict,
     IO,
     Iterator,
     List,
     Sequence,
     Tuple,
-    Union,
     TYPE_CHECKING,
+    Union,
     cast,
-    Dict,
 )
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 from git.types import PathLike
 
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
-
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.refs import SymbolicReference
+    from git.repo import Repo
 
 # ------------------------------------------------------------------------
 
@@ -65,8 +65,12 @@ __all__ = ("Commit",)
 class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     """Wraps a git commit object.
 
-    This class will act lazily on some of its attributes and will query the value on
-    demand only if it involves calling the git binary.
+    See gitglossary(7) on "commit object":
+    https://git-scm.com/docs/gitglossary#def_commit_object
+
+    :note:
+        This class will act lazily on some of its attributes and will query the value on
+        demand only if it involves calling the git binary.
     """
 
     # ENVIRONMENT VARIABLES
@@ -80,8 +84,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     # INVARIANTS
     default_encoding = "UTF-8"
 
-    # object configuration
     type: Literal["commit"] = "commit"
+
     __slots__ = (
         "tree",
         "author",
@@ -95,7 +99,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         "encoding",
         "gpgsig",
     )
+
     _id_attribute_ = "hexsha"
+
+    parents: Sequence["Commit"]
 
     def __init__(
         self,
@@ -113,14 +120,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         encoding: Union[str, None] = None,
         gpgsig: Union[str, None] = None,
     ) -> None:
-        R"""Instantiate a new :class:`Commit`. All keyword arguments taking ``None`` as
+        """Instantiate a new :class:`Commit`. All keyword arguments taking ``None`` as
         default will be implicitly set on first query.
 
         :param binsha:
             20 byte sha1.
-
-        :param parents: tuple(Commit, ...)
-            A tuple of commit ids or actual :class:`Commit`\s.
 
         :param tree:
             A :class:`~git.objects.tree.Tree` object.
@@ -293,7 +297,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def iter_items(
         cls,
         repo: "Repo",
-        rev: Union[str, "Commit", "SymbolicReference"],  # type: ignore
+        rev: Union[str, "Commit", "SymbolicReference"],
         paths: Union[PathLike, Sequence[PathLike]] = "",
         **kwargs: Any,
     ) -> Iterator["Commit"]:
@@ -429,7 +433,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             List containing key-value tuples of whitespace stripped trailer information.
         """
         cmd = ["git", "interpret-trailers", "--parse"]
-        proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
+        proc: Git.AutoInterrupt = self.repo.git.execute(  # type: ignore[call-overload]
+            cmd,
+            as_process=True,
+            istream=PIPE,
+        )
         trailer: str = proc.communicate(str(self.message).encode())[0].decode("utf8")
         trailer = trailer.strip()
 
@@ -508,7 +516,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             if proc_or_stream.stdout is not None:
                 stream = proc_or_stream.stdout
         elif hasattr(proc_or_stream, "readline"):
-            proc_or_stream = cast(IO, proc_or_stream)  # type: ignore [redundant-cast]
+            proc_or_stream = cast(IO, proc_or_stream)  # type: ignore[redundant-cast]
             stream = proc_or_stream
 
         readline = stream.readline

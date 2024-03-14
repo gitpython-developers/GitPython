@@ -178,7 +178,7 @@ def git_daemon_launched(base_path, ip, port):
 
     gd = None
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
             # but if invoked as 'git daemon', it detaches from parent `git` cmd,
             # and then CANNOT DIE!
@@ -202,7 +202,7 @@ def git_daemon_launched(base_path, ip, port):
                 as_process=True,
             )
         # Yes, I know... fortunately, this is always going to work if sleep time is just large enough.
-        time.sleep(1.0 if os.name == "nt" else 0.5)
+        time.sleep(1.0 if sys.platform == "win32" else 0.5)
     except Exception as ex:
         msg = textwrap.dedent(
             """
@@ -406,7 +406,7 @@ class VirtualEnvironment:
     __slots__ = ("_env_dir",)
 
     def __init__(self, env_dir, *, with_pip):
-        if os.name == "nt":
+        if sys.platform == "win32":
             self._env_dir = osp.realpath(env_dir)
             venv.create(self.env_dir, symlinks=False, with_pip=with_pip)
         else:
@@ -441,7 +441,7 @@ class VirtualEnvironment:
         return os.path.join(self.env_dir, "src")
 
     def _executable(self, basename):
-        if os.name == "nt":
+        if sys.platform == "win32":
             path = osp.join(self.env_dir, "Scripts", basename + ".exe")
         else:
             path = osp.join(self.env_dir, "bin", basename)

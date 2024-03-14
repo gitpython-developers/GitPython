@@ -18,6 +18,7 @@ from stat import (
     S_IXUSR,
 )
 import subprocess
+import sys
 
 from git.cmd import handle_process_output, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
@@ -99,7 +100,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     env["GIT_EDITOR"] = ":"
     cmd = [hp]
     try:
-        if os.name == "nt" and not _has_file_extension(hp):
+        if sys.platform == "win32" and not _has_file_extension(hp):
             # Windows only uses extensions to determine how to open files
             # (doesn't understand shebangs). Try using bash to run the hook.
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()

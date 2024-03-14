@@ -246,7 +246,7 @@ class _OMD(OrderedDict_OMD):
 def get_config_path(config_level: Lit_config_levels) -> str:
     # We do not support an absolute path of the gitconfig on Windows.
     # Use the global config instead.
-    if os.name == "nt" and config_level == "system":
+    if sys.platform == "win32" and config_level == "system":
         config_level = "global"
 
     if config_level == "system":
@@ -344,9 +344,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             configuration files.
         """
         cp.RawConfigParser.__init__(self, dict_type=_OMD)
-        self._dict: Callable[..., _OMD]  # type: ignore   # mypy/typeshed bug?
+        self._dict: Callable[..., _OMD]
         self._defaults: _OMD
-        self._sections: _OMD  # type: ignore  # mypy/typeshed bug?
+        self._sections: _OMD
 
         # Used in Python 3. Needs to stay in sync with sections for underlying
         # implementation to work.

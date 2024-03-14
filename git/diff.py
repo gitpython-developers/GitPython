@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import enum
 import re
 
 from git.cmd import handle_process_output
@@ -22,13 +23,12 @@ from typing import (
     Match,
     Optional,
     Tuple,
-    Type,
     TypeVar,
     Union,
     TYPE_CHECKING,
     cast,
 )
-from git.types import PathLike, Literal
+from git.types import Literal, PathLike
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -48,10 +48,55 @@ Lit_change_type = Literal["A", "D", "C", "M", "R", "T", "U"]
 # ------------------------------------------------------------------------
 
 
-__all__ = ("Diffable", "DiffIndex", "Diff", "NULL_TREE")
+__all__ = ("DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff")
 
-NULL_TREE = object()
-"""Special object to compare against the empty tree in diffs."""
+
+@enum.unique
+class DiffConstants(enum.Enum):
+    """Special objects for :meth:`Diffable.diff`.
+
+    See the :meth:`Diffable.diff` method's ``other`` parameter, which accepts various
+    values including these.
+
+    :note:
+        These constants are also available as attributes of the :mod:`git.diff` module,
+        the :class:`Diffable` class and its subclasses and instances, and the top-level
+        :mod:`git` module.
+    """
+
+    NULL_TREE = enum.auto()
+    """Stand-in indicating you want to compare against the empty tree in diffs.
+
+    Also accessible as :const:`git.NULL_TREE`, :const:`git.diff.NULL_TREE`, and
+    :const:`Diffable.NULL_TREE`.
+    """
+
+    INDEX = enum.auto()
+    """Stand-in indicating you want to diff against the index.
+
+    Also accessible as :const:`git.INDEX`, :const:`git.diff.INDEX`, and
+    :const:`Diffable.INDEX`, as well as :const:`Diffable.Index`. The latter has been
+    kept for backward compatibility and made an alias of this, so it may still be used.
+    """
+
+
+NULL_TREE: Literal[DiffConstants.NULL_TREE] = DiffConstants.NULL_TREE
+"""Stand-in indicating you want to compare against the empty tree in diffs.
+
+See :meth:`Diffable.diff`, which accepts this as a value of its ``other`` parameter.
+
+This is an alias of :const:`DiffConstants.NULL_TREE`, which may also be accessed as
+:const:`git.NULL_TREE` and :const:`Diffable.NULL_TREE`.
+"""
+
+INDEX: Literal[DiffConstants.INDEX] = DiffConstants.INDEX
+"""Stand-in indicating you want to diff against the index.
+
+See :meth:`Diffable.diff`, which accepts this as a value of its ``other`` parameter.
+
+This is an alias of :const:`DiffConstants.INDEX`, which may also be accessed as
+:const:`git.INDEX` and :const:`Diffable.INDEX`, as well as :const:`Diffable.Index`.
+"""
 
 _octal_byte_re = re.compile(rb"\\([0-9]{3})")
 
@@ -84,19 +129,56 @@ class Diffable:
     compatible type.
 
     :note:
-        Subclasses require a repo member as it is the case for
-        :class:`~git.objects.base.Object` instances, for practical reasons we do not
+        Subclasses require a :attr:`repo` member, as it is the case for
+        :class:`~git.objects.base.Object` instances. For practical reasons we do not
         derive from :class:`~git.objects.base.Object`.
     """
 
     __slots__ = ()
 
-    class Index:
-        """Stand-in indicating you want to diff against the index."""
+    repo: "Repo"
+    """Repository to operate on. Must be provided by subclass or sibling class."""
+
+    NULL_TREE = NULL_TREE
+    """Stand-in indicating you want to compare against the empty tree in diffs.
+
+    See the :meth:`diff` method, which accepts this as a value of its ``other``
+    parameter.
+
+    This is the same as :const:`DiffConstants.NULL_TREE`, and may also be accessed as
+    :const:`git.NULL_TREE` and :const:`git.diff.NULL_TREE`.
+    """
+
+    INDEX = INDEX
+    """Stand-in indicating you want to diff against the index.
+
+    See the :meth:`diff` method, which accepts this as a value of its ``other``
+    parameter.
+
+    This is the same as :const:`DiffConstants.INDEX`, and may also be accessed as
+    :const:`git.INDEX` and :const:`git.diff.INDEX`, as well as :class:`Diffable.INDEX`,
+    which is kept for backward compatibility (it is now defined an alias of this).
+    """
+
+    Index = INDEX
+    """Stand-in indicating you want to diff against the index
+    (same as :const:`~Diffable.INDEX`).
+
+    This is an alias of :const:`~Diffable.INDEX`, for backward compatibility. See
+    :const:`~Diffable.INDEX` and :meth:`diff` for details.
+
+    :note:
+        Although always meant for use as an opaque constant, this was formerly defined
+        as a class. Its usage is unchanged, but static type annotations that attempt
+        to permit only this object must be changed to avoid new mypy errors. This was
+        previously not possible to do, though ``Type[Diffable.Index]`` approximated it.
+        It is now possible to do precisely, using ``Literal[DiffConstants.INDEX]``.
+    """
 
     def _process_diff_args(
-        self, args: List[Union[str, "Diffable", Type["Diffable.Index"], object]]
-    ) -> List[Union[str, "Diffable", Type["Diffable.Index"], object]]:
+        self,
+        args: List[Union[PathLike, "Diffable"]],
+    ) -> List[Union[PathLike, "Diffable"]]:
         """
         :return:
             Possibly altered version of the given args list.
@@ -107,7 +189,7 @@ class Diffable:
 
     def diff(
         self,
-        other: Union[Type["Index"], "Tree", "Commit", None, str, object] = Index,
+        other: Union[DiffConstants, "Tree", "Commit", str, None] = INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
@@ -119,12 +201,16 @@ class Diffable:
             This the item to compare us with.
 
             * If ``None``, we will be compared to the working tree.
-            * If :class:`~git.index.base.Treeish`, it will be compared against the
-              respective tree.
-            * If :class:`Diffable.Index`, it will be compared against the index.
-            * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
-            * It defaults to :class:`Diffable.Index` so that the method will not by
-              default fail on bare repositories.
+
+            * If a :class:`~git.types.Tree_ish` or string, it will be compared against
+              the respective tree.
+
+            * If :const:`INDEX`, it will be compared against the index.
+
+            * If :const:`NULL_TREE`, it will compare against the empty tree.
+
+            This parameter defaults to :const:`INDEX` (rather than ``None``) so that the
+            method will not by default fail on bare repositories.
 
         :param paths:
             This a list of paths or a single path to limit the diff to. It will only
@@ -140,14 +226,14 @@ class Diffable:
             sides of the diff.
 
         :return:
-            :class:`DiffIndex`
+            A :class:`DiffIndex` representing the computed diff.
 
         :note:
-            On a bare repository, `other` needs to be provided as
-            :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
+            On a bare repository, `other` needs to be provided as :const:`INDEX`, or as
+            an instance of :class:`~git.objects.tree.Tree` or
             :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
-        args: List[Union[PathLike, Diffable, Type["Diffable.Index"], object]] = []
+        args: List[Union[PathLike, Diffable]] = []
         args.append("--abbrev=40")  # We need full shas.
         args.append("--full-index")  # Get full index paths, not only filenames.
 
@@ -169,11 +255,8 @@ class Diffable:
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        if hasattr(self, "Has_Repo"):
-            self.repo: "Repo" = self.repo
-
         diff_cmd = self.repo.git.diff
-        if other is self.Index:
+        if other is INDEX:
             args.insert(0, "--cached")
         elif other is NULL_TREE:
             args.insert(0, "-r")  # Recursive diff-tree.
@@ -186,7 +269,7 @@ class Diffable:
 
         args.insert(0, self)
 
-        # paths is a list here, or None.
+        # paths is a list or tuple here, or None.
         if paths:
             args.append("--")
             args.extend(paths)
@@ -206,7 +289,7 @@ T_Diff = TypeVar("T_Diff", bound="Diff")
 
 
 class DiffIndex(List[T_Diff]):
-    R"""An Index for diffs, allowing a list of :class:`Diff`\s to be queried by the diff
+    R"""An index for diffs, allowing a list of :class:`Diff`\s to be queried by the diff
     properties.
 
     The class improves the diff handling convenience.

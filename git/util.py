@@ -107,19 +107,12 @@ __all__ = [
 _logger = logging.getLogger(__name__)
 
 
-def _read_win_env_flag(name: str, default: bool) -> bool:
-    """Read a boolean flag from an environment variable on Windows.
+def _read_env_flag(name: str, default: bool) -> bool:
+    """Read a boolean flag from an environment variable.
 
     :return:
-        On Windows, the flag, or the `default` value if absent or ambiguous.
-        On all other operating systems, ``False``.
-
-    :note:
-        This only accesses the environment on Windows.
+        The flag, or the `default` value if absent or ambiguous.
     """
-    if os.name != "nt":
-        return False
-
     try:
         value = os.environ[name]
     except KeyError:
@@ -138,6 +131,19 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
         return True
     _logger.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
     return default
+
+
+def _read_win_env_flag(name: str, default: bool) -> bool:
+    """Read a boolean flag from an environment variable on Windows.
+
+    :return:
+        On Windows, the flag, or the `default` value if absent or ambiguous.
+        On all other operating systems, ``False``.
+
+    :note:
+        This only accesses the environment on Windows.
+    """
+    return sys.platform == "win32" and _read_env_flag(name, default)
 
 
 #: We need an easy way to see if Appveyor TCs start failing,
@@ -223,7 +229,7 @@ def rmtree(path: PathLike) -> None:
                 raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    if os.name != "nt":
+    if sys.platform != "win32":
         shutil.rmtree(path)
     elif sys.version_info >= (3, 12):
         shutil.rmtree(path, onexc=handler)
@@ -235,7 +241,7 @@ def rmfile(path: PathLike) -> None:
     """Ensure file deleted also on *Windows* where read-only files need special
     treatment."""
     if osp.isfile(path):
-        if os.name == "nt":
+        if sys.platform == "win32":
             os.chmod(path, 0o777)
         os.remove(path)
 
@@ -276,7 +282,7 @@ def join_path(a: PathLike, *p: PathLike) -> PathLike:
     return path
 
 
-if os.name == "nt":
+if sys.platform == "win32":
 
     def to_native_path_windows(path: PathLike) -> PathLike:
         path = str(path)
@@ -328,7 +334,7 @@ def _get_exe_extensions() -> Sequence[str]:
     PATHEXT = os.environ.get("PATHEXT", None)
     if PATHEXT:
         return tuple(p.upper() for p in PATHEXT.split(os.pathsep))
-    elif os.name == "nt":
+    elif sys.platform == "win32":
         return (".BAT", "COM", ".EXE")
     else:
         return ()
@@ -354,7 +360,9 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
         return (
             osp.isfile(fpath)
             and os.access(fpath, os.X_OK)
-            and (os.name != "nt" or not winprog_exts or any(fpath.upper().endswith(ext) for ext in winprog_exts))
+            and (
+                sys.platform != "win32" or not winprog_exts or any(fpath.upper().endswith(ext) for ext in winprog_exts)
+            )
         )
 
     progs = []
@@ -440,23 +448,7 @@ def decygpath(path: PathLike) -> str:
 _is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
-@overload
-def is_cygwin_git(git_executable: None) -> Literal[False]: ...
-
-
-@overload
-def is_cygwin_git(git_executable: PathLike) -> bool: ...
-
-
-def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if os.name == "nt":
-        # This is Windows-native Python, since Cygwin has os.name == "posix".
-        return False
-
-    if git_executable is None:
-        return False
-
-    git_executable = str(git_executable)
+def _is_cygwin_git(git_executable: str) -> bool:
     is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
     if is_cygwin is None:
         is_cygwin = False
@@ -477,6 +469,23 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
         _is_cygwin_cache[git_executable] = is_cygwin
 
     return is_cygwin
+
+
+@overload
+def is_cygwin_git(git_executable: None) -> Literal[False]: ...
+
+
+@overload
+def is_cygwin_git(git_executable: PathLike) -> bool: ...
+
+
+def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
+    if sys.platform == "win32":  # TODO: See if we can use `sys.platform != "cygwin"`.
+        return False
+    elif git_executable is None:
+        return False
+    else:
+        return _is_cygwin_git(str(git_executable))
 
 
 def get_user_id() -> str:
@@ -505,10 +514,10 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
     if isinstance(p, pathlib.Path):
         return p.resolve()
     try:
-        p = osp.expanduser(p)  # type: ignore
+        p = osp.expanduser(p)  # type: ignore[arg-type]
         if expand_vars:
-            p = osp.expandvars(p)  # type: ignore
-        return osp.normpath(osp.abspath(p))  # type: ignore
+            p = osp.expandvars(p)
+        return osp.normpath(osp.abspath(p))
     except Exception:
         return None
 
@@ -732,7 +741,14 @@ class RemoteProgress:
 
 
 class CallableRemoteProgress(RemoteProgress):
-    """An implementation forwarding updates to any callable."""
+    """A :class:`RemoteProgress` implementation forwarding updates to any callable.
+
+    :note:
+        Like direct instances of :class:`RemoteProgress`, instances of this
+        :class:`CallableRemoteProgress` class are not themselves directly callable.
+        Rather, instances of this class wrap a callable and forward to it. This should
+        therefore not be confused with :class:`git.types.CallableProgress`.
+    """
 
     __slots__ = ("_callable",)
 
@@ -1176,7 +1192,7 @@ class IterableList(List[T_IterableObj]):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore[override]
         assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
 
         if isinstance(index, int):

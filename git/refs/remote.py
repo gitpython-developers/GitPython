@@ -52,7 +52,7 @@ class RemoteReference(Head):
     # subclasses and recommends Any or "type: ignore".
     # (See: https://github.com/python/typing/issues/241)
     @classmethod
-    def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore
+    def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore[override]
         """Delete the given remote references.
 
         :note:

@@ -11,22 +11,16 @@ import datetime
 import glob
 from io import BytesIO
 import os
+import os.path as osp
 from stat import S_ISLNK
 import subprocess
+import sys
 import tempfile
 
-from git.compat import (
-    force_bytes,
-    defenc,
-)
-from git.exc import GitCommandError, CheckoutError, GitError, InvalidGitRepositoryError
-from git.objects import (
-    Blob,
-    Submodule,
-    Tree,
-    Object,
-    Commit,
-)
+from git.compat import defenc, force_bytes
+import git.diff as git_diff
+from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError
+from git.objects import Blob, Commit, Object, Submodule, Tree
 from git.objects.util import Serializable
 from git.util import (
     LazyMixin,
@@ -40,24 +34,17 @@ from git.util import (
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
 
-import git.diff as git_diff
-import os.path as osp
-
 from .fun import (
-    entry_key,
-    write_cache,
-    read_cache,
-    aggressive_tree_merge,
-    write_tree_from_cache,
-    stat_mode_to_index_mode,
     S_IFGITLINK,
+    aggressive_tree_merge,
+    entry_key,
+    read_cache,
     run_commit_hook,
+    stat_mode_to_index_mode,
+    write_cache,
+    write_tree_from_cache,
 )
-from .typ import (
-    BaseIndexEntry,
-    IndexEntry,
-    StageType,
-)
+from .typ import BaseIndexEntry, IndexEntry, StageType
 from .util import TemporaryFileSwap, post_clear_cache, default_index, git_working_dir
 
 # typing -----------------------------------------------------------------------------
@@ -76,16 +63,16 @@ from typing import (
     Sequence,
     TYPE_CHECKING,
     Tuple,
-    Type,
     Union,
 )
 
-from git.types import Commit_ish, PathLike
+from git.types import Literal, PathLike
 
 if TYPE_CHECKING:
     from subprocess import Popen
-    from git.repo import Repo
+
     from git.refs.reference import Reference
+    from git.repo import Repo
     from git.util import Actor
 
 
@@ -108,7 +95,7 @@ def _named_temporary_file_for_subprocess(directory: PathLike) -> Generator[str, 
         A context manager object that creates the file and provides its name on entry,
         and deletes it on exit.
     """
-    if os.name == "nt":
+    if sys.platform == "win32":
         fd, name = tempfile.mkstemp(dir=directory)
         os.close(fd)
         try:
@@ -644,9 +631,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return root_tree
 
     def _process_diff_args(
-        self,  # type: ignore[override]
-        args: List[Union[str, "git_diff.Diffable", Type["git_diff.Diffable.Index"]]],
-    ) -> List[Union[str, "git_diff.Diffable", Type["git_diff.Diffable.Index"]]]:
+        self,
+        args: List[Union[PathLike, "git_diff.Diffable"]],
+    ) -> List[Union[PathLike, "git_diff.Diffable"]]:
         try:
             args.pop(args.index(self))
         except IndexError:
@@ -1127,7 +1114,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def commit(
         self,
         message: str,
-        parent_commits: Union[Commit_ish, None] = None,
+        parent_commits: Union[List[Commit], None] = None,
         head: bool = True,
         author: Union[None, "Actor"] = None,
         committer: Union[None, "Actor"] = None,
@@ -1476,10 +1463,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         return self
 
-    # @ default_index, breaks typing for some reason, copied into function
+    # FIXME: This is documented to accept the same parameters as Diffable.diff, but this
+    # does not handle NULL_TREE for `other`. (The suppressed mypy error is about this.)
     def diff(
-        self,  # type: ignore[override]
-        other: Union[Type["git_diff.Diffable.Index"], "Tree", "Commit", str, None] = git_diff.Diffable.Index,
+        self,
+        other: Union[  # type: ignore[override]
+            Literal[git_diff.DiffConstants.INDEX],
+            "Tree",
+            "Commit",
+            str,
+            None,
+        ] = git_diff.INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
@@ -1494,12 +1488,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             Will only work with indices that represent the default git index as they
             have not been initialized with a stream.
         """
-
         # Only run if we are the default repository index.
         if self._file_path != self._index_path():
             raise AssertionError("Cannot call %r on indices that do not represent the default git index" % self.diff())
         # Index against index is always empty.
-        if other is self.Index:
+        if other is self.INDEX:
             return git_diff.DiffIndex()
 
         # Index against anything but None is a reverse diff with the respective item.
@@ -1513,12 +1506,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # Invert the existing R flag.
             cur_val = kwargs.get("R", False)
             kwargs["R"] = not cur_val
-            return other.diff(self.Index, paths, create_patch, **kwargs)
+            return other.diff(self.INDEX, paths, create_patch, **kwargs)
         # END diff against other item handling
 
         # If other is not None here, something is wrong.
         if other is not None:
-            raise ValueError("other must be None, Diffable.Index, a Tree or Commit, was %r" % other)
+            raise ValueError("other must be None, Diffable.INDEX, a Tree or Commit, was %r" % other)
 
         # Diff against working copy - can be handled by superclass natively.
         return super().diff(other, paths, create_patch, **kwargs)

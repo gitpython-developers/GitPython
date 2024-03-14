@@ -12,6 +12,7 @@ import os.path as osp
 from pathlib import Path
 import re
 import shlex
+import sys
 import warnings
 
 import gitdb
@@ -33,29 +34,29 @@ from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
 from git.util import (
     Actor,
-    finalize_process,
     cygpath,
-    hex_to_bin,
     expand_path,
+    finalize_process,
+    hex_to_bin,
     remove_password_if_present,
 )
 
 from .fun import (
-    rev_parse,
-    is_git_dir,
     find_submodule_git_dir,
-    touch,
     find_worktree_git_dir,
+    is_git_dir,
+    rev_parse,
+    touch,
 )
 
 # typing ------------------------------------------------------
 
 from git.types import (
-    TBD,
-    PathLike,
-    Lit_config_levels,
-    Commit_ish,
     CallableProgress,
+    Commit_ish,
+    Lit_config_levels,
+    PathLike,
+    TBD,
     Tree_ish,
     assert_never,
 )
@@ -67,25 +68,25 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
+    TYPE_CHECKING,
     TextIO,
     Tuple,
     Type,
     Union,
-    NamedTuple,
     cast,
-    TYPE_CHECKING,
 )
 
 from git.types import ConfigLevels_Tup, TypedDict
 
 if TYPE_CHECKING:
-    from git.util import IterableList
-    from git.refs.symbolic import SymbolicReference
     from git.objects import Tree
     from git.objects.submodule.base import UpdateProgress
+    from git.refs.symbolic import SymbolicReference
     from git.remote import RemoteProgress
+    from git.util import IterableList
 
 # -----------------------------------------------------------
 
@@ -95,7 +96,7 @@ __all__ = ("Repo",)
 
 
 class BlameEntry(NamedTuple):
-    commit: Dict[str, "Commit"]
+    commit: Dict[str, Commit]
     linenos: range
     orig_path: Optional[str]
     orig_linenos: range
@@ -218,7 +219,7 @@ class Repo:
             # Given how the tests are written, this seems more likely to catch Cygwin
             # git used from Windows than Windows git used from Cygwin. Therefore
             # changing to Cygwin-style paths is the relevant operation.
-            epath = cygpath(epath)
+            epath = cygpath(str(epath))
 
         epath = epath or path or os.getcwd()
         if not isinstance(epath, str):
@@ -336,10 +337,10 @@ class Repo:
             # they are collected by the garbage collector, thus preventing deletion.
             # TODO: Find these references and ensure they are closed and deleted
             # synchronously rather than forcing a gc collection.
-            if os.name == "nt":
+            if sys.platform == "win32":
                 gc.collect()
             gitdb.util.mman.collect()
-            if os.name == "nt":
+            if sys.platform == "win32":
                 gc.collect()
 
     def __eq__(self, rhs: object) -> bool:
@@ -618,7 +619,7 @@ class Repo:
             git_dir = self.git_dir
         # We do not support an absolute path of the gitconfig on Windows.
         # Use the global config instead.
-        if os.name == "nt" and config_level == "system":
+        if sys.platform == "win32" and config_level == "system":
             config_level = "global"
 
         if config_level == "system":
@@ -635,7 +636,7 @@ class Repo:
             else:
                 return osp.normpath(osp.join(repo_dir, "config"))
         else:
-            assert_never(  # type:ignore[unreachable]
+            assert_never(  # type: ignore[unreachable]
                 config_level,
                 ValueError(f"Invalid configuration level: {config_level!r}"),
             )
@@ -771,7 +772,7 @@ class Repo:
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
-    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Commit_ish, None]]:
+    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Commit]:
         R"""Find the closest common ancestor for the given revision
         (:class:`~git.objects.commit.Commit`\s, :class:`~git.refs.tag.Tag`\s,
         :class:`~git.refs.reference.Reference`\s, etc.).
@@ -796,9 +797,9 @@ class Repo:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # END handle input
 
-        res: List[Union[Commit_ish, None]] = []
+        res: List[Commit] = []
         try:
-            lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
+            lines: List[str] = self.git.merge_base(*rev, **kwargs).splitlines()
         except GitCommandError as err:
             if err.status == 128:
                 raise
@@ -814,7 +815,7 @@ class Repo:
 
         return res
 
-    def is_ancestor(self, ancestor_rev: "Commit", rev: "Commit") -> bool:
+    def is_ancestor(self, ancestor_rev: Commit, rev: Commit) -> bool:
         """Check if a commit is an ancestor of another.
 
         :param ancestor_rev:

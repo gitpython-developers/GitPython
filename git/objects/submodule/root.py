@@ -1,12 +1,12 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import logging
+
+import git
+from git.exc import InvalidGitRepositoryError
 from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
-from git.exc import InvalidGitRepositoryError
-import git
-
-import logging
 
 # typing -------------------------------------------------------------------
 
@@ -75,9 +75,9 @@ class RootModule(Submodule):
 
     # { Interface
 
-    def update(
+    def update(  # type: ignore[override]
         self,
-        previous_commit: Union[Commit_ish, None] = None,  # type: ignore[override]
+        previous_commit: Union[Commit_ish, str, None] = None,
         recursive: bool = True,
         force_remove: bool = False,
         init: bool = True,

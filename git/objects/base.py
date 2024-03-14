@@ -3,11 +3,11 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from git.exc import WorkTreeRepositoryUnsupported
-from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
-
 import gitdb.typ as dbtyp
 import os.path as osp
+
+from git.exc import WorkTreeRepositoryUnsupported
+from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
 
 from .util import get_object_type_by_name
 
@@ -16,30 +16,58 @@ from .util import get_object_type_by_name
 
 from typing import Any, TYPE_CHECKING, Union
 
-from git.types import PathLike, Commit_ish, Lit_commit_ish
+from git.types import AnyGitObject, GitObjectTypeString, PathLike
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from gitdb.base import OStream
+
+    from git.refs.reference import Reference
+    from git.repo import Repo
+
     from .tree import Tree
     from .blob import Blob
     from .submodule.base import Submodule
-    from git.refs.reference import Reference
 
 IndexObjUnion = Union["Tree", "Blob", "Submodule"]
 
 # --------------------------------------------------------------------------
 
-
-_assertion_msg_format = "Created object %r whose python type %r disagrees with the actual git object type %r"
-
 __all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):
-    """An Object which may be :class:`~git.objects.blob.Blob`,
-    :class:`~git.objects.tree.Tree`, :class:`~git.objects.commit.Commit` or
-    `~git.objects.tag.TagObject`."""
+    """Base class for classes representing git object types.
+
+    The following four leaf classes represent specific kinds of git objects:
+
+    * :class:`Blob <git.objects.blob.Blob>`
+    * :class:`Tree <git.objects.tree.Tree>`
+    * :class:`Commit <git.objects.commit.Commit>`
+    * :class:`TagObject <git.objects.tag.TagObject>`
+
+    See gitglossary(7) on:
+
+    * "object": https://git-scm.com/docs/gitglossary#def_object
+    * "object type": https://git-scm.com/docs/gitglossary#def_object_type
+    * "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+    * "tree object": https://git-scm.com/docs/gitglossary#def_tree_object
+    * "commit object": https://git-scm.com/docs/gitglossary#def_commit_object
+    * "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
+
+    :note:
+        See the :class:`~git.types.AnyGitObject` union type of the four leaf subclasses
+        that represent actual git object types.
+
+    :note:
+        :class:`~git.objects.submodule.base.Submodule` is defined under the hierarchy
+        rooted at this :class:`Object` class, even though submodules are not really a
+        type of git object. (This also applies to its
+        :class:`~git.objects.submodule.root.RootModule` subclass.)
+
+    :note:
+        This :class:`Object` class should not be confused with :class:`object` (the root
+        of the class hierarchy in Python).
+    """
 
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
@@ -53,7 +81,21 @@ class Object(LazyMixin):
 
     __slots__ = ("repo", "binsha", "size")
 
-    type: Union[Lit_commit_ish, None] = None
+    type: Union[GitObjectTypeString, None] = None
+    """String identifying (a concrete :class:`Object` subtype for) a git object type.
+
+    The subtypes that this may name correspond to the kinds of git objects that exist,
+    i.e., the objects that may be present in a git repository.
+
+    :note:
+        Most subclasses represent specific types of git objects and override this class
+        attribute accordingly. This attribute is ``None`` in the :class:`Object` base
+        class, as well as the :class:`IndexObject` intermediate subclass, but never
+        ``None`` in concrete leaf subclasses representing specific git object types.
+
+    :note:
+        See also :class:`~git.types.GitObjectTypeString`.
+    """
 
     def __init__(self, repo: "Repo", binsha: bytes) -> None:
         """Initialize an object by identifying it by its binary sha.
@@ -75,7 +117,7 @@ class Object(LazyMixin):
         )
 
     @classmethod
-    def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> Commit_ish:
+    def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> AnyGitObject:
         """
         :return:
             New :class:`Object` instance of a type appropriate to the object type behind
@@ -92,7 +134,7 @@ class Object(LazyMixin):
         return repo.rev_parse(str(id))
 
     @classmethod
-    def new_from_sha(cls, repo: "Repo", sha1: bytes) -> Commit_ish:
+    def new_from_sha(cls, repo: "Repo", sha1: bytes) -> AnyGitObject:
         """
         :return:
             New object instance of a type appropriate to represent the given binary sha1
@@ -113,8 +155,7 @@ class Object(LazyMixin):
         """Retrieve object information."""
         if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
-            self.size = oinfo.size  # type:  int
-            # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
+            self.size = oinfo.size  # type: int
         else:
             super()._set_cache_(attr)
 
@@ -174,9 +215,13 @@ class Object(LazyMixin):
 
 
 class IndexObject(Object):
-    """Base for all objects that can be part of the index file, namely
-    :class:`~git.objects.tree.Tree`, :class:`~git.objects.blob.Blob` and
-    :class:`~git.objects.submodule.base.Submodule` objects."""
+    """Base for all objects that can be part of the index file.
+
+    The classes representing git object types that can be part of the index file are
+    :class:`~git.objects.tree.Tree and :class:`~git.objects.blob.Blob`. In addition,
+    :class:`~git.objects.submodule.base.Submodule`, which is not really a git object
+    type but can be part of an index file, is also a subclass.
+    """
 
     __slots__ = ("path", "mode")
 

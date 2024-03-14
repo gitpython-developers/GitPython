@@ -619,7 +619,7 @@ class TraversableIterableObj(IterableObj, Traversable):
     def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:
         return super()._list_traverse(*args, **kwargs)
 
-    @overload  # type: ignore
+    @overload
     def traverse(self: T_TIobj) -> Iterator[T_TIobj]: ...
 
     @overload
@@ -688,5 +688,13 @@ class TraversableIterableObj(IterableObj, Traversable):
 
         return cast(
             Union[Iterator[T_TIobj], Iterator[Tuple[Union[None, T_TIobj], T_TIobj]]],
-            super()._traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge),  # type: ignore
+            super()._traverse(
+                predicate,  # type: ignore[arg-type]
+                prune,  # type: ignore[arg-type]
+                depth,
+                branch_first,
+                visit_once,
+                ignore_self,
+                as_edge,
+            ),
         )

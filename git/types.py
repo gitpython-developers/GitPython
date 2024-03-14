@@ -4,98 +4,226 @@
 import os
 import sys
 from typing import (  # noqa: F401
+    Any,
+    Callable,
     Dict,
     NoReturn,
+    Optional,
     Sequence as Sequence,
     Tuple,
-    Union,
-    Any,
-    Optional,
-    Callable,
     TYPE_CHECKING,
     TypeVar,
+    Union,
 )
 
 if sys.version_info >= (3, 8):
     from typing import (  # noqa: F401
         Literal,
-        TypedDict,
         Protocol,
         SupportsIndex as SupportsIndex,
+        TypedDict,
         runtime_checkable,
     )
 else:
     from typing_extensions import (  # noqa: F401
         Literal,
+        Protocol,
         SupportsIndex as SupportsIndex,
         TypedDict,
-        Protocol,
         runtime_checkable,
     )
 
-# if sys.version_info >= (3, 10):
-#     from typing import TypeGuard  # noqa: F401
-# else:
-#     from typing_extensions import TypeGuard  # noqa: F401
+if TYPE_CHECKING:
+    from git.objects import Commit, Tree, TagObject, Blob
+    from git.repo import Repo
 
 PathLike = Union[str, "os.PathLike[str]"]
-
-if TYPE_CHECKING:
-    from git.repo import Repo
-    from git.objects import Commit, Tree, TagObject, Blob
-
-    # from git.refs import SymbolicReference
+"""A :class:`str` (Unicode) based file or directory path."""
 
 TBD = Any
+"""Alias of :class:`~typing.Any`, when a type hint is meant to become more specific."""
+
 _T = TypeVar("_T")
+"""Type variable used internally in GitPython."""
+
+AnyGitObject = Union["Commit", "Tree", "TagObject", "Blob"]
+"""Union of the :class:`~git.objects.base.Object`-based types that represent actual git
+object types.
+
+As noted in :class:`~git.objects.base.Object`, which has further details, these are:
+
+* :class:`Blob <git.objects.blob.Blob>`
+* :class:`Tree <git.objects.tree.Tree>`
+* :class:`Commit <git.objects.commit.Commit>`
+* :class:`TagObject <git.objects.tag.TagObject>`
+
+Those GitPython classes represent the four git object types, per gitglossary(7):
+
+* "blob": https://git-scm.com/docs/gitglossary#def_blob_object
+* "tree object": https://git-scm.com/docs/gitglossary#def_tree_object
+* "commit object": https://git-scm.com/docs/gitglossary#def_commit_object
+* "tag object": https://git-scm.com/docs/gitglossary#def_tag_object
+
+For more general information on git objects and their types as git understands them:
+
+* "object": https://git-scm.com/docs/gitglossary#def_object
+* "object type": https://git-scm.com/docs/gitglossary#def_object_type
+
+:note:
+    See also the :class:`Tree_ish` and :class:`Commit_ish` unions.
+"""
 
 Tree_ish = Union["Commit", "Tree"]
-Commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
-Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
+"""Union of :class:`~git.objects.base.Object`-based types that are inherently tree-ish.
+
+See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-ish
+
+:note:
+    This union comprises **only** the :class:`~git.objects.commit.Commit` and
+    :class:`~git.objects.tree.Tree` classes, **all** of whose instances are tree-ish.
+    This has been done because of the way GitPython uses it as a static type annotation.
+
+    :class:`~git.objects.tag.TagObject`, some but not all of whose instances are
+    tree-ish (those representing git tag objects that ultimately resolve to a tree or
+    commit), is not covered as part of this union type.
+
+:note:
+    See also the :class:`AnyGitObject` union of all four classes corresponding to git
+    object types.
+"""
+
+Commit_ish = Union["Commit", "TagObject"]
+"""Union of :class:`~git.objects.base.Object`-based types that are sometimes commit-ish.
+
+See gitglossary(7) on "commit-ish": https://git-scm.com/docs/gitglossary#def_commit-ish
+
+:note:
+    :class:`~git.objects.commit.Commit` is the only class whose instances are all
+    commit-ish. This union type includes :class:`~git.objects.commit.Commit`, but also
+    :class:`~git.objects.tag.TagObject`, only **some** of whose instances are
+    commit-ish. Whether a particular :class:`~git.objects.tag.TagObject` peels
+    (recursively dereferences) to a commit can in general only be known at runtime.
+
+:note:
+    This is an inversion of the situation with :class:`Tree_ish`. This union is broader
+    than all commit-ish objects, while :class:`Tree_ish` is narrower than all tree-ish
+    objects.
+
+:note:
+    See also the :class:`AnyGitObject` union of all four classes corresponding to git
+    object types.
+"""
+
+GitObjectTypeString = Literal["commit", "tag", "blob", "tree"]
+"""Literal strings identifying git object types and the
+:class:`~git.objects.base.Object`-based types that represent them.
+
+See the :attr:`Object.type <git.objects.base.Object.type>` attribute. These are its
+values in :class:`~git.objects.base.Object` subclasses that represent git objects. These
+literals therefore correspond to the types in the :class:`AnyGitObject` union.
+
+These are the same strings git itself uses to identify its four object types. See
+gitglossary(7) on "object type": https://git-scm.com/docs/gitglossary#def_object_type
+"""
+
+Lit_commit_ish = Literal["commit", "tag"]
+"""Deprecated. Type of literal strings identifying sometimes-commitish git object types.
+
+Prior to a bugfix, this type had been defined more broadly. Any usage is in practice
+ambiguous and likely to be incorrect. Instead of this type:
+
+* For the type of the string literals associated with :class:`Commit_ish`, use
+  ``Literal["commit", "tag"]`` or create a new type alias for it. That is equivalent to
+  this type as currently defined.
+
+* For the type of all four string literals associated with :class:`AnyGitObject`, use
+  :class:`GitObjectTypeString`. That is equivalent to the old definition of this type
+  prior to the bugfix.
+"""
 
 # Config_levels ---------------------------------------------------------
 
 Lit_config_levels = Literal["system", "global", "user", "repository"]
+"""Type of literal strings naming git configuration levels.
+
+These strings relate to which file a git configuration variable is in.
+"""
+
+ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
+"""Static type of a tuple of the four strings representing configuration levels."""
 
 # Progress parameter type alias -----------------------------------------
 
 CallableProgress = Optional[Callable[[int, Union[str, float], Union[str, float, None], str], None]]
+"""General type of a function or other callable used as a progress reporter for cloning.
 
-# def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-#     # return inp in get_args(Lit_config_level)  # only py >= 3.8
-#     return inp in ("system", "user", "global", "repository")
+This is the type of a function or other callable that reports the progress of a clone,
+when passed as a ``progress`` argument to :meth:`Repo.clone <git.repo.base.Repo.clone>`
+or :meth:`Repo.clone_from <git.repo.base.Repo.clone_from>`.
 
+:note:
+    Those :meth:`~git.repo.base.Repo.clone` and :meth:`~git.repo.base.Repo.clone_from`
+    methods also accept :meth:`~git.util.RemoteProgress` instances, including instances
+    of its :meth:`~git.util.CallableRemoteProgress` subclass.
 
-ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
+:note:
+    Unlike objects that match this type, :meth:`~git.util.RemoteProgress` instances are
+    not directly callable, not even when they are instances of
+    :meth:`~git.util.CallableRemoteProgress`, which wraps a callable and forwards
+    information to it but is not itself callable.
+
+:note:
+    This type also allows ``None``, for cloning without reporting progress.
+"""
 
 # -----------------------------------------------------------------------------------
 
 
 def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None) -> None:
-    """For use in exhaustive checking of literal or Enum in if/else chain.
+    """For use in exhaustive checking of a literal or enum in if/else chains.
 
-    Should only be reached if all members not handled OR attempt to pass non-members through chain.
+    A call to this function should only be reached if not all members are handled, or if
+    an attempt is made to pass non-members through the chain.
 
-    If all members handled, type is Empty. Otherwise, will cause mypy error.
+    :param inp:
+        If all members are handled, the argument for `inp` will have the
+        :class:`~typing.Never`/:class:`~typing.NoReturn` type. Otherwise, the type will
+        mismatch and cause a mypy error.
 
-    If non-members given, should cause mypy error at variable creation.
+    :param raise_error:
+        If ``True``, will also raise :class:`ValueError` with a general "unhandled
+        literal" message, or the exception object passed as `exc`.
 
-    If raise_error is True, will also raise AssertionError or the Exception passed to exc.
+    :param exc:
+        It not ``None``, this should be an already-constructed exception object, to be
+        raised if `raise_error` is ``True``.
     """
     if raise_error:
         if exc is None:
-            raise ValueError(f"An unhandled Literal ({inp}) in an if/else chain was found")
+            raise ValueError(f"An unhandled literal ({inp!r}) in an if/else chain was found")
         else:
             raise exc
 
 
 class Files_TD(TypedDict):
+    """Dictionary with stat counts for the diff of a particular file.
+
+    For the :class:`~git.util.Stats.files` attribute of :class:`~git.util.Stats`
+    objects.
+    """
+
     insertions: int
     deletions: int
     lines: int
 
 
 class Total_TD(TypedDict):
+    """Dictionary with total stats from any number of files.
+
+    For the :class:`~git.util.Stats.total` attribute of :class:`~git.util.Stats`
+    objects.
+    """
+
     insertions: int
     deletions: int
     lines: int
@@ -103,15 +231,21 @@ class Total_TD(TypedDict):
 
 
 class HSH_TD(TypedDict):
+    """Dictionary carrying the same information as a :class:`~git.util.Stats` object."""
+
     total: Total_TD
     files: Dict[PathLike, Files_TD]
 
 
 @runtime_checkable
 class Has_Repo(Protocol):
+    """Protocol for having a :attr:`repo` attribute, the repository to operate on."""
+
     repo: "Repo"
 
 
 @runtime_checkable
 class Has_id_attribute(Protocol):
+    """Protocol for having :attr:`_id_attribute_` used in iteration and traversal."""
+
     _id_attribute_: str

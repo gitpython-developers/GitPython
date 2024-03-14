@@ -5,6 +5,87 @@
 
 # @PydevCodeAnalysisIgnore
 
+__all__ = [  # noqa: F405
+    "Actor",
+    "AmbiguousObjectName",
+    "BadName",
+    "BadObject",
+    "BadObjectType",
+    "BaseIndexEntry",
+    "Blob",
+    "BlobFilter",
+    "BlockingLockFile",
+    "CacheError",
+    "CheckoutError",
+    "CommandError",
+    "Commit",
+    "Diff",
+    "DiffConstants",
+    "DiffIndex",
+    "Diffable",
+    "FetchInfo",
+    "Git",
+    "GitCmdObjectDB",
+    "GitCommandError",
+    "GitCommandNotFound",
+    "GitConfigParser",
+    "GitDB",
+    "GitError",
+    "HEAD",
+    "Head",
+    "HookExecutionError",
+    "INDEX",
+    "IndexEntry",
+    "IndexFile",
+    "IndexObject",
+    "InvalidDBRoot",
+    "InvalidGitRepositoryError",
+    "List",  # Deprecated - import this from `typing` instead.
+    "LockFile",
+    "NULL_TREE",
+    "NoSuchPathError",
+    "ODBError",
+    "Object",
+    "Optional",  # Deprecated - import this from `typing` instead.
+    "ParseError",
+    "PathLike",
+    "PushInfo",
+    "RefLog",
+    "RefLogEntry",
+    "Reference",
+    "Remote",
+    "RemoteProgress",
+    "RemoteReference",
+    "Repo",
+    "RepositoryDirtyError",
+    "RootModule",
+    "RootUpdateProgress",
+    "Sequence",  # Deprecated - import from `typing`, or `collections.abc` in 3.9+.
+    "StageType",
+    "Stats",
+    "Submodule",
+    "SymbolicReference",
+    "TYPE_CHECKING",  # Deprecated - import this from `typing` instead.
+    "Tag",
+    "TagObject",
+    "TagReference",
+    "Tree",
+    "TreeModifier",
+    "Tuple",  # Deprecated - import this from `typing` instead.
+    "Union",  # Deprecated - import this from `typing` instead.
+    "UnmergedEntriesError",
+    "UnsafeOptionError",
+    "UnsafeProtocolError",
+    "UnsupportedOperation",
+    "UpdateProgress",
+    "WorkTreeRepositoryUnsupported",
+    "refresh",
+    "remove_password_if_present",
+    "rmtree",
+    "safe_decode",
+    "to_hex_sha",
+]
+
 __version__ = "git"
 
 from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
@@ -34,86 +115,6 @@ try:
     )
 except GitError as _exc:  # noqa: F405
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
-
-# __all__ must be statically defined by py.typed support
-# __all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]
-__all__ = [  # noqa: F405
-    "Actor",
-    "AmbiguousObjectName",
-    "BadName",
-    "BadObject",
-    "BadObjectType",
-    "BaseIndexEntry",
-    "Blob",
-    "BlobFilter",
-    "BlockingLockFile",
-    "CacheError",
-    "CheckoutError",
-    "CommandError",
-    "Commit",
-    "Diff",
-    "DiffIndex",
-    "Diffable",
-    "FetchInfo",
-    "Git",
-    "GitCmdObjectDB",
-    "GitCommandError",
-    "GitCommandNotFound",
-    "GitConfigParser",
-    "GitDB",
-    "GitError",
-    "HEAD",
-    "Head",
-    "HookExecutionError",
-    "IndexEntry",
-    "IndexFile",
-    "IndexObject",
-    "InvalidDBRoot",
-    "InvalidGitRepositoryError",
-    "List",
-    "LockFile",
-    "NULL_TREE",
-    "NoSuchPathError",
-    "ODBError",
-    "Object",
-    "Optional",
-    "ParseError",
-    "PathLike",
-    "PushInfo",
-    "RefLog",
-    "RefLogEntry",
-    "Reference",
-    "Remote",
-    "RemoteProgress",
-    "RemoteReference",
-    "Repo",
-    "RepositoryDirtyError",
-    "RootModule",
-    "RootUpdateProgress",
-    "Sequence",
-    "StageType",
-    "Stats",
-    "Submodule",
-    "SymbolicReference",
-    "TYPE_CHECKING",
-    "Tag",
-    "TagObject",
-    "TagReference",
-    "Tree",
-    "TreeModifier",
-    "Tuple",
-    "Union",
-    "UnmergedEntriesError",
-    "UnsafeOptionError",
-    "UnsafeProtocolError",
-    "UnsupportedOperation",
-    "UpdateProgress",
-    "WorkTreeRepositoryUnsupported",
-    "remove_password_if_present",
-    "rmtree",
-    "safe_decode",
-    "to_hex_sha",
-]
 
 # { Initialize git executable path
 GIT_OK = None
@@ -146,7 +147,7 @@ def refresh(path: Optional[PathLike] = None) -> None:
     if not Git.refresh(path=path):
         return
     if not FetchInfo.refresh():  # noqa: F405
-        return  # type: ignore [unreachable]
+        return  # type: ignore[unreachable]
 
     GIT_OK = True
 

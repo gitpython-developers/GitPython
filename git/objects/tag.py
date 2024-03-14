@@ -5,9 +5,11 @@
 
 """Provides an :class:`~git.objects.base.Object`-based type for annotated tags.
 
-This defines the :class:`TagReference` class, which represents annotated tags.
+This defines the :class:`TagObject` class, which represents annotated tags.
 For lightweight tags, see the :mod:`git.refs.tag` module.
 """
+
+import sys
 
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
@@ -16,9 +18,9 @@ from ..compat import defenc
 
 from typing import List, TYPE_CHECKING, Union
 
-try:
+if sys.version_info >= (3, 8):
     from typing import Literal
-except ImportError:
+else:
     from typing_extensions import Literal
 
 if TYPE_CHECKING:
@@ -33,7 +35,11 @@ __all__ = ("TagObject",)
 
 class TagObject(base.Object):
     """Annotated (i.e. non-lightweight) tag carrying additional information about an
-    object we are pointing to."""
+    object we are pointing to.
+
+    See gitglossary(7) on "tag object":
+    https://git-scm.com/docs/gitglossary#def_tag_object
+    """
 
     type: Literal["tag"] = "tag"
 

@@ -7,6 +7,7 @@ import glob
 import io
 import os
 import os.path as osp
+import sys
 from unittest import mock
 
 import pytest
@@ -238,7 +239,7 @@ class TestBase(TestCase):
             check_test_value(cr, tv)
 
     @pytest.mark.xfail(
-        os.name == "nt",
+        sys.platform == "win32",
         reason='Second config._has_includes() assertion fails (for "config is included if path is matching git_dir")',
         raises=AssertionError,
     )

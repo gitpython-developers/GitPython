@@ -74,7 +74,7 @@ def _fake_git(*version_info):
     fake_output = f"git version {fake_version} (fake)"
 
     with tempfile.TemporaryDirectory() as tdir:
-        if os.name == "nt":
+        if sys.platform == "win32":
             fake_git = Path(tdir, "fake-git.cmd")
             script = f"@echo {fake_output}\n"
             fake_git.write_text(script, encoding="utf-8")
@@ -215,7 +215,7 @@ class TestGit(TestBase):
 
         repo = Repo.init(rw_dir)
 
-        if os.name == "nt":
+        if sys.platform == "win32":
             # Copy an actual binary executable that is not git. (On Windows, running
             # "hostname" only displays the hostname, it never tries to change it.)
             other_exe_path = Path(os.environ["SystemRoot"], "system32", "hostname.exe")
@@ -228,7 +228,7 @@ class TestGit(TestBase):
             os.chmod(impostor_path, 0o755)
 
         if use_shell_impostor:
-            shell_name = "cmd.exe" if os.name == "nt" else "sh"
+            shell_name = "cmd.exe" if sys.platform == "win32" else "sh"
             shutil.copy(impostor_path, Path(rw_dir, shell_name))
 
         with contextlib.ExitStack() as stack:
@@ -245,7 +245,7 @@ class TestGit(TestBase):
         self.assertRegex(output, r"^git version\b")
 
     @skipUnless(
-        os.name == "nt",
+        sys.platform == "win32",
         "The regression only affected Windows, and this test logic is OS-specific.",
     )
     def test_it_avoids_upcasing_unrelated_environment_variable_names(self):
@@ -667,7 +667,7 @@ class TestGit(TestBase):
             stack.enter_context(mock.patch.dict(os.environ, {"PATH": new_path_var}))
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
 
-            if os.name == "nt":
+            if sys.platform == "win32":
                 # On Windows, use a shell so "git" finds "git.cmd". (In the infrequent
                 # case that this effect is desired in production code, it should not be
                 # done with this technique. USE_SHELL=True is less secure and reliable,
