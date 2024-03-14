@@ -1,7 +1,8 @@
 -r requirements.txt
 -r test-requirements.txt
 
-# libraries for additional local testing/linting - to be added to test-requirements.txt when all pass
-
+# For additional local testing/linting - to be added elsewhere eventually.
+ruff
+shellcheck
 pytest-icdiff
 # pytest-profiling
