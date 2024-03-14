@@ -1,18 +1,18 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import logging
+
+import git
+from git.exc import InvalidGitRepositoryError
 from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
-from git.exc import InvalidGitRepositoryError
-import git
-
-import logging
 
 # typing -------------------------------------------------------------------
 
 from typing import TYPE_CHECKING, Union
 
-from git.types import Old_commit_ish
+from git.types import Commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -77,7 +77,7 @@ class RootModule(Submodule):
 
     def update(  # type: ignore[override]
         self,
-        previous_commit: Union[Old_commit_ish, None] = None,
+        previous_commit: Union[Commit_ish, str, None] = None,
         recursive: bool = True,
         force_remove: bool = False,
         init: bool = True,
