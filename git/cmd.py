@@ -501,9 +501,8 @@ class Git:
                 if mode in quiet:
                     pass
                 elif mode in warn or mode in error:
-                    err = (
-                        dedent(
-                            """\
+                    err = dedent(
+                        """\
                         %s
                         All git commands will error until this is rectified.
 
@@ -516,16 +515,14 @@ class Git:
                         Example:
                             export %s=%s
                         """
-                        )
-                        % (
-                            err,
-                            cls._refresh_env_var,
-                            "|".join(quiet),
-                            "|".join(warn),
-                            "|".join(error),
-                            cls._refresh_env_var,
-                            quiet[0],
-                        )
+                    ) % (
+                        err,
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error),
+                        cls._refresh_env_var,
+                        quiet[0],
                     )
 
                     if mode in warn:
@@ -533,9 +530,8 @@ class Git:
                     else:
                         raise ImportError(err)
                 else:
-                    err = (
-                        dedent(
-                            """\
+                    err = dedent(
+                        """\
                         %s environment variable has been set but it has been set with an invalid value.
 
                         Use only the following values:
@@ -543,13 +539,11 @@ class Git:
                             - %s: for a warning message (logging level CRITICAL, displayed by default)
                             - %s: for a raised exception
                         """
-                        )
-                        % (
-                            cls._refresh_env_var,
-                            "|".join(quiet),
-                            "|".join(warn),
-                            "|".join(error),
-                        )
+                    ) % (
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error),
                     )
                     raise ImportError(err)
 
@@ -571,13 +565,11 @@ class Git:
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str:
-        ...
+    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str: ...
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str:
-        ...
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str: ...
 
     @classmethod
     def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
@@ -755,7 +747,7 @@ class Git:
         rest to ensure the underlying stream continues to work.
         """
 
-        __slots__: Tuple[str, ...] = ("_stream", "_nbr", "_size")
+        __slots__ = ("_stream", "_nbr", "_size")
 
         def __init__(self, size: int, stream: IO[bytes]) -> None:
             self._stream = stream
@@ -852,14 +844,14 @@ class Git:
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir: Union[None, PathLike] = None):
+    def __init__(self, working_dir: Union[None, PathLike] = None) -> None:
         """Initialize this instance with:
 
         :param working_dir:
-           Git directory we should work in. If ``None``, we always work in the current
-           directory as returned by :func:`os.getcwd`.
-           This is meant to be the working tree directory if available, or the
-           ``.git`` directory in case of bare repositories.
+            Git directory we should work in. If ``None``, we always work in the current
+            directory as returned by :func:`os.getcwd`.
+            This is meant to be the working tree directory if available, or the
+            ``.git`` directory in case of bare repositories.
         """
         super().__init__()
         self._working_dir = expand_path(working_dir)
@@ -938,8 +930,7 @@ class Git:
         command: Union[str, Sequence[Any]],
         *,
         as_process: Literal[True],
-    ) -> "AutoInterrupt":
-        ...
+    ) -> "AutoInterrupt": ...
 
     @overload
     def execute(
@@ -948,8 +939,7 @@ class Git:
         *,
         as_process: Literal[False] = False,
         stdout_as_string: Literal[True],
-    ) -> Union[str, Tuple[int, str, str]]:
-        ...
+    ) -> Union[str, Tuple[int, str, str]]: ...
 
     @overload
     def execute(
@@ -958,8 +948,7 @@ class Git:
         *,
         as_process: Literal[False] = False,
         stdout_as_string: Literal[False] = False,
-    ) -> Union[bytes, Tuple[int, bytes, str]]:
-        ...
+    ) -> Union[bytes, Tuple[int, bytes, str]]: ...
 
     @overload
     def execute(
@@ -969,8 +958,7 @@ class Git:
         with_extended_output: Literal[False],
         as_process: Literal[False],
         stdout_as_string: Literal[True],
-    ) -> str:
-        ...
+    ) -> str: ...
 
     @overload
     def execute(
@@ -980,8 +968,7 @@ class Git:
         with_extended_output: Literal[False],
         as_process: Literal[False],
         stdout_as_string: Literal[False],
-    ) -> bytes:
-        ...
+    ) -> bytes: ...
 
     def execute(
         self,
@@ -1109,8 +1096,8 @@ class Git:
         :raise git.exc.GitCommandError:
 
         :note:
-           If you add additional keyword arguments to the signature of this method,
-           you must update the ``execute_kwargs`` variable housed in this module.
+            If you add additional keyword arguments to the signature of this method, you
+            must update the ``execute_kwargs`` variable housed in this module.
         """
         # Remove password for the command if present.
         redacted_command = remove_password_if_present(command)
@@ -1402,8 +1389,9 @@ class Git:
         return self
 
     @overload
-    def _call_process(self, method: str, *args: None, **kwargs: None) -> str:
-        ...  # If no args were given, execute the call with all defaults.
+    def _call_process(
+        self, method: str, *args: None, **kwargs: None
+    ) -> str: ...  # If no args were given, execute the call with all defaults.
 
     @overload
     def _call_process(
@@ -1413,14 +1401,12 @@ class Git:
         as_process: Literal[True],
         *args: Any,
         **kwargs: Any,
-    ) -> "Git.AutoInterrupt":
-        ...
+    ) -> "Git.AutoInterrupt": ...
 
     @overload
     def _call_process(
         self, method: str, *args: Any, **kwargs: Any
-    ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]:
-        ...
+    ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]: ...
 
     def _call_process(
         self, method: str, *args: Any, **kwargs: Any
@@ -1453,7 +1439,7 @@ class Git:
 
         turns into::
 
-           git rev-list max-count 10 --header master
+            git rev-list max-count 10 --header master
 
         :return:
             Same as :meth:`execute`. If no args are given, used :meth:`execute`'s

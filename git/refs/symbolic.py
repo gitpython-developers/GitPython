@@ -73,7 +73,7 @@ class SymbolicReference:
     _remote_common_path_default = "refs/remotes"
     _id_attribute_ = "name"
 
-    def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False):
+    def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
         self.path = path
 
@@ -511,7 +511,7 @@ class SymbolicReference:
             valid object or reference.
         """
         try:
-            self.object
+            self.object  # noqa: B018
         except (OSError, ValueError):
             return False
         else:
@@ -525,7 +525,7 @@ class SymbolicReference:
             instead to another reference.
         """
         try:
-            self.ref
+            self.ref  # noqa: B018
             return False
         except TypeError:
             return True

@@ -235,7 +235,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # Make sure we have our entries read before getting a write lock.
         # Otherwise it would be done when streaming.
         # This can happen if one doesn't change the index, but writes it right away.
-        self.entries
+        self.entries  # noqa: B018
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
 
@@ -384,7 +384,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             with TemporaryFileSwap(join_path_native(repo.git_dir, "index")):
                 repo.git.read_tree(*arg_list, **kwargs)
                 index = cls(repo, tmp_index)
-                index.entries  # Force it to read the file as we will delete the temp-file.
+                index.entries  # noqa: B018 # Force it to read the file as we will delete the temp-file.
                 return index
             # END index merge handling
 
@@ -1326,7 +1326,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # Make sure we have our entries loaded before we start checkout_index, which
             # will hold a lock on it. We try to get the lock as well during our entries
             # initialization.
-            self.entries
+            self.entries  # noqa: B018
 
             args.append("--stdin")
             kwargs["as_process"] = True
@@ -1366,7 +1366,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 self._flush_stdin_and_wait(proc, ignore_stdout=True)
             except GitCommandError:
                 # Without parsing stdout we don't know what failed.
-                raise CheckoutError(
+                raise CheckoutError(  # noqa: B904
                     "Some files could not be checked out from the index, probably because they didn't exist.",
                     failed_files,
                     [],

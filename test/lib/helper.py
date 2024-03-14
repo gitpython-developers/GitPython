@@ -10,6 +10,7 @@ import io
 import logging
 import os
 import os.path as osp
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -411,6 +412,13 @@ class VirtualEnvironment:
         else:
             self._env_dir = env_dir
             venv.create(self.env_dir, symlinks=True, with_pip=with_pip)
+
+        if with_pip:
+            # The upgrade_deps parameter to venv.create is 3.9+ only, so do it this way.
+            command = [self.python, "-m", "pip", "install", "--upgrade", "pip"]
+            if sys.version_info < (3, 12):
+                command.append("setuptools")
+            subprocess.check_output(command)
 
     @property
     def env_dir(self):

@@ -16,7 +16,10 @@ from ..compat import defenc
 
 from typing import List, TYPE_CHECKING, Union
 
-from git.types import Literal
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo

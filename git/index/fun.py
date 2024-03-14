@@ -287,9 +287,9 @@ def read_cache(
     #   4 bytes length of chunk
     #   Repeated 0 - N times
     extension_data = stream.read(~0)
-    assert (
-        len(extension_data) > 19
-    ), "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(extension_data)
+    assert len(extension_data) > 19, (
+        "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(extension_data)
+    )
 
     content_sha = extension_data[-20:]
 

@@ -44,7 +44,12 @@ from typing import (
     Dict,
 )
 
-from git.types import PathLike, Literal
+from git.types import PathLike
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo

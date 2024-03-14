@@ -472,13 +472,11 @@ def _is_cygwin_git(git_executable: str) -> bool:
 
 
 @overload
-def is_cygwin_git(git_executable: None) -> Literal[False]:
-    ...
+def is_cygwin_git(git_executable: None) -> Literal[False]: ...
 
 
 @overload
-def is_cygwin_git(git_executable: PathLike) -> bool:
-    ...
+def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
@@ -503,8 +501,7 @@ def finalize_process(proc: Union[subprocess.Popen, "Git.AutoInterrupt"], **kwarg
 
 
 @overload
-def expand_path(p: None, expand_vars: bool = ...) -> None:
-    ...
+def expand_path(p: None, expand_vars: bool = ...) -> None: ...
 
 
 @overload
@@ -619,20 +616,6 @@ class RemoteProgress:
         if self._cur_line.startswith(("error:", "fatal:")):
             self.error_lines.append(self._cur_line)
             return
-
-        # Find escape characters and cut them away - regex will not work with
-        # them as they are non-ASCII. As git might expect a tty, it will send them.
-        last_valid_index = None
-        for i, c in enumerate(reversed(line_str)):
-            if ord(c) < 32:
-                # its a slice index
-                last_valid_index = -i - 1
-            # END character was non-ASCII
-        # END for each character in line
-        if last_valid_index is not None:
-            line_str = line_str[:last_valid_index]
-        # END cut away invalid part
-        line_str = line_str.rstrip()
 
         cur_count, max_count = None, None
         match = self.re_op_relative.match(line_str)
@@ -933,7 +916,7 @@ class Stats:
 
     __slots__ = ("total", "files")
 
-    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]):
+    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]) -> None:
         self.total = total
         self.files = files
 

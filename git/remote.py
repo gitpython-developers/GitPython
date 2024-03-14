@@ -91,22 +91,19 @@ def add_progress(
 
 
 @overload
-def to_progress_instance(progress: None) -> RemoteProgress:
-    ...
+def to_progress_instance(progress: None) -> RemoteProgress: ...
 
 
 @overload
-def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress:
-    ...
+def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress: ...
 
 
 @overload
-def to_progress_instance(progress: RemoteProgress) -> RemoteProgress:
-    ...
+def to_progress_instance(progress: RemoteProgress) -> RemoteProgress: ...
 
 
 def to_progress_instance(
-    progress: Union[Callable[..., Any], RemoteProgress, None]
+    progress: Union[Callable[..., Any], RemoteProgress, None],
 ) -> Union[RemoteProgress, CallableRemoteProgress]:
     """Given the `progress` return a suitable object derived from
     :class:`~git.util.RemoteProgress`."""
@@ -323,7 +320,7 @@ class FetchInfo(IterableObj):
         ERROR,
     ) = [1 << x for x in range(8)]
 
-    _re_fetch_result = re.compile(r"^\s*(.) (\[[\w\s\.$@]+\]|[\w\.$@]+)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?")
+    _re_fetch_result = re.compile(r"^ *(.) (\[[\w \.$@]+\]|[\w\.$@]+) +(.+) -> ([^ ]+)(    \(.*\)?$)?")
 
     _flag_map: Dict[flagKeyLiteral, int] = {
         "!": ERROR,
@@ -895,7 +892,7 @@ class Remote(LazyMixin, IterableObj):
             None,
             progress_handler,
             finalizer=None,
-            decode_streams=False,
+            decode_streams=True,
             kill_after_timeout=kill_after_timeout,
         )
 
@@ -1072,7 +1069,7 @@ class Remote(LazyMixin, IterableObj):
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_fetch_options)
 
         proc = self.repo.git.fetch(
-            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
+            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=False, v=verbose, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
@@ -1126,7 +1123,7 @@ class Remote(LazyMixin, IterableObj):
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_pull_options)
 
         proc = self.repo.git.pull(
-            "--", self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
+            "--", self, refspec, with_stdout=False, as_process=True, universal_newlines=False, v=True, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):

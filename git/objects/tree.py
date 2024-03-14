@@ -31,7 +31,12 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from git.types import PathLike, Literal
+from git.types import PathLike
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -186,7 +191,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     _map_id_to_type: Dict[int, Type[IndexObjUnion]] = {
         commit_id: Submodule,
         blob_id: Blob,
-        symlink_id: Blob
+        symlink_id: Blob,
         # Tree ID added once Tree is defined.
     }
 

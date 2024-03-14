@@ -3,7 +3,5 @@
 
 # libraries for additional local testing/linting - to be added to test-requirements.txt when all pass
 
-flake8-type-checking;python_version>="3.8"      # checks for TYPE_CHECKING only imports
-
 pytest-icdiff
 # pytest-profiling

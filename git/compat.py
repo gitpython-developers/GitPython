@@ -74,13 +74,11 @@ defenc = sys.getfilesystemencoding()
 
 
 @overload
-def safe_decode(s: None) -> None:
-    ...
+def safe_decode(s: None) -> None: ...
 
 
 @overload
-def safe_decode(s: AnyStr) -> str:
-    ...
+def safe_decode(s: AnyStr) -> str: ...
 
 
 def safe_decode(s: Union[AnyStr, None]) -> Optional[str]:
@@ -96,13 +94,11 @@ def safe_decode(s: Union[AnyStr, None]) -> Optional[str]:
 
 
 @overload
-def safe_encode(s: None) -> None:
-    ...
+def safe_encode(s: None) -> None: ...
 
 
 @overload
-def safe_encode(s: AnyStr) -> bytes:
-    ...
+def safe_encode(s: AnyStr) -> bytes: ...
 
 
 def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
@@ -118,13 +114,11 @@ def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
 
 
 @overload
-def win_encode(s: None) -> None:
-    ...
+def win_encode(s: None) -> None: ...
 
 
 @overload
-def win_encode(s: AnyStr) -> bytes:
-    ...
+def win_encode(s: AnyStr) -> bytes: ...
 
 
 def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:

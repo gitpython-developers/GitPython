@@ -6,7 +6,11 @@
 from mimetypes import guess_type
 from . import base
 
-from git.types import Literal
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 __all__ = ("Blob",)
 

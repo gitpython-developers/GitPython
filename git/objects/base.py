@@ -97,7 +97,7 @@ class Object(LazyMixin):
         See also :class:`~git.types.GitObjectTypeString`.
     """
 
-    def __init__(self, repo: "Repo", binsha: bytes):
+    def __init__(self, repo: "Repo", binsha: bytes) -> None:
         """Initialize an object by identifying it by its binary sha.
 
         All keyword arguments will be set on demand if ``None``.

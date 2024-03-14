@@ -56,7 +56,7 @@ class RootModule(Submodule):
 
     k_root_name = "__ROOT__"
 
-    def __init__(self, repo: "Repo"):
+    def __init__(self, repo: "Repo") -> None:
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super().__init__(
             repo,

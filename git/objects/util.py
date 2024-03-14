@@ -439,7 +439,7 @@ class Traversable(Protocol):
 
         if not as_edge:
             out: IterableList[Union["Commit", "Submodule", "Tree", "Blob"]] = IterableList(id)
-            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))
+            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))  # noqa: B026
             return out
             # Overloads in subclasses (mypy doesn't allow typing self: subclass).
             # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
@@ -620,8 +620,7 @@ class TraversableIterableObj(IterableObj, Traversable):
         return super()._list_traverse(*args, **kwargs)
 
     @overload
-    def traverse(self: T_TIobj) -> Iterator[T_TIobj]:
-        ...
+    def traverse(self: T_TIobj) -> Iterator[T_TIobj]: ...
 
     @overload
     def traverse(
@@ -633,8 +632,7 @@ class TraversableIterableObj(IterableObj, Traversable):
         visit_once: bool,
         ignore_self: Literal[True],
         as_edge: Literal[False],
-    ) -> Iterator[T_TIobj]:
-        ...
+    ) -> Iterator[T_TIobj]: ...
 
     @overload
     def traverse(
@@ -646,8 +644,7 @@ class TraversableIterableObj(IterableObj, Traversable):
         visit_once: bool,
         ignore_self: Literal[False],
         as_edge: Literal[True],
-    ) -> Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]:
-        ...
+    ) -> Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]: ...
 
     @overload
     def traverse(
@@ -659,8 +656,7 @@ class TraversableIterableObj(IterableObj, Traversable):
         visit_once: bool,
         ignore_self: Literal[True],
         as_edge: Literal[True],
-    ) -> Iterator[Tuple[T_TIobj, T_TIobj]]:
-        ...
+    ) -> Iterator[Tuple[T_TIobj, T_TIobj]]: ...
 
     def traverse(
         self: T_TIobj,
