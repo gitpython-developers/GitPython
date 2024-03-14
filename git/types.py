@@ -126,31 +126,6 @@ These are the same strings git itself uses to identify its four object types. Se
 gitglossary(7) on "object type": https://git-scm.com/docs/gitglossary#def_object_type
 """
 
-# FIXME: Replace uses with AnyGitObject and Commit_ish, and remove this.
-Old_commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
-"""Union of the :class:`~git.objects.base.Object`-based types that represent git object
-types. This union is often usable where a commit-ish is expected, but is not actually
-limited to types representing commit-ish git objects.
-
-See gitglossary(7) on:
-
-* "commit-ish": https://git-scm.com/docs/gitglossary#def_commit-ish
-* "object type": https://git-scm.com/docs/gitglossary#def_object_type
-
-:note:
-    This union comprises **more** classes than those whose instances really represent
-    commit-ish git objects:
-
-    * A :class:`~git.objects.commit.Commit` is of course always commit-ish, and a
-      :class:`~git.objects.tag.TagObject` is commit-ish if, when peeled (recursively
-      followed), a :class:`~git.objects.commit.Commit` is obtained.
-    * However, :class:`~git.objects.blob.Blob` and :class:`~git.objects.tree.Tree` are
-      also included, and they represent git objects that are never really commit-ish.
-
-    This is an inversion of the situation with :class:`Tree_ish`, which is narrower than
-    all tree-ish objects. It is done for practical reasons including backward
-    compatibility.
-"""
 
 # FIXME: After replacing the one use with GitObjectTypeString, define Lit_commit_ish
 #        somehow (it is a breaking change to remove it entirely). Maybe deprecate it.
