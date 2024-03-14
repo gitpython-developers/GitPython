@@ -4,38 +4,38 @@
 import os
 import sys
 from typing import (  # noqa: F401
+    Any,
+    Callable,
     Dict,
     NoReturn,
+    Optional,
     Sequence as Sequence,
     Tuple,
-    Union,
-    Any,
-    Optional,
-    Callable,
     TYPE_CHECKING,
     TypeVar,
+    Union,
 )
 
 if sys.version_info >= (3, 8):
     from typing import (  # noqa: F401
         Literal,
-        TypedDict,
         Protocol,
         SupportsIndex as SupportsIndex,
+        TypedDict,
         runtime_checkable,
     )
 else:
     from typing_extensions import (  # noqa: F401
         Literal,
+        Protocol,
         SupportsIndex as SupportsIndex,
         TypedDict,
-        Protocol,
         runtime_checkable,
     )
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
+    from git.repo import Repo
 
 PathLike = Union[str, "os.PathLike[str]"]
 """A :class:`str` (Unicode) based file or directory path."""
@@ -126,22 +126,19 @@ These are the same strings git itself uses to identify its four object types. Se
 gitglossary(7) on "object type": https://git-scm.com/docs/gitglossary#def_object_type
 """
 
+Lit_commit_ish = Literal["commit", "tag"]
+"""Deprecated. Type of literal strings identifying sometimes-commitish git object types.
 
-# FIXME: After replacing the one use with GitObjectTypeString, define Lit_commit_ish
-#        somehow (it is a breaking change to remove it entirely). Maybe deprecate it.
-Lit_old_commit_ish = Literal["commit", "tag", "blob", "tree"]
-"""Literal strings identifying concrete :class:`~git.objects.base.Object` subtypes
-representing git object types.
+Prior to a bugfix, this type had been defined more broadly. Any usage is in practice
+ambiguous and likely to be incorrect. Instead of this type:
 
-See the :class:`Object.type <git.objects.base.Object.type>` attribute.
+* For the type of the string literals associated with :class:`Commit_ish`, use
+  ``Literal["commit", "tag"]`` or create a new type alias for it. That is equivalent to
+  this type as currently defined.
 
-:note:
-    See also :class:`Old_commit_ish`, a union of the the :class:`~git.objects.base.Object`
-    subtypes associated with these literal strings.
-
-:note:
-    As noted in :class:`Old_commit_ish`, this is not limited to types of git objects that
-    are actually commit-ish.
+* For the type of all four string literals associated with :class:`AnyGitObject`, use
+  :class:`GitObjectTypeString`. That is equivalent to the old definition of this type
+  prior to the bugfix.
 """
 
 # Config_levels ---------------------------------------------------------
