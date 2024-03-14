@@ -1467,7 +1467,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     # does not handle NULL_TREE for `other`. (The suppressed mypy error is about this.)
     def diff(
         self,
-        other: Union[Literal[git_diff.DiffConstants.INDEX], "Tree", "Commit", str, None] = git_diff.INDEX,  # type: ignore[override]
+        other: Union[  # type: ignore[override]
+            Literal[git_diff.DiffConstants.INDEX],
+            "Tree",
+            "Commit",
+            str,
+            None,
+        ] = git_diff.INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
