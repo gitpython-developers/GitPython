@@ -138,13 +138,11 @@ def short_to_long(odb: "GitCmdObjectDB", hexsha: str) -> Optional[bytes]:
 
 
 @overload
-def name_to_object(repo: "Repo", name: str, return_ref: Literal[False] = ...) -> AnyGitObject:
-    ...
+def name_to_object(repo: "Repo", name: str, return_ref: Literal[False] = ...) -> AnyGitObject: ...
 
 
 @overload
-def name_to_object(repo: "Repo", name: str, return_ref: Literal[True]) -> Union[AnyGitObject, SymbolicReference]:
-    ...
+def name_to_object(repo: "Repo", name: str, return_ref: Literal[True]) -> Union[AnyGitObject, SymbolicReference]: ...
 
 
 def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[AnyGitObject, SymbolicReference]:
