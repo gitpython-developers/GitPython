@@ -100,5 +100,5 @@ jobs:
 
     - name: Documentation
       run: |
-        pip install -r doc/requirements.txt
+        pip install ".[doc]"
         make -C doc html
