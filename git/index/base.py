@@ -862,7 +862,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             handled manually at all.
 
             All current built-in extensions are listed here:
-            http://opensource.apple.com/source/Git/Git-26/src/git-htmldocs/technical/index-format.txt
+            https://git-scm.com/docs/index-format
 
         :return:
             List of :class:`~git.index.typ.BaseIndexEntry`\s representing the entries
