@@ -73,19 +73,18 @@ For more general information on git objects and their types as git understands t
     See also the :class:`Tree_ish` and :class:`Commit_ish` unions.
 """
 
-Tree_ish = Union["Commit", "Tree"]
-"""Union of :class:`~git.objects.base.Object`-based types that are inherently tree-ish.
+Tree_ish = Union["Commit", "Tree", "TagObject"]
+"""Union of :class:`~git.objects.base.Object`-based types that are sometimes tree-ish.
 
 See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-ish
 
 :note:
-    This union comprises **only** the :class:`~git.objects.commit.Commit` and
-    :class:`~git.objects.tree.Tree` classes, **all** of whose instances are tree-ish.
-    This has been done because of the way GitPython uses it as a static type annotation.
-
-    :class:`~git.objects.tag.TagObject`, some but not all of whose instances are
-    tree-ish (those representing git tag objects that ultimately resolve to a tree or
-    commit), is not covered as part of this union type.
+    :class:`~git.objects.tree.Tree` and :class:`~git.objects.commit.Commit` are the
+    classes whose instances are all tree-ish. This union includes them, but also
+    :class:`~git.objects.tag.TagObject`, only **some** of whose instances are tree-ish.
+    Whether a particular :class:`~git.objects.tag.TagObject` peels (recursively
+    dereferences) to a tree or commit, rather than a blob, can in general only be known
+    at runtime.
 
 :note:
     See also the :class:`AnyGitObject` union of all four classes corresponding to git
@@ -102,12 +101,8 @@ See gitglossary(7) on "commit-ish": https://git-scm.com/docs/gitglossary#def_com
     commit-ish. This union type includes :class:`~git.objects.commit.Commit`, but also
     :class:`~git.objects.tag.TagObject`, only **some** of whose instances are
     commit-ish. Whether a particular :class:`~git.objects.tag.TagObject` peels
-    (recursively dereferences) to a commit can in general only be known at runtime.
-
-:note:
-    This is an inversion of the situation with :class:`Tree_ish`. This union is broader
-    than all commit-ish objects, while :class:`Tree_ish` is narrower than all tree-ish
-    objects.
+    (recursively dereferences) to a commit, rather than a tree or blob, can in general
+    only be known at runtime.
 
 :note:
     See also the :class:`AnyGitObject` union of all four classes corresponding to git
