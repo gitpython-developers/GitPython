@@ -57,7 +57,8 @@ As noted in :class:`~git.objects.base.Object`, which has further details, these 
 * :class:`Commit <git.objects.commit.Commit>`
 * :class:`TagObject <git.objects.tag.TagObject>`
 
-Those GitPython classes represent the four git object types, per gitglossary(7):
+Those GitPython classes represent the four git object types, per
+:manpage:`gitglossary(7)`:
 
 * "blob": https://git-scm.com/docs/gitglossary#def_blob_object
 * "tree object": https://git-scm.com/docs/gitglossary#def_tree_object
@@ -76,7 +77,8 @@ For more general information on git objects and their types as git understands t
 Tree_ish = Union["Commit", "Tree", "TagObject"]
 """Union of :class:`~git.objects.base.Object`-based types that are sometimes tree-ish.
 
-See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-ish
+See :manpage:`gitglossary(7)` on "tree-ish":
+https://git-scm.com/docs/gitglossary#def_tree-ish
 
 :note:
     :class:`~git.objects.tree.Tree` and :class:`~git.objects.commit.Commit` are the
@@ -94,7 +96,8 @@ See gitglossary(7) on "tree-ish": https://git-scm.com/docs/gitglossary#def_tree-
 Commit_ish = Union["Commit", "TagObject"]
 """Union of :class:`~git.objects.base.Object`-based types that are sometimes commit-ish.
 
-See gitglossary(7) on "commit-ish": https://git-scm.com/docs/gitglossary#def_commit-ish
+See :manpage:`gitglossary(7)` on "commit-ish":
+https://git-scm.com/docs/gitglossary#def_commit-ish
 
 :note:
     :class:`~git.objects.commit.Commit` is the only class whose instances are all
@@ -117,8 +120,9 @@ See the :attr:`Object.type <git.objects.base.Object.type>` attribute. These are 
 values in :class:`~git.objects.base.Object` subclasses that represent git objects. These
 literals therefore correspond to the types in the :class:`AnyGitObject` union.
 
-These are the same strings git itself uses to identify its four object types. See
-gitglossary(7) on "object type": https://git-scm.com/docs/gitglossary#def_object_type
+These are the same strings git itself uses to identify its four object types.
+See :manpage:`gitglossary(7)` on "object type":
+https://git-scm.com/docs/gitglossary#def_object_type
 """
 
 Lit_commit_ish = Literal["commit", "tag"]

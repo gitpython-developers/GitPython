@@ -333,8 +333,8 @@ class FetchInfo(IterableObj):
 
     @classmethod
     def refresh(cls) -> Literal[True]:
-        """Update information about which ``git fetch`` flags are supported by the git
-        executable being used.
+        """Update information about which :manpage:`git-fetch(1)` flags are supported
+        by the git executable being used.
 
         Called by the :func:`git.refresh` function in the top level ``__init__``.
         """
@@ -1015,13 +1015,13 @@ class Remote(LazyMixin, IterableObj):
             "grab the master branch head from the $URL and store it as my origin
             branch head". And ``git push $URL refs/heads/master:refs/heads/to-upstream``
             means "publish my master branch head as to-upstream branch at $URL".
-            See also git-push(1).
+            See also :manpage:`git-push(1)`.
 
-            Taken from the git manual, gitglossary(7).
+            Taken from the git manual, :manpage:`gitglossary(7)`.
 
-            Fetch supports multiple refspecs (as the underlying git-fetch does) -
-            supplying a list rather than a string for 'refspec' will make use of this
-            facility.
+            Fetch supports multiple refspecs (as the underlying :manpage:`git-fetch(1)`
+            does) - supplying a list rather than a string for 'refspec' will make use of
+            this facility.
 
         :param progress:
             See the :meth:`push` method.
@@ -1040,7 +1040,7 @@ class Remote(LazyMixin, IterableObj):
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param kwargs:
-            Additional arguments to be passed to ``git fetch``.
+            Additional arguments to be passed to :manpage:`git-fetch(1)`.
 
         :return:
             IterableList(FetchInfo, ...) list of :class:`FetchInfo` instances providing
@@ -1104,7 +1104,7 @@ class Remote(LazyMixin, IterableObj):
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param kwargs:
-            Additional arguments to be passed to ``git pull``.
+            Additional arguments to be passed to :manpage:`git-pull(1)`.
 
         :return:
             Please see :meth:`fetch` method.
@@ -1170,7 +1170,7 @@ class Remote(LazyMixin, IterableObj):
             Allow unsafe options to be used, like ``--receive-pack``.
 
         :param kwargs:
-            Additional arguments to be passed to ``git push``.
+            Additional arguments to be passed to :manpage:`git-push(1)`.
 
         :return:
             A :class:`PushInfoList` object, where each list member represents an

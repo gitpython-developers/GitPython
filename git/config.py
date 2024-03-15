@@ -270,7 +270,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
 class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     """Implements specifics required to read git style configuration files.
 
-    This variation behaves much like the ``git config`` command, such that the
+    This variation behaves much like the :manpage:`git-config(1)` command, such that the
     configuration will be read on demand based on the filepath given during
     initialization.
 

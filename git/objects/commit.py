@@ -65,7 +65,7 @@ __all__ = ("Commit",)
 class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     """Wraps a git commit object.
 
-    See gitglossary(7) on "commit object":
+    See :manpage:`gitglossary(7)` on "commit object":
     https://git-scm.com/docs/gitglossary#def_commit_object
 
     :note:
@@ -269,8 +269,9 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             actually containing the paths.
 
         :param kwargs:
-            Additional options to be passed to ``git rev-list``. They must not alter the
-            output style of the command, or parsing will yield incorrect results.
+            Additional options to be passed to :manpage:`git-rev-list(1)`. They must not
+            alter the output style of the command, or parsing will yield incorrect
+            results.
 
         :return:
             An int defining the number of reachable commits
@@ -307,14 +308,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             The :class:`~git.repo.base.Repo`.
 
         :param rev:
-            Revision specifier. See git-rev-parse for viable options.
+            Revision specifier. See :manpage:`git-rev-parse(1)` for viable options.
 
         :param paths:
             An optional path or list of paths. If set only :class:`Commit`\s that
             include the path or paths will be considered.
 
         :param kwargs:
-            Optional keyword arguments to ``git rev-list`` where:
+            Optional keyword arguments to :manpage:`git-rev-list(1)` where:
 
             * ``max_count`` is the maximum number of commits to fetch.
             * ``skip`` is the number of commits to skip.
@@ -353,7 +354,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             contain at least one of the paths.
 
         :param kwargs:
-            All arguments allowed by ``git rev-list``.
+            All arguments allowed by :manpage:`git-rev-list(1)`.
 
         :return:
             Iterator yielding :class:`Commit` objects which are parents of ``self``
@@ -404,7 +405,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """Get the trailers of the message as a list.
 
         Git messages can contain trailer information that are similar to RFC 822 e-mail
-        headers (see: https://git-scm.com/docs/git-interpret-trailers).
+        headers. See :manpage:`git-interpret-trailers(1)`.
 
         This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information, returns the raw trailer data as a list.
@@ -456,7 +457,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """Get the trailers of the message as a dictionary.
 
         Git messages can contain trailer information that are similar to RFC 822 e-mail
-        headers (see: https://git-scm.com/docs/git-interpret-trailers).
+        headers. See :manpage:`git-interpret-trailers(1)`.
 
         This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information. The key value pairs are stripped of leading and
@@ -499,7 +500,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         from our lighting fast object database.
 
         :param proc:
-            ``git rev-list`` process instance - one sha per line.
+            :manpage:`git-rev-list(1)` process instance - one sha per line.
 
         :return:
             Iterator supplying :class:`Commit` objects
@@ -596,8 +597,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         :note:
             Additional information about the committer and author are taken from the
-            environment or from the git configuration. See git-commit-tree for more
-            information.
+            environment or from the git configuration. See :manpage:`git-commit-tree(1)`
+            for more information.
         """
         if parent_commits is None:
             try:

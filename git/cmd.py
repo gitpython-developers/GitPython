@@ -901,7 +901,8 @@ class Git:
     def version_info(self) -> Tuple[int, ...]:
         """
         :return: Tuple with integers representing the major, minor and additional
-            version numbers as parsed from ``git version``. Up to four fields are used.
+            version numbers as parsed from :manpage:`git-version(1)`. Up to four fields
+            are used.
 
             This value is generated on demand and is cached.
         """
@@ -1038,9 +1039,9 @@ class Git:
             3. Deeper descendants do not receive signals, though they may sometimes
                terminate as a consequence of their parent processes being killed.
             4. `kill_after_timeout` uses ``SIGKILL``, which can have negative side
-               effects on a repository. For example, stale locks in case of ``git gc``
-               could render the repository incapable of accepting changes until the lock
-               is manually removed.
+               effects on a repository. For example, stale locks in case of
+               :manpage:`git-gc(1)` could render the repository incapable of accepting
+               changes until the lock is manually removed.
 
         :param with_stdout:
             If ``True``, default ``True``, we open stdout on the created process.

@@ -173,8 +173,7 @@ class SymbolicReference:
     def _check_ref_name_valid(ref_path: PathLike) -> None:
         """Check a ref name for validity.
 
-        This is based on the rules described in:
-        https://git-scm.com/docs/git-check-ref-format/#_description
+        This is based on the rules described in :manpage:`git-check-ref-format(1)`.
         """
         previous: Union[str, None] = None
         one_before_previous: Union[str, None] = None

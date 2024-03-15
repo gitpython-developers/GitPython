@@ -124,7 +124,7 @@ class TagReference(Reference):
             If ``True``, force creation of a tag even though that tag already exists.
 
         :param kwargs:
-            Additional keyword arguments to be passed to ``git tag``.
+            Additional keyword arguments to be passed to :manpage:`git-tag(1)`.
 
         :return:
             A new :class:`TagReference`.

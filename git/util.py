@@ -558,8 +558,8 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 
 class RemoteProgress:
     """Handler providing an interface to parse progress information emitted by
-    ``git push`` and ``git fetch`` and to dispatch callbacks allowing subclasses to
-    react to the progress."""
+    :manpage:`git-push(1)` and :manpage:`git-fetch(1)` and to dispatch callbacks
+    allowing subclasses to react to the progress."""
 
     _num_op_codes: int = 9
     (
@@ -595,8 +595,8 @@ class RemoteProgress:
         self.other_lines: List[str] = []
 
     def _parse_progress_line(self, line: AnyStr) -> None:
-        """Parse progress information from the given line as retrieved by ``git push``
-        or ``git fetch``.
+        """Parse progress information from the given line as retrieved by
+        :manpage:`git-push(1)` or :manpage:`git-fetch(1)`.
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
@@ -922,7 +922,8 @@ class Stats:
 
     @classmethod
     def _list_from_string(cls, repo: "Repo", text: str) -> "Stats":
-        """Create a :class:`Stats` object from output retrieved by ``git diff``.
+        """Create a :class:`Stats` object from output retrieved by
+        :manpage:`git-diff(1)`.
 
         :return:
             :class:`git.Stats`

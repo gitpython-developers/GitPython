@@ -89,7 +89,7 @@ class HEAD(SymbolicReference):
             that are to be reset. This allows to partially reset individual files.
 
         :param kwargs:
-            Additional arguments passed to ``git reset``.
+            Additional arguments passed to :manpage:`git-reset(1)`.
 
         :return:
             self

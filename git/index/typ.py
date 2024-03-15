@@ -130,8 +130,7 @@ class BaseIndexEntry(BaseIndexEntryHelper):
             * 3 = stage of entries from the 'right' side of the merge
 
         :note:
-            For more information, see:
-            http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
+            For more information, see :manpage:`git-read-tree(1)`.
         """
         return (self.flags & CE_STAGEMASK) >> CE_STAGESHIFT
 
