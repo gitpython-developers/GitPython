@@ -1177,7 +1177,7 @@ class Remote(LazyMixin, IterableObj):
             individual head which had been updated on the remote side.
 
             If the push contains rejected heads, these will have the
-            :attr:`PushInfo.ERROR` bit set in their flags.
+            :const:`PushInfo.ERROR` bit set in their flags.
 
             If the operation fails completely, the length of the returned
             :class:`PushInfoList` will be 0.
