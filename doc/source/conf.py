@@ -87,6 +87,8 @@ exclude_trees = ["build"]
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
 
+manpages_url = "https://git-scm.com/docs/{page}"
+
 
 # Options for HTML output
 # -----------------------
