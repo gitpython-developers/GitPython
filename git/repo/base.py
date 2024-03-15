@@ -1452,7 +1452,7 @@ class Repo:
 
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
-              implementation used by the returned Repo instance.
+              implementation used by the returned :class:`Repo` instance.
             * All remaining keyword arguments are given to the ``git clone`` command.
 
         :return:
