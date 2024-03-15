@@ -1488,8 +1488,7 @@ class Repo:
         """Create a clone from the given URL.
 
         :param url:
-            Valid git url, see:
-            http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
+            Valid git url, see: https://git-scm.com/docs/git-clone#URLS
 
         :param to_path:
             Path to which the repository should be cloned to.
