@@ -464,7 +464,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         :param url:
             git-clone compatible URL, see git-clone reference for more information.
-            If ``None```, the repository is assumed to exist, and the url of the first
+            If ``None``, the repository is assumed to exist, and the url of the first
             remote is taken instead. This is useful if you want to make an existing
             repository a submodule of another one.
 
