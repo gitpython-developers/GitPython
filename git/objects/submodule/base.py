@@ -143,7 +143,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             See the `url` parameter.
 
         :param parent_commit:
-            See :meth:`set_parent_commit`.
+            The :class:`~git.objects.commit.Commit` whose tree is supposed to contain
+            the ``.gitmodules`` blob, or ``None`` to always point to the most recent
+            commit. See :meth:`set_parent_commit` for details.
 
         :param url:
             The URL to the remote repository which is the submodule.
@@ -1260,7 +1262,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         contain the ``.gitmodules`` blob.
 
         :param commit:
-            Commit-ish reference pointing at the root_tree, or ``None`` to always point
+            Commit-ish reference pointing at the root tree, or ``None`` to always point
             to the most recent commit.
 
         :param check:
