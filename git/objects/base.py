@@ -45,7 +45,7 @@ class Object(LazyMixin):
     * :class:`Commit <git.objects.commit.Commit>`
     * :class:`TagObject <git.objects.tag.TagObject>`
 
-    See gitglossary(7) on:
+    See :manpage:`gitglossary(7)` on:
 
     * "object": https://git-scm.com/docs/gitglossary#def_object
     * "object type": https://git-scm.com/docs/gitglossary#def_object_type

@@ -342,7 +342,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param kwargs:
-            Additional arguments given to ``git clone``.
+            Additional arguments given to :manpage:`git-clone(1)`.
         """
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
@@ -463,10 +463,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             It will be created as required during the repository initialization.
 
         :param url:
-            git-clone compatible URL, see git-clone reference for more information.
-            If ``None```, the repository is assumed to exist, and the url of the first
-            remote is taken instead. This is useful if you want to make an existing
-            repository a submodule of another one.
+            ``git clone ...``-compatible URL. See :manpage:`git-clone(1)` for more
+            information. If ``None``, the repository is assumed to exist, and the URL of
+            the first remote is taken instead. This is useful if you want to make an
+            existing repository a submodule of another one.
 
         :param branch:
             Name of branch at which the submodule should (later) be checked out. The
@@ -696,7 +696,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             its value.
 
         :param clone_multi_options:
-            List of ``git clone`` options.
+            List of :manpage:`git-clone(1)` options.
             Please see :meth:`Repo.clone <git.repo.base.Repo.clone>` for details.
             They only take effect with the `init` option.
 

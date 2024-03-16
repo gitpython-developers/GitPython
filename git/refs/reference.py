@@ -21,7 +21,7 @@ __all__ = ["Reference"]
 
 
 def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
-    """A decorator raising :class:`ValueError` if we are not a valid remote, based on the
+    """A decorator raising :exc:`ValueError` if we are not a valid remote, based on the
     path."""
 
     def wrapper(self: T_References, *args: Any) -> _T:

@@ -158,8 +158,8 @@ T = TypeVar("T")
 
 
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
-    """Methods with this decorator raise
-    :class:`~git.exc.InvalidGitRepositoryError` if they encounter a bare repository."""
+    """Methods with this decorator raise :exc:`~git.exc.InvalidGitRepositoryError` if
+    they encounter a bare repository."""
 
     from .exc import InvalidGitRepositoryError
 
@@ -558,8 +558,8 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 
 class RemoteProgress:
     """Handler providing an interface to parse progress information emitted by
-    ``git push`` and ``git fetch`` and to dispatch callbacks allowing subclasses to
-    react to the progress."""
+    :manpage:`git-push(1)` and :manpage:`git-fetch(1)` and to dispatch callbacks
+    allowing subclasses to react to the progress."""
 
     _num_op_codes: int = 9
     (
@@ -595,8 +595,8 @@ class RemoteProgress:
         self.other_lines: List[str] = []
 
     def _parse_progress_line(self, line: AnyStr) -> None:
-        """Parse progress information from the given line as retrieved by ``git push``
-        or ``git fetch``.
+        """Parse progress information from the given line as retrieved by
+        :manpage:`git-push(1)` or :manpage:`git-fetch(1)`.
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
@@ -713,14 +713,14 @@ class RemoteProgress:
         :param op_code:
             Integer allowing to be compared against Operation IDs and stage IDs.
 
-            Stage IDs are :attr:`BEGIN` and :attr:`END`. :attr:`BEGIN` will only be set
-            once for each Operation ID as well as :attr:`END`. It may be that
-            :attr:`BEGIN` and :attr:`END` are set at once in case only one progress
-            message was emitted due to the speed of the operation. Between :attr:`BEGIN`
-            and :attr:`END`, none of these flags will be set.
+            Stage IDs are :const:`BEGIN` and :const:`END`. :const:`BEGIN` will only be
+            set once for each Operation ID as well as :const:`END`. It may be that
+            :const:`BEGIN` and :const:`END` are set at once in case only one progress
+            message was emitted due to the speed of the operation. Between
+            :const:`BEGIN` and :const:`END`, none of these flags will be set.
 
-            Operation IDs are all held within the :attr:`OP_MASK`. Only one Operation ID
-            will be active per call.
+            Operation IDs are all held within the :const:`OP_MASK`. Only one Operation
+            ID will be active per call.
 
         :param cur_count:
             Current absolute count of items.
@@ -730,7 +730,7 @@ class RemoteProgress:
             maximum number of items or if it is (yet) unknown.
 
         :param message:
-            In case of the :attr:`WRITING` operation, it contains the amount of bytes
+            In case of the :const:`WRITING` operation, it contains the amount of bytes
             transferred. It may possibly be used for other purposes as well.
 
         :note:
@@ -922,7 +922,8 @@ class Stats:
 
     @classmethod
     def _list_from_string(cls, repo: "Repo", text: str) -> "Stats":
-        """Create a :class:`Stats` object from output retrieved by ``git diff``.
+        """Create a :class:`Stats` object from output retrieved by
+        :manpage:`git-diff(1)`.
 
         :return:
             :class:`git.Stats`
@@ -1093,8 +1094,8 @@ class BlockingLockFile(LockFile):
         self._max_block_time = max_block_time_s
 
     def _obtain_lock(self) -> None:
-        """This method blocks until it obtained the lock, or raises :class:`IOError` if
-        it ran out of time or if the parent directory was not available anymore.
+        """This method blocks until it obtained the lock, or raises :exc:`IOError` if it
+        ran out of time or if the parent directory was not available anymore.
 
         If this method returns, you are guaranteed to own the lock.
         """

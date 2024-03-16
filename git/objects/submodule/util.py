@@ -52,7 +52,7 @@ def mkhead(repo: "Repo", path: PathLike) -> "Head":
 
 def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "RemoteReference":
     """Find the remote branch matching the name of the given branch or raise
-    :class:`~git.exc.InvalidGitRepositoryError`."""
+    :exc:`~git.exc.InvalidGitRepositoryError`."""
     for remote in remotes:
         try:
             return remote.refs[branch_name]

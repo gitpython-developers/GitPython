@@ -225,11 +225,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :param ignore_extension_data:
             If ``True``, the TREE type extension data read in the index will not be
-            written to disk. NOTE that no extension data is actually written.
-            Use this if you have altered the index and would like to use
-            ``git write-tree`` afterwards to create a tree representing your written
-            changes. If this data is present in the written index, ``git write-tree``
-            will instead write the stored/cached tree.
+            written to disk. NOTE that no extension data is actually written. Use this
+            if you have altered the index and would like to use
+            :manpage:`git-write-tree(1)` afterwards to create a tree representing your
+            written changes. If this data is present in the written index,
+            :manpage:`git-write-tree(1)` will instead write the stored/cached tree.
             Alternatively, use :meth:`write_tree` to handle this case automatically.
         """
         # Make sure we have our entries read before getting a write lock.
@@ -343,7 +343,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                tree, tree 3 is the 'other' one.
 
         :param kwargs:
-            Additional arguments passed to ``git read-tree``.
+            Additional arguments passed to :manpage:`git-read-tree(1)`.
 
         :return:
             New :class:`IndexFile` instance. It will point to a temporary index location
@@ -355,9 +355,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             automatically resolve more cases in a commonly correct manner. Specify
             ``trivial=True`` as a keyword argument to override that.
 
-            As the underlying ``git read-tree`` command takes into account the current
-            index, it will be temporarily moved out of the way to prevent any unexpected
-            interference.
+            As the underlying :manpage:`git-read-tree(1)` command takes into account the
+            current index, it will be temporarily moved out of the way to prevent any
+            unexpected interference.
         """
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
@@ -470,10 +470,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             In that case, it will return ``None``.
 
         :note:
-            There is a bug in git-update-index that prevents it from sending reports
-            just in time. This is why we have a version that tries to read stdout and
-            one which doesn't. In fact, the stdout is not important as the piped-in
-            files are processed anyway and just in time.
+            There is a bug in :manpage:`git-update-index(1)` that prevents it from
+            sending reports just in time. This is why we have a version that tries to
+            read stdout and one which doesn't. In fact, the stdout is not important as
+            the piped-in files are processed anyway and just in time.
 
         :note:
             Newlines are essential here, git's behaviour is somewhat inconsistent on
@@ -550,8 +550,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         This will effectively remove the index entries of the respective path at all
         non-null stages and add the given blob as new stage null blob.
 
-        For each path there may only be one blob, otherwise a :class:`ValueError` will
-        be raised claiming the path is already at stage 0.
+        For each path there may only be one blob, otherwise a :exc:`ValueError` will be
+        raised claiming the path is already at stage 0.
 
         :raise ValueError:
             If one of the blobs already existed at stage 0.
@@ -644,8 +644,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def _to_relative_path(self, path: PathLike) -> PathLike:
         """
         :return:
-            Version of path relative to our git directory or raise :class:`ValueError`
-            if it is not within our git directory.
+            Version of path relative to our git directory or raise :exc:`ValueError` if
+            it is not within our git directory.
 
         :raise ValueError:
         """
@@ -782,11 +782,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 directories like ``lib``, which will add all the files within the
                 directory and subdirectories.
 
-                This equals a straight ``git add``.
+                This equals a straight :manpage:`git-add(1)`.
 
                 They are added at stage 0.
 
-            - :class:~`git.objects.blob.Blob` or :class:`~git.objects.submodule.base.Submodule` object
+            - :class:~`git.objects.blob.Blob` or
+              :class:`~git.objects.submodule.base.Submodule` object
 
                 Blobs are added as they are assuming a valid mode is set.
 
@@ -818,8 +819,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :param force:
             **CURRENTLY INEFFECTIVE**
             If ``True``, otherwise ignored or excluded files will be added anyway. As
-            opposed to the ``git add`` command, we enable this flag by default as the
-            API user usually wants the item to be added even though they might be
+            opposed to the :manpage:`git-add(1)` command, we enable this flag by default
+            as the API user usually wants the item to be added even though they might be
             excluded.
 
         :param fprogress:
@@ -850,8 +851,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :param write_extension_data:
             If ``True``, extension data will be written back to the index. This can lead
             to issues in case it is containing the 'TREE' extension, which will cause
-            the ``git commit`` command to write an old tree, instead of a new one
-            representing the now changed index.
+            the :manpage:`git-commit(1)` command to write an old tree, instead of a new
+            one representing the now changed index.
 
             This doesn't matter if you use :meth:`IndexFile.commit`, which ignores the
             'TREE' extension altogether. You should set it to ``True`` if you intend to
@@ -861,7 +862,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             handled manually at all.
 
             All current built-in extensions are listed here:
-            http://opensource.apple.com/source/Git/Git-26/src/git-htmldocs/technical/index-format.txt
+            https://git-scm.com/docs/index-format
 
         :return:
             List of :class:`~git.index.typ.BaseIndexEntry`\s representing the entries
@@ -1008,8 +1009,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             uncommitted changes in it.
 
         :param kwargs:
-            Additional keyword arguments to be passed to ``git rm``, such as ``r`` to
-            allow recursive removal.
+            Additional keyword arguments to be passed to :manpage:`git-rm(1)`, such as
+            ``r`` to allow recursive removal.
 
         :return:
             List(path_string, ...) list of repository relative paths that have been
@@ -1058,7 +1059,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             skipped.
 
         :param kwargs:
-            Additional arguments you would like to pass to ``git mv``, such as
+            Additional arguments you would like to pass to :manpage:`git-mv(1)`, such as
             ``dry_run`` or ``force``.
 
         :return:
@@ -1214,7 +1215,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :param force:
             If ``True``, existing files will be overwritten even if they contain local
             modifications.
-            If ``False``, these will trigger a :class:`~git.exc.CheckoutError`.
+            If ``False``, these will trigger a :exc:`~git.exc.CheckoutError`.
 
         :param fprogress:
             See :meth:`IndexFile.add` for signature and explanation.
@@ -1224,7 +1225,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             prior and after a file has been checked out.
 
         :param kwargs:
-            Additional arguments to be passed to ``git checkout-index``.
+            Additional arguments to be passed to :manpage:`git-checkout-index(1)`.
 
         :return:
             Iterable yielding paths to files which have been checked out and are
@@ -1243,8 +1244,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             The checkout is limited to checking out the files in the index. Files which
             are not in the index anymore and exist in the working tree will not be
             deleted. This behaviour is fundamentally different to ``head.checkout``,
-            i.e. if you want ``git checkout`` like behaviour, use ``head.checkout``
-            instead of ``index.checkout``.
+            i.e. if you want :manpage:`git-checkout(1)`-like behaviour, use
+            ``head.checkout`` instead of ``index.checkout``.
         """
         args = ["--index"]
         if force:
@@ -1416,14 +1417,14 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             raised.
 
         :param kwargs:
-            Additional keyword arguments passed to ``git reset``.
+            Additional keyword arguments passed to :manpage:`git-reset(1)`.
 
         :note:
             :meth:`IndexFile.reset`, as opposed to
             :meth:`HEAD.reset <git.refs.head.HEAD.reset>`, will not delete any files in
             order to maintain a consistent working tree. Instead, it will just check out
             the files according to their state in the index.
-            If you want ``git reset``-like behaviour, use
+            If you want :manpage:`git-reset(1)`-like behaviour, use
             :meth:`HEAD.reset <git.refs.head.HEAD.reset>` instead.
 
         :return:

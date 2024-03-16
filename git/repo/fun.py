@@ -153,8 +153,8 @@ def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[A
 
     :param return_ref:
         If ``True``, and name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise :class:`~gitdb.exc.BadObject` or
-        :class:`~gitdb.exc.BadName`.
+        instead of the object. Otherwise it will raise :exc:`~gitdb.exc.BadObject` or
+        :exc:`~gitdb.exc.BadName`.
     """
     hexsha: Union[None, str, bytes] = None
 
@@ -226,7 +226,7 @@ def to_commit(obj: Object) -> "Commit":
 
 
 def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
-    """Parse a revision string. Like ``git rev-parse``.
+    """Parse a revision string. Like :manpage:`git-rev-parse(1)`.
 
     :return:
         `~git.objects.base.Object` at the given revision.
@@ -239,8 +239,8 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
         * :class:`Blob <git.objects.blob.Blob>`
 
     :param rev:
-        ``git rev-parse``-compatible revision specification as string. Please see
-        http://www.kernel.org/pub/software/scm/git/docs/git-rev-parse.html for details.
+        :manpage:`git-rev-parse(1)`-compatible revision specification as string.
+        Please see :manpage:`git-rev-parse(1)` for details.
 
     :raise gitdb.exc.BadObject:
         If the given revision could not be found.

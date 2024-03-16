@@ -37,7 +37,7 @@ class TagObject(base.Object):
     """Annotated (i.e. non-lightweight) tag carrying additional information about an
     object we are pointing to.
 
-    See gitglossary(7) on "tag object":
+    See :manpage:`gitglossary(7)` on "tag object":
     https://git-scm.com/docs/gitglossary#def_tag_object
     """
 

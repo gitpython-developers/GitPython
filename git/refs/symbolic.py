@@ -173,8 +173,7 @@ class SymbolicReference:
     def _check_ref_name_valid(ref_path: PathLike) -> None:
         """Check a ref name for validity.
 
-        This is based on the rules described in:
-        https://git-scm.com/docs/git-check-ref-format/#_description
+        This is based on the rules described in :manpage:`git-check-ref-format(1)`.
         """
         previous: Union[str, None] = None
         one_before_previous: Union[str, None] = None
@@ -739,7 +738,7 @@ class SymbolicReference:
 
         :param force:
             If ``True``, force creation even if a symbolic reference with that name
-            already exists. Raise :class:`OSError` otherwise.
+            already exists. Raise :exc:`OSError` otherwise.
 
         :param logmsg:
             If not ``None``, the message to append to the reflog.

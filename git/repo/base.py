@@ -149,7 +149,7 @@ class Repo:
         "--config",
         "-c",
     ]
-    """Options to ``git clone`` that allow arbitrary commands to be executed.
+    """Options to :manpage:`git-clone(1)` that allow arbitrary commands to be executed.
 
     The ``--upload-pack``/``-u`` option allows users to execute arbitrary commands
     directly:
@@ -572,7 +572,7 @@ class Repo:
         """Delete the given heads.
 
         :param kwargs:
-            Additional keyword arguments to be passed to ``git branch``.
+            Additional keyword arguments to be passed to :manpage:`git-branch(1)`.
         """
         return Head.delete(self, *heads, **kwargs)
 
@@ -700,7 +700,7 @@ class Repo:
         """The :class:`~git.objects.commit.Commit` object for the specified revision.
 
         :param rev:
-            Revision specifier, see ``git rev-parse`` for viable options.
+            Revision specifier, see :manpage:`git-rev-parse(1)` for viable options.
 
         :return:
             :class:`~git.objects.commit.Commit`
@@ -749,7 +749,7 @@ class Repo:
         history of a given ref/commit.
 
         :param rev:
-            Revision specifier, see ``git rev-parse`` for viable options.
+            Revision specifier, see :manpage:`git-rev-parse(1)` for viable options.
             If ``None``, the active branch will be used.
 
         :param paths:
@@ -757,7 +757,7 @@ class Repo:
             path or paths will be returned.
 
         :param kwargs:
-            Arguments to be passed to ``git rev-list``.
+            Arguments to be passed to :manpage:`git-rev-list(1)`.
             Common ones are ``max_count`` and ``skip``.
 
         :note:
@@ -930,8 +930,8 @@ class Repo:
         """
         :return:
             ``True`` if the repository is considered dirty. By default it will react
-            like a git-status without untracked files, hence it is dirty if the index or
-            the working copy have changes.
+            like a :manpage:`git-status(1)` without untracked files, hence it is dirty
+            if the index or the working copy have changes.
         """
         if self._bare:
             # Bare repositories with no associated working directory are
@@ -1001,7 +1001,7 @@ class Repo:
     def ignored(self, *paths: PathLike) -> List[str]:
         """Checks if paths are ignored via ``.gitignore``.
 
-        This does so using the ``git check-ignore`` method.
+        This does so using the :manpage:`git-check-ignore(1)` method.
 
         :param paths:
             List of paths to check whether they are ignored or not.
@@ -1044,7 +1044,7 @@ class Repo:
         :param rev:
             Revision specifier. If ``None``, the blame will include all the latest
             uncommitted changes. Otherwise, anything successfully parsed by
-            ``git rev-parse`` is a valid option.
+            :manpage:`git-rev-parse(1)` is a valid option.
 
         :return:
             Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates the
@@ -1140,7 +1140,7 @@ class Repo:
         :param rev:
             Revision specifier. If ``None``, the blame will include all the latest
             uncommitted changes. Otherwise, anything successfully parsed by
-            ``git rev-parse`` is a valid option.
+            :manpage:`git-rev-parse(1)` is a valid option.
 
         :return:
             list: [git.Commit, list: [<line>]]
@@ -1312,7 +1312,8 @@ class Repo:
             environment variables.
 
         :param kwargs:
-            Keyword arguments serving as additional options to the ``git init`` command.
+            Keyword arguments serving as additional options to the
+            :manpage:`git-init(1)` command.
 
         :return:
             :class:`Repo` (the newly created repo)
@@ -1432,7 +1433,8 @@ class Repo:
             See :meth:`Remote.push <git.remote.Remote.push>`.
 
         :param multi_options:
-            A list of ``git clone`` options that can be provided multiple times.
+            A list of :manpage:`git-clone(1)` options that can be provided multiple
+            times.
 
             One option per list item which is passed exactly as specified to clone.
             For example::
@@ -1452,8 +1454,9 @@ class Repo:
 
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
-              implementation used by the returned Repo instance.
-            * All remaining keyword arguments are given to the ``git clone`` command.
+              implementation used by the returned :class:`Repo` instance.
+            * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
+              command.
 
         :return:
             :class:`Repo` (the newly cloned repo)
@@ -1485,8 +1488,7 @@ class Repo:
         """Create a clone from the given URL.
 
         :param url:
-            Valid git url, see:
-            http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
+            Valid git url, see: https://git-scm.com/docs/git-clone#URLS
 
         :param to_path:
             Path to which the repository should be cloned to.
@@ -1551,7 +1553,7 @@ class Repo:
             The optional prefix to prepend to each filename in the archive.
 
         :param kwargs:
-            Additional arguments passed to ``git archive``:
+            Additional arguments passed to :manpage:`git-archive(1)`:
 
             * Use the ``format`` argument to define the kind of format. Use specialized
               ostreams to write any format supported by Python.

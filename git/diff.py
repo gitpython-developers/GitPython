@@ -222,8 +222,8 @@ class Diffable:
             to be read and diffed.
 
         :param kwargs:
-            Additional arguments passed to ``git diff``, such as ``R=True`` to swap both
-            sides of the diff.
+            Additional arguments passed to :manpage:`git-diff(1)`, such as ``R=True`` to
+            swap both sides of the diff.
 
         :return:
             A :class:`DiffIndex` representing the computed diff.
@@ -590,7 +590,7 @@ class Diff:
             The repository we are operating on.
 
         :param proc:
-            ``git diff`` process to read from
+            :manpage:`git-diff(1)` process to read from
             (supports :class:`Git.AutoInterrupt <git.cmd.Git.AutoInterrupt>` wrapper).
 
         :return:
