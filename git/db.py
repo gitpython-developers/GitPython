@@ -59,7 +59,7 @@ class GitCmdObjectDB(LooseObjectDB):
         :raise gitdb.exc.BadObject:
 
         :note:
-            Currently we only raise :class:`~gitdb.exc.BadObject` as git does not
+            Currently we only raise :exc:`~gitdb.exc.BadObject` as git does not
             communicate ambiguous objects separately.
         """
         try:

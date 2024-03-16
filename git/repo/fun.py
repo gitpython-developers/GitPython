@@ -153,8 +153,8 @@ def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[A
 
     :param return_ref:
         If ``True``, and name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise :class:`~gitdb.exc.BadObject` or
-        :class:`~gitdb.exc.BadName`.
+        instead of the object. Otherwise it will raise :exc:`~gitdb.exc.BadObject` or
+        :exc:`~gitdb.exc.BadName`.
     """
     hexsha: Union[None, str, bytes] = None
 

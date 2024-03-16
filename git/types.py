@@ -190,7 +190,7 @@ def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, 
         mismatch and cause a mypy error.
 
     :param raise_error:
-        If ``True``, will also raise :class:`ValueError` with a general "unhandled
+        If ``True``, will also raise :exc:`ValueError` with a general "unhandled
         literal" message, or the exception object passed as `exc`.
 
     :param exc:

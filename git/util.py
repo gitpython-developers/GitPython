@@ -158,8 +158,8 @@ T = TypeVar("T")
 
 
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
-    """Methods with this decorator raise
-    :class:`~git.exc.InvalidGitRepositoryError` if they encounter a bare repository."""
+    """Methods with this decorator raise :exc:`~git.exc.InvalidGitRepositoryError` if
+    they encounter a bare repository."""
 
     from .exc import InvalidGitRepositoryError
 
@@ -1094,8 +1094,8 @@ class BlockingLockFile(LockFile):
         self._max_block_time = max_block_time_s
 
     def _obtain_lock(self) -> None:
-        """This method blocks until it obtained the lock, or raises :class:`IOError` if
-        it ran out of time or if the parent directory was not available anymore.
+        """This method blocks until it obtained the lock, or raises :exc:`IOError` if it
+        ran out of time or if the parent directory was not available anymore.
 
         If this method returns, you are guaranteed to own the lock.
         """

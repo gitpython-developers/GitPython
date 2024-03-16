@@ -76,5 +76,5 @@ class RemoteReference(Head):
 
     @classmethod
     def create(cls, *args: Any, **kwargs: Any) -> NoReturn:
-        """Raise :class:`TypeError`. Defined so the ``create`` method is disabled."""
+        """Raise :exc:`TypeError`. Defined so the ``create`` method is disabled."""
         raise TypeError("Cannot explicitly create remote references")

@@ -738,7 +738,7 @@ class SymbolicReference:
 
         :param force:
             If ``True``, force creation even if a symbolic reference with that name
-            already exists. Raise :class:`OSError` otherwise.
+            already exists. Raise :exc:`OSError` otherwise.
 
         :param logmsg:
             If not ``None``, the message to append to the reflog.

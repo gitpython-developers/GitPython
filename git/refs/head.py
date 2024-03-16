@@ -247,7 +247,7 @@ class Head(Reference):
 
         :param force:
             If ``True``, changes to the index and the working tree will be discarded.
-            If ``False``, :class:`~git.exc.GitCommandError` will be raised in that
+            If ``False``, :exc:`~git.exc.GitCommandError` will be raised in that
             situation.
 
         :param kwargs:

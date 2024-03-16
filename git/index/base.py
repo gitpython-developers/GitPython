@@ -550,8 +550,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         This will effectively remove the index entries of the respective path at all
         non-null stages and add the given blob as new stage null blob.
 
-        For each path there may only be one blob, otherwise a :class:`ValueError` will
-        be raised claiming the path is already at stage 0.
+        For each path there may only be one blob, otherwise a :exc:`ValueError` will be
+        raised claiming the path is already at stage 0.
 
         :raise ValueError:
             If one of the blobs already existed at stage 0.
@@ -644,8 +644,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def _to_relative_path(self, path: PathLike) -> PathLike:
         """
         :return:
-            Version of path relative to our git directory or raise :class:`ValueError`
-            if it is not within our git directory.
+            Version of path relative to our git directory or raise :exc:`ValueError` if
+            it is not within our git directory.
 
         :raise ValueError:
         """
@@ -1215,7 +1215,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :param force:
             If ``True``, existing files will be overwritten even if they contain local
             modifications.
-            If ``False``, these will trigger a :class:`~git.exc.CheckoutError`.
+            If ``False``, these will trigger a :exc:`~git.exc.CheckoutError`.
 
         :param fprogress:
             See :meth:`IndexFile.add` for signature and explanation.

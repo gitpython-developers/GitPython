@@ -100,8 +100,8 @@ class TreeModifier:
         """Add the given item to the tree.
 
         If an item with the given name already exists, nothing will be done, but a
-        :class:`ValueError` will be raised if the sha and mode of the existing item do
-        not match the one you add, unless `force` is ``True``.
+        :exc:`ValueError` will be raised if the sha and mode of the existing item do not
+        match the one you add, unless `force` is ``True``.
 
         :param sha:
             The 20 or 40 byte sha of the item to add.
