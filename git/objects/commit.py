@@ -404,8 +404,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def trailers_list(self) -> List[Tuple[str, str]]:
         """Get the trailers of the message as a list.
 
-        Git messages can contain trailer information that are similar to RFC 822 e-mail
-        headers. See :manpage:`git-interpret-trailers(1)`.
+        Git messages can contain trailer information that are similar to :rfc:`822`
+        e-mail headers. See :manpage:`git-interpret-trailers(1)`.
 
         This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information, returns the raw trailer data as a list.
@@ -456,8 +456,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def trailers_dict(self) -> Dict[str, List[str]]:
         """Get the trailers of the message as a dictionary.
 
-        Git messages can contain trailer information that are similar to RFC 822 e-mail
-        headers. See :manpage:`git-interpret-trailers(1)`.
+        Git messages can contain trailer information that are similar to :rfc:`822`
+        e-mail headers. See :manpage:`git-interpret-trailers(1)`.
 
         This function calls ``git interpret-trailers --parse`` onto the message to
         extract the trailer information. The key value pairs are stripped of leading and

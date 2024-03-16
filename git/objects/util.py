@@ -223,9 +223,8 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
 
         * Aware datetime instance
         * Git internal format: timestamp offset
-        * RFC 2822: ``Thu, 07 Apr 2005 22:13:13 +0200``
-        * ISO 8601: ``2005-04-07T22:13:13``
-            The T can be a space as well.
+        * :rfc:`2822`: ``Thu, 07 Apr 2005 22:13:13 +0200``
+        * ISO 8601: ``2005-04-07T22:13:13`` - The ``T`` can be a space as well.
 
     :return:
         Tuple(int(timestamp_UTC), int(offset)), both in seconds since epoch
