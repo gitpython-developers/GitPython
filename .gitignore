@@ -47,3 +47,7 @@ output.txt
 
 # Finder metadata
 .DS_Store
+
+# Output files for modattrs.py (these entries will be removed soon)
+a
+b
