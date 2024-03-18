@@ -8,8 +8,9 @@ __all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry", "StageType")
 from binascii import b2a_hex
 from pathlib import Path
 
-from .util import pack, unpack
 from git.objects import Blob
+
+from .util import pack, unpack
 
 # typing ----------------------------------------------------------------------
 

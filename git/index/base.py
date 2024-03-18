@@ -19,6 +19,9 @@ import subprocess
 import sys
 import tempfile
 
+from gitdb.base import IStream
+from gitdb.db import MemoryDB
+
 from git.compat import defenc, force_bytes
 import git.diff as git_diff
 from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError
@@ -33,8 +36,6 @@ from git.util import (
     unbare_repo,
     to_bin_sha,
 )
-from gitdb.base import IStream
-from gitdb.db import MemoryDB
 
 from .fun import (
     S_IFGITLINK,

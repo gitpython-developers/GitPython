@@ -4,21 +4,27 @@
 """Standalone functions to accompany the index implementation and make it more
 versatile."""
 
+__all__ = (
+    "write_cache",
+    "read_cache",
+    "write_tree_from_cache",
+    "entry_key",
+    "stat_mode_to_index_mode",
+    "S_IFGITLINK",
+    "run_commit_hook",
+    "hook_path",
+)
+
 from io import BytesIO
 import os
 import os.path as osp
 from pathlib import Path
-from stat import (
-    S_IFDIR,
-    S_IFLNK,
-    S_ISLNK,
-    S_ISDIR,
-    S_IFMT,
-    S_IFREG,
-    S_IXUSR,
-)
+from stat import S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, S_ISDIR, S_ISLNK, S_IXUSR
 import subprocess
 import sys
+
+from gitdb.base import IStream
+from gitdb.typ import str_tree_type
 
 from git.cmd import handle_process_output, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
@@ -29,8 +35,6 @@ from git.objects.fun import (
     tree_to_stream,
 )
 from git.util import IndexFileSHA1Writer, finalize_process
-from gitdb.base import IStream
-from gitdb.typ import str_tree_type
 
 from .typ import BaseIndexEntry, IndexEntry, CE_NAMEMASK, CE_STAGESHIFT
 from .util import pack, unpack
@@ -42,30 +46,17 @@ from typing import Dict, IO, List, Sequence, TYPE_CHECKING, Tuple, Type, Union, 
 from git.types import PathLike
 
 if TYPE_CHECKING:
-    from .base import IndexFile
     from git.db import GitCmdObjectDB
     from git.objects.tree import TreeCacheTup
 
-    # from git.objects.fun import EntryTupOrNone
+    from .base import IndexFile
 
 # ------------------------------------------------------------------------------------
-
 
 S_IFGITLINK = S_IFLNK | S_IFDIR
 """Flags for a submodule."""
 
 CE_NAMEMASK_INV = ~CE_NAMEMASK
-
-__all__ = (
-    "write_cache",
-    "read_cache",
-    "write_tree_from_cache",
-    "entry_key",
-    "stat_mode_to_index_mode",
-    "S_IFGITLINK",
-    "run_commit_hook",
-    "hook_path",
-)
 
 
 def hook_path(name: str, git_dir: PathLike) -> str:
