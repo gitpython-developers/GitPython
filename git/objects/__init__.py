@@ -26,7 +26,6 @@ __all__ = [
 from .base import IndexObject, Object
 from .blob import Blob
 from .commit import Commit
-from .submodule.base import Submodule, UpdateProgress
-from .submodule.root import RootModule, RootUpdateProgress
+from .submodule import RootModule, RootUpdateProgress, Submodule, UpdateProgress
 from .tag import TagObject
 from .tree import Tree, TreeModifier
