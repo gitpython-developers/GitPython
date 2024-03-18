@@ -3,15 +3,30 @@
 
 """Import all submodules' main classes into the package space."""
 
-import inspect
+__all__ = [
+    "base",
+    "blob",
+    "commit",
+    "submodule",
+    "tag",
+    "tree",
+    "IndexObject",
+    "Object",
+    "Blob",
+    "Commit",
+    "Submodule",
+    "UpdateProgress",
+    "RootModule",
+    "RootUpdateProgress",
+    "TagObject",
+    "Tree",
+    "TreeModifier",
+]
 
-from .base import *  # noqa: F403
-from .blob import *  # noqa: F403
-from .commit import *  # noqa: F403
-from .submodule.base import *  # noqa: F403
-from .submodule.root import *  # noqa: F403
-from .tag import *  # noqa: F403
-from .tree import *  # noqa: F403
-
-# Must come after submodule was made available.
-__all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]
+from .base import IndexObject, Object
+from .blob import Blob
+from .commit import Commit
+from .submodule.base import Submodule, UpdateProgress
+from .submodule.root import RootModule, RootUpdateProgress
+from .tag import TagObject
+from .tree import Tree, TreeModifier
