@@ -3,8 +3,14 @@
 
 """Functions that are supposed to be as fast as possible."""
 
-from stat import S_ISDIR
+__all__ = (
+    "tree_to_stream",
+    "tree_entries_from_data",
+    "traverse_trees_recursive",
+    "traverse_tree_recursive",
+)
 
+from stat import S_ISDIR
 
 from git.compat import safe_decode, defenc
 
@@ -23,20 +29,13 @@ from typing import (
 
 if TYPE_CHECKING:
     from _typeshed import ReadableBuffer
+
     from git import GitCmdObjectDB
 
-EntryTup = Tuple[bytes, int, str]  # same as TreeCacheTup in tree.py
+EntryTup = Tuple[bytes, int, str]  # Same as TreeCacheTup in tree.py.
 EntryTupOrNone = Union[EntryTup, None]
 
 # ---------------------------------------------------
-
-
-__all__ = (
-    "tree_to_stream",
-    "tree_entries_from_data",
-    "traverse_trees_recursive",
-    "traverse_tree_recursive",
-)
 
 
 def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:

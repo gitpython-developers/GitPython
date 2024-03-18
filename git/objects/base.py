@@ -3,14 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import gitdb.typ as dbtyp
+__all__ = ("Object", "IndexObject")
+
 import os.path as osp
 
+import gitdb.typ as dbtyp
+
 from git.exc import WorkTreeRepositoryUnsupported
-from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
+from git.util import LazyMixin, bin_to_hex, join_path_native, stream_copy
 
 from .util import get_object_type_by_name
-
 
 # typing ------------------------------------------------------------------
 
@@ -24,15 +26,13 @@ if TYPE_CHECKING:
     from git.refs.reference import Reference
     from git.repo import Repo
 
-    from .tree import Tree
     from .blob import Blob
     from .submodule.base import Submodule
+    from .tree import Tree
 
 IndexObjUnion = Union["Tree", "Blob", "Submodule"]
 
 # --------------------------------------------------------------------------
-
-__all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):

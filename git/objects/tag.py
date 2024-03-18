@@ -9,12 +9,17 @@ This defines the :class:`TagObject` class, which represents annotated tags.
 For lightweight tags, see the :mod:`git.refs.tag` module.
 """
 
+__all__ = ("TagObject",)
+
 import sys
+
+from git.compat import defenc
+from git.util import hex_to_bin
 
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
-from ..util import hex_to_bin
-from ..compat import defenc
+
+# typing ----------------------------------------------
 
 from typing import List, TYPE_CHECKING, Union
 
@@ -26,11 +31,12 @@ else:
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.util import Actor
-    from .commit import Commit
+
     from .blob import Blob
+    from .commit import Commit
     from .tree import Tree
 
-__all__ = ("TagObject",)
+# ---------------------------------------------------
 
 
 class TagObject(base.Object):

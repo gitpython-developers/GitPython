@@ -23,12 +23,13 @@ from typing import Any, Sequence, TYPE_CHECKING, Union
 from git.types import PathLike
 
 if TYPE_CHECKING:
-    from .base import Submodule
     from weakref import ReferenceType
+
+    from git.refs import Head, RemoteReference
+    from git.remote import Remote
     from git.repo import Repo
-    from git.refs import Head
-    from git import Remote
-    from git.refs import RemoteReference
+
+    from .base import Submodule
 
 # { Utilities
 
