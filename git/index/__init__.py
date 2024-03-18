@@ -4,6 +4,10 @@
 """Initialize the index package."""
 
 __all__ = [
+    "base",
+    "fun",
+    "typ",
+    "util",
     "BaseIndexEntry",
     "BlobFilter",
     "CheckoutError",
@@ -12,5 +16,6 @@ __all__ = [
     "StageType",
 ]
 
+from . import base, fun, typ, util
 from .base import CheckoutError, IndexFile
 from .typ import BaseIndexEntry, BlobFilter, IndexEntry, StageType
