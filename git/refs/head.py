@@ -6,12 +6,14 @@
 Note the distinction between the :class:`HEAD` and :class:`Head` classes.
 """
 
-from git.config import GitConfigParser, SectionConstraint
-from git.util import join_path
-from git.exc import GitCommandError
+__all__ = ["HEAD", "Head"]
 
-from .symbolic import SymbolicReference
+from git.config import GitConfigParser, SectionConstraint
+from git.exc import GitCommandError
+from git.util import join_path
+
 from .reference import Reference
+from .symbolic import SymbolicReference
 
 # typing ---------------------------------------------------
 
@@ -26,8 +28,6 @@ if TYPE_CHECKING:
 
 # -------------------------------------------------------------------
 
-__all__ = ["HEAD", "Head"]
-
 
 def strip_quotes(string: str) -> str:
     if string.startswith('"') and string.endswith('"'):
@@ -36,8 +36,8 @@ def strip_quotes(string: str) -> str:
 
 
 class HEAD(SymbolicReference):
-    """Special case of a SymbolicReference representing the repository's HEAD
-    reference."""
+    """Special case of a :class:`~git.refs.symbolic.SymbolicReference` representing the
+    repository's HEAD reference."""
 
     _HEAD_NAME = "HEAD"
     _ORIG_HEAD_NAME = "ORIG_HEAD"

@@ -1,7 +1,10 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["Reference"]
+
 from git.util import IterableObj, LazyMixin
+
 from .symbolic import SymbolicReference, T_References
 
 # typing ------------------------------------------------------------------
@@ -14,8 +17,6 @@ if TYPE_CHECKING:
     from git.repo import Repo
 
 # ------------------------------------------------------------------------------
-
-__all__ = ["Reference"]
 
 # { Utilities
 
@@ -34,7 +35,7 @@ def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
     return wrapper
 
 
-# }END utilities
+# } END utilities
 
 
 class Reference(SymbolicReference, LazyMixin, IterableObj):
@@ -142,7 +143,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         but will return non-detached references as well."""
         return cls._iter_items(repo, common_path)
 
-    # }END interface
+    # } END interface
 
     # { Remote Interface
 

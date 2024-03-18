@@ -3,24 +3,23 @@
 
 """Module implementing a remote object allowing easy access to git remotes."""
 
+__all__ = ["RemoteReference"]
+
 import os
 
 from git.util import join_path
 
 from .head import Head
 
-
-__all__ = ["RemoteReference"]
-
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, NoReturn, Union, TYPE_CHECKING
+from typing import Any, Iterator, NoReturn, TYPE_CHECKING, Union
+
 from git.types import PathLike
 
-
 if TYPE_CHECKING:
+    from git.remote import Remote
     from git.repo import Repo
-    from git import Remote
 
 # ------------------------------------------------------------------------------
 
