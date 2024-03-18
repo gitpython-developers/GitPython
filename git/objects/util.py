@@ -36,7 +36,6 @@ from typing import (
     Any,
     Callable,
     Deque,
-    # Generic,
     Iterator,
     NamedTuple,
     Sequence,
@@ -49,7 +48,7 @@ from typing import (
     overload,
 )
 
-from git.types import Has_id_attribute, Literal  # , _T
+from git.types import Has_id_attribute, Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -63,7 +62,6 @@ if TYPE_CHECKING:
     from .tag import TagObject
     from .tree import TraversedTreeTup, Tree
 else:
-    # Protocol = Generic[_T]  # Needed for typing bug #572?
     Protocol = ABC
 
     def runtime_checkable(f):

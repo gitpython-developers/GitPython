@@ -48,9 +48,6 @@ TreeCacheTup = Tuple[bytes, int, str]
 
 TraversedTreeTup = Union[Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submodule", "Submodule"]]]
 
-# def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
-#     return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
-
 # --------------------------------------------------------
 
 cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
@@ -124,7 +121,6 @@ class TreeModifier:
         index = self._index_by_name(name)
 
         item = (sha, mode, name)
-        # assert is_tree_cache(item)
 
         if index == -1:
             self._cache.append(item)
