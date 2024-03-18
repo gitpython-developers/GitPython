@@ -1,10 +1,13 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["RootModule", "RootUpdateProgress"]
+
 import logging
 
 import git
 from git.exc import InvalidGitRepositoryError
+
 from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
 
@@ -19,8 +22,6 @@ if TYPE_CHECKING:
     from git.util import IterableList
 
 # ----------------------------------------------------------------------------
-
-__all__ = ["RootModule", "RootUpdateProgress"]
 
 _logger = logging.getLogger(__name__)
 

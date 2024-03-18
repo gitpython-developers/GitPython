@@ -1,12 +1,20 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import git
-from git.exc import InvalidGitRepositoryError
-from git.config import GitConfigParser
+__all__ = (
+    "sm_section",
+    "sm_name",
+    "mkhead",
+    "find_first_remote_branch",
+    "SubmoduleConfigParser",
+)
+
 from io import BytesIO
 import weakref
 
+import git
+from git.config import GitConfigParser
+from git.exc import InvalidGitRepositoryError
 
 # typing -----------------------------------------------------------------------
 
@@ -21,15 +29,6 @@ if TYPE_CHECKING:
     from git.refs import Head
     from git import Remote
     from git.refs import RemoteReference
-
-
-__all__ = (
-    "sm_section",
-    "sm_name",
-    "mkhead",
-    "find_first_remote_branch",
-    "SubmoduleConfigParser",
-)
 
 # { Utilities
 
@@ -64,7 +63,6 @@ def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "
 
 
 # } END utilities
-
 
 # { Classes
 
