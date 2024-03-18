@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+__all__ = ("Repo",)
+
 import gc
 import logging
 import os
@@ -91,8 +93,6 @@ if TYPE_CHECKING:
 # -----------------------------------------------------------
 
 _logger = logging.getLogger(__name__)
-
-__all__ = ("Repo",)
 
 
 class BlameEntry(NamedTuple):
