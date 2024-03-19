@@ -5,6 +5,8 @@
 
 """Module implementing a remote object allowing easy access to git remotes."""
 
+__all__ = ("RemoteProgress", "PushInfo", "FetchInfo", "Remote")
+
 import contextlib
 import logging
 import re
@@ -53,8 +55,6 @@ flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 # -------------------------------------------------------------
 
 _logger = logging.getLogger(__name__)
-
-__all__ = ("RemoteProgress", "PushInfo", "FetchInfo", "Remote")
 
 # { Utilities
 

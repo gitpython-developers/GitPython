@@ -3,26 +3,25 @@
 
 """Module with our own gitdb implementation - it uses the git command."""
 
-from git.util import bin_to_hex, hex_to_bin
-from gitdb.base import OInfo, OStream
-from gitdb.db import GitDB
-from gitdb.db import LooseObjectDB
+__all__ = ("GitCmdObjectDB", "GitDB")
 
+from gitdb.base import OInfo, OStream
+from gitdb.db import GitDB, LooseObjectDB
 from gitdb.exc import BadObject
+
+from git.util import bin_to_hex, hex_to_bin
 from git.exc import GitCommandError
 
 # typing-------------------------------------------------
 
 from typing import TYPE_CHECKING
+
 from git.types import PathLike
 
 if TYPE_CHECKING:
     from git.cmd import Git
 
-
 # --------------------------------------------------------
-
-__all__ = ("GitCmdObjectDB", "GitDB")
 
 
 class GitCmdObjectDB(LooseObjectDB):

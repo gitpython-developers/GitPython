@@ -5,6 +5,8 @@
 
 """Parser for reading and writing configuration files."""
 
+__all__ = ("GitConfigParser", "SectionConstraint")
+
 import abc
 import configparser as cp
 import fnmatch
@@ -40,8 +42,9 @@ from typing import (
 from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, assert_never, _T
 
 if TYPE_CHECKING:
-    from git.repo.base import Repo
     from io import BytesIO
+
+    from git.repo.base import Repo
 
 T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
 T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool)
@@ -57,8 +60,6 @@ else:
     OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]  # type: ignore[assignment, misc]
 
 # -------------------------------------------------------------
-
-__all__ = ("GitConfigParser", "SectionConstraint")
 
 _logger = logging.getLogger(__name__)
 

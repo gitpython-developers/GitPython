@@ -5,18 +5,20 @@
 
 from __future__ import annotations
 
-import re
+__all__ = ("Git",)
+
 import contextlib
 import io
 import itertools
 import logging
 import os
+import re
 import signal
-from subprocess import Popen, PIPE, DEVNULL
 import subprocess
+from subprocess import DEVNULL, PIPE, Popen
 import sys
-import threading
 from textwrap import dedent
+import threading
 
 from git.compat import defenc, force_bytes, safe_decode
 from git.exc import (
@@ -57,12 +59,11 @@ from typing import (
     overload,
 )
 
-from git.types import PathLike, Literal, TBD
+from git.types import Literal, PathLike, TBD
 
 if TYPE_CHECKING:
-    from git.repo.base import Repo
     from git.diff import DiffIndex
-
+    from git.repo.base import Repo
 
 # ---------------------------------------------------------------------------------
 
@@ -83,8 +84,6 @@ execute_kwargs = {
 }
 
 _logger = logging.getLogger(__name__)
-
-__all__ = ("Git",)
 
 
 # ==============================================================================
