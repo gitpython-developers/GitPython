@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = ("Git",)
+__all__ = ["Git"]
 
 import contextlib
 import io

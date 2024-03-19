@@ -3,12 +3,12 @@
 
 """Functions that are supposed to be as fast as possible."""
 
-__all__ = (
+__all__ = [
     "tree_to_stream",
     "tree_entries_from_data",
     "traverse_trees_recursive",
     "traverse_tree_recursive",
-)
+]
 
 from stat import S_ISDIR
 

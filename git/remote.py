@@ -5,7 +5,7 @@
 
 """Module implementing a remote object allowing easy access to git remotes."""
 
-__all__ = ("RemoteProgress", "PushInfo", "FetchInfo", "Remote")
+__all__ = ["RemoteProgress", "PushInfo", "FetchInfo", "Remote"]
 
 import contextlib
 import logging

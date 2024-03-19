@@ -9,7 +9,7 @@ This defines the :class:`TagObject` class, which represents annotated tags.
 For lightweight tags, see the :mod:`git.refs.tag` module.
 """
 
-__all__ = ("TagObject",)
+__all__ = ["TagObject"]
 
 import sys
 

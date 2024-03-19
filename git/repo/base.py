@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = ("Repo",)
+__all__ = ["Repo"]
 
 import gc
 import logging

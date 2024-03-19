@@ -3,7 +3,7 @@
 
 """Additional types used by the index."""
 
-__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry", "StageType")
+__all__ = ["BlobFilter", "BaseIndexEntry", "IndexEntry", "StageType"]
 
 from binascii import b2a_hex
 from pathlib import Path

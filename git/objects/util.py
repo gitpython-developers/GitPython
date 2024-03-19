@@ -5,7 +5,7 @@
 
 """Utility functions for working with git objects."""
 
-__all__ = (
+__all__ = [
     "get_object_type_by_name",
     "parse_date",
     "parse_actor_and_date",
@@ -17,7 +17,7 @@ __all__ = (
     "Actor",
     "tzoffset",
     "utc",
-)
+]
 
 from abc import ABC, abstractmethod
 import calendar

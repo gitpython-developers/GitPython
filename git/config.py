@@ -5,7 +5,7 @@
 
 """Parser for reading and writing configuration files."""
 
-__all__ = ("GitConfigParser", "SectionConstraint")
+__all__ = ["GitConfigParser", "SectionConstraint"]
 
 import abc
 import configparser as cp

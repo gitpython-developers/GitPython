@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = (
+__all__ = [
     "rev_parse",
     "is_git_dir",
     "touch",
@@ -15,7 +15,7 @@ __all__ = (
     "deref_tag",
     "to_commit",
     "find_worktree_git_dir",
-)
+]
 
 import os
 import os.path as osp

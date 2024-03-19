@@ -3,7 +3,7 @@
 
 """Module with our own gitdb implementation - it uses the git command."""
 
-__all__ = ("GitCmdObjectDB", "GitDB")
+__all__ = ["GitCmdObjectDB", "GitDB"]
 
 from gitdb.base import OInfo, OStream
 from gitdb.db import GitDB, LooseObjectDB

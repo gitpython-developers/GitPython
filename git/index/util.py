@@ -3,7 +3,7 @@
 
 """Index utilities."""
 
-__all__ = ("TemporaryFileSwap", "post_clear_cache", "default_index", "git_working_dir")
+__all__ = ["TemporaryFileSwap", "post_clear_cache", "default_index", "git_working_dir"]
 
 import contextlib
 from functools import wraps

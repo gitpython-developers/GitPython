@@ -6,7 +6,7 @@
 """Module containing :class:`IndexFile`, an Index implementation facilitating all kinds
 of index manipulations such as querying and merging."""
 
-__all__ = ("IndexFile", "CheckoutError", "StageType")
+__all__ = ["IndexFile", "CheckoutError", "StageType"]
 
 import contextlib
 import datetime

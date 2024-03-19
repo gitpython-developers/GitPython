@@ -4,7 +4,7 @@
 """Standalone functions to accompany the index implementation and make it more
 versatile."""
 
-__all__ = (
+__all__ = [
     "write_cache",
     "read_cache",
     "write_tree_from_cache",
@@ -13,7 +13,7 @@ __all__ = (
     "S_IFGITLINK",
     "run_commit_hook",
     "hook_path",
-)
+]
 
 from io import BytesIO
 import os
