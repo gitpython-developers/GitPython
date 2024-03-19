@@ -144,6 +144,11 @@ try:
         SymbolicReference,
         Tag,
         TagReference,
+        head,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.head.
+        log,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.log.
+        reference,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.reference.
+        symbolic,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.symbolic.
+        tag,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.tag.
     )
     from git.diff import (  # @NoMove
         INDEX,
@@ -164,7 +169,21 @@ try:
         IndexEntry,
         IndexFile,
         StageType,
-        util,  # noqa: F401  # For backward compatibility.
+        base,  # noqa: F401  # Nonpublic. May disappear! Use git.index.base.
+        fun,  # noqa: F401  # Nonpublic. May disappear! Use git.index.fun.
+        typ,  # noqa: F401  # Nonpublic. May disappear! Use git.index.typ.
+        #
+        # NOTE: The expression `git.util` evaluates to git.index.util, and the import
+        # `from git import util` imports git.index.util, NOT git.util. It may not be
+        # feasible to change this until the next major version, to avoid breaking code
+        # inadvertently relying on it. If git.index.util really is what you want, use or
+        # import from that name, to avoid confusion. To use the "real" git.util module,
+        # write `from git.util import ...`, or access it as `sys.modules["git.util"]`.
+        # (This differs from other historical indirect-submodule imports that are
+        # unambiguously nonpublic and are subject to immediate removal. Here, the public
+        # git.util module, even though different, makes it less discoverable that the
+        # expression `git.util` refers to a non-public attribute of the git module.)
+        util,  # noqa: F401
     )
     from git.util import (  # @NoMove
         Actor,
