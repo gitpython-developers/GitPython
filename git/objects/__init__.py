@@ -4,12 +4,6 @@
 """Import all submodules' main classes into the package space."""
 
 __all__ = [
-    "base",
-    "blob",
-    "commit",
-    "submodule",
-    "tag",
-    "tree",
     "IndexObject",
     "Object",
     "Blob",
@@ -23,7 +17,6 @@ __all__ = [
     "TreeModifier",
 ]
 
-from . import base, blob, commit, submodule, tag, tree
 from .base import IndexObject, Object
 from .blob import Blob
 from .commit import Commit

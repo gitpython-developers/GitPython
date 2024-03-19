@@ -2,12 +2,6 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 __all__ = [
-    "head",
-    "log",
-    "reference",
-    "remote",
-    "symbolic",
-    "tag",
     "HEAD",
     "Head",
     "RefLog",
@@ -19,7 +13,6 @@ __all__ = [
     "TagReference",
 ]
 
-from . import head, log, reference, remote, symbolic, tag
 from .head import HEAD, Head
 from .log import RefLog, RefLogEntry
 from .reference import Reference

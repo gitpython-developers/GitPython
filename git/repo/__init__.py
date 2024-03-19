@@ -3,7 +3,6 @@
 
 """Initialize the repo package."""
 
-__all__ = ["base", "fun", "Repo"]
+__all__ = ["Repo"]
 
-from . import base, fun
 from .base import Repo
