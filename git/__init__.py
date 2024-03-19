@@ -5,7 +5,7 @@
 
 # @PydevCodeAnalysisIgnore
 
-__all__ = [  # noqa: F405
+__all__ = [
     "Actor",
     "AmbiguousObjectName",
     "BadName",
@@ -88,32 +88,93 @@ __all__ = [  # noqa: F405
 
 __version__ = "git"
 
-from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 from gitdb.util import to_hex_sha
-from git.exc import *  # noqa: F403  # @NoMove @IgnorePep8
+
+from git.exc import (
+    AmbiguousObjectName,
+    BadName,
+    BadObject,
+    BadObjectType,
+    CacheError,
+    CheckoutError,
+    CommandError,
+    GitCommandError,
+    GitCommandNotFound,
+    GitError,
+    HookExecutionError,
+    InvalidDBRoot,
+    InvalidGitRepositoryError,
+    NoSuchPathError,
+    ODBError,
+    ParseError,
+    RepositoryDirtyError,
+    UnmergedEntriesError,
+    UnsafeOptionError,
+    UnsafeProtocolError,
+    UnsupportedOperation,
+    WorkTreeRepositoryUnsupported,
+)
 from git.types import PathLike
 
 try:
-    from git.compat import safe_decode  # @NoMove @IgnorePep8
-    from git.config import GitConfigParser  # @NoMove @IgnorePep8
-    from git.objects import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.refs import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.diff import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.db import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.cmd import Git  # @NoMove @IgnorePep8
-    from git.repo import Repo  # @NoMove @IgnorePep8
-    from git.remote import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.index import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.util import (  # @NoMove @IgnorePep8
-        LockFile,
-        BlockingLockFile,
-        Stats,
+    from git.cmd import Git  # @NoMove
+    from git.compat import safe_decode  # @NoMove
+    from git.config import GitConfigParser  # @NoMove
+    from git.db import GitCmdObjectDB, GitDB  # @NoMove
+    from git.diff import (  # @NoMove
+        INDEX,
+        NULL_TREE,
+        Diff,
+        DiffConstants,
+        DiffIndex,
+        Diffable,
+    )
+    from git.index import (  # @NoMove
+        BaseIndexEntry,
+        BlobFilter,
+        CheckoutError,
+        IndexEntry,
+        IndexFile,
+        StageType,
+        util,  # noqa: F401  # For backward compatibility.
+    )
+    from git.objects import (  # @NoMove
+        Blob,
+        Commit,
+        IndexObject,
+        Object,
+        RootModule,
+        RootUpdateProgress,
+        Submodule,
+        TagObject,
+        Tree,
+        TreeModifier,
+        UpdateProgress,
+    )
+    from git.refs import (  # @NoMove
+        HEAD,
+        Head,
+        RefLog,
+        RefLogEntry,
+        Reference,
+        RemoteReference,
+        SymbolicReference,
+        Tag,
+        TagReference,
+    )
+    from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress  # @NoMove
+    from git.repo import Repo  # @NoMove
+    from git.util import (  # @NoMove
         Actor,
+        BlockingLockFile,
+        LockFile,
+        Stats,
         remove_password_if_present,
         rmtree,
     )
-except GitError as _exc:  # noqa: F405
+except GitError as _exc:
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
 
 # { Initialize git executable path
