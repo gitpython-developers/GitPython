@@ -51,16 +51,16 @@ import warnings
 # gitdb all the time in their imports. They are not in __all__, at least currently,
 # because they could be removed or changed at any time, and so should not be considered
 # conceptually public to code outside GitPython. Linters of course do not like it.
-from gitdb.util import (  # noqa: F401  # @IgnorePep8
-    LazyMixin,  # @UnusedImport
-    LockedFD,  # @UnusedImport
-    bin_to_hex,  # @UnusedImport
-    file_contents_ro_filepath,  # @UnusedImport
-    file_contents_ro,  # @UnusedImport
-    hex_to_bin,  # @UnusedImport
+from gitdb.util import (
+    LazyMixin,  # noqa: F401
+    LockedFD,  # noqa: F401
+    bin_to_hex,  # noqa: F401
+    file_contents_ro_filepath,  # noqa: F401
+    file_contents_ro,  # noqa: F401
+    hex_to_bin,  # noqa: F401
     make_sha,
-    to_bin_sha,  # @UnusedImport
-    to_hex_sha,  # @UnusedImport
+    to_bin_sha,  # noqa: F401
+    to_hex_sha,  # noqa: F401
 )
 
 # typing ---------------------------------------------------------

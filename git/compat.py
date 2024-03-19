@@ -14,18 +14,18 @@ import locale
 import os
 import sys
 
-from gitdb.utils.encoding import force_bytes, force_text  # noqa: F401  # @UnusedImport
+from gitdb.utils.encoding import force_bytes, force_text  # noqa: F401
 
 # typing --------------------------------------------------------------------
 
-from typing import (  # noqa: F401
-    Any,
+from typing import (
+    Any,  # noqa: F401
     AnyStr,
-    Dict,
-    IO,
+    Dict,  # noqa: F401
+    IO,  # noqa: F401
     Optional,
-    Tuple,
-    Type,
+    Tuple,  # noqa: F401
+    Type,  # noqa: F401
     Union,
     overload,
 )
