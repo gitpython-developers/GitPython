@@ -119,27 +119,8 @@ from git.exc import (
 from git.types import PathLike
 
 try:
-    from git.cmd import Git  # @NoMove
     from git.compat import safe_decode  # @NoMove
     from git.config import GitConfigParser  # @NoMove
-    from git.db import GitCmdObjectDB, GitDB  # @NoMove
-    from git.diff import (  # @NoMove
-        INDEX,
-        NULL_TREE,
-        Diff,
-        DiffConstants,
-        DiffIndex,
-        Diffable,
-    )
-    from git.index import (  # @NoMove
-        BaseIndexEntry,
-        BlobFilter,
-        CheckoutError,
-        IndexEntry,
-        IndexFile,
-        StageType,
-        util,  # noqa: F401  # For backward compatibility.
-    )
     from git.objects import (  # @NoMove
         Blob,
         Commit,
@@ -164,8 +145,27 @@ try:
         Tag,
         TagReference,
     )
-    from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress  # @NoMove
+    from git.diff import (  # @NoMove
+        INDEX,
+        NULL_TREE,
+        Diff,
+        DiffConstants,
+        DiffIndex,
+        Diffable,
+    )
+    from git.db import GitCmdObjectDB, GitDB  # @NoMove
+    from git.cmd import Git  # @NoMove
     from git.repo import Repo  # @NoMove
+    from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress  # @NoMove
+    from git.index import (  # @NoMove
+        BaseIndexEntry,
+        BlobFilter,
+        CheckoutError,
+        IndexEntry,
+        IndexFile,
+        StageType,
+        util,  # noqa: F401  # For backward compatibility.
+    )
     from git.util import (  # @NoMove
         Actor,
         BlockingLockFile,
