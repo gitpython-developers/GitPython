@@ -36,13 +36,10 @@ from git import (
     Submodule,
     Tree,
 )
-from git.exc import (
-    BadObject,
-    UnsafeOptionError,
-    UnsafeProtocolError,
-)
+from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError
 from git.repo.fun import touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
+
 from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 

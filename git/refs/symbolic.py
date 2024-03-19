@@ -1,10 +1,14 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["SymbolicReference"]
+
 import os
 
+from gitdb.exc import BadName, BadObject
+
 from git.compat import defenc
-from git.objects import Object
+from git.objects.base import Object
 from git.objects.commit import Commit
 from git.refs.log import RefLog
 from git.util import (
@@ -15,7 +19,6 @@ from git.util import (
     join_path_native,
     to_native_path_linux,
 )
-from gitdb.exc import BadName, BadObject
 
 # typing ------------------------------------------------------------------
 
@@ -30,6 +33,7 @@ from typing import (
     Union,
     cast,
 )
+
 from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
@@ -43,9 +47,6 @@ if TYPE_CHECKING:
 T_References = TypeVar("T_References", bound="SymbolicReference")
 
 # ------------------------------------------------------------------------------
-
-
-__all__ = ["SymbolicReference"]
 
 
 def _git_dir(repo: "Repo", path: Union[PathLike, None]) -> PathLike:

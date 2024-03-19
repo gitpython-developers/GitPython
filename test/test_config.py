@@ -15,8 +15,8 @@ import pytest
 from git import GitConfigParser
 from git.config import _OMD, cp
 from git.util import rmfile
-from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
+from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
 _tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
 

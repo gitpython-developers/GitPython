@@ -6,10 +6,7 @@ import re
 
 import git
 
-from .lib import (
-    TestBase,
-    with_rw_directory,
-)
+from test.lib import TestBase, with_rw_directory
 
 
 class TestClone(TestBase):

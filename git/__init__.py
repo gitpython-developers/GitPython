@@ -5,7 +5,7 @@
 
 # @PydevCodeAnalysisIgnore
 
-__all__ = [  # noqa: F405
+__all__ = [
     "Actor",
     "AmbiguousObjectName",
     "BadName",
@@ -88,32 +88,112 @@ __all__ = [  # noqa: F405
 
 __version__ = "git"
 
-from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 from gitdb.util import to_hex_sha
-from git.exc import *  # noqa: F403  # @NoMove @IgnorePep8
+
+from git.exc import (
+    AmbiguousObjectName,
+    BadName,
+    BadObject,
+    BadObjectType,
+    CacheError,
+    CheckoutError,
+    CommandError,
+    GitCommandError,
+    GitCommandNotFound,
+    GitError,
+    HookExecutionError,
+    InvalidDBRoot,
+    InvalidGitRepositoryError,
+    NoSuchPathError,
+    ODBError,
+    ParseError,
+    RepositoryDirtyError,
+    UnmergedEntriesError,
+    UnsafeOptionError,
+    UnsafeProtocolError,
+    UnsupportedOperation,
+    WorkTreeRepositoryUnsupported,
+)
 from git.types import PathLike
 
 try:
-    from git.compat import safe_decode  # @NoMove @IgnorePep8
-    from git.config import GitConfigParser  # @NoMove @IgnorePep8
-    from git.objects import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.refs import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.diff import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.db import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.cmd import Git  # @NoMove @IgnorePep8
-    from git.repo import Repo  # @NoMove @IgnorePep8
-    from git.remote import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.index import *  # noqa: F403  # @NoMove @IgnorePep8
-    from git.util import (  # @NoMove @IgnorePep8
-        LockFile,
-        BlockingLockFile,
-        Stats,
+    from git.compat import safe_decode  # @NoMove
+    from git.config import GitConfigParser  # @NoMove
+    from git.objects import (  # @NoMove
+        Blob,
+        Commit,
+        IndexObject,
+        Object,
+        RootModule,
+        RootUpdateProgress,
+        Submodule,
+        TagObject,
+        Tree,
+        TreeModifier,
+        UpdateProgress,
+    )
+    from git.refs import (  # @NoMove
+        HEAD,
+        Head,
+        RefLog,
+        RefLogEntry,
+        Reference,
+        RemoteReference,
+        SymbolicReference,
+        Tag,
+        TagReference,
+        head,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.head.
+        log,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.log.
+        reference,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.reference.
+        symbolic,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.symbolic.
+        tag,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.tag.
+    )
+    from git.diff import (  # @NoMove
+        INDEX,
+        NULL_TREE,
+        Diff,
+        DiffConstants,
+        DiffIndex,
+        Diffable,
+    )
+    from git.db import GitCmdObjectDB, GitDB  # @NoMove
+    from git.cmd import Git  # @NoMove
+    from git.repo import Repo  # @NoMove
+    from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress  # @NoMove
+    from git.index import (  # @NoMove
+        BaseIndexEntry,
+        BlobFilter,
+        CheckoutError,
+        IndexEntry,
+        IndexFile,
+        StageType,
+        base,  # noqa: F401  # Nonpublic. May disappear! Use git.index.base.
+        fun,  # noqa: F401  # Nonpublic. May disappear! Use git.index.fun.
+        typ,  # noqa: F401  # Nonpublic. May disappear! Use git.index.typ.
+        #
+        # NOTE: The expression `git.util` evaluates to git.index.util, and the import
+        # `from git import util` imports git.index.util, NOT git.util. It may not be
+        # feasible to change this until the next major version, to avoid breaking code
+        # inadvertently relying on it. If git.index.util really is what you want, use or
+        # import from that name, to avoid confusion. To use the "real" git.util module,
+        # write `from git.util import ...`, or access it as `sys.modules["git.util"]`.
+        # (This differs from other historical indirect-submodule imports that are
+        # unambiguously nonpublic and are subject to immediate removal. Here, the public
+        # git.util module, even though different, makes it less discoverable that the
+        # expression `git.util` refers to a non-public attribute of the git module.)
+        util,  # noqa: F401
+    )
+    from git.util import (  # @NoMove
         Actor,
+        BlockingLockFile,
+        LockFile,
+        Stats,
         remove_password_if_present,
         rmtree,
     )
-except GitError as _exc:  # noqa: F405
+except GitError as _exc:
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
 
 # { Initialize git executable path

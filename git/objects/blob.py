@@ -3,17 +3,17 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["Blob"]
+
 from mimetypes import guess_type
 import sys
-
-from . import base
 
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
 
-__all__ = ("Blob",)
+from . import base
 
 
 class Blob(base.IndexObject):

@@ -10,9 +10,11 @@ from io import BytesIO
 from time import time
 import sys
 
-from .lib import TestBigRepoRW
-from git import Commit
 from gitdb import IStream
+
+from git import Commit
+
+from test.performance.lib import TestBigRepoRW
 from test.test_commit import TestCommitSerialization
 
 

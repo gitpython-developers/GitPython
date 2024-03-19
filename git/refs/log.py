@@ -1,43 +1,42 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["RefLog", "RefLogEntry"]
+
 from mmap import mmap
+import os.path as osp
 import re
 import time as _time
 
 from git.compat import defenc
 from git.objects.util import (
-    parse_date,
     Serializable,
     altz_to_utctz_str,
+    parse_date,
 )
 from git.util import (
     Actor,
     LockedFD,
     LockFile,
     assure_directory_exists,
-    to_native_path,
     bin_to_hex,
     file_contents_ro_filepath,
+    to_native_path,
 )
-
-import os.path as osp
-
 
 # typing ------------------------------------------------------------------
 
-from typing import Iterator, List, Tuple, Union, TYPE_CHECKING
+from typing import Iterator, List, Tuple, TYPE_CHECKING, Union
 
 from git.types import PathLike
 
 if TYPE_CHECKING:
     from io import BytesIO
-    from git.refs import SymbolicReference
+
     from git.config import GitConfigParser, SectionConstraint
+    from git.refs import SymbolicReference
 
 # ------------------------------------------------------------------------------
-
-__all__ = ["RefLog", "RefLogEntry"]
 
 
 class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):

@@ -3,86 +3,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from abc import abstractmethod
-import contextlib
-from functools import wraps
-import getpass
-import logging
-import os
-import os.path as osp
-import pathlib
-import platform
-import re
-import shutil
-import stat
-import subprocess
 import sys
-import time
-from urllib.parse import urlsplit, urlunsplit
-import warnings
 
-# typing ---------------------------------------------------------
-
-from typing import (
-    Any,
-    AnyStr,
-    BinaryIO,
-    Callable,
-    Dict,
-    Generator,
-    IO,
-    Iterator,
-    List,
-    Optional,
-    Pattern,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-    TYPE_CHECKING,
-    cast,
-    overload,
-)
-
-if TYPE_CHECKING:
-    from git.remote import Remote
-    from git.repo.base import Repo
-    from git.config import GitConfigParser, SectionConstraint
-    from git import Git
-
-from .types import (
-    Literal,
-    SupportsIndex,
-    Protocol,
-    runtime_checkable,  # because behind py version guards
-    PathLike,
-    HSH_TD,
-    Total_TD,
-    Files_TD,  # aliases
-    Has_id_attribute,
-)
-
-# ---------------------------------------------------------------------
-
-from gitdb.util import (  # noqa: F401  # @IgnorePep8
-    make_sha,
-    LockedFD,  # @UnusedImport
-    file_contents_ro,  # @UnusedImport
-    file_contents_ro_filepath,  # @UnusedImport
-    LazyMixin,  # @UnusedImport
-    to_hex_sha,  # @UnusedImport
-    to_bin_sha,  # @UnusedImport
-    bin_to_hex,  # @UnusedImport
-    hex_to_bin,  # @UnusedImport
-)
-
-T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attribute"], covariant=True)
-# So IterableList[Head] is subtype of IterableList[IterableObj].
-
-# NOTE:  Some of the unused imports might be used/imported by others.
-# Handle once test-cases are back up and running.
-# Most of these are unused here, but are for use by git-python modules so these
-# don't see gitdb all the time. Flake of course doesn't like it.
 __all__ = [
     "stream_copy",
     "join_path",
@@ -103,6 +25,89 @@ __all__ = [
     "unbare_repo",
     "HIDE_WINDOWS_KNOWN_ERRORS",
 ]
+
+if sys.platform == "win32":
+    __all__.append("to_native_path_windows")
+
+from abc import abstractmethod
+import contextlib
+from functools import wraps
+import getpass
+import logging
+import os
+import os.path as osp
+import pathlib
+import platform
+import re
+import shutil
+import stat
+import subprocess
+import time
+from urllib.parse import urlsplit, urlunsplit
+import warnings
+
+# NOTE: Unused imports can be improved now that CI testing has fully resumed. Some of
+# these be used indirectly through other GitPython modules, which avoids having to write
+# gitdb all the time in their imports. They are not in __all__, at least currently,
+# because they could be removed or changed at any time, and so should not be considered
+# conceptually public to code outside GitPython. Linters of course do not like it.
+from gitdb.util import (
+    LazyMixin,  # noqa: F401
+    LockedFD,  # noqa: F401
+    bin_to_hex,  # noqa: F401
+    file_contents_ro,  # noqa: F401
+    file_contents_ro_filepath,  # noqa: F401
+    hex_to_bin,  # noqa: F401
+    make_sha,
+    to_bin_sha,  # noqa: F401
+    to_hex_sha,  # noqa: F401
+)
+
+# typing ---------------------------------------------------------
+
+from typing import (
+    Any,
+    AnyStr,
+    BinaryIO,
+    Callable,
+    Dict,
+    Generator,
+    IO,
+    Iterator,
+    List,
+    Optional,
+    Pattern,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
+
+if TYPE_CHECKING:
+    from git.cmd import Git
+    from git.config import GitConfigParser, SectionConstraint
+    from git.remote import Remote
+    from git.repo.base import Repo
+
+from git.types import (
+    Files_TD,
+    Has_id_attribute,
+    HSH_TD,
+    Literal,
+    PathLike,
+    Protocol,
+    SupportsIndex,
+    Total_TD,
+    runtime_checkable,
+)
+
+# ---------------------------------------------------------------------
+
+T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attribute"], covariant=True)
+# So IterableList[Head] is subtype of IterableList[IterableObj].
 
 _logger = logging.getLogger(__name__)
 
@@ -292,7 +297,6 @@ if sys.platform == "win32":
         path = str(path)
         return path.replace("\\", "/")
 
-    __all__.append("to_native_path_windows")
     to_native_path = to_native_path_windows
 else:
     # No need for any work on Linux.

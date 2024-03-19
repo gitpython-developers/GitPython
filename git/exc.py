@@ -42,12 +42,14 @@ from gitdb.exc import (
     ParseError,
     UnsupportedOperation,
 )
+
 from git.compat import safe_decode
 from git.util import remove_password_if_present
 
 # typing ----------------------------------------------------
 
-from typing import List, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import List, Sequence, Tuple, TYPE_CHECKING, Union
+
 from git.types import PathLike
 
 if TYPE_CHECKING:

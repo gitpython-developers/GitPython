@@ -1,6 +1,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["Submodule", "UpdateProgress"]
+
 import gc
 from io import BytesIO
 import logging
@@ -67,8 +69,6 @@ if TYPE_CHECKING:
     from git.repo import Repo
 
 # -----------------------------------------------------------------------------
-
-__all__ = ["Submodule", "UpdateProgress"]
 
 _logger = logging.getLogger(__name__)
 

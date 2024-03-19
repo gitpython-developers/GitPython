@@ -5,18 +5,31 @@
 
 from __future__ import annotations
 
+__all__ = [
+    "rev_parse",
+    "is_git_dir",
+    "touch",
+    "find_submodule_git_dir",
+    "name_to_object",
+    "short_to_long",
+    "deref_tag",
+    "to_commit",
+    "find_worktree_git_dir",
+]
+
 import os
 import os.path as osp
 from pathlib import Path
 import stat
 from string import digits
 
+from gitdb.exc import BadName, BadObject
+
 from git.cmd import Git
 from git.exc import WorkTreeRepositoryUnsupported
 from git.objects import Object
 from git.refs import SymbolicReference
-from git.util import hex_to_bin, bin_to_hex, cygpath
-from gitdb.exc import BadName, BadObject
+from git.util import cygpath, bin_to_hex, hex_to_bin
 
 # Typing ----------------------------------------------------------------------
 
@@ -29,21 +42,10 @@ if TYPE_CHECKING:
     from git.objects import Commit, TagObject
     from git.refs.reference import Reference
     from git.refs.tag import Tag
+
     from .base import Repo
 
 # ----------------------------------------------------------------------------
-
-__all__ = (
-    "rev_parse",
-    "is_git_dir",
-    "touch",
-    "find_submodule_git_dir",
-    "name_to_object",
-    "short_to_long",
-    "deref_tag",
-    "to_commit",
-    "find_worktree_git_dir",
-)
 
 
 def touch(filename: str) -> str:

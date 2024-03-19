@@ -3,6 +3,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["Commit"]
+
 from collections import defaultdict
 import datetime
 from io import BytesIO
@@ -14,10 +16,12 @@ import sys
 from time import altzone, daylight, localtime, time, timezone
 
 from gitdb import IStream
+
 from git.cmd import Git
 from git.diff import Diffable
-from git.util import hex_to_bin, Actor, Stats, finalize_process
+from git.util import Actor, Stats, finalize_process, hex_to_bin
 
+from . import base
 from .tree import Tree
 from .util import (
     Serializable,
@@ -27,7 +31,6 @@ from .util import (
     parse_actor_and_date,
     parse_date,
 )
-from . import base
 
 # typing ------------------------------------------------------------------
 
@@ -58,8 +61,6 @@ if TYPE_CHECKING:
 # ------------------------------------------------------------------------
 
 _logger = logging.getLogger(__name__)
-
-__all__ = ("Commit",)
 
 
 class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):

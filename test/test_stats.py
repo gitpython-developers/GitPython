@@ -3,9 +3,10 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from test.lib import TestBase, fixture
 from git import Stats
 from git.compat import defenc
+
+from test.lib import TestBase, fixture
 
 
 class TestStats(TestBase):

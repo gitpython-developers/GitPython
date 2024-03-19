@@ -38,6 +38,7 @@ from git.util import (
     remove_password_if_present,
     rmtree,
 )
+
 from test.lib import TestBase, with_rw_repo
 
 

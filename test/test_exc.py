@@ -3,9 +3,11 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+from itertools import product
 import re
 
 import ddt
+
 from git.exc import (
     InvalidGitRepositoryError,
     WorkTreeRepositoryUnsupported,
@@ -20,9 +22,8 @@ from git.exc import (
     RepositoryDirtyError,
 )
 from git.util import remove_password_if_present
-from test.lib import TestBase
 
-import itertools as itt
+from test.lib import TestBase
 
 
 _cmd_argvs = (
@@ -79,7 +80,7 @@ class TExc(TestBase):
         for ex_class in exception_classes:
             self.assertTrue(issubclass(ex_class, GitError))
 
-    @ddt.data(*list(itt.product(_cmd_argvs, _causes_n_substrings, _streams_n_substrings)))
+    @ddt.data(*list(product(_cmd_argvs, _causes_n_substrings, _streams_n_substrings)))
     def test_CommandError_unicode(self, case):
         argv, (cause, subs), stream = case
         cls = CommandError

@@ -3,16 +3,18 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["TreeModifier", "Tree"]
+
 import sys
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
 
+from . import util
 from .base import IndexObjUnion, IndexObject
 from .blob import Blob
 from .fun import tree_entries_from_data, tree_to_stream
 from .submodule.base import Submodule
-from . import util
 
 # typing -------------------------------------------------
 
@@ -39,22 +41,16 @@ from git.types import PathLike
 
 if TYPE_CHECKING:
     from io import BytesIO
+
     from git.repo import Repo
 
 TreeCacheTup = Tuple[bytes, int, str]
 
 TraversedTreeTup = Union[Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submodule", "Submodule"]]]
 
-
-# def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
-#     return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
-
 # --------------------------------------------------------
 
-
 cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
-
-__all__ = ("TreeModifier", "Tree")
 
 
 class TreeModifier:
@@ -125,7 +121,6 @@ class TreeModifier:
         index = self._index_by_name(name)
 
         item = (sha, mode, name)
-        # assert is_tree_cache(item)
 
         if index == -1:
             self._cache.append(item)

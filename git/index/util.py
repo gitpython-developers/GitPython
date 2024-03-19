@@ -3,6 +3,8 @@
 
 """Index utilities."""
 
+__all__ = ["TemporaryFileSwap", "post_clear_cache", "default_index", "git_working_dir"]
+
 import contextlib
 from functools import wraps
 import os
@@ -22,14 +24,9 @@ if TYPE_CHECKING:
 
 # ---------------------------------------------------------------------------------
 
-
-__all__ = ("TemporaryFileSwap", "post_clear_cache", "default_index", "git_working_dir")
-
 # { Aliases
 pack = struct.pack
 unpack = struct.unpack
-
-
 # } END aliases
 
 

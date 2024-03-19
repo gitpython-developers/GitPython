@@ -5,14 +5,13 @@
 
 import gc
 import os
+import os.path
 import sys
 
 import pytest
 
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
-
-import os.path
 
 
 class Tutorials(TestBase):

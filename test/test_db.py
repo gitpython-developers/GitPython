@@ -3,12 +3,13 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os.path as osp
+
 from git.db import GitCmdObjectDB
 from git.exc import BadObject
-from test.lib import TestBase
 from git.util import bin_to_hex
 
-import os.path as osp
+from test.lib import TestBase
 
 
 class TestDB(TestBase):

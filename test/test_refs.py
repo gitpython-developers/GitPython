@@ -4,27 +4,28 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from itertools import chain
+import os.path as osp
 from pathlib import Path
+import tempfile
 
-from git import (
-    Reference,
-    Head,
-    TagReference,
-    RemoteReference,
-    Commit,
-    SymbolicReference,
-    GitCommandError,
-    RefLog,
-    GitConfigParser,
-)
-from git.objects.tag import TagObject
-from test.lib import TestBase, with_rw_repo
-from git.util import Actor
 from gitdb.exc import BadName
 
+from git import (
+    Commit,
+    GitCommandError,
+    GitConfigParser,
+    Head,
+    RefLog,
+    Reference,
+    RemoteReference,
+    SymbolicReference,
+    TagReference,
+)
+from git.objects.tag import TagObject
 import git.refs as refs
-import os.path as osp
-import tempfile
+from git.util import Actor
+
+from test.lib import TestBase, with_rw_repo
 
 
 class TestRefs(TestBase):

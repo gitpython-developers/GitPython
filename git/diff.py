@@ -3,16 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = ["DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff"]
+
 import enum
 import re
 
 from git.cmd import handle_process_output
 from git.compat import defenc
+from git.objects.blob import Blob
+from git.objects.util import mode_str_to_int
 from git.util import finalize_process, hex_to_bin
-
-from .objects.blob import Blob
-from .objects.util import mode_str_to_int
-
 
 # typing ------------------------------------------------------------------
 
@@ -23,32 +23,25 @@ from typing import (
     Match,
     Optional,
     Tuple,
+    TYPE_CHECKING,
     TypeVar,
     Union,
-    TYPE_CHECKING,
     cast,
 )
 from git.types import Literal, PathLike
 
 if TYPE_CHECKING:
-    from .objects.tree import Tree
-    from .objects import Commit
-    from git.repo.base import Repo
-    from git.objects.base import IndexObject
     from subprocess import Popen
-    from git import Git
+
+    from git.cmd import Git
+    from git.objects.base import IndexObject
+    from git.objects.commit import Commit
+    from git.objects.tree import Tree
+    from git.repo.base import Repo
 
 Lit_change_type = Literal["A", "D", "C", "M", "R", "T", "U"]
 
-
-# def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
-#     # return True
-#     return inp in ['A', 'D', 'C', 'M', 'R', 'T', 'U']
-
 # ------------------------------------------------------------------------
-
-
-__all__ = ("DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff")
 
 
 @enum.unique
@@ -693,7 +686,6 @@ class Diff:
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
-            # assert is_change_type(_change_type[0]), f"Unexpected value for change_type received: {_change_type[0]}"
             change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = "".join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None

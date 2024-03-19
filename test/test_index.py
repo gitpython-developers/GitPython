@@ -17,18 +17,12 @@ import subprocess
 import sys
 import tempfile
 
+from gitdb.base import IStream
+
 import ddt
 import pytest
 
-from git import (
-    BlobFilter,
-    Diff,
-    Git,
-    IndexFile,
-    Object,
-    Repo,
-    Tree,
-)
+from git import BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
 from git.exc import (
     CheckoutError,
     GitCommandError,
@@ -41,7 +35,7 @@ from git.index.typ import BaseIndexEntry, IndexEntry
 from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
-from gitdb.base import IStream
+
 from test.lib import (
     TestBase,
     VirtualEnvironment,

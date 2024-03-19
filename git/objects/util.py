@@ -3,28 +3,41 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""General utility functions."""
+"""Utility functions for working with git objects."""
+
+__all__ = [
+    "get_object_type_by_name",
+    "parse_date",
+    "parse_actor_and_date",
+    "ProcessStreamAdapter",
+    "Traversable",
+    "altz_to_utctz_str",
+    "utctz_to_altz",
+    "verify_utctz",
+    "Actor",
+    "tzoffset",
+    "utc",
+]
 
 from abc import ABC, abstractmethod
 import calendar
 from collections import deque
 from datetime import datetime, timedelta, tzinfo
-from string import digits
 import re
+from string import digits
 import time
 import warnings
 
-from git.util import IterableList, IterableObj, Actor
+from git.util import Actor, IterableList, IterableObj
 
 # typing ------------------------------------------------------------
+
 from typing import (
     Any,
     Callable,
     Deque,
     Iterator,
-    # Generic,
     NamedTuple,
-    overload,
     Sequence,
     TYPE_CHECKING,
     Tuple,
@@ -32,21 +45,23 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
-from git.types import Has_id_attribute, Literal  # , _T
+from git.types import Has_id_attribute, Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
-    from .commit import Commit
-    from .blob import Blob
-    from .tag import TagObject
-    from .tree import Tree, TraversedTreeTup
     from subprocess import Popen
-    from .submodule.base import Submodule
+
     from git.types import Protocol, runtime_checkable
+
+    from .blob import Blob
+    from .commit import Commit
+    from .submodule.base import Submodule
+    from .tag import TagObject
+    from .tree import TraversedTreeTup, Tree
 else:
-    # Protocol = Generic[_T]  # Needed for typing bug #572?
     Protocol = ABC
 
     def runtime_checkable(f):
@@ -67,20 +82,6 @@ TraversedTup = Union[
 ]
 
 # --------------------------------------------------------------------
-
-__all__ = (
-    "get_object_type_by_name",
-    "parse_date",
-    "parse_actor_and_date",
-    "ProcessStreamAdapter",
-    "Traversable",
-    "altz_to_utctz_str",
-    "utctz_to_altz",
-    "verify_utctz",
-    "Actor",
-    "tzoffset",
-    "utc",
-)
 
 ZERO = timedelta(0)
 

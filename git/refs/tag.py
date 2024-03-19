@@ -8,9 +8,9 @@ represents lightweight tags. For annotated tags (which are git objects), see the
 :mod:`git.objects.tag` module.
 """
 
-from .reference import Reference
-
 __all__ = ["TagReference", "Tag"]
+
+from .reference import Reference
 
 # typing ------------------------------------------------------------------
 
@@ -19,11 +19,9 @@ from typing import Any, TYPE_CHECKING, Type, Union
 from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
-    from git.objects import Commit
-    from git.objects import TagObject
+    from git.objects import Commit, TagObject
     from git.refs import SymbolicReference
     from git.repo import Repo
-
 
 # ------------------------------------------------------------------------------
 

@@ -3,4 +3,6 @@
 
 """Initialize the repo package."""
 
-from .base import Repo as Repo  # noqa: F401
+__all__ = ["Repo"]
+
+from .base import Repo

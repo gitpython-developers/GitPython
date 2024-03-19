@@ -14,6 +14,7 @@ import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
+
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
 

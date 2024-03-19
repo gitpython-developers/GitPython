@@ -6,6 +6,8 @@
 """Module containing :class:`IndexFile`, an Index implementation facilitating all kinds
 of index manipulations such as querying and merging."""
 
+__all__ = ["IndexFile", "CheckoutError", "StageType"]
+
 import contextlib
 import datetime
 import glob
@@ -16,6 +18,9 @@ from stat import S_ISLNK
 import subprocess
 import sys
 import tempfile
+
+from gitdb.base import IStream
+from gitdb.db import MemoryDB
 
 from git.compat import defenc, force_bytes
 import git.diff as git_diff
@@ -31,8 +36,6 @@ from git.util import (
     unbare_repo,
     to_bin_sha,
 )
-from gitdb.base import IStream
-from gitdb.db import MemoryDB
 
 from .fun import (
     S_IFGITLINK,
@@ -79,9 +82,6 @@ if TYPE_CHECKING:
 Treeish = Union[Tree, Commit, str, bytes]
 
 # ------------------------------------------------------------------------------------
-
-
-__all__ = ("IndexFile", "CheckoutError", "StageType")
 
 
 @contextlib.contextmanager
