@@ -25,8 +25,9 @@ else:
 
 import ddt
 
-from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
+from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
 from git.util import cwd, finalize_process
+
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 

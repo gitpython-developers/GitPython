@@ -5,18 +5,18 @@
 
 import gc
 import os
+import os.path as osp
 import sys
 import tempfile
 from unittest import skipIf
 
 from git import Repo
-from git.objects import Blob, Tree, Commit, TagObject
-from git.objects.util import get_object_type_by_name
-from test.lib import TestBase as _TestBase, with_rw_repo, with_rw_and_rw_remote_repo
-from git.util import hex_to_bin, HIDE_WINDOWS_FREEZE_ERRORS
-
+from git.objects import Blob, Commit, TagObject, Tree
 import git.objects.base as base
-import os.path as osp
+from git.objects.util import get_object_type_by_name
+from git.util import HIDE_WINDOWS_FREEZE_ERRORS, hex_to_bin
+
+from test.lib import TestBase as _TestBase, with_rw_and_rw_remote_repo, with_rw_repo
 
 
 class TestBase(_TestBase):

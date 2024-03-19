@@ -3,8 +3,9 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from test.lib import TestBase
 from git import Blob
+
+from test.lib import TestBase
 
 
 class TestBlob(TestBase):

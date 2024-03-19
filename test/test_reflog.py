@@ -5,9 +5,10 @@ import os.path as osp
 import tempfile
 
 from git.objects import IndexObject
-from git.refs import RefLogEntry, RefLog
+from git.refs import RefLog, RefLogEntry
+from git.util import Actor, hex_to_bin, rmtree
+
 from test.lib import TestBase, fixture_path
-from git.util import Actor, rmtree, hex_to_bin
 
 
 class TestRefLog(TestBase):

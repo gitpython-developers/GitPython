@@ -5,13 +5,14 @@
 
 import logging
 import os
+import os.path as osp
 import tempfile
 
 from git import Repo
 from git.db import GitCmdObjectDB, GitDB
-from test.lib import TestBase
 from git.util import rmtree
-import os.path as osp
+
+from test.lib import TestBase
 
 # { Invariants
 

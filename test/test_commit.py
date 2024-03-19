@@ -6,23 +6,25 @@
 import copy
 from datetime import datetime
 from io import BytesIO
+import os.path as osp
 import re
 import sys
 import time
 from unittest.mock import Mock
 
-from git import (
-    Commit,
-    Actor,
-)
-from git import Repo
-from git.objects.util import tzoffset, utc
-from git.repo.fun import touch
-from test.lib import TestBase, with_rw_repo, fixture_path, StringProcessAdapter
-from test.lib import with_rw_directory
 from gitdb import IStream
 
-import os.path as osp
+from git import Actor, Commit, Repo
+from git.objects.util import tzoffset, utc
+from git.repo.fun import touch
+
+from test.lib import (
+    StringProcessAdapter,
+    TestBase,
+    fixture_path,
+    with_rw_directory,
+    with_rw_repo,
+)
 
 
 class TestCommitSerialization(TestBase):

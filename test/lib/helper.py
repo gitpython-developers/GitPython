@@ -3,6 +3,22 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+__all__ = [
+    "fixture_path",
+    "fixture",
+    "StringProcessAdapter",
+    "with_rw_directory",
+    "with_rw_repo",
+    "with_rw_and_rw_remote_repo",
+    "TestBase",
+    "VirtualEnvironment",
+    "TestCase",
+    "SkipTest",
+    "skipIf",
+    "GIT_REPO",
+    "GIT_DAEMON_PORT",
+]
+
 import contextlib
 from functools import wraps
 import gc
@@ -30,22 +46,6 @@ ospd = osp.dirname
 
 GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(__file__))))
 GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
-
-__all__ = (
-    "fixture_path",
-    "fixture",
-    "StringProcessAdapter",
-    "with_rw_directory",
-    "with_rw_repo",
-    "with_rw_and_rw_remote_repo",
-    "TestBase",
-    "VirtualEnvironment",
-    "TestCase",
-    "SkipTest",
-    "skipIf",
-    "GIT_REPO",
-    "GIT_DAEMON_PORT",
-)
 
 _logger = logging.getLogger(__name__)
 

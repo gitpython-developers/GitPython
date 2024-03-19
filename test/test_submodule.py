@@ -27,6 +27,7 @@ from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, join_path_native, to_native_path_linux
+
 from test.lib import TestBase, with_rw_directory, with_rw_repo
 
 

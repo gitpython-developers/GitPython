@@ -28,7 +28,7 @@ from git import (
 )
 from git.cmd import Git
 from git.exc import UnsafeOptionError, UnsafeProtocolError
-from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS, IterableList
+from git.util import HIDE_WINDOWS_FREEZE_ERRORS, IterableList, rmtree
 from test.lib import (
     GIT_DAEMON_PORT,
     TestBase,
@@ -36,7 +36,6 @@ from test.lib import (
     with_rw_and_rw_remote_repo,
     with_rw_repo,
 )
-
 
 # Make sure we have repeatable results.
 random.seed(0)

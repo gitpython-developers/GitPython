@@ -6,7 +6,7 @@
 import sys
 from time import time
 
-from .lib import TestBigRepoR
+from test.performance.lib import TestBigRepoR
 
 
 class TestObjDBPerformance(TestBigRepoR):

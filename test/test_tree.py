@@ -8,8 +8,9 @@ import os.path as osp
 from pathlib import Path
 import subprocess
 
-from git.objects import Tree, Blob
+from git.objects import Blob, Tree
 from git.util import cwd
+
 from test.lib import TestBase, with_rw_directory
 
 
