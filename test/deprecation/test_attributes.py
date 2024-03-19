@@ -2,9 +2,14 @@
 
 import pytest
 
-import git
 
+def test_cannot_get_undefined() -> None:
+    import git
 
-def test_no_attribute() -> None:
     with pytest.raises(AttributeError):
         git.foo
+
+
+def test_cannot_import_undefined() -> None:
+    with pytest.raises(ImportError):
+        from git import foo
