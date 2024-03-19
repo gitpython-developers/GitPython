@@ -75,7 +75,7 @@ For more general information on git objects and their types as git understands t
 """
 
 Tree_ish = Union["Commit", "Tree", "TagObject"]
-"""Union of :class:`~git.objects.base.Object`-based types that are sometimes tree-ish.
+"""Union of :class:`~git.objects.base.Object`-based types that are typically tree-ish.
 
 See :manpage:`gitglossary(7)` on "tree-ish":
 https://git-scm.com/docs/gitglossary#def_tree-ish
@@ -83,10 +83,11 @@ https://git-scm.com/docs/gitglossary#def_tree-ish
 :note:
     :class:`~git.objects.tree.Tree` and :class:`~git.objects.commit.Commit` are the
     classes whose instances are all tree-ish. This union includes them, but also
-    :class:`~git.objects.tag.TagObject`, only **some** of whose instances are tree-ish.
+    :class:`~git.objects.tag.TagObject`, only **most** of whose instances are tree-ish.
     Whether a particular :class:`~git.objects.tag.TagObject` peels (recursively
     dereferences) to a tree or commit, rather than a blob, can in general only be known
-    at runtime.
+    at runtime. In practice, git tag objects are nearly always used for tagging commits,
+    and such tags are tree-ish because commits are tree-ish.
 
 :note:
     See also the :class:`AnyGitObject` union of all four classes corresponding to git
@@ -94,7 +95,7 @@ https://git-scm.com/docs/gitglossary#def_tree-ish
 """
 
 Commit_ish = Union["Commit", "TagObject"]
-"""Union of :class:`~git.objects.base.Object`-based types that are sometimes commit-ish.
+"""Union of :class:`~git.objects.base.Object`-based types that are typically commit-ish.
 
 See :manpage:`gitglossary(7)` on "commit-ish":
 https://git-scm.com/docs/gitglossary#def_commit-ish
@@ -102,10 +103,11 @@ https://git-scm.com/docs/gitglossary#def_commit-ish
 :note:
     :class:`~git.objects.commit.Commit` is the only class whose instances are all
     commit-ish. This union type includes :class:`~git.objects.commit.Commit`, but also
-    :class:`~git.objects.tag.TagObject`, only **some** of whose instances are
+    :class:`~git.objects.tag.TagObject`, only **most** of whose instances are
     commit-ish. Whether a particular :class:`~git.objects.tag.TagObject` peels
     (recursively dereferences) to a commit, rather than a tree or blob, can in general
-    only be known at runtime.
+    only be known at runtime. In practice, git tag objects are nearly always used for
+    tagging commits, and such tags are of course commit-ish.
 
 :note:
     See also the :class:`AnyGitObject` union of all four classes corresponding to git
