@@ -3,7 +3,7 @@
 
 import os
 import sys
-from typing import (  # noqa: F401
+from typing import (
     Any,
     Callable,
     Dict,
@@ -17,7 +17,7 @@ from typing import (  # noqa: F401
 )
 
 if sys.version_info >= (3, 8):
-    from typing import (  # noqa: F401
+    from typing import (
         Literal,
         Protocol,
         SupportsIndex as SupportsIndex,
@@ -25,7 +25,7 @@ if sys.version_info >= (3, 8):
         runtime_checkable,
     )
 else:
-    from typing_extensions import (  # noqa: F401
+    from typing_extensions import (
         Literal,
         Protocol,
         SupportsIndex as SupportsIndex,
