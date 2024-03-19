@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import os
-import sys
 from pathlib import Path
+import sys
 from typing import Sequence
 
 from setuptools import setup, find_packages
