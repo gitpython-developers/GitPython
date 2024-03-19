@@ -50,10 +50,6 @@ if TYPE_CHECKING:
 
 flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
-# def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
-#     return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
-
-
 # -------------------------------------------------------------
 
 _logger = logging.getLogger(__name__)
@@ -415,7 +411,6 @@ class FetchInfo(IterableObj):
             remote_local_ref_str,
             note,
         ) = match.groups()
-        # assert is_flagKeyLiteral(control_character), f"{control_character}"
         control_character = cast(flagKeyLiteral, control_character)
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
