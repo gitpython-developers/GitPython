@@ -23,6 +23,7 @@ __all__ = [
     "TreeModifier",
 ]
 
+from . import base, blob, commit, submodule, tag, tree
 from .base import IndexObject, Object
 from .blob import Blob
 from .commit import Commit
