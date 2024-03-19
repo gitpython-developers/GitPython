@@ -55,8 +55,8 @@ from gitdb.util import (
     LazyMixin,  # noqa: F401
     LockedFD,  # noqa: F401
     bin_to_hex,  # noqa: F401
-    file_contents_ro_filepath,  # noqa: F401
     file_contents_ro,  # noqa: F401
+    file_contents_ro_filepath,  # noqa: F401
     hex_to_bin,  # noqa: F401
     make_sha,
     to_bin_sha,  # noqa: F401
