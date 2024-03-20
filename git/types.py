@@ -7,11 +7,13 @@ from typing import (
     Any,
     Callable,
     Dict,
+    List,
     NoReturn,
     Optional,
     Sequence as Sequence,
     Tuple,
     TYPE_CHECKING,
+    Type,
     TypeVar,
     Union,
 )
@@ -127,20 +129,39 @@ See :manpage:`gitglossary(7)` on "object type":
 https://git-scm.com/docs/gitglossary#def_object_type
 """
 
-Lit_commit_ish = Literal["commit", "tag"]
-"""Deprecated. Type of literal strings identifying sometimes-commitish git object types.
+Lit_commit_ish: Type[Literal["commit", "tag"]]
+"""Deprecated. Type of literal strings identifying typically-commitish git object types.
 
 Prior to a bugfix, this type had been defined more broadly. Any usage is in practice
-ambiguous and likely to be incorrect. Instead of this type:
+ambiguous and likely to be incorrect. This type has therefore been made a static type
+error to appear in annotations. It is preserved, with a deprecated status, to avoid
+introducing runtime errors in code that refers to it, but it should not be used.
+
+Instead of this type:
 
 * For the type of the string literals associated with :class:`Commit_ish`, use
   ``Literal["commit", "tag"]`` or create a new type alias for it. That is equivalent to
-  this type as currently defined.
+  this type as currently defined (but usable in statically checked type annotations).
 
 * For the type of all four string literals associated with :class:`AnyGitObject`, use
   :class:`GitObjectTypeString`. That is equivalent to the old definition of this type
-  prior to the bugfix.
+  prior to the bugfix (and is also usable in statically checked type annotations).
 """
+
+
+def _getattr(name: str) -> Any:
+    if name == "Lit_commit_ish":
+        return Literal["commit", "tag"]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+if not TYPE_CHECKING:  # Preserve static checking for undefined/misspelled attributes.
+    __getattr__ = _getattr
+
+
+def __dir__() -> List[str]:
+    return [*globals(), "Lit_commit_ish"]
+
 
 # Config_levels ---------------------------------------------------------
 
@@ -188,12 +209,12 @@ def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, 
 
     :param inp:
         If all members are handled, the argument for `inp` will have the
-        :class:`~typing.Never`/:class:`~typing.NoReturn` type. Otherwise, the type will
-        mismatch and cause a mypy error.
+        :class:`~typing.Never`/:class:`~typing.NoReturn` type.
+        Otherwise, the type will mismatch and cause a mypy error.
 
     :param raise_error:
-        If ``True``, will also raise :exc:`ValueError` with a general "unhandled
-        literal" message, or the exception object passed as `exc`.
+        If ``True``, will also raise :exc:`ValueError` with a general
+        "unhandled literal" message, or the exception object passed as `exc`.
 
     :param exc:
         It not ``None``, this should be an already-constructed exception object, to be

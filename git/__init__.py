@@ -88,7 +88,10 @@ __all__ = [
 
 __version__ = "git"
 
-from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Any, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 from gitdb.util import to_hex_sha
 
@@ -144,11 +147,6 @@ try:
         SymbolicReference,
         Tag,
         TagReference,
-        head,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.head.
-        log,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.log.
-        reference,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.reference.
-        symbolic,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.symbolic.
-        tag,  # noqa: F401  # Nonpublic. May disappear! Use git.refs.tag.
     )
     from git.diff import (  # @NoMove
         INDEX,
@@ -169,21 +167,6 @@ try:
         IndexEntry,
         IndexFile,
         StageType,
-        base,  # noqa: F401  # Nonpublic. May disappear! Use git.index.base.
-        fun,  # noqa: F401  # Nonpublic. May disappear! Use git.index.fun.
-        typ,  # noqa: F401  # Nonpublic. May disappear! Use git.index.typ.
-        #
-        # NOTE: The expression `git.util` evaluates to git.index.util, and the import
-        # `from git import util` imports git.index.util, NOT git.util. It may not be
-        # feasible to change this until the next major version, to avoid breaking code
-        # inadvertently relying on it. If git.index.util really is what you want, use or
-        # import from that name, to avoid confusion. To use the "real" git.util module,
-        # write `from git.util import ...`, or access it as `sys.modules["git.util"]`.
-        # (This differs from other historical indirect-submodule imports that are
-        # unambiguously nonpublic and are subject to immediate removal. Here, the public
-        # git.util module, even though different, makes it less discoverable that the
-        # expression `git.util` refers to a non-public attribute of the git module.)
-        util,  # noqa: F401
     )
     from git.util import (  # @NoMove
         Actor,
@@ -196,7 +179,72 @@ try:
 except GitError as _exc:
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
 
+
+# NOTE: The expression `git.util` evaluates to git.index.util and `from git import util`
+# imports git.index.util, NOT git.util. It may not be feasible to change this until the
+# next major version, to avoid breaking code inadvertently relying on it.
+#
+# - If git.index.util *is* what you want, use or import from that, to avoid confusion.
+#
+# - To use the "real" git.util module, write `from git.util import ...`, or if necessary
+#   access it as `sys.modules["git.util"]`.
+#
+# (This differs from other indirect-submodule imports that are unambiguously non-public
+# and subject to immediate removal. Here, the public git.util module, though different,
+# makes less discoverable that the expression `git.util` refers to a non-public
+# attribute of the git module.)
+#
+# This had come about by a wildcard import. Now that all intended imports are explicit,
+# the intuitive but potentially incompatible binding occurs due to the usual rules for
+# Python submodule bindings. So for now we delete that and let __getattr__ handle it.
+#
+del util  # type: ignore[name-defined]  # noqa: F821
+
+
+def _warned_import(message: str, fullname: str) -> "ModuleType":
+    import importlib
+    import warnings
+
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
+    return importlib.import_module(fullname)
+
+
+def _getattr(name: str) -> Any:
+    # TODO: If __version__ is made dynamic and lazily fetched, put that case right here.
+
+    if name == "util":
+        return _warned_import(
+            "The expression `git.util` and the import `from git import util` actually "
+            "reference git.index.util, and not the git.util module accessed in "
+            '`from git.util import XYZ` or `sys.modules["git.util"]`. This potentially '
+            "confusing behavior is currently preserved for compatibility, but may be "
+            "changed in the future and should not be relied on.",
+            fullname="git.index.util",
+        )
+
+    for names, prefix in (
+        ({"head", "log", "reference", "symbolic", "tag"}, "git.refs"),
+        ({"base", "fun", "typ"}, "git.index"),
+    ):
+        if name not in names:
+            continue
+
+        fullname = f"{prefix}.{name}"
+
+        return _warned_import(
+            f"{__name__}.{name} is a private alias of {fullname} and subject to "
+            f"immediate removal. Use {fullname} instead.",
+            fullname=fullname,
+        )
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+if not TYPE_CHECKING:  # Preserve static checking for undefined/misspelled attributes.
+    __getattr__ = _getattr
+
 # { Initialize git executable path
+
 GIT_OK = None
 
 
@@ -232,12 +280,9 @@ def refresh(path: Optional[PathLike] = None) -> None:
     GIT_OK = True
 
 
-# } END initialize git executable path
-
-
-#################
 try:
     refresh()
 except Exception as _exc:
     raise ImportError("Failed to initialize: {0}".format(_exc)) from _exc
-#################
+
+# } END initialize git executable path
