@@ -52,6 +52,9 @@ def test_util_alias_import_warns() -> None:
 def test_private_module_aliases() -> None:
     """These exist dynamically (for now) but mypy treats them as absent (intentionally).
 
+    This code verifies the effect of static type checking when analyzed by mypy, if mypy
+    is configured with ``warn_unused_ignores = true``.
+
     More detailed dynamic behavior is examined in the subsequent test cases.
     """
     git.head  # type: ignore[attr-defined]
