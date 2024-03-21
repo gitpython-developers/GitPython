@@ -49,8 +49,8 @@ def test_util_alias_import_warns() -> None:
     assert "should not be relied on" in message
 
 
-def test_private_module_aliases() -> None:
-    """These exist dynamically (for now) but mypy treats them as absent (intentionally).
+def test_private_module_aliases_exist_dynamically() -> None:
+    """These exist at runtime (for now) but mypy treats them as absent (intentionally).
 
     This code verifies the effect of static type checking when analyzed by mypy, if mypy
     is configured with ``warn_unused_ignores = true``.
@@ -67,7 +67,7 @@ def test_private_module_aliases() -> None:
     git.typ  # type: ignore[attr-defined]
 
 
-_parametrize_by_private_alias = pytest.mark.parametrize(
+@pytest.mark.parametrize(
     "name, fullname",
     [
         ("head", "git.refs.head"),
@@ -80,32 +80,26 @@ _parametrize_by_private_alias = pytest.mark.parametrize(
         ("typ", "git.index.typ"),
     ],
 )
+class TestPrivateModuleAliases:
+    """Tests of the private module aliases' shared specific runtime behaviors."""
 
+    def test_private_module_alias_access_resolves(self, name: str, fullname: str) -> None:
+        """These resolve for now, though they're private we do not guarantee this."""
+        assert getattr(git, name) is importlib.import_module(fullname)
 
-@_parametrize_by_private_alias
-def test_private_module_alias_access_resolves(name: str, fullname: str) -> None:
-    """These resolve for now, though they're private we do not guarantee this."""
-    assert getattr(git, name) is importlib.import_module(fullname)
-
-
-@_parametrize_by_private_alias
-def test_private_module_alias_import_resolves(name: str, fullname: str) -> None:
-    exec(f"from git import {name}")
-    assert locals()[name] is importlib.import_module(fullname)
-
-
-@_parametrize_by_private_alias
-def test_private_module_alias_access_warns(name: str, fullname: str) -> None:
-    with pytest.deprecated_call() as ctx:
-        getattr(git, name)
-
-    assert len(ctx) == 1
-    assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
-
-
-@_parametrize_by_private_alias
-def test_private_module_alias_import_warns(name: str, fullname: str) -> None:
-    with pytest.deprecated_call() as ctx:
+    def test_private_module_alias_import_resolves(self, name: str, fullname: str) -> None:
         exec(f"from git import {name}")
+        assert locals()[name] is importlib.import_module(fullname)
 
-    assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
+    def test_private_module_alias_access_warns(self, name: str, fullname: str) -> None:
+        with pytest.deprecated_call() as ctx:
+            getattr(git, name)
+
+        assert len(ctx) == 1
+        assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
+
+    def test_private_module_alias_import_warns(self, name: str, fullname: str) -> None:
+        with pytest.deprecated_call() as ctx:
+            exec(f"from git import {name}")
+
+        assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
