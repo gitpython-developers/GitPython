@@ -9,12 +9,12 @@ import git
 
 def test_cannot_get_undefined() -> None:
     with pytest.raises(AttributeError):
-        git.foo
+        git.foo  # type: ignore[attr-defined]
 
 
 def test_cannot_import_undefined() -> None:
     with pytest.raises(ImportError):
-        from git import foo  # noqa: F401
+        from git import foo  # type: ignore[attr-defined]  # noqa: F401
 
 
 def test_util_alias_access_resolves() -> None:
@@ -47,6 +47,21 @@ def test_util_alias_import_warns() -> None:
     assert "git.util" in message
     assert "git.index.util" in message
     assert "should not be relied on" in message
+
+
+def test_private_module_aliases() -> None:
+    """These exist dynamically but mypy will show them as absent (intentionally).
+
+    More detailed dynamic behavior is examined in the subsequent test cases.
+    """
+    git.head  # type: ignore[attr-defined]
+    git.log  # type: ignore[attr-defined]
+    git.reference  # type: ignore[attr-defined]
+    git.symbolic  # type: ignore[attr-defined]
+    git.tag  # type: ignore[attr-defined]
+    git.base  # type: ignore[attr-defined]
+    git.fun  # type: ignore[attr-defined]
+    git.typ  # type: ignore[attr-defined]
 
 
 _parametrize_by_private_alias = pytest.mark.parametrize(
