@@ -25,7 +25,7 @@ def test_util_alias_access_resolves() -> None:
 def test_util_alias_import_resolves() -> None:
     from git import util
 
-    util is git.index.util
+    assert util is git.index.util
 
 
 def test_util_alias_access_warns() -> None:
@@ -88,7 +88,7 @@ def test_private_module_alias_access_resolves(name: str, fullname: str) -> None:
 @_parametrize_by_private_alias
 def test_private_module_alias_import_resolves(name: str, fullname: str) -> None:
     exec(f"from git import {name}")
-    locals()[name] is importlib.import_module(fullname)
+    assert locals()[name] is importlib.import_module(fullname)
 
 
 @_parametrize_by_private_alias
