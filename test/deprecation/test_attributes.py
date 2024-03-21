@@ -18,7 +18,7 @@ def test_cannot_import_undefined() -> None:
 
 
 def test_util_alias_access_resolves() -> None:
-    """These resolve for now, though they're private we do not guarantee this."""
+    """These resolve for now, though they're private and we do not guarantee this."""
     assert git.util is git.index.util
 
 
@@ -50,7 +50,7 @@ def test_util_alias_import_warns() -> None:
 
 
 def test_private_module_aliases() -> None:
-    """These exist dynamically but mypy will show them as absent (intentionally).
+    """These exist dynamically (for now) but mypy treats them as absent (intentionally).
 
     More detailed dynamic behavior is examined in the subsequent test cases.
     """
