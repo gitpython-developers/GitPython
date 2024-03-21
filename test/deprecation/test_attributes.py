@@ -4,10 +4,10 @@ import importlib
 
 import pytest
 
+import git
+
 
 def test_cannot_get_undefined() -> None:
-    import git
-
     with pytest.raises(AttributeError):
         git.foo
 
@@ -19,21 +19,16 @@ def test_cannot_import_undefined() -> None:
 
 def test_util_alias_access_resolves() -> None:
     """These resolve for now, though they're private we do not guarantee this."""
-    import git
-
     assert git.util is git.index.util
 
 
 def test_util_alias_import_resolves() -> None:
     from git import util
-    import git
 
     util is git.index.util
 
 
 def test_util_alias_access_warns() -> None:
-    import git
-
     with pytest.deprecated_call() as ctx:
         git.util
 
@@ -72,8 +67,6 @@ _parametrize_by_private_alias = pytest.mark.parametrize(
 @_parametrize_by_private_alias
 def test_private_module_alias_access_resolves(name: str, fullname: str) -> None:
     """These resolve for now, though they're private we do not guarantee this."""
-    import git
-
     assert getattr(git, name) is importlib.import_module(fullname)
 
 
@@ -85,8 +78,6 @@ def test_private_module_alias_import_resolves(name: str, fullname: str) -> None:
 
 @_parametrize_by_private_alias
 def test_private_module_alias_access_warns(name: str, fullname: str) -> None:
-    import git
-
     with pytest.deprecated_call() as ctx:
         getattr(git, name)
 
