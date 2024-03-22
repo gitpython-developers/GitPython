@@ -84,7 +84,7 @@ class TestPrivateModuleAliases:
     """Tests of the private module aliases' shared specific runtime behaviors."""
 
     def test_private_module_alias_access_resolves(self, name: str, fullname: str) -> None:
-        """These resolve for now, though they're private we do not guarantee this."""
+        """These resolve for now, though they're private and we do not guarantee this."""
         assert getattr(git, name) is importlib.import_module(fullname)
 
     def test_private_module_alias_import_resolves(self, name: str, fullname: str) -> None:
