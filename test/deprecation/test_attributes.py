@@ -1,6 +1,7 @@
 """Tests for dynamic and static attribute errors."""
 
 import importlib
+from typing import Type
 
 import pytest
 
@@ -26,6 +27,23 @@ def test_util_alias_import_resolves() -> None:
     from git import util
 
     assert util is git.index.util
+
+
+def test_util_alias_members_resolve() -> None:
+    """git.index.util members can be accessed via git.util, and mypy recognizes it."""
+    # TODO: When typing_extensions is made a test dependency, use assert_type for this.
+    gu_tfs = git.util.TemporaryFileSwap
+    from git.index.util import TemporaryFileSwap
+
+    def accepts_tfs_type(t: Type[TemporaryFileSwap]) -> None:
+        pass
+
+    def rejects_tfs_type(t: Type[git.Git]) -> None:
+        pass
+
+    accepts_tfs_type(gu_tfs)
+    rejects_tfs_type(gu_tfs)  # type: ignore[arg-type]
+    assert gu_tfs is TemporaryFileSwap
 
 
 def test_util_alias_access_warns() -> None:
@@ -103,14 +121,3 @@ class TestPrivateModuleAliases:
             exec(f"from git import {name}")
 
         assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
-
-
-reveal_type(git.util.git_working_dir)
-
-# FIXME: Add one or more test cases that access something like git.util.git_working_dir
-# to verify that it is available, and also use assert_type on it to ensure mypy knows
-# that accesses to expressions of the form git.util.XYZ resolve to git.index.util.XYZ.
-#
-# It may be necessary for GitPython, in git/__init__.py, to import util from git.index
-# explicitly before (still) deleting the util global, in order for mypy to know what is
-# going on. Also check pyright.
