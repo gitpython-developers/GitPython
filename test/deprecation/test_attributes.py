@@ -31,7 +31,6 @@ def test_util_alias_import_resolves() -> None:
 
 def test_util_alias_members_resolve() -> None:
     """git.index.util members can be accessed via git.util, and mypy recognizes it."""
-    # TODO: When typing_extensions is made a test dependency, use assert_type for this.
     gu_tfs = git.util.TemporaryFileSwap
     from git.index.util import TemporaryFileSwap
 
@@ -41,8 +40,10 @@ def test_util_alias_members_resolve() -> None:
     def rejects_tfs_type(t: Type[git.Git]) -> None:
         pass
 
+    # TODO: When typing_extensions is made a test dependency, use assert_type for this.
     accepts_tfs_type(gu_tfs)
     rejects_tfs_type(gu_tfs)  # type: ignore[arg-type]
+
     assert gu_tfs is TemporaryFileSwap
 
 
