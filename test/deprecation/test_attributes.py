@@ -103,3 +103,14 @@ class TestPrivateModuleAliases:
             exec(f"from git import {name}")
 
         assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
+
+
+reveal_type(git.util.git_working_dir)
+
+# FIXME: Add one or more test cases that access something like git.util.git_working_dir
+# to verify that it is available, and also use assert_type on it to ensure mypy knows
+# that accesses to expressions of the form git.util.XYZ resolve to git.index.util.XYZ.
+#
+# It may be necessary for GitPython, in git/__init__.py, to import util from git.index
+# explicitly before (still) deleting the util global, in order for mypy to know what is
+# going on. Also check pyright.
