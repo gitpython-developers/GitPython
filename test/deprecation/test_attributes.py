@@ -51,7 +51,7 @@ def test_util_alias_access_warns() -> None:
         git.util
 
     assert len(ctx) == 1
-    message = ctx[0].message.args[0]
+    message = str(ctx[0].message)
     assert "git.util" in message
     assert "git.index.util" in message
     assert "should not be relied on" in message
@@ -61,7 +61,7 @@ def test_util_alias_import_warns() -> None:
     with pytest.deprecated_call() as ctx:
         from git import util  # noqa: F401
 
-    message = ctx[0].message.args[0]
+    message = str(ctx[0].message)
     assert "git.util" in message
     assert "git.index.util" in message
     assert "should not be relied on" in message
@@ -114,10 +114,12 @@ class TestPrivateModuleAliases:
             getattr(git, name)
 
         assert len(ctx) == 1
-        assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
+        message = str(ctx[0].message)
+        assert message.endswith(f"Use {fullname} instead.")
 
     def test_private_module_alias_import_warns(self, name: str, fullname: str) -> None:
         with pytest.deprecated_call() as ctx:
             exec(f"from git import {name}")
 
-        assert ctx[0].message.args[0].endswith(f"Use {fullname} instead.")
+        message = str(ctx[0].message)
+        assert message.endswith(f"Use {fullname} instead.")
