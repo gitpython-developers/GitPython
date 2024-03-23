@@ -8,7 +8,7 @@ number of more broadly scoped suppressions, even where it is feasible to do so.
 Running pytest checks dynamic behavior as usual.
 """
 
-from itertools import groupby
+import itertools
 from typing import Type
 
 import pytest
@@ -145,6 +145,6 @@ def test_private_module_alias_import() -> None:
     # to do a pre-check prior to retrieving the attribute for actual use. However, for
     # each import, all messages should be the same and should note what to use instead.
     messages_with_duplicates = [str(w.message) for w in ctx]
-    messages = [message for message, _ in groupby(messages_with_duplicates)]
+    messages = [message for message, _ in itertools.groupby(messages_with_duplicates)]
     for target, message in zip(_MODULE_ALIAS_TARGETS, messages, strict=True):
         assert message.endswith(f"Use {target.__name__} instead.")
