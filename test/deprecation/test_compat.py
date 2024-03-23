@@ -64,7 +64,7 @@ def test_is_platform() -> None:
 
 def test_dir() -> None:
     """dir() on git.compat lists attributes meant to be public, even if deprecated."""
-    expected = {
+    expected_subset = {
         "defenc",
         "safe_decode",
         "safe_encode",
@@ -73,4 +73,5 @@ def test_dir() -> None:
         "is_win",
         "is_posix",
     }
-    assert expected <= set(dir(git.compat))
+    actual = set(dir(git.compat))
+    assert expected_subset <= actual
