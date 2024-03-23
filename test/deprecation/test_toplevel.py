@@ -102,6 +102,26 @@ _PRIVATE_MODULE_ALIAS_TARGETS = (
 """Targets of private aliases in the git module to some modules, not including util."""
 
 
+_PRIVATE_MODULE_ALIAS_TARGET_NAMES = (
+    "git.refs.head",
+    "git.refs.log",
+    "git.refs.reference",
+    "git.refs.symbolic",
+    "git.refs.tag",
+    "git.index.base",
+    "git.index.fun",
+    "git.index.typ",
+)
+"""Expected ``__name__`` attributes of targets of private aliases in the git module."""
+
+
+def test_alias_target_module_names_are_by_location() -> None:
+    """The aliases are weird, but their targets are normal, even in ``__name__``."""
+    actual = [module.__name__ for module in _PRIVATE_MODULE_ALIAS_TARGETS]
+    expected = list(_PRIVATE_MODULE_ALIAS_TARGET_NAMES)
+    assert actual == expected
+
+
 def test_private_module_alias_access() -> None:
     """Non-util private alias access works but warns and is a deliberate mypy error."""
     with pytest.deprecated_call() as ctx:
