@@ -1,7 +1,7 @@
 """Tests for dynamic and static errors and warnings in GitPython's git.compat module.
 
-These tests verify that the is_<platform> aliases are available, and are even listed in
-the output of dir(), but issue warnings, and that bogus (misspelled or unrecognized)
+These tests verify that the is_<platform> attributes are available, and are even listed
+in the output of dir(), but issue warnings, and that bogus (misspelled or unrecognized)
 attribute access is still an error both at runtime and with mypy. This is similar to
 some of the tests in test_toplevel, but the situation being tested here is simpler
 because it does not involve unintuitive module aliasing or import behavior. So this only
@@ -15,8 +15,8 @@ import pytest
 
 import git.compat
 
-
 _MESSAGE_LEADER = "{} and other is_<platform> aliases are deprecated."
+"""Form taken by the beginning of the warnings issues for is_<platform> access."""
 
 
 def test_cannot_access_undefined() -> None:
@@ -26,7 +26,7 @@ def test_cannot_access_undefined() -> None:
 
 
 def test_is_platform() -> None:
-    """The is_<platform> aliases work, warn, and mypy accepts code accessing them."""
+    """The is_<platform> attributes work, warn, and mypy accepts code accessing them."""
     fully_qualified_names = [
         "git.compat.is_win",
         "git.compat.is_posix",
