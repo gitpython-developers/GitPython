@@ -8,4 +8,4 @@ pytest-cov
 pytest-instafail
 pytest-mock
 pytest-sugar
-typing-extensions
+typing-extensions ; python_version < "3.11"

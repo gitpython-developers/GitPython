@@ -9,7 +9,13 @@ Running pytest checks dynamic behavior as usual.
 """
 
 import itertools
+import sys
 from typing import Type
+
+if sys.version_info >= (3, 11):
+    from typing import assert_type
+else:
+    from typing_extensions import assert_type
 
 import pytest
 from typing_extensions import assert_type
