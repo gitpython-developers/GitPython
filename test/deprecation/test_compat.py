@@ -11,6 +11,11 @@ tests attribute access, not "from" imports (whose behavior can be intuitively in
 import os
 import sys
 
+if sys.version_info >= (3, 11):
+    from typing import assert_type
+else:
+    from typing_extensions import assert_type
+
 import pytest
 
 import git.compat
@@ -37,6 +42,10 @@ def test_is_platform() -> None:
         is_win = git.compat.is_win
         is_posix = git.compat.is_posix
         is_darwin = git.compat.is_darwin
+
+    assert_type(is_win, bool)
+    assert_type(is_posix, bool)
+    assert_type(is_darwin, bool)
 
     messages = [str(entry.message) for entry in ctx]
     assert len(messages) == 3
