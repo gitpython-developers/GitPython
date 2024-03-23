@@ -1,4 +1,4 @@
-"""Tests for dynamic and static attribute errors in GitPython's top-level git module.
+"""Tests for dynamic and static errors and warnings in GitPython's top-level git module.
 
 Provided mypy has ``warn_unused_ignores = true`` set, running mypy on these test cases
 checks static typing of the code under test. This is the reason for the many separate
@@ -31,13 +31,13 @@ import git.refs.tag
 
 
 def test_cannot_access_undefined() -> None:
-    """Accessing a bogus attribute in git remains both a dynamic and static error."""
+    """Accessing a bogus attribute in git remains a dynamic and static error."""
     with pytest.raises(AttributeError):
         git.foo  # type: ignore[attr-defined]
 
 
 def test_cannot_import_undefined() -> None:
-    """Importing a bogus attribute from git remains both a dynamic and static error."""
+    """Importing a bogus attribute from git remains a dynamic and static error."""
     with pytest.raises(ImportError):
         from git import foo  # type: ignore[attr-defined]  # noqa: F401
 
