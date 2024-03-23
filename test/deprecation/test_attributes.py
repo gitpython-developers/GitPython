@@ -11,6 +11,14 @@ import pytest
 from typing_extensions import assert_type
 
 import git
+import git.index.base
+import git.index.fun
+import git.index.typ
+import git.refs.head
+import git.refs.log
+import git.refs.reference
+import git.refs.symbolic
+import git.refs.tag
 
 
 def test_cannot_access_undefined() -> None:
