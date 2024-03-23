@@ -1,4 +1,4 @@
-"""Tests for dynamic and static errors and warnings in GitPython's top-level git module.
+"""Tests for dynamic and static characteristics of top-level git module attributes.
 
 Provided mypy has ``warn_unused_ignores = true`` set, running mypy on these test cases
 checks static typing of the code under test. This is the reason for the many separate

@@ -1,4 +1,4 @@
-"""Tests for dynamic and static errors and warnings in GitPython's git.compat module.
+"""Tests for dynamic and static characteristics of git.compat module attributes.
 
 These tests verify that the is_<platform> attributes are available, and are even listed
 in the output of dir(), but issue warnings, and that bogus (misspelled or unrecognized)
