@@ -1,7 +1,11 @@
 """Tests for dynamic and static attribute errors in GitPython's top-level git module.
 
 Provided mypy has ``warn_unused_ignores = true`` set, running mypy on these test cases
-checks static typing of the code under test. (Running pytest checks dynamic behavior.)
+checks static typing of the code under test. This is the reason for the many separate
+single-line attr-defined suppressions, so those should not be replaced with a smaller
+number of more broadly scoped suppressions, even where it is feasible to do so.
+
+Running pytest checks dynamic behavior as usual.
 """
 
 from itertools import groupby
