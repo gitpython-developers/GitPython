@@ -105,7 +105,7 @@ _PRIVATE_MODULE_ALIAS_TARGETS = (
 
 
 def test_private_module_alias_access() -> None:
-    """Non-util private alias access works, warns, but is a deliberate mypy error."""
+    """Non-util private alias access works but warns and is a deliberate mypy error."""
     with pytest.deprecated_call() as ctx:
         assert (
             git.head,  # type: ignore[attr-defined]
@@ -128,7 +128,7 @@ def test_private_module_alias_access() -> None:
 
 
 def test_private_module_alias_import() -> None:
-    """Non-util private alias access works, warns, but is a deliberate mypy error."""
+    """Non-util private alias import works but warns and is a deliberate mypy error."""
     with pytest.deprecated_call() as ctx:
         from git import head  # type: ignore[attr-defined]
         from git import log  # type: ignore[attr-defined]
