@@ -160,3 +160,52 @@ def test_private_module_alias_import() -> None:
 
     for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages):
         assert message.endswith(f"Use {target.__name__} instead.")
+
+
+def test_dir_contains_public_attributes() -> None:
+    """All public attributes of the git module are present when dir() is called on it.
+
+    This is naturally the case, but some ways of adding dynamic attribute access
+    behavior can change it, especially if __dir__ is defined but care is not taken to
+    preserve the contents that should already be present.
+
+    Note that dir() should usually automatically list non-public attributes if they are
+    actually "physically" present as well, so the approach taken here to test it should
+    not be reproduced if __dir__ is added (instead, a call to globals() could be used,
+    as its keys list the automatic values).
+    """
+    expected_subset = set(git.__all__)
+    actual = set(dir(git))
+    assert expected_subset <= actual
+
+
+def test_dir_does_not_contain_util() -> None:
+    """The util attribute is absent from the dir() of git.
+
+    Because this behavior is less confusing than including it, where its meaning would
+    be assumed by users examining the dir() for what is available.
+    """
+    assert "util" not in dir(git)
+
+
+def test_dir_does_not_contain_private_module_aliases() -> None:
+    """Names from inside index and refs only pretend to be there and are not in dir().
+
+    The reason for omitting these is not that they are private, since private members
+    are usually included in dir() when actually present. Instead, these are only sort
+    of even there, no longer being imported and only being resolved dynamically for the
+    time being. In addition, it would be confusing to list these because doing so would
+    obscure the module structure of GitPython.
+    """
+    expected_absent = {
+        "head",
+        "log",
+        "reference",
+        "symbolic",
+        "tag",
+        "base",
+        "fun",
+        "typ",
+    }
+    actual = set(dir(git))
+    assert not (expected_absent & actual), "They should be completely disjoint."
