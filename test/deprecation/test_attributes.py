@@ -120,7 +120,10 @@ def test_private_module_alias_access() -> None:
 
     # Each should have warned exactly once, and note what to use instead.
     messages = [str(w.message) for w in ctx]
-    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages, strict=True):
+
+    assert len(messages) == len(_PRIVATE_MODULE_ALIAS_TARGETS)
+
+    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages):
         assert message.endswith(f"Use {target.__name__} instead.")
 
 
@@ -153,5 +156,8 @@ def test_private_module_alias_import() -> None:
     # each import, all messages should be the same and should note what to use instead.
     messages_with_duplicates = [str(w.message) for w in ctx]
     messages = [message for message, _ in itertools.groupby(messages_with_duplicates)]
-    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages, strict=True):
+
+    assert len(messages) == len(_PRIVATE_MODULE_ALIAS_TARGETS)
+
+    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages):
         assert message.endswith(f"Use {target.__name__} instead.")
