@@ -1,4 +1,8 @@
-"""Tests for dynamic and static attribute errors."""
+"""Tests for dynamic and static attribute errors in GitPython's top-level git module.
+
+Provided mypy has ``warn_unused_ignores = true`` set, running mypy on these test cases
+checks static typing of the code under test. (Running pytest checks dynamic behavior.)
+"""
 
 import importlib
 from typing import Type
@@ -16,17 +20,6 @@ def test_cannot_get_undefined() -> None:
 def test_cannot_import_undefined() -> None:
     with pytest.raises(ImportError):
         from git import foo  # type: ignore[attr-defined]  # noqa: F401
-
-
-def test_util_alias_access_resolves() -> None:
-    """These resolve for now, though they're private and we do not guarantee this."""
-    assert git.util is git.index.util
-
-
-def test_util_alias_import_resolves() -> None:
-    from git import util
-
-    assert util is git.index.util
 
 
 def test_util_alias_members_resolve() -> None:
@@ -68,59 +61,78 @@ def test_util_alias_import_warns() -> None:
     assert "should not be relied on" in message
 
 
-def test_private_module_aliases_exist_dynamically() -> None:
-    """These exist at runtime (for now) but mypy treats them as absent (intentionally).
-
-    This code verifies the effect of static type checking when analyzed by mypy, if mypy
-    is configured with ``warn_unused_ignores = true``.
-
-    More detailed dynamic behavior is examined in the subsequent test cases.
-    """
-    git.head  # type: ignore[attr-defined]
-    git.log  # type: ignore[attr-defined]
-    git.reference  # type: ignore[attr-defined]
-    git.symbolic  # type: ignore[attr-defined]
-    git.tag  # type: ignore[attr-defined]
-    git.base  # type: ignore[attr-defined]
-    git.fun  # type: ignore[attr-defined]
-    git.typ  # type: ignore[attr-defined]
-
-
-@pytest.mark.parametrize(
-    "name, fullname",
-    [
-        ("head", "git.refs.head"),
-        ("log", "git.refs.log"),
-        ("reference", "git.refs.reference"),
-        ("symbolic", "git.refs.symbolic"),
-        ("tag", "git.refs.tag"),
-        ("base", "git.index.base"),
-        ("fun", "git.index.fun"),
-        ("typ", "git.index.typ"),
-    ],
+# Split out util and have all its tests be separate, above.
+_MODULE_ALIAS_TARGETS = (
+    git.refs.head,
+    git.refs.log,
+    git.refs.reference,
+    git.refs.symbolic,
+    git.refs.tag,
+    git.index.base,
+    git.index.fun,
+    git.index.typ,
+    git.index.util,
 )
-class TestPrivateModuleAliases:
-    """Tests of the private module aliases' shared specific runtime behaviors."""
 
-    def test_private_module_alias_access_resolves(self, name: str, fullname: str) -> None:
-        """These resolve for now, though they're private and we do not guarantee this."""
-        assert getattr(git, name) is importlib.import_module(fullname)
 
-    def test_private_module_alias_import_resolves(self, name: str, fullname: str) -> None:
-        exec(f"from git import {name}")
-        assert locals()[name] is importlib.import_module(fullname)
+def test_private_module_alias_access_on_git_module() -> None:
+    """Private alias access works, warns, and except for util is a mypy error."""
+    with pytest.deprecated_call() as ctx:
+        assert (
+            git.head,  # type: ignore[attr-defined]
+            git.log,  # type: ignore[attr-defined]
+            git.reference,  # type: ignore[attr-defined]
+            git.symbolic,  # type: ignore[attr-defined]
+            git.tag,  # type: ignore[attr-defined]
+            git.base,  # type: ignore[attr-defined]
+            git.fun,  # type: ignore[attr-defined]
+            git.typ,  # type: ignore[attr-defined]
+            git.util,
+        ) == _MODULE_ALIAS_TARGETS
 
-    def test_private_module_alias_access_warns(self, name: str, fullname: str) -> None:
-        with pytest.deprecated_call() as ctx:
-            getattr(git, name)
+    messages = [str(w.message) for w in ctx]
+    for target, message in zip(_MODULE_ALIAS_TARGETS[:-1], messages[:-1], strict=True):
+        assert message.endswith(f"Use {target.__name__} instead.")
 
-        assert len(ctx) == 1
-        message = str(ctx[0].message)
-        assert message.endswith(f"Use {fullname} instead.")
+    util_message = messages[-1]
+    assert "git.util" in util_message
+    assert "git.index.util" in util_message
+    assert "should not be relied on" in util_message
 
-    def test_private_module_alias_import_warns(self, name: str, fullname: str) -> None:
-        with pytest.deprecated_call() as ctx:
-            exec(f"from git import {name}")
 
-        message = str(ctx[0].message)
-        assert message.endswith(f"Use {fullname} instead.")
+def test_private_module_alias_import_from_git_module() -> None:
+    """Private alias import works, warns, and except for util is a mypy error."""
+    with pytest.deprecated_call() as ctx:
+        from git import head  # type: ignore[attr-defined]
+        from git import log  # type: ignore[attr-defined]
+        from git import reference  # type: ignore[attr-defined]
+        from git import symbolic  # type: ignore[attr-defined]
+        from git import tag  # type: ignore[attr-defined]
+        from git import base  # type: ignore[attr-defined]
+        from git import fun  # type: ignore[attr-defined]
+        from git import typ  # type: ignore[attr-defined]
+        from git import util
+
+    assert (
+        head,
+        log,
+        reference,
+        symbolic,
+        tag,
+        base,
+        fun,
+        typ,
+        util,
+    ) == _MODULE_ALIAS_TARGETS
+
+    # FIXME: This fails because, with imports, multiple consecutive accesses may occur.
+    # In practice, with CPython, it is always exactly two accesses, the first from the
+    # equivalent of a hasattr, and the second to fetch the attribute intentionally.
+    messages = [str(w.message) for w in ctx]
+    for target, message in zip(_MODULE_ALIAS_TARGETS[:-1], messages[:-1], strict=True):
+        assert message.endswith(f"Use {target.__name__} instead.")
+
+    util_message = messages[-1]
+    assert "git.util" in util_message
+    assert "git.index.util" in util_message
+    assert "should not be relied on" in util_message
