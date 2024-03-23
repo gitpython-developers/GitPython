@@ -4,61 +4,72 @@ Provided mypy has ``warn_unused_ignores = true`` set, running mypy on these test
 checks static typing of the code under test. (Running pytest checks dynamic behavior.)
 """
 
-import importlib
+from itertools import groupby
 from typing import Type
 
 import pytest
+from typing_extensions import assert_type
 
 import git
 
 
-def test_cannot_get_undefined() -> None:
+def test_cannot_access_undefined() -> None:
+    """Accessing a bogus attribute in git remains both a dynamic and static error."""
     with pytest.raises(AttributeError):
         git.foo  # type: ignore[attr-defined]
 
 
 def test_cannot_import_undefined() -> None:
+    """Importing a bogus attribute from git remains both a dynamic and static error."""
     with pytest.raises(ImportError):
         from git import foo  # type: ignore[attr-defined]  # noqa: F401
 
 
-def test_util_alias_members_resolve() -> None:
-    """git.index.util members can be accessed via git.util, and mypy recognizes it."""
-    gu_tfs = git.util.TemporaryFileSwap
+def test_util_alias_access() -> None:
+    """Accessing util in git works, warns, and mypy verifies it and its attributes."""
+    # The attribute access should succeed.
+    with pytest.deprecated_call() as ctx:
+        util = git.util
+
+    # There should be exactly one warning and it should have our util-specific message.
+    (message,) = [str(entry.message) for entry in ctx]
+    assert "git.util" in message
+    assert "git.index.util" in message
+    assert "should not be relied on" in message
+
+    # We check access through the util alias to the TemporaryFileSwap member, since it
+    # is slightly simpler to validate and reason about than the other public members,
+    # which are functions (specifically, higher-order functions for use as decorators).
     from git.index.util import TemporaryFileSwap
 
-    def accepts_tfs_type(t: Type[TemporaryFileSwap]) -> None:
-        pass
+    assert_type(util.TemporaryFileSwap, Type[TemporaryFileSwap])
 
-    def rejects_tfs_type(t: Type[git.Git]) -> None:
-        pass
-
-    # TODO: When typing_extensions is made a test dependency, use assert_type for this.
-    accepts_tfs_type(gu_tfs)
-    rejects_tfs_type(gu_tfs)  # type: ignore[arg-type]
-
-    assert gu_tfs is TemporaryFileSwap
+    # This comes after the static assertion, just in case it would affect the inference.
+    assert util.TemporaryFileSwap is TemporaryFileSwap
 
 
-def test_util_alias_access_warns() -> None:
+def test_util_alias_import() -> None:
+    """Importing util from git works, warns, and mypy verifies it and its attributes."""
+    # The import should succeed.
     with pytest.deprecated_call() as ctx:
-        git.util
+        from git import util
 
-    assert len(ctx) == 1
-    message = str(ctx[0].message)
+    # There may be multiple warnings. In CPython there will be currently always be
+    # exactly two, possibly due to the equivalent of calling hasattr to do a pre-check
+    # prior to retrieving the attribute for actual use. However, all warnings should
+    # have the same message, and it should be our util-specific message.
+    (message,) = {str(entry.message) for entry in ctx}
     assert "git.util" in message
     assert "git.index.util" in message
     assert "should not be relied on" in message
 
+    # As above, we check access through the util alias to the TemporaryFileSwap member.
+    from git.index.util import TemporaryFileSwap
 
-def test_util_alias_import_warns() -> None:
-    with pytest.deprecated_call() as ctx:
-        from git import util  # noqa: F401
+    assert_type(util.TemporaryFileSwap, Type[TemporaryFileSwap])
 
-    message = str(ctx[0].message)
-    assert "git.util" in message
-    assert "git.index.util" in message
-    assert "should not be relied on" in message
+    # This comes after the static assertion, just in case it would affect the inference.
+    assert util.TemporaryFileSwap is TemporaryFileSwap
 
 
 # Split out util and have all its tests be separate, above.
@@ -71,12 +82,11 @@ _MODULE_ALIAS_TARGETS = (
     git.index.base,
     git.index.fun,
     git.index.typ,
-    git.index.util,
 )
 
 
-def test_private_module_alias_access_on_git_module() -> None:
-    """Private alias access works, warns, and except for util is a mypy error."""
+def test_private_module_alias_access() -> None:
+    """Non-util private alias access works, warns, but is a deliberate mypy error."""
     with pytest.deprecated_call() as ctx:
         assert (
             git.head,  # type: ignore[attr-defined]
@@ -87,21 +97,16 @@ def test_private_module_alias_access_on_git_module() -> None:
             git.base,  # type: ignore[attr-defined]
             git.fun,  # type: ignore[attr-defined]
             git.typ,  # type: ignore[attr-defined]
-            git.util,
         ) == _MODULE_ALIAS_TARGETS
 
+    # Each should have warned exactly once, and note what to use instead.
     messages = [str(w.message) for w in ctx]
-    for target, message in zip(_MODULE_ALIAS_TARGETS[:-1], messages[:-1], strict=True):
+    for target, message in zip(_MODULE_ALIAS_TARGETS, messages, strict=True):
         assert message.endswith(f"Use {target.__name__} instead.")
 
-    util_message = messages[-1]
-    assert "git.util" in util_message
-    assert "git.index.util" in util_message
-    assert "should not be relied on" in util_message
 
-
-def test_private_module_alias_import_from_git_module() -> None:
-    """Private alias import works, warns, and except for util is a mypy error."""
+def test_private_module_alias_import() -> None:
+    """Non-util private alias access works, warns, but is a deliberate mypy error."""
     with pytest.deprecated_call() as ctx:
         from git import head  # type: ignore[attr-defined]
         from git import log  # type: ignore[attr-defined]
@@ -111,7 +116,6 @@ def test_private_module_alias_import_from_git_module() -> None:
         from git import base  # type: ignore[attr-defined]
         from git import fun  # type: ignore[attr-defined]
         from git import typ  # type: ignore[attr-defined]
-        from git import util
 
     assert (
         head,
@@ -122,17 +126,13 @@ def test_private_module_alias_import_from_git_module() -> None:
         base,
         fun,
         typ,
-        util,
     ) == _MODULE_ALIAS_TARGETS
 
-    # FIXME: This fails because, with imports, multiple consecutive accesses may occur.
-    # In practice, with CPython, it is always exactly two accesses, the first from the
-    # equivalent of a hasattr, and the second to fetch the attribute intentionally.
-    messages = [str(w.message) for w in ctx]
-    for target, message in zip(_MODULE_ALIAS_TARGETS[:-1], messages[:-1], strict=True):
+    # Each import may warn multiple times. In CPython there will be currently always be
+    # exactly two warnings per import, possibly due to the equivalent of calling hasattr
+    # to do a pre-check prior to retrieving the attribute for actual use. However, for
+    # each import, all messages should be the same and should note what to use instead.
+    messages_with_duplicates = [str(w.message) for w in ctx]
+    messages = [message for message, _ in groupby(messages_with_duplicates)]
+    for target, message in zip(_MODULE_ALIAS_TARGETS, messages, strict=True):
         assert message.endswith(f"Use {target.__name__} instead.")
-
-    util_message = messages[-1]
-    assert "git.util" in util_message
-    assert "git.index.util" in util_message
-    assert "should not be relied on" in util_message
