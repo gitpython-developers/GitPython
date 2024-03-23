@@ -18,7 +18,6 @@ else:
     from typing_extensions import assert_type
 
 import pytest
-from typing_extensions import assert_type
 
 import git
 import git.index.base
