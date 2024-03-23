@@ -89,7 +89,6 @@ def test_util_alias_import() -> None:
     assert util.TemporaryFileSwap is TemporaryFileSwap
 
 
-# Split out util and have all its tests be separate, above.
 _PRIVATE_MODULE_ALIAS_TARGETS = (
     git.refs.head,
     git.refs.log,
