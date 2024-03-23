@@ -25,9 +25,29 @@ def test_cannot_access_undefined() -> None:
         git.compat.foo  # type: ignore[attr-defined]
 
 
-def test_is_win() -> None:
+def test_is_platform() -> None:
+    """The is_<platform> aliases work, warn, and mypy accepts code accessing them."""
+    fully_qualified_names = [
+        "git.compat.is_win",
+        "git.compat.is_posix",
+        "git.compat.is_darwin",
+    ]
+
     with pytest.deprecated_call() as ctx:
-        value = git.compat.is_win
-    (message,) = [str(entry.message) for entry in ctx]  # Exactly one message.
-    assert message.startswith(_MESSAGE_LEADER.format("git.compat.is_win"))
-    assert value == (os.name == "nt")
+        is_win = git.compat.is_win
+        is_posix = git.compat.is_posix
+        is_darwin = git.compat.is_darwin
+
+    messages = [str(entry.message) for entry in ctx]
+    assert len(messages) == 3
+
+    for fullname, message in zip(fully_qualified_names, messages):
+        assert message.startswith(_MESSAGE_LEADER.format(fullname))
+
+    # These exactly reproduce the expressions in the code under test, so they are not
+    # good for testing that the values are correct. Instead, the purpose of this test is
+    # to ensure that any dynamic machinery put in place in git.compat to cause warnings
+    # to be issued does not get in the way of the intended values being accessed.
+    assert is_win == (os.name == "nt")
+    assert is_posix == (os.name == "posix")
+    assert is_darwin == (sys.platform == "darwin")
