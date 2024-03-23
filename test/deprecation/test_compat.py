@@ -51,3 +51,17 @@ def test_is_platform() -> None:
     assert is_win == (os.name == "nt")
     assert is_posix == (os.name == "posix")
     assert is_darwin == (sys.platform == "darwin")
+
+
+def test_dir() -> None:
+    """dir() on git.compat lists attributes meant to be public, even if deprecated."""
+    expected = {
+        "defenc",
+        "safe_decode",
+        "safe_encode",
+        "win_encode",
+        "is_darwin",
+        "is_win",
+        "is_posix",
+    }
+    assert expected <= set(dir(git.compat))
