@@ -21,7 +21,7 @@ import pytest
 import git.compat
 
 _MESSAGE_LEADER = "{} and other is_<platform> aliases are deprecated."
-"""Form taken by the beginning of the warnings issues for is_<platform> access."""
+"""Form taken by the beginning of the warnings issued for is_<platform> access."""
 
 
 def test_cannot_access_undefined() -> None:
