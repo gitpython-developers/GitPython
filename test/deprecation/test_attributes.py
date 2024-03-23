@@ -85,7 +85,7 @@ def test_util_alias_import() -> None:
 
 
 # Split out util and have all its tests be separate, above.
-_MODULE_ALIAS_TARGETS = (
+_PRIVATE_MODULE_ALIAS_TARGETS = (
     git.refs.head,
     git.refs.log,
     git.refs.reference,
@@ -95,6 +95,7 @@ _MODULE_ALIAS_TARGETS = (
     git.index.fun,
     git.index.typ,
 )
+"""Targets of private aliases in the git module to some modules, not including util."""
 
 
 def test_private_module_alias_access() -> None:
@@ -109,11 +110,11 @@ def test_private_module_alias_access() -> None:
             git.base,  # type: ignore[attr-defined]
             git.fun,  # type: ignore[attr-defined]
             git.typ,  # type: ignore[attr-defined]
-        ) == _MODULE_ALIAS_TARGETS
+        ) == _PRIVATE_MODULE_ALIAS_TARGETS
 
     # Each should have warned exactly once, and note what to use instead.
     messages = [str(w.message) for w in ctx]
-    for target, message in zip(_MODULE_ALIAS_TARGETS, messages, strict=True):
+    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages, strict=True):
         assert message.endswith(f"Use {target.__name__} instead.")
 
 
@@ -138,7 +139,7 @@ def test_private_module_alias_import() -> None:
         base,
         fun,
         typ,
-    ) == _MODULE_ALIAS_TARGETS
+    ) == _PRIVATE_MODULE_ALIAS_TARGETS
 
     # Each import may warn multiple times. In CPython there will be currently always be
     # exactly two warnings per import, possibly due to the equivalent of calling hasattr
@@ -146,5 +147,5 @@ def test_private_module_alias_import() -> None:
     # each import, all messages should be the same and should note what to use instead.
     messages_with_duplicates = [str(w.message) for w in ctx]
     messages = [message for message, _ in itertools.groupby(messages_with_duplicates)]
-    for target, message in zip(_MODULE_ALIAS_TARGETS, messages, strict=True):
+    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages, strict=True):
         assert message.endswith(f"Use {target.__name__} instead.")
