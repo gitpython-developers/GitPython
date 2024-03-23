@@ -141,8 +141,8 @@ def test_private_module_alias_access() -> None:
 
     assert len(messages) == len(_PRIVATE_MODULE_ALIAS_TARGETS)
 
-    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages):
-        assert message.endswith(f"Use {target.__name__} instead.")
+    for fullname, message in zip(_PRIVATE_MODULE_ALIAS_TARGET_NAMES, messages):
+        assert message.endswith(f"Use {fullname} instead.")
 
 
 def test_private_module_alias_import() -> None:
@@ -177,8 +177,8 @@ def test_private_module_alias_import() -> None:
 
     assert len(messages) == len(_PRIVATE_MODULE_ALIAS_TARGETS)
 
-    for target, message in zip(_PRIVATE_MODULE_ALIAS_TARGETS, messages):
-        assert message.endswith(f"Use {target.__name__} instead.")
+    for fullname, message in zip(_PRIVATE_MODULE_ALIAS_TARGET_NAMES, messages):
+        assert message.endswith(f"Use {fullname} instead.")
 
 
 def test_dir_contains_public_attributes() -> None:
