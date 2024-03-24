@@ -13,6 +13,7 @@ use some of these utilities, in some cases for compatibility across different pl
 import locale
 import os
 import sys
+import warnings
 
 from gitdb.utils.encoding import force_bytes, force_text  # noqa: F401
 
@@ -47,8 +48,6 @@ def _getattr(name: str) -> Any:
         value = _deprecated_platform_aliases[name]
     except KeyError:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
-
-    import warnings
 
     warnings.warn(
         f"{__name__}.{name} and other is_<platform> aliases are deprecated. "

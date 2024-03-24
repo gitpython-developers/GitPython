@@ -93,6 +93,8 @@ from typing import Any, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 if TYPE_CHECKING:
     from types import ModuleType
 
+import warnings
+
 from gitdb.util import to_hex_sha
 
 from git.exc import (
@@ -167,6 +169,7 @@ try:
         IndexEntry,
         IndexFile,
         StageType,
+        util,
     )
     from git.util import (  # @NoMove
         Actor,
@@ -198,12 +201,11 @@ except GitError as _exc:
 # the intuitive but potentially incompatible binding occurs due to the usual rules for
 # Python submodule bindings. So for now we delete that and let __getattr__ handle it.
 #
-del util  # type: ignore[name-defined]  # noqa: F821
+del util
 
 
 def _warned_import(message: str, fullname: str) -> "ModuleType":
     import importlib
-    import warnings
 
     warnings.warn(message, DeprecationWarning, stacklevel=3)
     return importlib.import_module(fullname)
