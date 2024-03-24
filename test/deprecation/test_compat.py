@@ -63,15 +63,19 @@ def test_is_platform() -> None:
 
 
 def test_dir() -> None:
-    """dir() on git.compat lists attributes meant to be public, even if deprecated."""
+    """dir() on git.compat includes all public attributes, even if deprecated.
+
+    As dir() usually does, it also has nonpublic attributes, which should also not be
+    removed by a custom __dir__ function, but those are less important to test.
+    """
     expected_subset = {
+        "is_win",
+        "is_posix",
+        "is_darwin",
         "defenc",
         "safe_decode",
         "safe_encode",
         "win_encode",
-        "is_darwin",
-        "is_win",
-        "is_posix",
     }
     actual = set(dir(git.compat))
     assert expected_subset <= actual
