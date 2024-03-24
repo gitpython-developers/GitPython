@@ -37,3 +37,30 @@ def test_can_access_lit_commit_ish_but_it_is_not_usable() -> None:
 
     # It should be as documented (even though deliberately unusable in static checks).
     assert Lit_commit_ish == Literal["commit", "tag"]
+
+
+def test_dir() -> None:
+    """dir() on git.types includes public names, even ``Lit_commit_ish``.
+
+    It also contains private names that we don't test. See test_compat.test_dir.
+    """
+    expected_subset = {
+        "PathLike",
+        "TBD",
+        "AnyGitObject",
+        "Tree_ish",
+        "Commit_ish",
+        "GitObjectTypeString",
+        "Lit_commit_ish",
+        "Lit_config_levels",
+        "ConfigLevels_Tup",
+        "CallableProgress",
+        "assert_never",
+        "Files_TD",
+        "Total_TD",
+        "HSH_TD",
+        "Has_Repo",
+        "Has_id_attribute",
+    }
+    actual = set(dir(git.types))
+    assert expected_subset <= actual
