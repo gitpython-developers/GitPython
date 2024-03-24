@@ -18,8 +18,8 @@ def test_cannot_access_undefined() -> None:
         git.types.foo  # type: ignore[attr-defined]
 
 
-def test_lit_commit_ish() -> None:
-    """ """
+def test_can_access_lit_commit_ish_but_it_is_not_usable() -> None:
+    """Lit_commit_ish_can be accessed, but warns and is an invalid type annotation."""
     # It would be fine to test attribute access rather than a "from" import. But a
     # "from" import is more likely to appear in actual usage, so it is used here.
     with pytest.deprecated_call() as ctx:
