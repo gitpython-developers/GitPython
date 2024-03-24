@@ -76,9 +76,9 @@ def test_util_alias_import() -> None:
     # prior to retrieving the attribute for actual use. However, all warnings should
     # have the same message, and it should be our util-specific message.
     (message,) = {str(entry.message) for entry in ctx}
-    assert "git.util" in message
-    assert "git.index.util" in message
-    assert "should not be relied on" in message
+    assert "git.util" in message, "Has alias."
+    assert "git.index.util" in message, "Has target."
+    assert "should not be relied on" in message, "Distinct from other messages."
 
     # As above, we check access through the util alias to the TemporaryFileSwap member.
     from git.index.util import TemporaryFileSwap
