@@ -53,10 +53,10 @@ def test_is_platform() -> None:
     for fullname, message in zip(fully_qualified_names, messages):
         assert message.startswith(_MESSAGE_LEADER.format(fullname))
 
-    # These exactly reproduce the expressions in the code under test, so they are not
-    # good for testing that the values are correct. Instead, the purpose of this test is
-    # to ensure that any dynamic machinery put in place in git.compat to cause warnings
-    # to be issued does not get in the way of the intended values being accessed.
+    # These assertions exactly reproduce the expressions in the code under test, so they
+    # are not good for testing that the values are correct. Instead, their purpose is to
+    # ensure that any dynamic machinery put in place in git.compat to cause warnings to
+    # be issued does not get in the way of the intended values being accessed.
     assert is_win == (os.name == "nt")
     assert is_posix == (os.name == "posix")
     assert is_darwin == (sys.platform == "darwin")
