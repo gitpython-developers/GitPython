@@ -6,6 +6,7 @@ including deprecation warnings, while others verify that other aspects of attrib
 access are not inadvertently broken by mechanisms introduced to issue the warnings.
 """
 
+from concurrent.futures import ProcessPoolExecutor
 import contextlib
 import sys
 from typing import Generator
@@ -36,7 +37,7 @@ def _suppress_deprecation_warning() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def try_restore_use_shell_state() -> Generator[None, None, None]:
+def restore_use_shell_state() -> Generator[None, None, None]:
     """Fixture to attempt to restore state associated with the ``USE_SHELL`` attribute.
 
     This is used to decrease the likelihood of state changes leaking out and affecting
@@ -142,7 +143,7 @@ def _assert_use_shell_full_results(
     assert recheck_message.startswith(_USE_SHELL_DEPRECATED_FRAGMENT)
 
 
-def test_use_shell_set_and_get_on_class(try_restore_use_shell_state: None) -> None:
+def test_use_shell_set_and_get_on_class(restore_use_shell_state: None) -> None:
     """USE_SHELL can be set and re-read as a class attribute, always warning."""
     with pytest.deprecated_call() as setting:
         Git.USE_SHELL = True
@@ -163,7 +164,7 @@ def test_use_shell_set_and_get_on_class(try_restore_use_shell_state: None) -> No
     )
 
 
-def test_use_shell_set_on_class_get_on_instance(try_restore_use_shell_state: None) -> None:
+def test_use_shell_set_on_class_get_on_instance(restore_use_shell_state: None) -> None:
     """USE_SHELL can be set on the class and read on an instance, always warning.
 
     This is like test_use_shell_set_and_get_on_class but it performs reads on an
@@ -196,14 +197,31 @@ def test_use_shell_set_on_class_get_on_instance(try_restore_use_shell_state: Non
 @pytest.mark.parametrize("value", [False, True])
 def test_use_shell_cannot_set_on_instance(
     value: bool,
-    try_restore_use_shell_state: None,  # In case of a bug where it does set USE_SHELL.
+    restore_use_shell_state: None,  # In case of a bug where it does set USE_SHELL.
 ) -> None:
     instance = Git()
     with pytest.raises(AttributeError):
         instance.USE_SHELL = value
 
 
-# FIXME: Test behavior with multiprocessing (the attribute needs to pickle properly).
+def _check_use_shell_in_worker(value: bool) -> None:
+    # USE_SHELL should have the value set in the parent before starting the worker.
+    assert Git.USE_SHELL is value
+
+    # FIXME: Check that mutation still works and raises the warning.
+
+
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+@pytest.mark.parametrize("value", [False, True])
+def test_use_shell_preserved_in_multiprocessing(
+    value: bool,
+    restore_use_shell_state: None,
+) -> None:
+    """The USE_SHELL class attribute pickles accurately for multiprocessing."""
+    Git.USE_SHELL = value
+    with ProcessPoolExecutor(max_workers=1) as executor:
+        # Calling result() marshals any exception back to this process and raises it.
+        executor.submit(_check_use_shell_in_worker, value).result()
 
 
 _EXPECTED_DIR_SUBSET = {
