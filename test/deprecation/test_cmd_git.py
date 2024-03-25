@@ -9,6 +9,7 @@ access are not inadvertently broken by mechanisms introduced to issue the warnin
 import contextlib
 import sys
 from typing import Generator
+import warnings
 
 if sys.version_info >= (3, 11):
     from typing import assert_type
@@ -26,9 +27,16 @@ _USE_SHELL_DANGEROUS_FRAGMENT = "Setting Git.USE_SHELL to True is unsafe and ins
 """Beginning text of USE_SHELL deprecation warnings when USE_SHELL is set True."""
 
 
+@contextlib.contextmanager
+def _suppress_deprecation_warning() -> Generator[None, None, None]:
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        yield
+
+
 @pytest.fixture
-def reset_backing_attribute() -> Generator[None, None, None]:
-    """Fixture to reset the private ``_USE_SHELL`` attribute.
+def try_restore_use_shell_state() -> Generator[None, None, None]:
+    """Fixture to attempt to restore state associated with the ``USE_SHELL`` attribute.
 
     This is used to decrease the likelihood of state changes leaking out and affecting
     other tests. But the goal is not to assert that ``_USE_SHELL`` is used, nor anything
@@ -38,18 +46,27 @@ def reset_backing_attribute() -> Generator[None, None, None]:
     restores attributes that it has previously been used to change, create, or remove.
     """
     no_value = object()
+
     try:
-        old_value = Git._USE_SHELL
+        old_backing_value = Git._USE_SHELL
     except AttributeError:
-        old_value = no_value
+        old_backing_value = no_value
+    try:
+        with _suppress_deprecation_warning():
+            old_public_value = Git.USE_SHELL
 
-    yield
+        # This doesn't have its own try-finally because pytest catches exceptions raised
+        # during the yield. (The outer try-finally catches exceptions in this fixture.)
+        yield
 
-    if old_value is no_value:
-        with contextlib.suppress(AttributeError):
-            del Git._USE_SHELL
-    else:
-        Git._USE_SHELL = old_value
+        with _suppress_deprecation_warning():
+            Git.USE_SHELL = old_public_value
+    finally:
+        if old_backing_value is no_value:
+            with contextlib.suppress(AttributeError):
+                del Git._USE_SHELL
+        else:
+            Git._USE_SHELL = old_backing_value
 
 
 def test_cannot_access_undefined_on_git_class() -> None:
@@ -76,23 +93,26 @@ def test_get_use_shell_on_class_default() -> None:
     assert not use_shell
 
 
-# FIXME: More robustly check that each operation really issues exactly one deprecation
-# warning, even if this requires relying more on reset_backing_attribute doing its job.
-def test_use_shell_on_class(reset_backing_attribute) -> None:
+def test_use_shell_on_class(try_restore_use_shell_state) -> None:
     """USE_SHELL can be written and re-read as a class attribute, always warning."""
-    # We assert in a "safe" order, using reset_backing_attribute only as a backstop.
-    with pytest.deprecated_call() as ctx:
+    with pytest.deprecated_call() as setting:
         Git.USE_SHELL = True
+    with pytest.deprecated_call() as checking:
         set_value = Git.USE_SHELL
+    with pytest.deprecated_call() as resetting:
         Git.USE_SHELL = False
+    with pytest.deprecated_call() as rechecking:
         reset_value = Git.USE_SHELL
 
     # The attribute should take on the values set to it.
     assert set_value is True
     assert reset_value is False
 
-    messages = [str(entry.message) for entry in ctx]
-    set_message, check_message, reset_message, recheck_message = messages
+    # Each access should warn exactly once.
+    (set_message,) = [str(entry.message) for entry in setting]
+    (check_message,) = [str(entry.message) for entry in checking]
+    (reset_message,) = [str(entry.message) for entry in resetting]
+    (recheck_message,) = [str(entry.message) for entry in rechecking]
 
     # Setting it to True should produce the special warning for that.
     assert _USE_SHELL_DEPRECATED_FRAGMENT in set_message
