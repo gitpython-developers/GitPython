@@ -17,6 +17,7 @@ else:
     from typing_extensions import assert_type
 
 import pytest
+from pytest import WarningsRecorder
 
 from git.cmd import Git
 
@@ -93,17 +94,34 @@ def test_get_use_shell_on_class_default() -> None:
     assert not use_shell
 
 
-def test_use_shell_on_class(try_restore_use_shell_state) -> None:
-    """USE_SHELL can be written and re-read as a class attribute, always warning."""
-    with pytest.deprecated_call() as setting:
-        Git.USE_SHELL = True
-    with pytest.deprecated_call() as checking:
-        set_value = Git.USE_SHELL
-    with pytest.deprecated_call() as resetting:
-        Git.USE_SHELL = False
-    with pytest.deprecated_call() as rechecking:
-        reset_value = Git.USE_SHELL
+def test_get_use_shell_on_instance_default() -> None:
+    """USE_SHELL can be read as an instance attribute, defaulting to False and warning.
 
+    This is the same as test_get_use_shell_on_class_default above, but for instances.
+    The test is repeated, instead of using parametrization, for clearer static analysis.
+    """
+    instance = Git()
+
+    with pytest.deprecated_call() as ctx:
+        use_shell = instance.USE_SHELL
+
+    (message,) = [str(entry.message) for entry in ctx]  # Exactly one warning.
+    assert message.startswith(_USE_SHELL_DEPRECATED_FRAGMENT)
+
+    assert_type(use_shell, bool)
+
+    # This comes after the static assertion, just in case it would affect the inference.
+    assert not use_shell
+
+
+def _assert_use_shell_full_results(
+    set_value: bool,
+    reset_value: bool,
+    setting: WarningsRecorder,
+    checking: WarningsRecorder,
+    resetting: WarningsRecorder,
+    rechecking: WarningsRecorder,
+) -> None:
     # The attribute should take on the values set to it.
     assert set_value is True
     assert reset_value is False
@@ -124,7 +142,66 @@ def test_use_shell_on_class(try_restore_use_shell_state) -> None:
     assert recheck_message.startswith(_USE_SHELL_DEPRECATED_FRAGMENT)
 
 
-# FIXME: Test behavior on instances (where we can get but not set).
+def test_use_shell_set_and_get_on_class(try_restore_use_shell_state: None) -> None:
+    """USE_SHELL can be set and re-read as a class attribute, always warning."""
+    with pytest.deprecated_call() as setting:
+        Git.USE_SHELL = True
+    with pytest.deprecated_call() as checking:
+        set_value = Git.USE_SHELL
+    with pytest.deprecated_call() as resetting:
+        Git.USE_SHELL = False
+    with pytest.deprecated_call() as rechecking:
+        reset_value = Git.USE_SHELL
+
+    _assert_use_shell_full_results(
+        set_value,
+        reset_value,
+        setting,
+        checking,
+        resetting,
+        rechecking,
+    )
+
+
+def test_use_shell_set_on_class_get_on_instance(try_restore_use_shell_state: None) -> None:
+    """USE_SHELL can be set on the class and read on an instance, always warning.
+
+    This is like test_use_shell_set_and_get_on_class but it performs reads on an
+    instance. There is some redundancy here in assertions about warnings when the
+    attribute is set, but it is a separate test so that any bugs where a read on the
+    class (or an instance) is needed first before a read on an instance (or the class)
+    are detected.
+    """
+    instance = Git()
+
+    with pytest.deprecated_call() as setting:
+        Git.USE_SHELL = True
+    with pytest.deprecated_call() as checking:
+        set_value = instance.USE_SHELL
+    with pytest.deprecated_call() as resetting:
+        Git.USE_SHELL = False
+    with pytest.deprecated_call() as rechecking:
+        reset_value = instance.USE_SHELL
+
+    _assert_use_shell_full_results(
+        set_value,
+        reset_value,
+        setting,
+        checking,
+        resetting,
+        rechecking,
+    )
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_use_shell_cannot_set_on_instance(
+    value: bool,
+    try_restore_use_shell_state: None,  # In case of a bug where it does set USE_SHELL.
+) -> None:
+    instance = Git()
+    with pytest.raises(AttributeError):
+        instance.USE_SHELL = value
+
 
 # FIXME: Test behavior with multiprocessing (the attribute needs to pickle properly).
 
