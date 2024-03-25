@@ -204,11 +204,8 @@ def test_use_shell_cannot_set_on_instance(
         instance.USE_SHELL = value
 
 
-def _check_use_shell_in_worker(value: bool) -> None:
-    # USE_SHELL should have the value set in the parent before starting the worker.
-    assert Git.USE_SHELL is value
-
-    # FIXME: Check that mutation still works and raises the warning.
+def _get_value_in_current_process() -> bool:
+    return Git.USE_SHELL
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
@@ -220,8 +217,8 @@ def test_use_shell_preserved_in_multiprocessing(
     """The USE_SHELL class attribute pickles accurately for multiprocessing."""
     Git.USE_SHELL = value
     with ProcessPoolExecutor(max_workers=1) as executor:
-        # Calling result() marshals any exception back to this process and raises it.
-        executor.submit(_check_use_shell_in_worker, value).result()
+        marshaled_value = executor.submit(_get_value_in_current_process).result()
+    assert marshaled_value is value
 
 
 _EXPECTED_DIR_SUBSET = {
