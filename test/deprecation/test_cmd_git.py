@@ -11,19 +11,19 @@ A note on multiprocessing
 Because USE_SHELL has no instance state, this module does not include tests of pickling
 and multiprocessing:
 
-- Just as with a simple class attribute, when a class attribute with custom logic is
-  later set to a new value, it may have either its initial value or the new value when
-  accessed from a worker process, depending on the process start method. With "fork",
-  changes are preserved. With "spawn" or "forkserver", re-importing the modules causes
-  initial values to be set. Then the value in the parent at the time it dispatches the
-  task is only set in the children if the parent has the task set it, or if it is set as
-  a side effect of importing needed modules, or of unpickling objects passed to the
-  child (for example, if it is set in a top-level statement of the module that defines
-  the function submitted for the child worker process to call).
+- Just as with a simple class attribute, when a class attribute with custom logic is set
+  to another value, even before a worker process is created that uses the class, the
+  worker process may see either the initial or new value, depending on the process start
+  method. With "fork", changes are preserved. With "spawn" or "forkserver", re-importing
+  the modules causes initial values to be set. Then the value in the parent at the time
+  it dispatches the task is only set in the children if the parent has the task set it,
+  or if it is set as a side effect of importing needed modules, or of unpickling objects
+  passed to the child (for example, if it is set in a top-level statement of the module
+  that defines the function submitted for the child worker process to call).
 
 - When an attribute gains new logic provided by a property or custom descriptor, and the
   attribute involves instance-level state, incomplete or corrupted pickling can break
-  multiprocessing. (For example, if an instance attribute is reimplemented using a
+  multiprocessing. (For example, when an instance attribute is reimplemented using a
   descriptor that stores data in a global WeakKeyDictionary, pickled instances should be
   tested to ensure they are still working correctly.) But nothing like that applies
   here, because instance state is not involved. Although the situation is inherently
@@ -35,8 +35,8 @@ and multiprocessing:
 A note on metaclass conflicts
 =============================
 
-The most important DeprecationWarning is for the code ``Git.USE_SHELL = True``, which is
-a security risk. But this warning may not be possible to implement without a custom
+The most important DeprecationWarning is for code like ``Git.USE_SHELL = True``, which
+is a security risk. But this warning may not be possible to implement without a custom
 metaclass. This is because a descriptor in a class can customize all forms of attribute
 access on its instances, but can only customize getting an attribute on the class.
 Retrieving a descriptor from a class calls its ``__get__`` method (if defined), but
