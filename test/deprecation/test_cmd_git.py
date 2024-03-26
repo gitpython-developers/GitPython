@@ -5,8 +5,11 @@ which can also be accessed through instances. Some tests directly verify its beh
 including deprecation warnings, while others verify that other aspects of attribute
 access are not inadvertently broken by mechanisms introduced to issue the warnings.
 
-A note on multiprocessing: Because USE_SHELL has no instance state, this module does not
-include tests of pickling and multiprocessing.
+A note on multiprocessing
+=========================
+
+Because USE_SHELL has no instance state, this module does not include tests of pickling
+and multiprocessing:
 
 - Just as with a simple class attribute, when a class attribute with custom logic is
   later set to a new value, it may have either its initial value or the new value when
@@ -28,6 +31,26 @@ include tests of pickling and multiprocessing.
 
 - That USE_SHELL cannot be set on instances, and that when retrieved on instances it
   always gives the same value as on the class, is covered in the tests here.
+
+A note on metaclass conflicts
+=============================
+
+The most important DeprecationWarning is for the code ``Git.USE_SHELL = True``, which is
+a security risk. But this warning may not be possible to implement without a custom
+metaclass. This is because a descriptor in a class can customize all forms of attribute
+access on its instances, but can only customize getting an attribute on the class.
+Retrieving a descriptor from a class calls its ``__get__`` method (if defined), but
+replacing or deleting it does not call its ``__set__`` or ``__delete__`` methods.
+
+Adding a metaclass is a potentially breaking change. This is because derived classes
+that use an unrelated metaclass, whether directly or by inheriting from a class such as
+abc.ABC that uses one, will raise TypeError when defined. These would have to be
+modified to use a newly introduced metaclass that is a lower bound of both. Subclasses
+remain unbroken in the far more typical case that they use no custom metaclass.
+
+The tests in this module do not establish whether the danger of setting Git.USE_SHELL to
+True is high enough, and applications of deriving from Git and using an unrelated custom
+metaclass marginal enough, to justify introducing a metaclass to issue the warnings.
 """
 
 import contextlib
