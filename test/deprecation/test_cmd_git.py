@@ -1,12 +1,35 @@
 """Tests for static and dynamic characteristics of Git class and instance attributes.
 
-Currently this all relates to the deprecated :class:`Git.USE_SHELL` class attribute,
+Currently this all relates to the deprecated :attr:`Git.USE_SHELL` class attribute,
 which can also be accessed through instances. Some tests directly verify its behavior,
 including deprecation warnings, while others verify that other aspects of attribute
 access are not inadvertently broken by mechanisms introduced to issue the warnings.
+
+A note on multiprocessing: Because USE_SHELL has no instance state, this module does not
+include tests of pickling and multiprocessing.
+
+- Just as with a simple class attribute, when a class attribute with custom logic is
+  later set to a new value, it may have either its initial value or the new value when
+  accessed from a worker process, depending on the process start method. With "fork",
+  changes are preserved. With "spawn" or "forkserver", re-importing the modules causes
+  initial values to be set. Then the value in the parent at the time it dispatches the
+  task is only set in the children if the parent has the task set it, or if it is set as
+  a side effect of importing needed modules, or of unpickling objects passed to the
+  child (for example, if it is set in a top-level statement of the module that defines
+  the function submitted for the child worker process to call).
+
+- When an attribute gains new logic provided by a property or custom descriptor, and the
+  attribute involves instance-level state, incomplete or corrupted pickling can break
+  multiprocessing. (For example, if an instance attribute is reimplemented using a
+  descriptor that stores data in a global WeakKeyDictionary, pickled instances should be
+  tested to ensure they are still working correctly.) But nothing like that applies
+  here, because instance state is not involved. Although the situation is inherently
+  complex as described above, it is independent of the attribute implementation.
+
+- That USE_SHELL cannot be set on instances, and that when retrieved on instances it
+  always gives the same value as on the class, is covered in the tests here.
 """
 
-from concurrent.futures import ProcessPoolExecutor
 import contextlib
 import sys
 from typing import Generator
@@ -202,23 +225,6 @@ def test_use_shell_cannot_set_on_instance(
     instance = Git()
     with pytest.raises(AttributeError):
         instance.USE_SHELL = value
-
-
-def _get_value_in_current_process() -> bool:
-    return Git.USE_SHELL
-
-
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-@pytest.mark.parametrize("value", [False, True])
-def test_use_shell_preserved_in_multiprocessing(
-    value: bool,
-    restore_use_shell_state: None,
-) -> None:
-    """The USE_SHELL class attribute pickles accurately for multiprocessing."""
-    Git.USE_SHELL = value
-    with ProcessPoolExecutor(max_workers=1) as executor:
-        marshaled_value = executor.submit(_get_value_in_current_process).result()
-    assert marshaled_value is value
 
 
 _EXPECTED_DIR_SUBSET = {
