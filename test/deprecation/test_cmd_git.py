@@ -54,6 +54,7 @@ metaclass marginal enough, to justify introducing a metaclass to issue the warni
 """
 
 import contextlib
+import logging
 import sys
 from typing import Generator
 import unittest.mock
@@ -75,6 +76,8 @@ _USE_SHELL_DEPRECATED_FRAGMENT = "Git.USE_SHELL is deprecated"
 _USE_SHELL_DANGEROUS_FRAGMENT = "Setting Git.USE_SHELL to True is unsafe and insecure"
 """Beginning text of USE_SHELL deprecation warnings when USE_SHELL is set True."""
 
+_logger = logging.getLogger(__name__)
+
 
 @contextlib.contextmanager
 def _suppress_deprecation_warning() -> Generator[None, None, None]:
@@ -85,22 +88,44 @@ def _suppress_deprecation_warning() -> Generator[None, None, None]:
 
 @pytest.fixture
 def restore_use_shell_state() -> Generator[None, None, None]:
-    """Fixture to attempt to restore state associated with the ``USE_SHELL`` attribute.
+    """Fixture to attempt to restore state associated with the USE_SHELL attribute.
 
     This is used to decrease the likelihood of state changes leaking out and affecting
-    other tests. But the goal is not to assert that ``_USE_SHELL`` is used, nor anything
-    about how or when it is used, which is an implementation detail subject to change.
+    other tests. But the goal is not to assert implementation details of USE_SHELL.
 
-    This is possible but inelegant to do with pytest's monkeypatch fixture, which only
-    restores attributes that it has previously been used to change, create, or remove.
+    This covers two of the common implementation strategies, for convenience in testing
+    both. USE_SHELL could be implemented in the metaclass:
+
+    * With a separate _USE_SHELL backing attribute. If using a property or other
+      descriptor, this is the natural way to do it, but custom __getattribute__ and
+      __setattr__ logic, if it does more than adding warnings, may also use that.
+    * Like a simple attribute, using USE_SHELL itself, stored as usual in the class
+      dictionary, with custom __getattribute__/__setattr__ logic only to warn.
+
+    This tries to save private state, tries to save the public attribute value, yields
+    to the test case, tries to restore the public attribute value, then tries to restore
+    private state. The idea is that if the getting or setting logic is wrong in the code
+    under test, the state will still most likely be reset successfully.
     """
     no_value = object()
 
+    # Try to save the original private state.
     try:
-        old_backing_value = Git._USE_SHELL
+        old_private_value = Git._USE_SHELL
     except AttributeError:
-        old_backing_value = no_value
+        separate_backing_attribute = False
+        try:
+            old_private_value = type.__getattribute__(Git, "USE_SHELL")
+        except AttributeError:
+            old_private_value = no_value
+            _logger.error("Cannot retrieve old private _USE_SHELL or USE_SHELL value")
+    else:
+        separate_backing_attribute = True
+
     try:
+        # Try to save the original public value. Rather than attempt to restore a state
+        # where the attribute is not set, if we cannot do this we allow AttributeError
+        # to propagate out of the fixture, erroring the test case before its code runs.
         with _suppress_deprecation_warning():
             old_public_value = Git.USE_SHELL
 
@@ -108,14 +133,15 @@ def restore_use_shell_state() -> Generator[None, None, None]:
         # during the yield. (The outer try-finally catches exceptions in this fixture.)
         yield
 
+        # Try to restore the original public value.
         with _suppress_deprecation_warning():
             Git.USE_SHELL = old_public_value
     finally:
-        if old_backing_value is no_value:
-            with contextlib.suppress(AttributeError):
-                del Git._USE_SHELL
-        else:
-            Git._USE_SHELL = old_backing_value
+        # Try to restore the original private state.
+        if separate_backing_attribute:
+            Git._USE_SHELL = old_private_value
+        elif old_private_value is not no_value:
+            type.__setattr__(Git, "USE_SHELL", old_private_value)
 
 
 def test_cannot_access_undefined_on_git_class() -> None:
@@ -277,7 +303,7 @@ def test_use_shell_is_mock_patchable_on_class_as_object_attribute(
     """
     Git.USE_SHELL = original_value
     if Git.USE_SHELL is not original_value:
-        raise RuntimeError(f"Can't set up the test")
+        raise RuntimeError("Can't set up the test")
     new_value = not original_value
 
     with unittest.mock.patch.object(Git, "USE_SHELL", new_value):
