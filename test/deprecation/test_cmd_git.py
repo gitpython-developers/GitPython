@@ -292,10 +292,11 @@ def test_use_shell_is_mock_patchable_on_class_as_object_attribute(
     correct one to restore, even by a normal setattr.
 
     The effect is that some ways of simulating a class attribute with added behavior can
-    cause a descriptor, such as a property, to be set to its own backing attribute
-    during unpatching; then subsequent reads raise RecursionError. This happens if both
-    (a) setting it on the class is customized in a metaclass and (b) getting it on
-    instances is customized with a descriptor (such as a property) in the class itself.
+    cause a descriptor, such as a property, to be set as the value of its own backing
+    attribute during unpatching; then subsequent reads raise RecursionError. This
+    happens if both (a) setting it on the class is customized in a metaclass and (b)
+    getting it on instances is customized with a descriptor (such as a property) in the
+    class itself.
 
     Although ideally code outside GitPython would not rely on being able to patch
     Git.USE_SHELL with unittest.mock.patch, the technique is widespread. Thus, USE_SHELL
