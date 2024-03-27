@@ -399,28 +399,25 @@ class Git(metaclass=_GitMeta):
 
     _USE_SHELL: bool = False
 
-    @property
-    def USE_SHELL(self) -> bool:
-        """Deprecated. If set to ``True``, a shell will be used to execute git commands.
+    USE_SHELL: bool
+    """Deprecated. If set to ``True``, a shell will be used to execute git commands.
 
-        Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console
-        windows in graphical Windows applications. In 2.0.8 and higher, it provides no
-        benefit, as GitPython solves that problem more robustly and safely by using the
-        ``CREATE_NO_WINDOW`` process creation flag on Windows.
+    Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
+    in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
+    GitPython solves that problem more robustly and safely by using the
+    ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
-        Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any
-        GitPython functions should be updated to use the default value of ``False``
-        instead. ``True`` is unsafe unless the effect of shell expansions is fully
-        considered and accounted for, which is not possible under most circumstances.
+    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
+    functions should be updated to use the default value of ``False`` instead. ``True``
+    is unsafe unless the effect of shell expansions is fully considered and accounted
+    for, which is not possible under most circumstances.
 
-        See:
+    See:
 
-        - :meth:`Git.execute` (on the ``shell`` parameter).
-        - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
-        - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
-        """
-        _warn_use_shell(False)
-        return self._USE_SHELL
+    - :meth:`Git.execute` (on the ``shell`` parameter).
+    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    """
 
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     _refresh_env_var = "GIT_PYTHON_REFRESH"
@@ -921,6 +918,11 @@ class Git(metaclass=_GitMeta):
         """
         if name.startswith("_"):
             return super().__getattribute__(name)
+
+        if name == "USE_SHELL":
+            _warn_use_shell(False)
+            return self._USE_SHELL
+
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     def set_persistent_git_options(self, **kwargs: Any) -> None:
