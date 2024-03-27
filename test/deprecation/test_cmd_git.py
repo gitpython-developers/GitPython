@@ -274,7 +274,7 @@ def test_use_shell_cannot_set_on_instance(
 ) -> None:
     instance = Git()
     with pytest.raises(AttributeError):
-        instance.USE_SHELL = value
+        instance.USE_SHELL = value  # type: ignore[misc]  # Name not in __slots__.
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
