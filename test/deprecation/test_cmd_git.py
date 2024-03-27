@@ -111,7 +111,7 @@ def restore_use_shell_state() -> Generator[None, None, None]:
 
     # Try to save the original private state.
     try:
-        old_private_value = Git._USE_SHELL
+        old_private_value = Git._USE_SHELL  # type: ignore[attr-defined]
     except AttributeError:
         separate_backing_attribute = False
         try:
@@ -139,7 +139,7 @@ def restore_use_shell_state() -> Generator[None, None, None]:
     finally:
         # Try to restore the original private state.
         if separate_backing_attribute:
-            Git._USE_SHELL = old_private_value
+            Git._USE_SHELL = old_private_value  # type: ignore[attr-defined]
         elif old_private_value is not no_value:
             type.__setattr__(Git, "USE_SHELL", old_private_value)
 
