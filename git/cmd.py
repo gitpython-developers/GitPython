@@ -348,7 +348,8 @@ class _GitMeta(type):
     if not TYPE_CHECKING:
         # To preserve static checking for undefined/misspelled attributes while letting
         # the methods' bodies be type-checked, these are defined as non-special methods,
-        # then bound to special names out of view of static type checkers.
+        # then bound to special names out of view of static type checkers. (The original
+        # names invoke name mangling (leading "__") to avoid confusion in other scopes.)
         __getattribute__ = __getattribute
         __setattr__ = __setattr
 
