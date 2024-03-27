@@ -19,6 +19,7 @@ from subprocess import DEVNULL, PIPE, Popen
 import sys
 from textwrap import dedent
 import threading
+import warnings
 
 from git.compat import defenc, force_bytes, safe_decode
 from git.exc import (
@@ -54,6 +55,7 @@ from typing import (
     TYPE_CHECKING,
     TextIO,
     Tuple,
+    Type,
     Union,
     cast,
     overload,
@@ -307,8 +309,45 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 
 ## -- End Utilities -- @}
 
+_USE_SHELL_DEFAULT_MESSAGE = (
+    "Git.USE_SHELL is deprecated, because only its default value of False is safe. "
+    "It will be removed in a future release."
+)
 
-class Git:
+_USE_SHELL_DANGER_MESSAGE = (
+    "Setting Git.USE_SHELL to True is unsafe and insecure, and should be avoided, "
+    "because the effect of shell metacharacters and shell expansions cannot usually be "
+    "accounted for. In addition, Git.USE_SHELL is deprecated and will be removed in a "
+    "future release."
+)
+
+
+def _warn_use_shell(extra_danger: bool) -> None:
+    warnings.warn(
+        _USE_SHELL_DANGER_MESSAGE if extra_danger else _USE_SHELL_DEFAULT_MESSAGE,
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+class _GitMeta(type):
+    """Metaclass for :class:`Git`.
+
+    This helps issue :class:`DeprecationWarning` if :attr:`Git.USE_SHELL` is used.
+    """
+
+    @property
+    def USE_SHELL(cls: Type[Git]) -> bool:
+        _warn_use_shell(False)
+        return cls._USE_SHELL
+
+    @USE_SHELL.setter
+    def USE_SHELL(cls: Type[Git], value: bool) -> None:
+        _warn_use_shell(value)
+        cls._USE_SHELL = value
+
+
+class Git(metaclass=_GitMeta):
     """The Git class manages communication with the Git binary.
 
     It provides a convenient interface to calling the Git binary, such as in::
@@ -358,25 +397,30 @@ class Git:
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
     """Enables debugging of GitPython's git commands."""
 
-    USE_SHELL = False
-    """Deprecated. If set to ``True``, a shell will be used when executing git commands.
+    _USE_SHELL: bool = False
 
-    Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
-    in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
-    GitPython solves that problem more robustly and safely by using the
-    ``CREATE_NO_WINDOW`` process creation flag on Windows.
+    @property
+    def USE_SHELL(self) -> bool:
+        """Deprecated. If set to ``True``, a shell will be used to execute git commands.
 
-    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
-    functions should be updated to use the default value of ``False`` instead. ``True``
-    is unsafe unless the effect of shell expansions is fully considered and accounted
-    for, which is not possible under most circumstances.
+        Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console
+        windows in graphical Windows applications. In 2.0.8 and higher, it provides no
+        benefit, as GitPython solves that problem more robustly and safely by using the
+        ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
-    See:
+        Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any
+        GitPython functions should be updated to use the default value of ``False``
+        instead. ``True`` is unsafe unless the effect of shell expansions is fully
+        considered and accounted for, which is not possible under most circumstances.
 
-    - :meth:`Git.execute` (on the ``shell`` parameter).
-    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
-    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
-    """
+        See:
+
+        - :meth:`Git.execute` (on the ``shell`` parameter).
+        - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+        - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+        """
+        _warn_use_shell(False)
+        return self._USE_SHELL
 
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     _refresh_env_var = "GIT_PYTHON_REFRESH"
@@ -1138,7 +1182,7 @@ class Git:
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
-            shell = self.USE_SHELL
+            shell = self._USE_SHELL
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
