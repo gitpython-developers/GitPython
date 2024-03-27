@@ -335,15 +335,22 @@ class _GitMeta(type):
     This helps issue :class:`DeprecationWarning` if :attr:`Git.USE_SHELL` is used.
     """
 
-    def __getattribute__(cls, name: str) -> Any:
+    def __getattribute(cls, name: str) -> Any:
         if name == "USE_SHELL":
             _warn_use_shell(False)
         return super().__getattribute__(name)
 
-    def __setattr__(cls, name: str, value: Any) -> Any:
+    def __setattr(cls, name: str, value: Any) -> Any:
         if name == "USE_SHELL":
             _warn_use_shell(value)
         super().__setattr__(name, value)
+
+    if not TYPE_CHECKING:
+        # To preserve static checking for undefined/misspelled attributes while letting
+        # the methods' bodies be type-checked, these are defined as non-special methods,
+        # then bound to special names out of view of static type checkers.
+        __getattribute__ = __getattribute
+        __setattr__ = __setattr
 
 
 class Git(metaclass=_GitMeta):
