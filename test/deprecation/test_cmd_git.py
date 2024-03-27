@@ -82,7 +82,7 @@ _logger = logging.getLogger(__name__)
 @contextlib.contextmanager
 def _suppress_deprecation_warning() -> Generator[None, None, None]:
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        warnings.simplefilter("ignore", DeprecationWarning)
         yield
 
 
@@ -311,6 +311,24 @@ def test_use_shell_is_mock_patchable_on_class_as_object_attribute(
         assert Git.USE_SHELL is new_value
 
     assert Git.USE_SHELL is original_value
+
+
+def test_execute_without_shell_arg_does_not_warn() -> None:
+    """No deprecation warning is issued from operations implemented using Git.execute().
+
+    When no ``shell`` argument is passed to Git.execute, which is when the value of
+    USE_SHELL is to be used, the way Git.execute itself accesses USE_SHELL does not
+    issue a deprecation warning.
+    """
+    with warnings.catch_warnings():
+        for category in DeprecationWarning, PendingDeprecationWarning:
+            warnings.filterwarnings(
+                action="error",
+                category=category,
+                module=r"git(?:\.|$)",
+            )
+
+        Git().version()
 
 
 _EXPECTED_DIR_SUBSET = {
