@@ -56,6 +56,7 @@ metaclass marginal enough, to justify introducing a metaclass to issue the warni
 import contextlib
 import sys
 from typing import Generator
+import unittest.mock
 import warnings
 
 if sys.version_info >= (3, 11):
@@ -248,6 +249,41 @@ def test_use_shell_cannot_set_on_instance(
     instance = Git()
     with pytest.raises(AttributeError):
         instance.USE_SHELL = value
+
+
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
+@pytest.mark.parametrize("original_value", [False, True])
+def test_use_shell_is_mock_patchable_on_class_as_object_attribute(
+    original_value: bool,
+    restore_use_shell_state: None,
+) -> None:
+    """Asymmetric patching looking up USE_SHELL in ``__dict__`` doesn't corrupt state.
+
+    Code using GitPython may temporarily set Git.USE_SHELL to a different value. Ideally
+    it does not use unittest.mock.patch to do so, because that makes subtle assumptions
+    about the relationship between attributes and dictionaries. If the attribute can be
+    retrieved from the ``__dict__`` rather than directly, that value is assumed the
+    correct one to restore, even by a normal setattr.
+
+    The effect is that some ways of simulating a class attribute with added behavior can
+    cause a descriptor, such as a property, to be set to its own backing attribute
+    during unpatching; then subsequent reads raise RecursionError. This happens if both
+    (a) setting it on the class is customized in a metaclass and (b) getting it on
+    instances is customized with a descriptor (such as a property) in the class itself.
+
+    Although ideally code outside GitPython would not rely on being able to patch
+    Git.USE_SHELL with unittest.mock.patch, the technique is widespread. Thus, USE_SHELL
+    should be implemented in some way compatible with it. This test checks for that.
+    """
+    Git.USE_SHELL = original_value
+    if Git.USE_SHELL is not original_value:
+        raise RuntimeError(f"Can't set up the test")
+    new_value = not original_value
+
+    with unittest.mock.patch.object(Git, "USE_SHELL", new_value):
+        assert Git.USE_SHELL is new_value
+
+    assert Git.USE_SHELL is original_value
 
 
 _EXPECTED_DIR_SUBSET = {
