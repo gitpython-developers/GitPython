@@ -7,6 +7,7 @@ __all__ = ["DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff
 
 import enum
 import re
+import warnings
 
 from git.cmd import handle_process_output
 from git.compat import defenc
@@ -554,6 +555,11 @@ class Diff:
             This property is deprecated.
             Please use the :attr:`renamed_file` property instead.
         """
+        warnings.warn(
+            "Diff.renamed is deprecated, use Diff.renamed_file instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.renamed_file
 
     @property
