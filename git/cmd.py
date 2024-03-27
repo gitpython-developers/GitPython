@@ -55,7 +55,6 @@ from typing import (
     TYPE_CHECKING,
     TextIO,
     Tuple,
-    Type,
     Union,
     cast,
     overload,
@@ -336,15 +335,15 @@ class _GitMeta(type):
     This helps issue :class:`DeprecationWarning` if :attr:`Git.USE_SHELL` is used.
     """
 
-    @property
-    def USE_SHELL(cls: Type[Git]) -> bool:
-        _warn_use_shell(False)
-        return cls._USE_SHELL
+    def __getattribute__(cls, name: str) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(False)
+        return super().__getattribute__(name)
 
-    @USE_SHELL.setter
-    def USE_SHELL(cls: Type[Git], value: bool) -> None:
-        _warn_use_shell(value)
-        cls._USE_SHELL = value
+    def __setattr__(cls, name: str, value: Any) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(value)
+        super().__setattr__(name, value)
 
 
 class Git(metaclass=_GitMeta):
@@ -397,9 +396,7 @@ class Git(metaclass=_GitMeta):
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
     """Enables debugging of GitPython's git commands."""
 
-    _USE_SHELL: bool = False
-
-    USE_SHELL: bool
+    USE_SHELL: bool = False
     """Deprecated. If set to ``True``, a shell will be used to execute git commands.
 
     Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
@@ -909,6 +906,11 @@ class Git(metaclass=_GitMeta):
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
 
+    def __getattribute__(self, name: str) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(False)
+        return super().__getattribute__(name)
+
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was an object.
 
@@ -918,11 +920,6 @@ class Git(metaclass=_GitMeta):
         """
         if name.startswith("_"):
             return super().__getattribute__(name)
-
-        if name == "USE_SHELL":
-            _warn_use_shell(False)
-            return self._USE_SHELL
-
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     def set_persistent_git_options(self, **kwargs: Any) -> None:
@@ -1184,7 +1181,7 @@ class Git(metaclass=_GitMeta):
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
-            shell = self._USE_SHELL
+            shell = self.USE_SHELL
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
