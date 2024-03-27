@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = ["Git"]
+__all__ = ["GitMeta", "Git"]
 
 import contextlib
 import io
@@ -352,6 +352,32 @@ class _GitMeta(type):
         # names invoke name mangling (leading "__") to avoid confusion in other scopes.)
         __getattribute__ = __getattribute
         __setattr__ = __setattr
+
+
+GitMeta = _GitMeta
+"""Alias of :class:`Git`'s metaclass, whether it is :class:`type` or a custom metaclass.
+
+Whether the :class:`Git` class has the default :class:`type` as its metaclass or uses a
+custom metaclass is not documented and may change at any time. This statically checkable
+metaclass alias is equivalent at runtime to ``type(Git)``. This should almost never be
+used. Code that benefits from it is likely to be remain brittle even if it is used.
+
+In view of the :class:`Git` class's intended use and :class:`Git` objects' dynamic
+callable attributes representing git subcommands, it rarely makes sense to inherit from
+:class:`Git` at all. Using :class:`Git` in multiple inheritance can be especially tricky
+to do correctly. Attempting uses of :class:`Git` where its metaclass is relevant, such
+as when a sibling class has an unrelated metaclass and a shared lower bound metaclass
+might have to be introduced to solve a metaclass conflict, is not recommended.
+
+:note:
+    The correct static type of the :class:`Git` class itself, and any subclasses, is
+    ``Type[Git]``. (This can be written as ``type[Git]`` in Python 3.9 later.)
+
+    :class:`GitMeta` should never be used in any annotation where ``Type[Git]`` is
+    intended or otherwise possible to use. This alias is truly only for very rare and
+    inherently precarious situations where it is necessary to deal with the metaclass
+    explicitly.
+"""
 
 
 class Git(metaclass=_GitMeta):
