@@ -1189,7 +1189,12 @@ class Git(metaclass=_GitMeta):
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
-            shell = self.USE_SHELL
+            # Get the value of USE_SHELL with no deprecation warning. Do this without
+            # warnings.catch_warnings, to avoid a race condition with application code
+            # configuring warnings. The value could be looked up in type(self).__dict__
+            # or Git.__dict__, but those can break under some circumstances. This works
+            # the same as self.USE_SHELL in more situations; see Git.__getattribute__.
+            shell = super().__getattribute__("USE_SHELL")
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
