@@ -1285,7 +1285,7 @@ class IterableObj(Protocol):
 
 
 class IterableClassWatcher(type):
-    """Metaclass that issues :class:`DeprecationWarning` when :class:`git.util.Iterable`
+    """Metaclass that issues :exc:`DeprecationWarning` when :class:`git.util.Iterable`
     is subclassed."""
 
     def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
