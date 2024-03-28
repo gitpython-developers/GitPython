@@ -15,6 +15,7 @@ from git.repo import Repo
 @pytest.fixture
 def single_diff(tmp_path):
     """Fixture to supply a single-file diff."""
+    # TODO: Consider making a fake diff rather than using a real repo and commit.
     (tmp_path / "a.txt").write_text("hello\n", encoding="utf-8")
     repo = Repo.init(tmp_path)
     repo.index.add(["a.txt"])
