@@ -50,3 +50,21 @@ def test_diff_renamed_file_does_not_warn(diff):
     """The preferred Diff.renamed_file property issues no deprecation warning."""
     with _assert_no_deprecation_warning():
         diff.renamed_file
+
+
+def test_commit_trailers_warns(commit):
+    """The deprecated Commit.trailers property issues a deprecation warning."""
+    with pytest.deprecated_call():
+        commit.trailers
+
+
+def test_commit_trailers_list_does_not_warn(commit):
+    """The nondeprecated Commit.trailers_list property issues no deprecation warning."""
+    with _assert_no_deprecation_warning():
+        commit.trailers_list
+
+
+def test_commit_trailers_dict_does_not_warn(commit):
+    """The nondeprecated Commit.trailers_dict property issues no deprecation warning."""
+    with _assert_no_deprecation_warning():
+        commit.trailers_dict
