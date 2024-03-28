@@ -4,6 +4,7 @@
 """Tests of assorted deprecation warnings with no extra subtleties to check."""
 
 import gc
+import warnings
 
 import pytest
 
@@ -25,5 +26,14 @@ def single_diff(tmp_path):
 
 
 def test_diff_renamed_warns(single_diff):
+    """The deprecated Diff.renamed property issues a deprecation warning."""
     with pytest.deprecated_call():
         single_diff.renamed
+
+
+def test_diff_renamed_file_does_not_warn(single_diff):
+    """The preferred Diff.renamed_file property issues no deprecation warning."""
+    with warnings.catch_warnings():
+        # FIXME: Refine this to filter for deprecation warnings from GitPython.
+        warnings.simplefilter("error", DeprecationWarning)
+        single_diff.renamed_file
