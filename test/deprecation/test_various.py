@@ -10,6 +10,7 @@ import warnings
 import pytest
 
 from git.diff import NULL_TREE
+from git.objects.util import Traversable
 from git.repo import Repo
 
 
@@ -68,3 +69,27 @@ def test_commit_trailers_dict_does_not_warn(commit):
     """The nondeprecated Commit.trailers_dict property issues no deprecation warning."""
     with _assert_no_deprecation_warning():
         commit.trailers_dict
+
+
+def test_traverse_list_traverse_in_base_class_warns(commit):
+    """Traversable.list_traverse's base implementation issues a deprecation warning."""
+    with pytest.deprecated_call():
+        Traversable.list_traverse(commit)
+
+
+def test_traversable_list_traverse_override_does_not_warn(commit):
+    """Calling list_traverse on concrete subclasses is not deprecated, does not warn."""
+    with _assert_no_deprecation_warning():
+        commit.list_traverse()
+
+
+def test_traverse_traverse_in_base_class_warns(commit):
+    """Traversable.traverse's base implementation issues a deprecation warning."""
+    with pytest.deprecated_call():
+        Traversable.traverse(commit)
+
+
+def test_traverse_traverse_override_does_not_warn(commit):
+    """Calling traverse on concrete subclasses is not deprecated, does not warn."""
+    with _assert_no_deprecation_warning():
+        commit.traverse()
