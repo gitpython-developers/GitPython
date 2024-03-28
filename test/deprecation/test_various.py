@@ -4,7 +4,6 @@
 """Tests of assorted deprecation warnings with no extra subtleties to check."""
 
 import contextlib
-import gc
 import warnings
 
 import pytest
@@ -31,8 +30,7 @@ def commit(tmp_path):
     repo = Repo.init(tmp_path)
     repo.index.add(["a.txt"])
     yield repo.index.commit("Initial commit")
-    del repo
-    gc.collect()
+    repo.close()
 
 
 @pytest.fixture
