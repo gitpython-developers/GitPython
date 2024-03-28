@@ -1,7 +1,19 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Tests of assorted deprecation warnings with no extra subtleties to check."""
+"""Tests of assorted deprecation warnings when there are no extra subtleties to check.
+
+This tests deprecation warnings where all that needs be verified is that a deprecated
+property, function, or class issues a DeprecationWarning when used and, if applicable,
+that recommended alternatives do not issue the warning.
+
+This is in contrast to other modules within test.deprecation, which test warnings where
+there is a risk of breaking other runtime behavior, or of breaking static type checking
+or making it less useful, by introducing the warning or in plausible future changes to
+how the warning is implemented. That happens when it is necessary to customize attribute
+access on a module or class, in a way it was not customized before, to issue a warning.
+It is inapplicable to the deprecations whose warnings are tested in this module.
+"""
 
 import contextlib
 import warnings
