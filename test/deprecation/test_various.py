@@ -12,6 +12,7 @@ import pytest
 from git.diff import NULL_TREE
 from git.objects.util import Traversable
 from git.repo import Repo
+from git.util import Iterable as _Iterable, IterableObj
 
 
 @contextlib.contextmanager
@@ -93,3 +94,19 @@ def test_traverse_traverse_override_does_not_warn(commit):
     """Calling traverse on concrete subclasses is not deprecated, does not warn."""
     with _assert_no_deprecation_warning():
         commit.traverse()
+
+
+def test_iterable_inheriting_warns():
+    """Subclassing the deprecated git.util.Iterable issues a deprecation warning."""
+    with pytest.deprecated_call():
+
+        class Derived(_Iterable):
+            pass
+
+
+def test_iterable_obj_inheriting_does_not_warn():
+    """Subclassing git.util.IterableObj is not deprecated, does not warn."""
+    with _assert_no_deprecation_warning():
+
+        class Derived(IterableObj):
+            pass
