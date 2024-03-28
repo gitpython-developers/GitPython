@@ -621,6 +621,8 @@ class Remote(LazyMixin, IterableObj):
             return True
         except cp.NoSectionError:
             return False
+        except ValueError:
+            return False
 
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator["Remote"]:
