@@ -383,7 +383,7 @@ def test_class_dir() -> None:
 def test_instance_dir() -> None:
     """dir() on Git objects includes its statically known attributes.
 
-    This is like test_class_dir, but for Git instance rather than the class itself.
+    This is like test_class_dir, but for Git instances rather than the class itself.
     """
     instance = Git()
     actual = set(dir(instance))
