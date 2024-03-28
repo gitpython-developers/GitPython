@@ -3,6 +3,7 @@
 
 """Tests of assorted deprecation warnings with no extra subtleties to check."""
 
+import contextlib
 import gc
 import warnings
 
@@ -10,6 +11,15 @@ import pytest
 
 from git.diff import NULL_TREE
 from git.repo import Repo
+
+
+@contextlib.contextmanager
+def _assert_no_deprecation_warning():
+    """Context manager to assert that code does not issue any deprecation warnings."""
+    with warnings.catch_warnings():
+        # FIXME: Refine this to filter for deprecation warnings from GitPython.
+        warnings.simplefilter("error", DeprecationWarning)
+        yield
 
 
 @pytest.fixture
@@ -26,7 +36,6 @@ def commit(tmp_path):
 @pytest.fixture
 def diff(commit):
     """Fixture to supply a single-file diff."""
-    # TODO: Consider making a fake diff rather than using a real repo and commit.
     (diff,) = commit.diff(NULL_TREE)  # Exactly one file in the diff.
     yield diff
 
@@ -39,7 +48,5 @@ def test_diff_renamed_warns(diff):
 
 def test_diff_renamed_file_does_not_warn(diff):
     """The preferred Diff.renamed_file property issues no deprecation warning."""
-    with warnings.catch_warnings():
-        # FIXME: Refine this to filter for deprecation warnings from GitPython.
-        warnings.simplefilter("error", DeprecationWarning)
+    with _assert_no_deprecation_warning():
         diff.renamed_file
