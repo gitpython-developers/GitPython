@@ -25,9 +25,21 @@ from git.objects.util import Traversable
 from git.repo import Repo
 from git.util import Iterable as _Iterable, IterableObj
 
+# typing -----------------------------------------------------------------
+
+from typing import Generator, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from git.diff import Diff
+    from git.objects.commit import Commit
+
+# ------------------------------------------------------------------------
+
 
 @contextlib.contextmanager
-def _assert_no_deprecation_warning():
+def _assert_no_deprecation_warning() -> Generator[None, None, None]:
     """Context manager to assert that code does not issue any deprecation warnings."""
     with warnings.catch_warnings():
         # FIXME: Refine this to filter for deprecation warnings from GitPython.
@@ -36,7 +48,7 @@ def _assert_no_deprecation_warning():
 
 
 @pytest.fixture
-def commit(tmp_path):
+def commit(tmp_path: "Path") -> Generator["Commit", None, None]:
     """Fixture to supply a one-commit repo's commit, enough for deprecation tests."""
     (tmp_path / "a.txt").write_text("hello\n", encoding="utf-8")
     repo = Repo.init(tmp_path)
@@ -46,67 +58,67 @@ def commit(tmp_path):
 
 
 @pytest.fixture
-def diff(commit):
+def diff(commit: "Commit") -> Generator["Diff", None, None]:
     """Fixture to supply a single-file diff."""
     (diff,) = commit.diff(NULL_TREE)  # Exactly one file in the diff.
     yield diff
 
 
-def test_diff_renamed_warns(diff):
+def test_diff_renamed_warns(diff: "Diff") -> None:
     """The deprecated Diff.renamed property issues a deprecation warning."""
     with pytest.deprecated_call():
         diff.renamed
 
 
-def test_diff_renamed_file_does_not_warn(diff):
+def test_diff_renamed_file_does_not_warn(diff: "Diff") -> None:
     """The preferred Diff.renamed_file property issues no deprecation warning."""
     with _assert_no_deprecation_warning():
         diff.renamed_file
 
 
-def test_commit_trailers_warns(commit):
+def test_commit_trailers_warns(commit: "Commit") -> None:
     """The deprecated Commit.trailers property issues a deprecation warning."""
     with pytest.deprecated_call():
         commit.trailers
 
 
-def test_commit_trailers_list_does_not_warn(commit):
+def test_commit_trailers_list_does_not_warn(commit: "Commit") -> None:
     """The nondeprecated Commit.trailers_list property issues no deprecation warning."""
     with _assert_no_deprecation_warning():
         commit.trailers_list
 
 
-def test_commit_trailers_dict_does_not_warn(commit):
+def test_commit_trailers_dict_does_not_warn(commit: "Commit") -> None:
     """The nondeprecated Commit.trailers_dict property issues no deprecation warning."""
     with _assert_no_deprecation_warning():
         commit.trailers_dict
 
 
-def test_traverse_list_traverse_in_base_class_warns(commit):
+def test_traverse_list_traverse_in_base_class_warns(commit: "Commit") -> None:
     """Traversable.list_traverse's base implementation issues a deprecation warning."""
     with pytest.deprecated_call():
         Traversable.list_traverse(commit)
 
 
-def test_traversable_list_traverse_override_does_not_warn(commit):
+def test_traversable_list_traverse_override_does_not_warn(commit: "Commit") -> None:
     """Calling list_traverse on concrete subclasses is not deprecated, does not warn."""
     with _assert_no_deprecation_warning():
         commit.list_traverse()
 
 
-def test_traverse_traverse_in_base_class_warns(commit):
+def test_traverse_traverse_in_base_class_warns(commit: "Commit") -> None:
     """Traversable.traverse's base implementation issues a deprecation warning."""
     with pytest.deprecated_call():
         Traversable.traverse(commit)
 
 
-def test_traverse_traverse_override_does_not_warn(commit):
+def test_traverse_traverse_override_does_not_warn(commit: "Commit") -> None:
     """Calling traverse on concrete subclasses is not deprecated, does not warn."""
     with _assert_no_deprecation_warning():
         commit.traverse()
 
 
-def test_iterable_inheriting_warns():
+def test_iterable_inheriting_warns() -> None:
     """Subclassing the deprecated git.util.Iterable issues a deprecation warning."""
     with pytest.deprecated_call():
 
@@ -114,7 +126,7 @@ def test_iterable_inheriting_warns():
             pass
 
 
-def test_iterable_obj_inheriting_does_not_warn():
+def test_iterable_obj_inheriting_does_not_warn() -> None:
     """Subclassing git.util.IterableObj is not deprecated, does not warn."""
     with _assert_no_deprecation_warning():
 
