@@ -1,7 +1,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Tests for static and dynamic characteristics of Git class and instance attributes.
+"""Tests for dynamic and static characteristics of Git class and instance attributes.
 
 Currently this all relates to the deprecated :attr:`Git.USE_SHELL` class attribute,
 which can also be accessed through instances. Some tests directly verify its behavior,
