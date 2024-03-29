@@ -1,3 +1,6 @@
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 """Tests for dynamic and static characteristics of git.compat module attributes.
 
 These tests verify that the is_<platform> attributes are available, and are even listed
