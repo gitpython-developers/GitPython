@@ -169,6 +169,8 @@ try:
         IndexEntry,
         IndexFile,
         StageType,
+        # NOTE: This tells type checkers what util resolves to. We delete it, and it is
+        # really resolved by __getattr__, which warns. See below on what to use instead.
         util,
     )
     from git.util import (  # @NoMove
@@ -181,27 +183,6 @@ try:
     )
 except GitError as _exc:
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
-
-
-# NOTE: The expression `git.util` evaluates to git.index.util and `from git import util`
-# imports git.index.util, NOT git.util. It may not be feasible to change this until the
-# next major version, to avoid breaking code inadvertently relying on it.
-#
-# - If git.index.util *is* what you want, use or import from that, to avoid confusion.
-#
-# - To use the "real" git.util module, write `from git.util import ...`, or if necessary
-#   access it as `sys.modules["git.util"]`.
-#
-# (This differs from other indirect-submodule imports that are unambiguously non-public
-# and subject to immediate removal. Here, the public git.util module, though different,
-# makes less discoverable that the expression `git.util` refers to a non-public
-# attribute of the git module.)
-#
-# This had come about by a wildcard import. Now that all intended imports are explicit,
-# the intuitive but potentially incompatible binding occurs due to the usual rules for
-# Python submodule bindings. So for now we delete that and let __getattr__ handle it.
-#
-del util
 
 
 def _warned_import(message: str, fullname: str) -> "ModuleType":
@@ -242,7 +223,36 @@ def _getattr(name: str) -> Any:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-if not TYPE_CHECKING:  # Preserve static checking for undefined/misspelled attributes.
+if not TYPE_CHECKING:
+    # NOTE: The expression `git.util` gives git.index.util and `from git import util`
+    # imports git.index.util, NOT git.util. It may not be feasible to change this until
+    # the next major version, to avoid breaking code inadvertently relying on it.
+    #
+    # - If git.index.util *is* what you want, use (or import from) that, to avoid
+    #   confusion.
+    #
+    # - To use the "real" git.util module, write `from git.util import ...`, or if
+    #   necessary access it as `sys.modules["git.util"]`.
+    #
+    # Note also that `import git.util` technically imports the "real" git.util... but
+    # the *expression* `git.util` after doing so is still git.index.util!
+    #
+    # (This situation differs from that of other indirect-submodule imports that are
+    # unambiguously non-public and subject to immediate removal. Here, the public
+    # git.util module, though different, makes less discoverable that the expression
+    # `git.util` refers to a non-public attribute of the git module.)
+    #
+    # This had originally come about by a wildcard import. Now that all intended imports
+    # are explicit, the intuitive but potentially incompatible binding occurs due to the
+    # usual rules for Python submodule bindings. So for now we replace that binding with
+    # git.index.util, delete that, and let __getattr__ handle it and issue a warning.
+    #
+    # For the same runtime behavior, it would be enough to forgo importing util, and
+    # delete util as created naturally; __getattr__ would behave the same. But type
+    # checkers would not know what util refers to when accessed as an attribute of git.
+    del util
+
+    # This is "hidden" to preserve static checking for undefined/misspelled attributes.
     __getattr__ = _getattr
 
 # { Initialize git executable path
