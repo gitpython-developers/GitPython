@@ -405,23 +405,45 @@ class Git(metaclass=_GitMeta):
     """Enables debugging of GitPython's git commands."""
 
     USE_SHELL: bool = False
-    """Deprecated. If set to ``True``, a shell will be used to execute git commands.
+    """Deprecated. If set to ``True``, a shell will be used when executing git commands.
+
+    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
+    functions should be updated to use the default value of ``False`` instead. ``True``
+    is unsafe unless the effect of syntax treated specially by the shell is fully
+    considered and accounted for, which is not possible under most circumstances. As
+    detailed below, it is also no longer needed, even where it had been in the past.
+
+    In addition, how a value of ``True`` interacts with some aspects of GitPython's
+    operation is not precisely specified and may change without warning, even before
+    GitPython 4.0.0 when :attr:`USE_SHELL` may be removed. This includes:
+
+    * Whether or how GitPython automatically customizes the shell environment.
+
+    * Whether, outside of Windows (where :class:`subprocess.Popen` supports lists of
+      separate arguments even when ``shell=True``), this can be used with any GitPython
+      functionality other than direct calls to the :meth:`execute` method.
+
+    * Whether any GitPython feature that runs git commands ever attempts to partially
+      sanitize data a shell may treat specially. Currently this is not done.
 
     Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
     in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
     GitPython solves that problem more robustly and safely by using the
     ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
-    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
-    functions should be updated to use the default value of ``False`` instead. ``True``
-    is unsafe unless the effect of shell expansions is fully considered and accounted
-    for, which is not possible under most circumstances.
+    Because Windows path search differs subtly based on whether a shell is used, in rare
+    cases changing this from ``True`` to ``False`` may keep an unusual git "executable",
+    such as a batch file, from being found. To fix this, set the command name or full
+    path in the :envvar:`GIT_PYTHON_GIT_EXECUTABLE` environment variable or pass the
+    full path to :func:`git.refresh` (or invoke the script using a ``.exe`` shim).
 
-    See:
+    Further reading:
 
-    - :meth:`Git.execute` (on the ``shell`` parameter).
-    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
-    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    * :meth:`Git.execute` (on the ``shell`` parameter).
+    * https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+    * https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    * https://github.com/python/cpython/issues/91558#issuecomment-1100942950
+    * https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
     """
 
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
