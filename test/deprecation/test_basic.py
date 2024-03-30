@@ -15,15 +15,14 @@ access on a module or class, in a way it was not customized before, to issue a w
 It is inapplicable to the deprecations whose warnings are tested in this module.
 """
 
-import contextlib
-import warnings
-
 import pytest
 
 from git.diff import NULL_TREE
 from git.objects.util import Traversable
 from git.repo import Repo
 from git.util import Iterable as _Iterable, IterableObj
+
+from .lib import assert_no_deprecation_warning
 
 # typing -----------------------------------------------------------------
 
@@ -36,15 +35,6 @@ if TYPE_CHECKING:
     from git.objects.commit import Commit
 
 # ------------------------------------------------------------------------
-
-
-@contextlib.contextmanager
-def _assert_no_deprecation_warning() -> Generator[None, None, None]:
-    """Context manager to assert that code does not issue any deprecation warnings."""
-    with warnings.catch_warnings():
-        # FIXME: Refine this to filter for deprecation warnings from GitPython.
-        warnings.simplefilter("error", DeprecationWarning)
-        yield
 
 
 @pytest.fixture
@@ -72,7 +62,7 @@ def test_diff_renamed_warns(diff: "Diff") -> None:
 
 def test_diff_renamed_file_does_not_warn(diff: "Diff") -> None:
     """The preferred Diff.renamed_file property issues no deprecation warning."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
         diff.renamed_file
 
 
@@ -84,13 +74,13 @@ def test_commit_trailers_warns(commit: "Commit") -> None:
 
 def test_commit_trailers_list_does_not_warn(commit: "Commit") -> None:
     """The nondeprecated Commit.trailers_list property issues no deprecation warning."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
         commit.trailers_list
 
 
 def test_commit_trailers_dict_does_not_warn(commit: "Commit") -> None:
     """The nondeprecated Commit.trailers_dict property issues no deprecation warning."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
         commit.trailers_dict
 
 
@@ -102,7 +92,7 @@ def test_traverse_list_traverse_in_base_class_warns(commit: "Commit") -> None:
 
 def test_traversable_list_traverse_override_does_not_warn(commit: "Commit") -> None:
     """Calling list_traverse on concrete subclasses is not deprecated, does not warn."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
         commit.list_traverse()
 
 
@@ -114,7 +104,7 @@ def test_traverse_traverse_in_base_class_warns(commit: "Commit") -> None:
 
 def test_traverse_traverse_override_does_not_warn(commit: "Commit") -> None:
     """Calling traverse on concrete subclasses is not deprecated, does not warn."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
         commit.traverse()
 
 
@@ -128,7 +118,7 @@ def test_iterable_inheriting_warns() -> None:
 
 def test_iterable_obj_inheriting_does_not_warn() -> None:
     """Subclassing git.util.IterableObj is not deprecated, does not warn."""
-    with _assert_no_deprecation_warning():
+    with assert_no_deprecation_warning():
 
         class Derived(IterableObj):
             pass

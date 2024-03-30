@@ -56,12 +56,10 @@ True is high enough, and applications of deriving from Git and using an unrelate
 metaclass marginal enough, to justify introducing a metaclass to issue the warnings.
 """
 
-import contextlib
 import logging
 import sys
 from typing import Generator
 import unittest.mock
-import warnings
 
 if sys.version_info >= (3, 11):
     from typing import assert_type
@@ -73,6 +71,8 @@ from pytest import WarningsRecorder
 
 from git.cmd import Git
 
+from .lib import assert_no_deprecation_warning, suppress_deprecation_warning
+
 _USE_SHELL_DEPRECATED_FRAGMENT = "Git.USE_SHELL is deprecated"
 """Text contained in all USE_SHELL deprecation warnings, and starting most of them."""
 
@@ -80,13 +80,6 @@ _USE_SHELL_DANGEROUS_FRAGMENT = "Setting Git.USE_SHELL to True is unsafe and ins
 """Beginning text of USE_SHELL deprecation warnings when USE_SHELL is set True."""
 
 _logger = logging.getLogger(__name__)
-
-
-@contextlib.contextmanager
-def _suppress_deprecation_warning() -> Generator[None, None, None]:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        yield
 
 
 @pytest.fixture
@@ -129,7 +122,7 @@ def restore_use_shell_state() -> Generator[None, None, None]:
         # Try to save the original public value. Rather than attempt to restore a state
         # where the attribute is not set, if we cannot do this we allow AttributeError
         # to propagate out of the fixture, erroring the test case before its code runs.
-        with _suppress_deprecation_warning():
+        with suppress_deprecation_warning():
             old_public_value = Git.USE_SHELL
 
         # This doesn't have its own try-finally because pytest catches exceptions raised
@@ -137,7 +130,7 @@ def restore_use_shell_state() -> Generator[None, None, None]:
         yield
 
         # Try to restore the original public value.
-        with _suppress_deprecation_warning():
+        with suppress_deprecation_warning():
             Git.USE_SHELL = old_public_value
     finally:
         # Try to restore the original private state.
@@ -323,14 +316,7 @@ def test_execute_without_shell_arg_does_not_warn() -> None:
     USE_SHELL is to be used, the way Git.execute itself accesses USE_SHELL does not
     issue a deprecation warning.
     """
-    with warnings.catch_warnings():
-        for category in DeprecationWarning, PendingDeprecationWarning:
-            warnings.filterwarnings(
-                action="error",
-                category=category,
-                module=r"git(?:\.|$)",
-            )
-
+    with assert_no_deprecation_warning():
         Git().version()
 
 
