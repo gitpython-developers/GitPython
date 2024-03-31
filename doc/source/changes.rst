@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.43
+======
+
+A major visible change will be the added deprecation- or user-warnings,
+and greatly improved typing.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.43
+
 3.1.42
 ======
 
