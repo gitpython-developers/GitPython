@@ -314,10 +314,10 @@ _USE_SHELL_DEFAULT_MESSAGE = (
 )
 
 _USE_SHELL_DANGER_MESSAGE = (
-    "Setting Git.USE_SHELL to True is unsafe and insecure, and should be avoided, "
-    "because the effect of shell metacharacters and shell expansions cannot usually be "
-    "accounted for. In addition, Git.USE_SHELL is deprecated and will be removed in a "
-    "future release."
+    "Setting Git.USE_SHELL to True is unsafe and insecure, as the effect of special "
+    "shell syntax cannot usually be accounted for. This can result in a command "
+    "injection vulnerability and arbitrary code execution. Git.USE_SHELL is deprecated "
+    "and will be removed in a future release."
 )
 
 
@@ -412,6 +412,13 @@ class Git(metaclass=_GitMeta):
     is unsafe unless the effect of syntax treated specially by the shell is fully
     considered and accounted for, which is not possible under most circumstances. As
     detailed below, it is also no longer needed, even where it had been in the past.
+
+    It is in many if not most cases a command injection vulnerability for an application
+    to set :attr:`USE_SHELL` to ``True``. Any attacker who can cause a specially crafted
+    fragment of text to make its way into any part of any argument to any git command
+    (including paths, branch names, etc.) can cause the shell to read and write
+    arbitrary files and execute arbitrary commands. Innocent input may also accidentally
+    contain special shell syntax, leading to inadvertent malfunctions.
 
     In addition, how a value of ``True`` interacts with some aspects of GitPython's
     operation is not precisely specified and may change without warning, even before
