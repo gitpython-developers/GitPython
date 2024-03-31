@@ -13,6 +13,7 @@ use some of these utilities, in some cases for compatibility across different pl
 import locale
 import os
 import sys
+import warnings
 
 from gitdb.utils.encoding import force_bytes, force_text  # noqa: F401
 
@@ -23,7 +24,9 @@ from typing import (
     AnyStr,
     Dict,  # noqa: F401
     IO,  # noqa: F401
+    List,
     Optional,
+    TYPE_CHECKING,
     Tuple,  # noqa: F401
     Type,  # noqa: F401
     Union,
@@ -33,7 +36,37 @@ from typing import (
 # ---------------------------------------------------------------------------
 
 
-is_win = os.name == "nt"
+_deprecated_platform_aliases = {
+    "is_win": os.name == "nt",
+    "is_posix": os.name == "posix",
+    "is_darwin": sys.platform == "darwin",
+}
+
+
+def _getattr(name: str) -> Any:
+    try:
+        value = _deprecated_platform_aliases[name]
+    except KeyError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+
+    warnings.warn(
+        f"{__name__}.{name} and other is_<platform> aliases are deprecated. "
+        "Write the desired os.name or sys.platform check explicitly instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return value
+
+
+if not TYPE_CHECKING:  # Preserve static checking for undefined/misspelled attributes.
+    __getattr__ = _getattr
+
+
+def __dir__() -> List[str]:
+    return [*globals(), *_deprecated_platform_aliases]
+
+
+is_win: bool
 """Deprecated alias for ``os.name == "nt"`` to check for native Windows.
 
 This is deprecated because it is clearer to write out :attr:`os.name` or
@@ -45,7 +78,7 @@ used.
     Cygwin, use ``sys.platform == "cygwin"``.
 """
 
-is_posix = os.name == "posix"
+is_posix: bool
 """Deprecated alias for ``os.name == "posix"`` to check for Unix-like ("POSIX") systems.
 
 This is deprecated because it clearer to write out :attr:`os.name` or
@@ -58,7 +91,7 @@ used.
     (Darwin).
 """
 
-is_darwin = sys.platform == "darwin"
+is_darwin: bool
 """Deprecated alias for ``sys.platform == "darwin"`` to check for macOS (Darwin).
 
 This is deprecated because it clearer to write out :attr:`os.name` or

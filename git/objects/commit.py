@@ -14,6 +14,7 @@ import re
 from subprocess import Popen, PIPE
 import sys
 from time import altzone, daylight, localtime, time, timezone
+import warnings
 
 from gitdb import IStream
 
@@ -399,6 +400,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Dictionary containing whitespace stripped trailer information.
             Only contains the latest instance of each trailer key.
         """
+        warnings.warn(
+            "Commit.trailers is deprecated, use Commit.trailers_list or Commit.trailers_dict instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property

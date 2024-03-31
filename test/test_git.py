@@ -669,13 +669,13 @@ class TestGit(TestBase):
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
 
             if sys.platform == "win32":
-                # On Windows, use a shell so "git" finds "git.cmd". (In the infrequent
-                # case that this effect is desired in production code, it should not be
-                # done with this technique. USE_SHELL=True is less secure and reliable,
-                # as unintended shell expansions can occur, and is deprecated. Instead,
-                # use a custom command, by setting the GIT_PYTHON_GIT_EXECUTABLE
-                # environment variable to git.cmd or by passing git.cmd's full path to
-                # git.refresh. Or wrap the script with a .exe shim.)
+                # On Windows, use a shell so "git" finds "git.cmd". The correct and safe
+                # ways to do this straightforwardly are to set GIT_PYTHON_GIT_EXECUTABLE
+                # to git.cmd in the environment, or call git.refresh with the command's
+                # full path. See the Git.USE_SHELL docstring for deprecation details.
+                # But this tests a "default" scenario where neither is done. The
+                # approach used here, setting USE_SHELL to True so PATHEXT is honored,
+                # should not be used in production code (nor even in most test cases).
                 stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
 
             new_git = Git()

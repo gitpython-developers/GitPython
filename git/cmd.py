@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = ["Git"]
+__all__ = ["GitMeta", "Git"]
 
 import contextlib
 import io
@@ -19,6 +19,7 @@ from subprocess import DEVNULL, PIPE, Popen
 import sys
 from textwrap import dedent
 import threading
+import warnings
 
 from git.compat import defenc, force_bytes, safe_decode
 from git.exc import (
@@ -307,8 +308,79 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 
 ## -- End Utilities -- @}
 
+_USE_SHELL_DEFAULT_MESSAGE = (
+    "Git.USE_SHELL is deprecated, because only its default value of False is safe. "
+    "It will be removed in a future release."
+)
 
-class Git:
+_USE_SHELL_DANGER_MESSAGE = (
+    "Setting Git.USE_SHELL to True is unsafe and insecure, as the effect of special "
+    "shell syntax cannot usually be accounted for. This can result in a command "
+    "injection vulnerability and arbitrary code execution. Git.USE_SHELL is deprecated "
+    "and will be removed in a future release."
+)
+
+
+def _warn_use_shell(extra_danger: bool) -> None:
+    warnings.warn(
+        _USE_SHELL_DANGER_MESSAGE if extra_danger else _USE_SHELL_DEFAULT_MESSAGE,
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+class _GitMeta(type):
+    """Metaclass for :class:`Git`.
+
+    This helps issue :class:`DeprecationWarning` if :attr:`Git.USE_SHELL` is used.
+    """
+
+    def __getattribute(cls, name: str) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(False)
+        return super().__getattribute__(name)
+
+    def __setattr(cls, name: str, value: Any) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(value)
+        super().__setattr__(name, value)
+
+    if not TYPE_CHECKING:
+        # To preserve static checking for undefined/misspelled attributes while letting
+        # the methods' bodies be type-checked, these are defined as non-special methods,
+        # then bound to special names out of view of static type checkers. (The original
+        # names invoke name mangling (leading "__") to avoid confusion in other scopes.)
+        __getattribute__ = __getattribute
+        __setattr__ = __setattr
+
+
+GitMeta = _GitMeta
+"""Alias of :class:`Git`'s metaclass, whether it is :class:`type` or a custom metaclass.
+
+Whether the :class:`Git` class has the default :class:`type` as its metaclass or uses a
+custom metaclass is not documented and may change at any time. This statically checkable
+metaclass alias is equivalent at runtime to ``type(Git)``. This should almost never be
+used. Code that benefits from it is likely to be remain brittle even if it is used.
+
+In view of the :class:`Git` class's intended use and :class:`Git` objects' dynamic
+callable attributes representing git subcommands, it rarely makes sense to inherit from
+:class:`Git` at all. Using :class:`Git` in multiple inheritance can be especially tricky
+to do correctly. Attempting uses of :class:`Git` where its metaclass is relevant, such
+as when a sibling class has an unrelated metaclass and a shared lower bound metaclass
+might have to be introduced to solve a metaclass conflict, is not recommended.
+
+:note:
+    The correct static type of the :class:`Git` class itself, and any subclasses, is
+    ``Type[Git]``. (This can be written as ``type[Git]`` in Python 3.9 later.)
+
+    :class:`GitMeta` should never be used in any annotation where ``Type[Git]`` is
+    intended or otherwise possible to use. This alias is truly only for very rare and
+    inherently precarious situations where it is necessary to deal with the metaclass
+    explicitly.
+"""
+
+
+class Git(metaclass=_GitMeta):
     """The Git class manages communication with the Git binary.
 
     It provides a convenient interface to calling the Git binary, such as in::
@@ -358,24 +430,53 @@ class Git:
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
     """Enables debugging of GitPython's git commands."""
 
-    USE_SHELL = False
+    USE_SHELL: bool = False
     """Deprecated. If set to ``True``, a shell will be used when executing git commands.
+
+    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
+    functions should be updated to use the default value of ``False`` instead. ``True``
+    is unsafe unless the effect of syntax treated specially by the shell is fully
+    considered and accounted for, which is not possible under most circumstances. As
+    detailed below, it is also no longer needed, even where it had been in the past.
+
+    It is in many if not most cases a command injection vulnerability for an application
+    to set :attr:`USE_SHELL` to ``True``. Any attacker who can cause a specially crafted
+    fragment of text to make its way into any part of any argument to any git command
+    (including paths, branch names, etc.) can cause the shell to read and write
+    arbitrary files and execute arbitrary commands. Innocent input may also accidentally
+    contain special shell syntax, leading to inadvertent malfunctions.
+
+    In addition, how a value of ``True`` interacts with some aspects of GitPython's
+    operation is not precisely specified and may change without warning, even before
+    GitPython 4.0.0 when :attr:`USE_SHELL` may be removed. This includes:
+
+    * Whether or how GitPython automatically customizes the shell environment.
+
+    * Whether, outside of Windows (where :class:`subprocess.Popen` supports lists of
+      separate arguments even when ``shell=True``), this can be used with any GitPython
+      functionality other than direct calls to the :meth:`execute` method.
+
+    * Whether any GitPython feature that runs git commands ever attempts to partially
+      sanitize data a shell may treat specially. Currently this is not done.
 
     Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
     in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
     GitPython solves that problem more robustly and safely by using the
     ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
-    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
-    functions should be updated to use the default value of ``False`` instead. ``True``
-    is unsafe unless the effect of shell expansions is fully considered and accounted
-    for, which is not possible under most circumstances.
+    Because Windows path search differs subtly based on whether a shell is used, in rare
+    cases changing this from ``True`` to ``False`` may keep an unusual git "executable",
+    such as a batch file, from being found. To fix this, set the command name or full
+    path in the :envvar:`GIT_PYTHON_GIT_EXECUTABLE` environment variable or pass the
+    full path to :func:`git.refresh` (or invoke the script using a ``.exe`` shim).
 
-    See:
+    Further reading:
 
-    - :meth:`Git.execute` (on the ``shell`` parameter).
-    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
-    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    * :meth:`Git.execute` (on the ``shell`` parameter).
+    * https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+    * https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    * https://github.com/python/cpython/issues/91558#issuecomment-1100942950
+    * https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
     """
 
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
@@ -868,6 +969,11 @@ class Git:
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
 
+    def __getattribute__(self, name: str) -> Any:
+        if name == "USE_SHELL":
+            _warn_use_shell(False)
+        return super().__getattribute__(name)
+
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was an object.
 
@@ -1138,7 +1244,12 @@ class Git:
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
-            shell = self.USE_SHELL
+            # Get the value of USE_SHELL with no deprecation warning. Do this without
+            # warnings.catch_warnings, to avoid a race condition with application code
+            # configuring warnings. The value could be looked up in type(self).__dict__
+            # or Git.__dict__, but those can break under some circumstances. This works
+            # the same as self.USE_SHELL in more situations; see Git.__getattribute__.
+            shell = super().__getattribute__("USE_SHELL")
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,

@@ -88,7 +88,7 @@ jobs:
 
     - name: Check types with mypy
       run: |
-        mypy --python-version=${{ matrix.python-version }} -p git
+        mypy --python-version=${{ matrix.python-version }}
       env:
         MYPY_FORCE_COLOR: "1"
         TERM: "xterm-256color"  # For color: https://github.com/python/mypy/issues/13817

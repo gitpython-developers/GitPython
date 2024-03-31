@@ -167,7 +167,7 @@ This includes the linting and autoformatting done by Ruff, as well as some other
 To typecheck, run:
 
 ```sh
-mypy -p git
+mypy
 ```
 
 #### CI (and tox)
