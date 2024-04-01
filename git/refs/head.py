@@ -99,8 +99,8 @@ class HEAD(SymbolicReference):
         if index:
             mode = "--mixed"
 
-            # It appears some git versions declare mixed and paths deprecated.
-            # See http://github.com/Byron/GitPython/issues#issue/2.
+            # Explicit "--mixed" when passing paths is deprecated since git 1.5.4.
+            # See https://github.com/gitpython-developers/GitPython/discussions/1876.
             if paths:
                 mode = None
             # END special case
