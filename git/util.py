@@ -339,7 +339,7 @@ def _get_exe_extensions() -> Sequence[str]:
     if PATHEXT:
         return tuple(p.upper() for p in PATHEXT.split(os.pathsep))
     elif sys.platform == "win32":
-        return (".BAT", "COM", ".EXE")
+        return (".BAT", ".COM", ".EXE")
     else:
         return ()
 

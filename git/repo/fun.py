@@ -112,7 +112,7 @@ def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
             path = content[8:]
 
             if Git.is_cygwin():
-                # Cygwin creates submodules prefixed with `/cygdrive/...` suffixes.
+                # Cygwin creates submodules prefixed with `/cygdrive/...`.
                 # Cygwin git understands Cygwin paths much better than Windows ones.
                 # Also the Cygwin tests are assuming Cygwin paths.
                 path = cygpath(path)
