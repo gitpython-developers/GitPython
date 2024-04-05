@@ -316,7 +316,7 @@ class FetchInfo(IterableObj):
         ERROR,
     ) = [1 << x for x in range(8)]
 
-    _re_fetch_result = re.compile(r"^ *(.) (\[[\w \.$@]+\]|[\w\.$@]+) +(.+) -> ([^ ]+)(    \(.*\)?$)?")
+    _re_fetch_result = re.compile(r"^ *(?:.{0,3})(.) (\[[\w \.$@]+\]|[\w\.$@]+) +(.+) -> ([^ ]+)(    \(.*\)?$)?")
 
     _flag_map: Dict[flagKeyLiteral, int] = {
         "!": ERROR,
