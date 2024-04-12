@@ -6,7 +6,7 @@ This directory contains files related to GitPython's suite of fuzz tests that ar
 infrastructure provided by [OSS-Fuzz][oss-fuzz-repo]. This document aims to provide necessary information for working
 with fuzzing in GitPython.
 
-The details about the latest OSS-Fuzz test status, including build logs and coverage reports, is made available
+The latest details regarding OSS-Fuzz test status, including build logs and coverage reports, is made available
 at [this link](https://introspector.oss-fuzz.com/project-profile?project=gitpython).
 
 ## How to Contribute
@@ -23,7 +23,7 @@ Areas that are particularly appreciated include:
   update of any size, please consider suggesting it!
 
 For everything else, such as expanding test coverage, optimizing test performance, or enhancing error detection
-capabilities, jump in to the "Getting Started" section below.
+capabilities, jump into the "Getting Started" section below.
 
 ## Getting Started with Fuzzing GitPython
 
@@ -63,7 +63,7 @@ The `fuzzing/` directory is organized into three key areas:
 
 ### Fuzz Targets (`fuzz-targets/`)
 
-Contains Python files for each fuzz test, targeting specific functionalities of GitPython.
+Contains Python files for each fuzz test.
 
 **Things to Know**:
 
@@ -81,7 +81,7 @@ Contains Python files for each fuzz test, targeting specific functionalities of 
 
 Provides hints to the fuzzing engine about inputs that might trigger unique code paths. Each fuzz target may have a
 corresponding `.dict` file. For details on how these are used, refer
-to [LibFuzzer documentation](https://llvm.org/docs/LibFuzzer.html#dictionaries).
+to the [LibFuzzer documentation on the subject](https://llvm.org/docs/LibFuzzer.html#dictionaries).
 
 **Things to Know**:
 
@@ -104,6 +104,11 @@ Includes scripts for building and integrating fuzz targets with OSS-Fuzz:
   dictionary entries and ensuring all required build dependencies are installed and up-to-date.
 - **`build.sh`** - Executed within the Docker container, this script builds fuzz targets with necessary instrumentation
   and prepares seed corpora and dictionaries for use.
+
+**Where to learn more:**
+
+- [OSS-Fuzz documentation on the build.sh](https://google.github.io/oss-fuzz/getting-started/new-project-guide/#buildsh)
+- [See GitPython's build.sh and Dockerfile in the OSS-Fuzz repository](https://github.com/google/oss-fuzz/tree/master/projects/gitpython)
 
 ## Running Fuzzers Locally
 
@@ -153,8 +158,20 @@ python infra/helper.py check_build gitpython
 Execute the desired fuzz target:
 
 ```shell
-python infra/helper.py run_fuzzer gitpython $FUZZ_TARGET
+python infra/helper.py run_fuzzer gitpython $FUZZ_TARGET -- -max_total_time=60 -print_final_stats=1
 ```
+
+> [!TIP]
+> In the example above, the "`-- -max_total_time=60 -print_final_stats=1`" portion of the command is optional but quite
+> useful.
+>
+> Every argument provided after "`--`" in the above command is passed to the fuzzing engine directly. In this case:
+> - `-max_total_time=60` tells the LibFuzzer to stop execution after 60 seconds have elapsed.
+> - `-print_final_stats=1` tells the LibFuzzer to print a summary of useful metrics about the target run upon
+    completion.
+>
+> But almost any [LibFuzzer option listed in the documentation](https://llvm.org/docs/LibFuzzer.html#options) should
+> work as well.
 
 #### Next Steps
 
