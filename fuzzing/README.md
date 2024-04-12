@@ -80,8 +80,8 @@ Contains Python files for each fuzz test.
 ### Dictionaries (`dictionaries/`)
 
 Provides hints to the fuzzing engine about inputs that might trigger unique code paths. Each fuzz target may have a
-corresponding `.dict` file. For details on how these are used, refer
-to the [LibFuzzer documentation on the subject](https://llvm.org/docs/LibFuzzer.html#dictionaries).
+corresponding `.dict` file. For information about dictionary syntax, refer to
+the [LibFuzzer documentation on the subject](https://llvm.org/docs/LibFuzzer.html#dictionaries).
 
 **Things to Know**:
 
@@ -92,7 +92,7 @@ to the [LibFuzzer documentation on the subject](https://llvm.org/docs/LibFuzzer.
   existing file here.
 - Development or updates to dictionaries should reflect the varied formats and edge cases relevant to the
   functionalities under test.
-- Example dictionaries (some of which are used to build the default dictionaries mentioned above) are can be found here:
+- Example dictionaries (some of which are used to build the default dictionaries mentioned above) can be found here:
   - [AFL++ dictionary repository](https://github.com/AFLplusplus/AFLplusplus/tree/stable/dictionaries#readme)
   - [Google/fuzzing dictionary repository](https://github.com/google/fuzzing/tree/master/dictionaries)
 

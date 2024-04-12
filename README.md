@@ -241,7 +241,7 @@ Please have a look at the [contributions file][contributing].
 [3-Clause BSD License](https://opensource.org/license/bsd-3-clause/), also known as the New BSD License. See the [LICENSE file][license].
 
 > [!NOTE]
-> There are two special case files located in the `fuzzzing/` directory that are licensed differently:
+> There are two special case files located in the [`fuzzzing/` directory](./fuzzing) that are licensed differently:
 >
 > `fuzz_config.py` and `fuzz_tree.py` were migrated here from the OSS-Fuzz project repository where they were initially
 > created and retain the original licence and copyright notice (Apache License, Version 2.0 and Copyright 2023 Google
