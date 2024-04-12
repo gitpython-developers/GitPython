@@ -134,8 +134,10 @@ containers.
 Set environment variables to simplify command usage:
 
 ```shell
-export SANITIZER=address  # Can be either 'address' or 'undefined'.
-export FUZZ_TARGET=fuzz_config # specify the fuzz target without the .py extension.
+# $SANITIZER can be either 'address' or 'undefined':
+export SANITIZER=address
+# specify the fuzz target without the .py extension:
+export FUZZ_TARGET=fuzz_config
 ```
 
 #### Build and Run
@@ -148,6 +150,19 @@ cd oss-fuzz
 python infra/helper.py build_image gitpython
 python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython
 ```
+
+> [!TIP]
+> The `build_fuzzers` command above accepts a local file path pointing to your gitpython repository clone as the last
+> argument.
+> This makes it easy to build fuzz targets you are developing locally in this repository without changing anything in
+> the OSS-Fuzz repo!
+> For example, if you have cloned this repository (or a fork of it) into: `~/code/GitPython`
+> Then running this command would build new or modified fuzz targets using the `~/code/GitPython/fuzzing/fuzz-targets`
+> directory:
+> ```shell
+> python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython ~/code/GitPython
+> ```
+
 
 Verify the build of your fuzzers with the optional `check_build` command:
 
