@@ -36,9 +36,9 @@ download_and_concatenate_common_dictionaries() {
 
 fetch_seed_corpra() {
   # Seed corpus zip files are hosted in a separate repository to avoid additional bloat in this repo.
-  git clone --depth 1 https://github.com/DaveLak/oss-fuzz-inputs.git oss-fuzz-inputs &&
-    rsync -avc oss-fuzz-inputs/gitpython/corpra/ "$SEED_DATA_DIR/" &&
-    rm -rf oss-fuzz-inputs; # Clean up the cloned repo to keep the Docker image as slim as possible.
+  git clone --depth 1 https://github.com/gitpython-developers/qa-assets.git qa-assets &&
+    rsync -avc qa-assets/gitpython/corpra/ "$SEED_DATA_DIR/" &&
+    rm -rf qa-assets; # Clean up the cloned repo to keep the Docker image as slim as possible.
 }
 
 ########################
