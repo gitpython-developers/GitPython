@@ -13,7 +13,7 @@ find "$SEED_DATA_DIR" \( -name '*_seed_corpus.zip' -o -name '*.options' -o -name
   -exec cp {} "$OUT" \;
 
 # Build fuzzers in $OUT.
-find "$SRC/gitpython/fuzzing" -name 'fuzz_*.py' -print0 | while IFS= read -r -d $'\0' fuzz_harness; do
+find "$SRC/gitpython/fuzzing" -name 'fuzz_*.py' -print0 | while IFS= read -r -d '' fuzz_harness; do
   compile_python_fuzzer "$fuzz_harness"
 
   common_base_dictionary_filename="$SEED_DATA_DIR/__base.dict"
