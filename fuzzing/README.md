@@ -193,6 +193,18 @@ python infra/helper.py run_fuzzer gitpython $FUZZ_TARGET -- -max_total_time=60 -
 For detailed instructions on advanced features like reproducing OSS-Fuzz issues or using the Fuzz Introspector, refer
 to [the official OSS-Fuzz documentation][oss-fuzz-docs].
 
+## LICENSE
+
+All files located within the `fuzzing/` directory are subject to [the same license](../LICENSE)
+as [the other files in this repository](../README.md#license) with two exceptions:
+
+Two files located in this directory, [`fuzz_config.py`](./fuzz-targets/fuzz_config.py)
+and [`fuzz_tree.py`](./fuzz-targets/fuzz_tree.py), have been migrated here from the OSS-Fuzz project repository where
+they were originally created. As such, these two files retain their original license and copyright notice (Apache
+License, Version 2.0 and Copyright 2023 Google LLC respectively.) Each file includes a notice in their respective header
+comments stating that they have been modified. [LICENSE-APACHE](./LICENSE-APACHE) contains the original license used by
+the OSS-Fuzz project repository at the time they were migrated.
+
 [oss-fuzz-repo]: https://github.com/google/oss-fuzz
 
 [oss-fuzz-docs]: https://google.github.io/oss-fuzz

@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+###############################################################################
+# Note: This file has been modified by contributors to GitPython.
+# The original state of this file may be referenced here:
+# https://github.com/google/oss-fuzz/commit/f26f254558fc48f3c9bc130b10507386b94522da
+###############################################################################
 import atheris
 import sys
 import io

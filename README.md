@@ -240,17 +240,8 @@ Please have a look at the [contributions file][contributing].
 
 [3-Clause BSD License](https://opensource.org/license/bsd-3-clause/), also known as the New BSD License. See the [LICENSE file][license].
 
-> [!NOTE]
-> There are two special case files located in the [`fuzzzing/` directory](./fuzzing) that are licensed differently:
->
-> `fuzz_config.py` and `fuzz_tree.py` were migrated here from the OSS-Fuzz project repository where they were initially
-> created and retain the original licence and copyright notice (Apache License, Version 2.0 and Copyright 2023 Google
-> LLC respectively.)
->
-> - **These files do not impact the licence under which GitPython releases or source code are distributed.**
-> - The files located in the `fuzzzing/` directory are part of the project test suite and neither packaged nor distributed as
-    part of any release.
-
+Two files exclusively used for fuzz testing are subject to [a separate license, detailed here](./fuzzing/README.md#license).
+These files are not included in the wheel or sdist packages published by the maintainers of GitPython.
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md
 [license]: https://github.com/gitpython-developers/GitPython/blob/main/LICENSE
