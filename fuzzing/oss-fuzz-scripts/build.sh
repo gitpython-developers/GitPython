@@ -4,7 +4,7 @@ set -euo pipefail
 
 python3 -m pip install .
 
-# Directory to look in for dictionaries, options files, and seed corpa:
+# Directory to look in for dictionaries, options files, and seed corpora:
 SEED_DATA_DIR="$SRC/seed_data"
 
 find "$SEED_DATA_DIR" \( -name '*_seed_corpus.zip' -o -name '*.options' -o -name '*.dict' \) \
@@ -27,7 +27,7 @@ find "$SRC/gitpython/fuzzing" -name 'fuzz_*.py' -print0 | while IFS= read -r -d 
       # If a dictionary file for this fuzzer already exists and is not empty,
       # we append a new line to the end of it before appending any new entries.
       #
-      # libfuzzer will happily ignore multiple empty lines in a dictionary but crash
+      # LibFuzzer will happily ignore multiple empty lines in a dictionary but fail with an error
       # if any single line has incorrect syntax (e.g., if we accidentally add two entries to the same line.)
       # See docs for valid syntax: https://llvm.org/docs/LibFuzzer.html#id32
       echo >>"$output_file"
