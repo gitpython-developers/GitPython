@@ -6,8 +6,8 @@ This directory contains files related to GitPython's suite of fuzz tests that ar
 infrastructure provided by [OSS-Fuzz][oss-fuzz-repo]. This document aims to provide necessary information for working
 with fuzzing in GitPython.
 
-The latest details regarding OSS-Fuzz test status, including build logs and coverage reports, is made available
-at [this link](https://introspector.oss-fuzz.com/project-profile?project=gitpython).
+The latest details regarding OSS-Fuzz test status, including build logs and coverage reports, is available
+on [the Open Source Fuzzing Introspection website](https://introspector.oss-fuzz.com/project-profile?project=gitpython).
 
 ## How to Contribute
 
@@ -152,7 +152,7 @@ python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython
 ```
 
 > [!TIP]
-> The `build_fuzzers` command above accepts a local file path pointing to your gitpython repository clone as the last
+> The `build_fuzzers` command above accepts a local file path pointing to your GitPython repository clone as the last
 > argument.
 > This makes it easy to build fuzz targets you are developing locally in this repository without changing anything in
 > the OSS-Fuzz repo!
