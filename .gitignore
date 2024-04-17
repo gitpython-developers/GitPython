@@ -47,3 +47,6 @@ output.txt
 
 # Finder metadata
 .DS_Store
+
+# Files created by OSS-Fuzz when running locally
+fuzz_*.pkg.spec
