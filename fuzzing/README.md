@@ -129,18 +129,7 @@ This approach uses Docker images provided by OSS-Fuzz for building and running f
 comprehensive features but requires a local clone of the OSS-Fuzz repository and sufficient disk space for Docker
 containers.
 
-#### Preparation
-
-Set environment variables to simplify command usage:
-
-```shell
-# $SANITIZER can be either 'address' or 'undefined':
-export SANITIZER=address
-# specify the fuzz target without the .py extension:
-export FUZZ_TARGET=fuzz_config
-```
-
-#### Build and Run
+#### Build the Execution Environment
 
 Clone the OSS-Fuzz repository and prepare the Docker environment:
 
@@ -148,7 +137,7 @@ Clone the OSS-Fuzz repository and prepare the Docker environment:
 git clone --depth 1 https://github.com/google/oss-fuzz.git oss-fuzz
 cd oss-fuzz
 python infra/helper.py build_image gitpython
-python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython
+python infra/helper.py build_fuzzers --sanitizer address gitpython
 ```
 
 > [!TIP]
@@ -160,14 +149,23 @@ python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython
 > Then running this command would build new or modified fuzz targets using the `~/code/GitPython/fuzzing/fuzz-targets`
 > directory:
 > ```shell
-> python infra/helper.py build_fuzzers --sanitizer $SANITIZER gitpython ~/code/GitPython
+> python infra/helper.py build_fuzzers --sanitizer address gitpython ~/code/GitPython
 > ```
-
 
 Verify the build of your fuzzers with the optional `check_build` command:
 
 ```shell
 python infra/helper.py check_build gitpython
+```
+
+#### Run a Fuzz Target
+
+Setting an environment variable for the fuzz target argument of the execution command makes it easier to quickly select
+a different target between runs:
+
+```shell
+# specify the fuzz target without the .py extension:
+export FUZZ_TARGET=fuzz_config
 ```
 
 Execute the desired fuzz target:
