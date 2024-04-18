@@ -53,5 +53,5 @@ download_and_concatenate_common_dictionaries "$SEED_DATA_DIR/__base.dict" \
 
 # The OSS-Fuzz base image has outdated dependencies by default so we upgrade them below.
 python3 -m pip install --upgrade pip
- # Upgrade to the latest versions known to work at the time the below changes were introduced:
+# Upgrade to the latest versions known to work at the time the below changes were introduced:
 python3 -m pip install 'setuptools~=69.0' 'pyinstaller~=6.0'
