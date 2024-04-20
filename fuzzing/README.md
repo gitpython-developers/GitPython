@@ -44,8 +44,7 @@ capabilities, jump into the "Getting Started" section below.
 ### Setting Up Your Local Environment
 
 Before contributing to fuzzing efforts, ensure Python and Docker are installed on your machine. Docker is required for
-running fuzzers in containers provided by OSS-Fuzz. [Install Docker](https://docs.docker.com/get-docker/) following the
-official guide if you do not already have it.
+running fuzzers in containers provided by OSS-Fuzz and for safely executing test files directly. [Install Docker](https://docs.docker.com/get-docker/) following the official guide if you do not already have it.
 
 ### Understanding Existing Fuzz Targets
 
@@ -110,18 +109,50 @@ Includes scripts for building and integrating fuzz targets with OSS-Fuzz:
 - [OSS-Fuzz documentation on the build.sh](https://google.github.io/oss-fuzz/getting-started/new-project-guide/#buildsh)
 - [See GitPython's build.sh and Dockerfile in the OSS-Fuzz repository](https://github.com/google/oss-fuzz/tree/master/projects/gitpython)
 
+### Local Development Helpers (`local-dev-helpers/`)
+
+Contains tools to make local development tasks easier.
+See [the "Running Fuzzers Locally" section below](#running-fuzzers-locally) for further documentation and use cases related to files found here.
+
 ## Running Fuzzers Locally
+
+> [!WARNING]
+> **Some fuzz targets in this repository write to the filesystem** during execution.
+> For that reason, it is strongly recommended to **always use Docker when executing fuzz targets**, even when it may be
+> possible to do so without it.
+>
+> Although [I/O operations such as writing to disk are not considered best practice](https://github.com/google/fuzzing/blob/master/docs/good-fuzz-target.md#io), the current implementation of at least one test requires it. 
+> See [the "Setting Up Your Local Environment" section above](#setting-up-your-local-environment) if you do not already have Docker installed on your machine.
+>
+> PRs that replace disk I/O with in-memory alternatives are very much welcomed!
 
 ### Direct Execution of Fuzz Targets
 
-For quick testing of changes, [Atheris][atheris-repo] makes it possible to execute a fuzz target directly:
+Directly executing fuzz targets allows for quick iteration and testing of changes which can be helpful during early
+development of new fuzz targets or for validating changes made to an existing test.
+The [Dockerfile](./local-dev-helpers/Dockerfile) located in the `local-dev-helpers/` subdirectory provides a lightweight
+container environment preconfigured with [Atheris][atheris-repo] that makes it easy to execute a fuzz target directly.
 
-1. Install Atheris following the [installation guide][atheris-repo] for your operating system.
-2. Execute a fuzz target, for example:
+**From the root directory of your GitPython repository clone**:
+
+1. Build the local development helper image:
 
 ```shell
-python fuzzing/fuzz-targets/fuzz_config.py
+docker build -f fuzzing/local-dev-helpers/Dockerfile -t gitpython-fuzzdev .
 ```
+
+2. Then execute a fuzz target inside the image, for example:
+
+```shell
+ docker run -it -v "$PWD":/src gitpython-fuzzdev python fuzzing/fuzz-targets/fuzz_config.py -atheris_runs=10000
+```
+
+The above command executes [`fuzz_config.py`](./fuzz-targets/fuzz_config.py) and exits after `10000` runs, or earlier if
+the fuzzer finds an error.
+
+Docker CLI's `-v` flag specifies a volume mount in Docker that maps the directory in which the command is run (which
+should be the root directory of your local GitPython clone) to a directory inside the container, so any modifications
+made between invocations will be reflected immediately without the need to rebuild the image each time.
 
 ### Running OSS-Fuzz Locally
 
