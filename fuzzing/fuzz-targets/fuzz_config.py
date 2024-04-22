@@ -34,12 +34,8 @@ def TestOneInput(data):
         git_config.read()
     except (MissingSectionHeaderError, ParsingError, UnicodeDecodeError):
         return -1  # Reject inputs raising expected exceptions
-    except (IndexError, ValueError) as e:
-        if isinstance(e, IndexError) and "string index out of range" in str(e):
-            # Known possibility that might be patched
-            # See: https://github.com/gitpython-developers/GitPython/issues/1887
-            pass
-        elif isinstance(e, ValueError) and "embedded null byte" in str(e):
+    except ValueError as e:
+        if isinstance(e, ValueError) and "embedded null byte" in str(e):
             # The `os.path.expanduser` function, which does not accept strings
             # containing null bytes might raise this.
             return -1
