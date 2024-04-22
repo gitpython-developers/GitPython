@@ -24,11 +24,14 @@ import os
 import shutil
 
 with atheris.instrument_imports():
-    from git.objects import Tree
-    from git.repo import Repo
+    import git
 
 
 def TestOneInput(data):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
+        git.refresh(path_to_bundled_git_binary)
+
     fdp = atheris.FuzzedDataProvider(data)
     git_dir = "/tmp/.git"
     head_file = os.path.join(git_dir, "HEAD")
@@ -46,9 +49,9 @@ def TestOneInput(data):
     os.mkdir(common_dir)
     os.mkdir(objects_dir)
 
-    _repo = Repo("/tmp/")
+    _repo = git.Repo("/tmp/")
 
-    fuzz_tree = Tree(_repo, Tree.NULL_BIN_SHA, 0, "")
+    fuzz_tree = git.Tree(_repo, git.Tree.NULL_BIN_SHA, 0, "")
     try:
         fuzz_tree._deserialize(io.BytesIO(data))
     except IndexError:

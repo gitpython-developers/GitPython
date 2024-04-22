@@ -20,16 +20,21 @@
 import atheris
 import sys
 import io
+import os
 from configparser import MissingSectionHeaderError, ParsingError
 
 with atheris.instrument_imports():
-    from git import GitConfigParser
+    import git
 
 
 def TestOneInput(data):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
+        git.refresh(path_to_bundled_git_binary)
+
     sio = io.BytesIO(data)
     sio.name = "/tmp/fuzzconfig.config"
-    git_config = GitConfigParser(sio)
+    git_config = git.GitConfigParser(sio)
     try:
         git_config.read()
     except (MissingSectionHeaderError, ParsingError, UnicodeDecodeError):
