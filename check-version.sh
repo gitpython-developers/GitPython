@@ -1,5 +1,8 @@
 #!/bin/bash
 #
+# This file is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+#
 # This script checks if we are in a consistent state to build a new release.
 # See the release instructions in README.md for the steps to make this pass.
 # You may want to run "make release" instead of running this script directly.

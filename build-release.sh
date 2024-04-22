@@ -1,5 +1,8 @@
 #!/bin/bash
 #
+# This file is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+#
 # This script builds a release. If run in a venv, it auto-installs its tools.
 # You may want to run "make release" instead of running this script directly.
 
