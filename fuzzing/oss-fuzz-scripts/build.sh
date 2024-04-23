@@ -14,7 +14,7 @@ find "$SEED_DATA_DIR" \( -name '*_seed_corpus.zip' -o -name '*.options' -o -name
 
 # Build fuzzers in $OUT.
 find "$SRC/gitpython/fuzzing" -name 'fuzz_*.py' -print0 | while IFS= read -r -d '' fuzz_harness; do
-  compile_python_fuzzer "$fuzz_harness"
+  compile_python_fuzzer "$fuzz_harness" --add-binary="$(command -v git):."
 
   common_base_dictionary_filename="$SEED_DATA_DIR/__base.dict"
   if [[ -r "$common_base_dictionary_filename" ]]; then
