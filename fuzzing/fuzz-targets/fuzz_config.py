@@ -35,7 +35,7 @@ def TestOneInput(data):
     except (MissingSectionHeaderError, ParsingError, UnicodeDecodeError):
         return -1  # Reject inputs raising expected exceptions
     except ValueError as e:
-        if isinstance(e, ValueError) and "embedded null byte" in str(e):
+        if "embedded null byte" in str(e):
             # The `os.path.expanduser` function, which does not accept strings
             # containing null bytes might raise this.
             return -1
