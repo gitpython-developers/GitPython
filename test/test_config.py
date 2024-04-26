@@ -142,6 +142,14 @@ class TestBase(TestCase):
             )
             self.assertEqual(len(config.sections()), 23)
 
+    def test_config_value_with_trailing_new_line(self):
+        config_content = b'[section-header]\nkey:"value\n"'
+        config_file = io.BytesIO(config_content)
+        config_file.name = "multiline_value.config"
+
+        git_config = GitConfigParser(config_file)
+        git_config.read()  # This should not throw an exception
+
     def test_base(self):
         path_repo = fixture_path("git_config")
         path_global = fixture_path("git_config_global")

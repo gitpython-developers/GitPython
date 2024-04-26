@@ -452,7 +452,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         e = None  # None, or an exception.
 
         def string_decode(v: str) -> str:
-            if v[-1] == "\\":
+            if v and v.endswith("\\"):
                 v = v[:-1]
             # END cut trailing escapes to prevent decode error
 
