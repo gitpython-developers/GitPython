@@ -225,14 +225,14 @@ to [the official OSS-Fuzz documentation][oss-fuzz-docs].
 ## LICENSE
 
 All files located within the `fuzzing/` directory are subject to [the same license](../LICENSE)
-as [the other files in this repository](../README.md#license) with two exceptions:
+as [the other files in this repository](../README.md#license) with one exception:
 
-Two files located in this directory, [`fuzz_config.py`](./fuzz-targets/fuzz_config.py)
-and [`fuzz_tree.py`](./fuzz-targets/fuzz_tree.py), have been migrated here from the OSS-Fuzz project repository where
-they were originally created. As such, these two files retain their original license and copyright notice (Apache
-License, Version 2.0 and Copyright 2023 Google LLC respectively.) Each file includes a notice in their respective header
-comments stating that they have been modified. [LICENSE-APACHE](./LICENSE-APACHE) contains the original license used by
-the OSS-Fuzz project repository at the time they were migrated.
+[`fuzz_config.py`](./fuzz-targets/fuzz_config.py) was migrated to this repository from the OSS-Fuzz project's repository
+where it was originally created. As such, [`fuzz_config.py`](./fuzz-targets/fuzz_config.py) retains its original license
+and copyright notice (Apache License, Version 2.0 and Copyright 2023 Google LLC respectively) as in a header
+comment, followed by a notice stating that it has have been modified contributors to GitPython.
+[LICENSE-APACHE](./LICENSE-APACHE) contains the original license used by the OSS-Fuzz project repository at the time the
+file was migrated.
 
 [oss-fuzz-repo]: https://github.com/google/oss-fuzz
 
