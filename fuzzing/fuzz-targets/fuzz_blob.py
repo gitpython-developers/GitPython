@@ -16,13 +16,17 @@ def TestOneInput(data):
 
     with tempfile.TemporaryDirectory() as temp_dir:
         repo = git.Repo.init(path=temp_dir)
-        blob = git.Blob(
-            repo,
-            **{
-                "binsha": git.Blob.NULL_BIN_SHA,
-                "path": fdp.ConsumeUnicodeNoSurrogates(fdp.remaining_bytes()),
-            },
-        )
+        binsha = fdp.ConsumeBytes(20)
+        mode = fdp.ConsumeInt(fdp.ConsumeIntInRange(0, fdp.remaining_bytes()))
+        path = fdp.ConsumeUnicodeNoSurrogates(fdp.remaining_bytes())
+
+        try:
+            blob = git.Blob(repo, binsha, mode, path)
+        except AssertionError as e:
+            if "Require 20 byte binary sha, got" in str(e):
+                return -1
+            else:
+                raise e
 
         _ = blob.mime_type
 
