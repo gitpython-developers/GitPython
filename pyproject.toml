@@ -78,3 +78,8 @@ lint.unfixable = [
 "test/**" = [
     "B018",  # useless-expression
 ]
+
+[tool.codespell]
+#skip = '*.po,*.ts,./src/3rdParty,./src/Test'
+#count = true
+quiet-level = 3
