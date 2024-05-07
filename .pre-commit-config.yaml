@@ -1,11 +1,11 @@
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.2
+  rev: v0.4.3
   hooks:
-  - id: ruff-format
-    exclude: ^git/ext/
   - id: ruff
     args: ["--fix"]
+    exclude: ^git/ext/
+  - id: ruff-format
     exclude: ^git/ext/
 
 - repo: https://github.com/shellcheck-py/shellcheck-py
