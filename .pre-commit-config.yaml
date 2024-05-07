@@ -4,6 +4,7 @@ repos:
   hooks:
   - id: codespell
     additional_dependencies: [tomli]
+    args: ["--write-changes"]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.4.3
