@@ -76,25 +76,6 @@ Contains Python files for each fuzz test.
   reason, fuzz tests should gracefully handle anticipated exception cases with a `try`/`except` block to avoid false
   positives that halt the fuzzing engine.
 
-### Dictionaries (`dictionaries/`)
-
-Provides hints to the fuzzing engine about inputs that might trigger unique code paths. Each fuzz target may have a
-corresponding `.dict` file. For information about dictionary syntax, refer to
-the [LibFuzzer documentation on the subject](https://llvm.org/docs/LibFuzzer.html#dictionaries).
-
-**Things to Know**:
-
-- OSS-Fuzz loads dictionary files per fuzz target if one exists with the same name, all others are ignored.
-- Most entries in the dictionary files found here are escaped hex or Unicode values that were recommended by the fuzzing
-  engine after previous runs.
-- A default set of dictionary entries are created for all fuzz targets as part of the build process, regardless of an
-  existing file here.
-- Development or updates to dictionaries should reflect the varied formats and edge cases relevant to the
-  functionalities under test.
-- Example dictionaries (some of which are used to build the default dictionaries mentioned above) can be found here:
-  - [AFL++ dictionary repository](https://github.com/AFLplusplus/AFLplusplus/tree/stable/dictionaries#readme)
-  - [Google/fuzzing dictionary repository](https://github.com/google/fuzzing/tree/master/dictionaries)
-
 ### OSS-Fuzz Scripts (`oss-fuzz-scripts/`)
 
 Includes scripts for building and integrating fuzz targets with OSS-Fuzz:
