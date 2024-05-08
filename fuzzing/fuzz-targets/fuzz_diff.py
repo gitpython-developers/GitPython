@@ -1,5 +1,6 @@
 import sys
 import os
+import io
 import tempfile
 from binascii import Error as BinasciiError
 
@@ -13,13 +14,26 @@ with atheris.instrument_imports():
     from git import Repo, Diff
 
 
+class BytesProcessAdapter:
+    """Allows bytes to be used as process objects returned by subprocess.Popen."""
+
+    def __init__(self, input_string):
+        self.stdout = io.BytesIO(input_string)
+        self.stderr = io.BytesIO()
+
+    def wait(self):
+        return 0
+
+    poll = wait
+
+
 def TestOneInput(data):
     fdp = atheris.FuzzedDataProvider(data)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         repo = Repo.init(path=temp_dir)
         try:
-            Diff(
+            diff = Diff(
                 repo,
                 a_rawpath=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
                 b_rawpath=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
@@ -43,6 +57,21 @@ def TestOneInput(data):
                 return -1
             else:
                 raise e
+
+        _ = diff.__str__()
+        _ = diff.a_path
+        _ = diff.b_path
+        _ = diff.rename_from
+        _ = diff.rename_to
+        _ = diff.renamed_file
+
+        diff_index = diff._index_from_patch_format(
+            repo, proc=BytesProcessAdapter(fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())))
+        )
+
+        diff._handle_diff_line(
+            lines_bytes=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())), repo=repo, index=diff_index
+        )
 
 
 def main():
