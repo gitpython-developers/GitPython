@@ -17,16 +17,19 @@ with atheris.instrument_imports():
 class BytesProcessAdapter:
     """Allows bytes to be used as process objects returned by subprocess.Popen."""
 
+    @atheris.instrument_func
     def __init__(self, input_string):
         self.stdout = io.BytesIO(input_string)
         self.stderr = io.BytesIO()
 
+    @atheris.instrument_func
     def wait(self):
         return 0
 
     poll = wait
 
 
+@atheris.instrument_func
 def TestOneInput(data):
     fdp = atheris.FuzzedDataProvider(data)
 
