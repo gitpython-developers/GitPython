@@ -30,7 +30,7 @@ jobs:
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: python39=3.9.16-1 python39-pip python39-virtualenv git
+        packages: python39=3.9.16-1 python39-pip python39-virtualenv git=2.43.0-1
 
     - name: Arrange for verbose output
       run: |
