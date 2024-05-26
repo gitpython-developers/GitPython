@@ -30,7 +30,7 @@ jobs:
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: python39=3.9.16-1 python39-pip python39-virtualenv git=2.43.0-1
+        packages: python39=3.9.16-1 python39-pip python39-virtualenv git
 
     - name: Arrange for verbose output
       run: |
@@ -40,6 +40,7 @@ jobs:
     - name: Special configuration for Cygwin git
       run: |
         git config --global --add safe.directory "$(pwd)"
+        git config --global --add safe.directory "$(pwd)/.git"
         git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
