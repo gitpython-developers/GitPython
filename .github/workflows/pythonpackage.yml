@@ -44,7 +44,7 @@ jobs:
 
     - name: Set up WSL (Windows)
       if: startsWith(matrix.os, 'windows')
-      uses: Vampire/setup-wsl@v3.0.0
+      uses: Vampire/setup-wsl@v3.1.0
       with:
         distribution: Debian
 
