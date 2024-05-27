@@ -40,6 +40,7 @@ jobs:
     - name: Special configuration for Cygwin git
       run: |
         git config --global --add safe.directory "$(pwd)"
+        git config --global --add safe.directory "$(pwd)/.git"
         git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
