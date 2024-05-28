@@ -325,7 +325,7 @@ class DiffIndex(List[T_Diff]):
                 yield diffidx
             elif change_type == "C" and diffidx.copied_file:
                 yield diffidx
-            elif change_type == "R" and diffidx.renamed:
+            elif change_type == "R" and diffidx.renamed_file:
                 yield diffidx
             elif change_type == "M" and diffidx.a_blob and diffidx.b_blob and diffidx.a_blob != diffidx.b_blob:
                 yield diffidx
