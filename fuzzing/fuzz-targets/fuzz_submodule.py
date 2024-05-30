@@ -83,6 +83,7 @@ def TestOneInput(data):
             FileNotFoundError,
             FileExistsError,
             IsADirectoryError,
+            NotADirectoryError,
             BrokenPipeError,
         ):
             return -1
