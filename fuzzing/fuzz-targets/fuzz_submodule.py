@@ -4,13 +4,22 @@ import os
 import tempfile
 from configparser import ParsingError
 from utils import is_expected_exception_message, get_max_filename_length
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # pragma: no cover
     path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
     os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = path_to_bundled_git_binary
 
-with atheris.instrument_imports():
-    from git import Repo, GitCommandError, InvalidGitRepositoryError
+if not sys.warnoptions:  # pragma: no cover
+    # The warnings filter below can be overridden by passing the -W option
+    # to the Python interpreter command line or setting the `PYTHONWARNINGS` environment variable.
+    import warnings
+    import logging
+
+    # Fuzzing data causes some plugins to generate a large number of warnings
+    # which are not usually interesting and make the test output hard to read, so we ignore them.
+    warnings.simplefilter("ignore")
+    logging.getLogger().setLevel(logging.ERROR)
 
 
 def TestOneInput(data):
@@ -92,6 +101,7 @@ def TestOneInput(data):
 
 
 def main():
+    atheris.instrument_all()
     atheris.Setup(sys.argv, TestOneInput)
     atheris.Fuzz()
 
