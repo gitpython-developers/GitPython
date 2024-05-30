@@ -67,7 +67,15 @@ def TestOneInput(data):
                 )
                 repo.index.commit(f"Removed submodule {submodule_name}")
 
-        except (ParsingError, GitCommandError, InvalidGitRepositoryError, FileNotFoundError, BrokenPipeError):
+        except (
+            ParsingError,
+            GitCommandError,
+            InvalidGitRepositoryError,
+            FileNotFoundError,
+            FileExistsError,
+            IsADirectoryError,
+            BrokenPipeError,
+        ):
             return -1
         except (ValueError, OSError) as e:
             expected_messages = [
