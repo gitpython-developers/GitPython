@@ -16,7 +16,7 @@ if not sys.warnoptions:  # pragma: no cover
     import warnings
     import logging
 
-    # Fuzzing data causes some plugins to generate a large number of warnings
+    # Fuzzing data causes some modules to generate a large number of warnings
     # which are not usually interesting and make the test output hard to read, so we ignore them.
     warnings.simplefilter("ignore")
     logging.getLogger().setLevel(logging.ERROR)
