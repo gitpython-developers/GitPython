@@ -3,7 +3,7 @@ import sys
 import os
 import tempfile
 from configparser import ParsingError
-from utils import is_expected_exception_message
+from utils import is_expected_exception_message, get_max_filename_length
 
 if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
     path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
@@ -42,12 +42,12 @@ def TestOneInput(data):
                     writer.release()
 
                 submodule.update(init=fdp.ConsumeBool(), dry_run=fdp.ConsumeBool(), force=fdp.ConsumeBool())
-
                 submodule_repo = submodule.module()
-                new_file_path = os.path.join(
-                    submodule_repo.working_tree_dir,
-                    f"new_file_{fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 512))}",
+
+                new_file_name = fdp.ConsumeUnicodeNoSurrogates(
+                    fdp.ConsumeIntInRange(1, max(1, get_max_filename_length(submodule_repo.working_tree_dir)))
                 )
+                new_file_path = os.path.join(submodule_repo.working_tree_dir, new_file_name)
                 with open(new_file_path, "wb") as new_file:
                     new_file.write(fdp.ConsumeBytes(fdp.ConsumeIntInRange(1, 512)))
                 submodule_repo.index.add([new_file_path])
@@ -77,14 +77,13 @@ def TestOneInput(data):
             BrokenPipeError,
         ):
             return -1
-        except (ValueError, OSError) as e:
+        except ValueError as e:
             expected_messages = [
                 "SHA is empty",
                 "Reference at",
                 "embedded null byte",
                 "This submodule instance does not exist anymore",
                 "cmd stdin was empty",
-                "File name too long",
             ]
             if is_expected_exception_message(e, expected_messages):
                 return -1

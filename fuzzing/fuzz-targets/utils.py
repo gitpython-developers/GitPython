@@ -1,4 +1,5 @@
 import atheris  # pragma: no cover
+import os
 from typing import List  # pragma: no cover
 
 
@@ -20,3 +21,17 @@ def is_expected_exception_message(exception: Exception, error_message_list: List
         if error.lower() in exception_message:
             return True
     return False
+
+
+@atheris.instrument_func
+def get_max_filename_length(path: str) -> int:
+    """
+    Get the maximum filename length for the filesystem containing the given path.
+
+    Args:
+        path (str): The path to check the filesystem for.
+
+    Returns:
+        int: The maximum filename length.
+    """
+    return os.pathconf(path, "PC_NAME_MAX")
