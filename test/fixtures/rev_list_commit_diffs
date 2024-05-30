@@ -5,4 +5,3 @@ author Tom Preston-Werner <tom@mojombo.com> 1193200199 -0700
 committer Tom Preston-Werner <tom@mojombo.com> 1193200199 -0700
 
     fix some initialization warnings
-
