@@ -658,7 +658,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return os.path.relpath(path, self.repo.working_tree_dir)
 
     def _preprocess_add_items(
-        self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]
+        self, items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]]
     ) -> Tuple[List[PathLike], List[BaseIndexEntry]]:
         """Split the items into two lists of path strings and BaseEntries."""
         paths = []
@@ -749,7 +749,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     def add(
         self,
-        items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]],
+        items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]],
         force: bool = True,
         fprogress: Callable = lambda *args: None,
         path_rewriter: Union[Callable[..., PathLike], None] = None,
@@ -976,7 +976,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     @default_index
     def remove(
         self,
-        items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]],
+        items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]],
         working_tree: bool = False,
         **kwargs: Any,
     ) -> List[str]:
@@ -1036,7 +1036,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     @default_index
     def move(
         self,
-        items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]],
+        items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]],
         skip_errors: bool = False,
         **kwargs: Any,
     ) -> List[Tuple[str, str]]:
