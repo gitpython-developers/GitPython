@@ -1478,7 +1478,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
-    ) -> git_diff.DiffIndex:
+    ) -> git_diff.DiffIndex[git_diff.Diff]:
         """Diff this index against the working copy or a :class:`~git.objects.tree.Tree`
         or :class:`~git.objects.commit.Commit` object.
 

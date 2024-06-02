@@ -187,7 +187,7 @@ class Diffable:
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
         **kwargs: Any,
-    ) -> "DiffIndex":
+    ) -> "DiffIndex[Diff]":
         """Create diffs between two items being trees, trees and index or an index and
         the working tree. Detects renames automatically.
 
@@ -581,7 +581,7 @@ class Diff:
         return None
 
     @classmethod
-    def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex:
+    def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex["Diff"]:
         """Create a new :class:`DiffIndex` from the given process output which must be
         in patch format.
 
@@ -674,7 +674,7 @@ class Diff:
         return index
 
     @staticmethod
-    def _handle_diff_line(lines_bytes: bytes, repo: "Repo", index: DiffIndex) -> None:
+    def _handle_diff_line(lines_bytes: bytes, repo: "Repo", index: DiffIndex["Diff"]) -> None:
         lines = lines_bytes.decode(defenc)
 
         # Discard everything before the first colon, and the colon itself.
@@ -747,7 +747,7 @@ class Diff:
             index.append(diff)
 
     @classmethod
-    def _index_from_raw_format(cls, repo: "Repo", proc: "Popen") -> "DiffIndex":
+    def _index_from_raw_format(cls, repo: "Repo", proc: "Popen") -> "DiffIndex[Diff]":
         """Create a new :class:`DiffIndex` from the given process output which must be
         in raw format.
 
