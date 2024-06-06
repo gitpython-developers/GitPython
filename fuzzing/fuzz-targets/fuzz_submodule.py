@@ -35,12 +35,13 @@ def TestOneInput(data):
                 sub_repo = Repo.init(submodule_temp_dir, bare=fdp.ConsumeBool())
                 sub_repo.index.commit(fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 512)))
 
-                submodule_name = f"submodule_{fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 512))}"
+                submodule_name = fdp.ConsumeUnicodeNoSurrogates(
+                    fdp.ConsumeIntInRange(1, max(1, get_max_filename_length(repo.working_tree_dir)))
+                )
                 submodule_path = os.path.join(repo.working_tree_dir, submodule_name)
-                submodule_url = sub_repo.git_dir
 
-                submodule = repo.create_submodule(submodule_name, submodule_path, url=submodule_url)
-                repo.index.commit(f"Added submodule {submodule_name}")
+                submodule = repo.create_submodule(submodule_name, submodule_path, url=sub_repo.git_dir)
+                repo.index.commit("Added submodule")
 
                 with submodule.config_writer() as writer:
                     key_length = fdp.ConsumeIntInRange(1, max(1, fdp.remaining_bytes()))
