@@ -31,7 +31,7 @@ from typing import Generator, TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from git.diff import Diff
+    from git.diff import Diff, DiffIndex
     from git.objects.commit import Commit
 
 # ------------------------------------------------------------------------
@@ -52,6 +52,12 @@ def diff(commit: "Commit") -> Generator["Diff", None, None]:
     """Fixture to supply a single-file diff."""
     (diff,) = commit.diff(NULL_TREE)  # Exactly one file in the diff.
     yield diff
+
+
+@pytest.fixture
+def diffs(commit: "Commit") -> Generator["DiffIndex", None, None]:
+    """Fixture to supply a DiffIndex."""
+    yield commit.diff(NULL_TREE)
 
 
 def test_diff_renamed_warns(diff: "Diff") -> None:
@@ -122,3 +128,10 @@ def test_iterable_obj_inheriting_does_not_warn() -> None:
 
         class Derived(IterableObj):
             pass
+
+
+def test_diff_iter_change_type(diffs: "DiffIndex") -> None:
+    """The internal DiffIndex.iter_change_type function issues no deprecation warning."""
+    with assert_no_deprecation_warning():
+        for change_type in diffs.change_type:
+            [*diffs.iter_change_type(change_type=change_type)]
