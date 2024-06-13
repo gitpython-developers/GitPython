@@ -469,11 +469,11 @@ class Tutorials(TestBase):
         # ![30-test_references_and_objects]
 
         # [31-test_references_and_objects]
-        git = repo.git
-        git.checkout("HEAD", b="my_new_branch")  # Create a new branch.
-        git.branch("another-new-one")
-        git.branch("-D", "another-new-one")  # Pass strings for full control over argument order.
-        git.for_each_ref()  # '-' becomes '_' when calling it.
+        git_cmd = repo.git
+        git_cmd.checkout("HEAD", b="my_new_branch")  # Create a new branch.
+        git_cmd.branch("another-new-one")
+        git_cmd.branch("-D", "another-new-one")  # Pass strings for full control over argument order.
+        git_cmd.for_each_ref()  # '-' becomes '_' when calling it.
         # ![31-test_references_and_objects]
 
         repo.git.clear_cache()
