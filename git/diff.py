@@ -695,7 +695,7 @@ class Diff:
             change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = "".join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
-            path = path.strip()
+            path = path.strip("\n")
             a_path = path.encode(defenc)
             b_path = path.encode(defenc)
             deleted_file = False
