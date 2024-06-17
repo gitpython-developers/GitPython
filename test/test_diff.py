@@ -529,3 +529,23 @@ class TestDiff(TestBase):
         self.assertEqual(len(index_against_head), 1)
         index_against_working_tree = repo.index.diff(None, create_patch=True)
         self.assertEqual(len(index_against_working_tree), 1)
+
+    @with_rw_directory
+    def test_beginning_space(self, rw_dir):
+        # Create a file beginning by a whitespace
+        repo = Repo.init(rw_dir)
+        file = osp.join(rw_dir, " file.txt")
+        with open(file, "w") as f:
+            f.write("hello world")
+        repo.git.add(Git.polish_url(file))
+        repo.index.commit("first commit")
+        
+        # Diff the commit with an empty tree
+        # and check the paths
+        diff_index = repo.head.commit.diff(NULL_TREE)
+        d = diff_index[0]
+        a_path = d.a_path
+        b_path = d.b_path
+        self.assertEqual(a_path, " file.txt")
+        self.assertEqual(b_path, " file.txt")
+    
