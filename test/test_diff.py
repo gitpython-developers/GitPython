@@ -539,7 +539,7 @@ class TestDiff(TestBase):
             f.write("hello world")
         repo.git.add(Git.polish_url(file))
         repo.index.commit("first commit")
-        
+
         # Diff the commit with an empty tree
         # and check the paths
         diff_index = repo.head.commit.diff(NULL_TREE)
@@ -548,4 +548,3 @@ class TestDiff(TestBase):
         b_path = d.b_path
         self.assertEqual(a_path, " file.txt")
         self.assertEqual(b_path, " file.txt")
-    
