@@ -828,8 +828,15 @@ class Remote(LazyMixin, IterableObj):
             name._clear_cache()
         return name
 
-    # `rm` is an alias.
-    rm = remove
+    @classmethod
+    def rm(cls, repo: "Repo", name: str) -> str:
+        """Alias of remove.
+        Remove the remote with the given name.
+
+        :return:
+            The passed remote name to remove
+        """
+        return cls.remove(repo, name)
 
     def rename(self, new_name: str) -> "Remote":
         """Rename self to the given `new_name`.

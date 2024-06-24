@@ -403,6 +403,17 @@ class Repo:
         return Head.list_items(self)
 
     @property
+    def branches(self) -> "IterableList[Head]":
+        """Alias for heads.
+        A list of :class:`~git.refs.head.Head` objects representing the branch heads
+        in this repo.
+
+        :return:
+            ``git.IterableList(Head, ...)``
+        """
+        return self.heads
+
+    @property
     def references(self) -> "IterableList[Reference]":
         """A list of :class:`~git.refs.reference.Reference` objects representing tags,
         heads and remote references.
@@ -412,11 +423,16 @@ class Repo:
         """
         return Reference.list_items(self)
 
-    # Alias for references.
-    refs = references
+    @property
+    def refs(self) -> "IterableList[Reference]":
+        """Alias for references.
+        A list of :class:`~git.refs.reference.Reference` objects representing tags,
+        heads and remote references.
 
-    # Alias for heads.
-    branches = heads
+        :return:
+            ``git.IterableList(Reference, ...)``
+        """
+        return self.references
 
     @property
     def index(self) -> "IndexFile":
