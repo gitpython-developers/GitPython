@@ -122,4 +122,3 @@ License Information
 ===================
 GitPython is licensed under the New BSD License.  See the LICENSE file for
 more information.
-
