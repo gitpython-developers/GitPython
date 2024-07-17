@@ -20,7 +20,7 @@ https://github.com/gitpython-developers/GitPython/releases/tag/3.1.42
 3.1.41
 ======
 
-This release is relevant for security as it fixes a possible arbitary
+This release is relevant for security as it fixes a possible arbitrary
 code execution on Windows.
 
 See this PR for details: https://github.com/gitpython-developers/GitPython/pull/1792

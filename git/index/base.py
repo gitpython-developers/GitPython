@@ -1443,7 +1443,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     key = entry_key(path, 0)
                     self.entries[key] = nie[key]
                 except KeyError:
-                    # If key is not in theirs, it musn't be in ours.
+                    # If key is not in theirs, it mustn't be in ours.
                     try:
                         del self.entries[key]
                     except KeyError:

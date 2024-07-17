@@ -78,3 +78,8 @@ lint.unfixable = [
 "test/**" = [
     "B018",  # useless-expression
 ]
+
+[tool.codespell]
+ignore-words-list="gud,doesnt"
+#count = true
+quiet-level = 3

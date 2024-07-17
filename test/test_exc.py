@@ -52,7 +52,7 @@ _causes_n_substrings = (
 
 _streams_n_substrings = (
     None,
-    "steram",
+    "stream",
     "ομορφο stream",
 )
 
