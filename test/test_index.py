@@ -1018,7 +1018,7 @@ class TestIndex(TestBase):
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
         reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
+        raises=HookExecutionError,
     )
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
@@ -1077,7 +1077,7 @@ class TestIndex(TestBase):
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
         reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
+        raises=HookExecutionError,
     )
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
@@ -1120,7 +1120,7 @@ class TestIndex(TestBase):
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
         reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
+        raises=HookExecutionError,
     )
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Wsl,

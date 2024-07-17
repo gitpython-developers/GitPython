@@ -80,7 +80,6 @@ lint.unfixable = [
 ]
 
 [tool.codespell]
-skip = 'test/fixtures/reflog_*'
 ignore-words-list="gud,doesnt"
 #count = true
 quiet-level = 3
