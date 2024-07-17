@@ -377,15 +377,25 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             :class:`Stats`
         """
-        if not self.parents:
-            text = self.repo.git.diff_tree(self.hexsha, "--", numstat=True, no_renames=True, root=True)
-            text2 = ""
-            for line in text.splitlines()[1:]:
+
+        def process_lines(lines: List[str]) -> str:
+            text = ""
+            for file_info, line in zip(lines, lines[len(lines) // 2 :]):
+                change_type = file_info.split("\t")[0][-1]
                 (insertions, deletions, filename) = line.split("\t")
-                text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
-            text = text2
+                text += "%s\t%s\t%s\t%s\n" % (change_type, insertions, deletions, filename)
+            return text
+
+        if not self.parents:
+            lines = self.repo.git.diff_tree(
+                self.hexsha, "--", numstat=True, no_renames=True, root=True, raw=True
+            ).splitlines()[1:]
+            text = process_lines(lines)
         else:
-            text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True)
+            lines = self.repo.git.diff(
+                self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True, raw=True
+            ).splitlines()
+            text = process_lines(lines)
         return Stats._list_from_string(self.repo, text)
 
     @property

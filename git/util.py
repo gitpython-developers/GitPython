@@ -910,6 +910,7 @@ class Stats:
       deletions = number of deleted lines as int
       insertions = number of inserted lines as int
       lines = total number of lines changed as int, or deletions + insertions
+      change_type = type of change as str, A|C|D|M|R|T|U|X|B
 
     ``full-stat-dict``
 
@@ -938,7 +939,7 @@ class Stats:
             "files": {},
         }
         for line in text.splitlines():
-            (raw_insertions, raw_deletions, filename) = line.split("\t")
+            (change_type, raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != "-" and int(raw_insertions) or 0
             deletions = raw_deletions != "-" and int(raw_deletions) or 0
             hsh["total"]["insertions"] += insertions
@@ -949,6 +950,7 @@ class Stats:
                 "insertions": insertions,
                 "deletions": deletions,
                 "lines": insertions + deletions,
+                "change_type": change_type,
             }
             hsh["files"][filename.strip()] = files_dict
         return Stats(hsh["total"], hsh["files"])
