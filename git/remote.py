@@ -250,7 +250,7 @@ class PushInfo(IterableObj):
                 flags |= cls.NEW_TAG
             elif "[new branch]" in summary:
                 flags |= cls.NEW_HEAD
-            # up-to-date encoded in control character
+            # `uptodate` encoded in control character
         else:
             # Fast-forward or forced update - was encoded in control character,
             # but we parse the old and new commit.
