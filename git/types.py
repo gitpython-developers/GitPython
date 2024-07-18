@@ -248,6 +248,7 @@ class Files_TD(TypedDict):
     insertions: int
     deletions: int
     lines: int
+    change_type: str
 
 
 class Total_TD(TypedDict):

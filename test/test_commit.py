@@ -135,9 +135,12 @@ class TestCommit(TestCommitSerialization):
         commit = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
         stats = commit.stats
 
-        def check_entries(d):
+        def check_entries(d, has_change_type=False):
             assert isinstance(d, dict)
-            for key in ("insertions", "deletions", "lines"):
+            keys = ("insertions", "deletions", "lines")
+            if has_change_type:
+                keys += ("change_type",)
+            for key in keys:
                 assert key in d
 
         # END assertion helper
@@ -148,7 +151,7 @@ class TestCommit(TestCommitSerialization):
         assert "files" in stats.total
 
         for _filepath, d in stats.files.items():
-            check_entries(d)
+            check_entries(d, True)
         # END for each stated file
 
         # Check that data is parsed properly.
