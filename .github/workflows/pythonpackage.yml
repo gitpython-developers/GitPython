@@ -18,10 +18,6 @@ jobs:
         exclude:
         - os: "macos-14"
           python-version: "3.7"
-        - os: "macos-14"
-          python-version: "3.8"
-        - os: "macos-14"
-          python-version: "3.9"
         include:
         - experimental: false
 
