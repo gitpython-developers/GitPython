@@ -47,6 +47,7 @@ jobs:
       uses: Vampire/setup-wsl@v3.1.1
       with:
         distribution: Alpine
+        additional-packages: bash
 
     - name: Prepare this repo for tests
       run: |
