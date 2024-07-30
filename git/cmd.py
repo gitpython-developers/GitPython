@@ -1214,7 +1214,8 @@ class Git(metaclass=_GitMeta):
             warnings.warn(
                 "Git.show() has strip_newline_in_stdout=True by default, which probably isn't what you want and will "
                 "change in a future version. It is recommended to use Git.show(..., strip_newline_in_stdout=False)",
-                DeprecationWarning
+                DeprecationWarning,
+                stacklevel=1,
             )
 
         # Allow the user to have the command executed in their working dir.
