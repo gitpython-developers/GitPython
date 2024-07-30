@@ -1193,7 +1193,7 @@ class TestRepo(TestBase):
     @with_rw_directory
     def test_empty_repo(self, rw_dir):
         """Assure we can handle empty repositories"""
-        r = Repo.init(rw_dir, mkdir=False)
+        r = Repo.init(rw_dir, mkdir=False, initial_branch="master")
         # It's ok not to be able to iterate a commit, as there is none.
         self.assertRaises(ValueError, r.iter_commits)
         self.assertEqual(r.active_branch.name, "master")
@@ -1352,7 +1352,7 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_rebasing(self, rw_dir):
-        r = Repo.init(rw_dir)
+        r = Repo.init(rw_dir, initial_branch="master")
         fp = osp.join(rw_dir, "hello.txt")
         r.git.commit(
             "--allow-empty",
