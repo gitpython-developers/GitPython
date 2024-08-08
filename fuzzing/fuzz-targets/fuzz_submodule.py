@@ -1,15 +1,50 @@
+# ruff: noqa: E402
 import atheris
 import sys
 import os
+import traceback
 import tempfile
 from configparser import ParsingError
-from utils import is_expected_exception_message, get_max_filename_length
+from utils import get_max_filename_length
+import re
+
+bundle_dir = os.path.dirname(os.path.abspath(__file__))
 
 if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # pragma: no cover
-    path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
-    os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = path_to_bundled_git_binary
+    bundled_git_binary_path = os.path.join(bundle_dir, "git")
+    os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = bundled_git_binary_path
 
 from git import Repo, GitCommandError, InvalidGitRepositoryError
+
+
+def load_exception_list(file_path):
+    """Load and parse the exception list from a file."""
+    try:
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+        exception_list = set()
+        for line in lines:
+            match = re.match(r"(.+):(\d+):", line)
+            if match:
+                file_path = match.group(1).strip()
+                line_number = int(match.group(2).strip())
+                exception_list.add((file_path, line_number))
+        return exception_list
+    except FileNotFoundError:
+        print("File not found: %s", file_path)
+        return set()
+    except Exception as e:
+        print("Error loading exception list: %s", e)
+        return set()
+
+
+def check_exception_against_list(exception_list, exc_traceback):
+    """Check if the exception traceback matches any entry in the exception list."""
+    for filename, lineno, _, _ in traceback.extract_tb(exc_traceback):
+        if (filename, lineno) in exception_list:
+            return True
+    return False
+
 
 if not sys.warnoptions:  # pragma: no cover
     # The warnings filter below can be overridden by passing the -W option
@@ -89,17 +124,14 @@ def TestOneInput(data):
             BrokenPipeError,
         ):
             return -1
-        except ValueError as e:
-            expected_messages = [
-                "SHA is empty",
-                "Reference at",
-                "embedded null byte",
-                "This submodule instance does not exist anymore",
-                "cmd stdin was empty",
-            ]
-            if is_expected_exception_message(e, expected_messages):
+        except Exception as e:
+            exc_traceback = e.__traceback__
+            exception_list = load_exception_list(os.path.join(bundle_dir, "explicit-exceptions-list.txt"))
+            if check_exception_against_list(exception_list, exc_traceback):
+                print("Exception matches an entry in the exception list.")
                 return -1
             else:
+                print("Exception does not match any entry in the exception list.")
                 raise e
 
 
