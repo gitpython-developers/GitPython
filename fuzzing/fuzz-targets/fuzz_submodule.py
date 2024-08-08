@@ -31,19 +31,25 @@ def load_exception_list(file_path):
                 exception_list.add((file_path, line_number))
         return exception_list
     except FileNotFoundError:
-        print("File not found: %s", file_path)
+        print(f"File not found: {file_path}")
         return set()
     except Exception as e:
-        print("Error loading exception list: %s", e)
+        print(f"Error loading exception list: {e}")
         return set()
+
+
+def match_exception_with_traceback(exception_list, exc_traceback):
+    """Match exception traceback with the entries in the exception list."""
+    for filename, lineno, _, _ in traceback.extract_tb(exc_traceback):
+        for file_pattern, line_pattern in exception_list:
+            if re.fullmatch(file_pattern, filename) and re.fullmatch(line_pattern, str(lineno)):
+                return True
+    return False
 
 
 def check_exception_against_list(exception_list, exc_traceback):
     """Check if the exception traceback matches any entry in the exception list."""
-    for filename, lineno, _, _ in traceback.extract_tb(exc_traceback):
-        if (filename, lineno) in exception_list:
-            return True
-    return False
+    return match_exception_with_traceback(exception_list, exc_traceback)
 
 
 if not sys.warnoptions:  # pragma: no cover
@@ -128,10 +134,8 @@ def TestOneInput(data):
             exc_traceback = e.__traceback__
             exception_list = load_exception_list(os.path.join(bundle_dir, "explicit-exceptions-list.txt"))
             if check_exception_against_list(exception_list, exc_traceback):
-                print("Exception matches an entry in the exception list.")
                 return -1
             else:
-                print("Exception does not match any entry in the exception list.")
                 raise e
 
 
