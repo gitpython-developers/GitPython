@@ -1,67 +1,17 @@
-# ruff: noqa: E402
 import atheris
 import sys
 import os
-import traceback
 import tempfile
 from configparser import ParsingError
-from utils import get_max_filename_length
-import re
-
-bundle_dir = os.path.dirname(os.path.abspath(__file__))
-
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # pragma: no cover
-    bundled_git_binary_path = os.path.join(bundle_dir, "git")
-    os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = bundled_git_binary_path
-
 from git import Repo, GitCommandError, InvalidGitRepositoryError
+from utils import (
+    setup_git_environment,
+    handle_exception,
+    get_max_filename_length,
+)
 
-
-def load_exception_list(file_path):
-    """Load and parse the exception list from a file."""
-    try:
-        with open(file_path, "r") as file:
-            lines = file.readlines()
-        exception_list = set()
-        for line in lines:
-            match = re.match(r"(.+):(\d+):", line)
-            if match:
-                file_path = match.group(1).strip()
-                line_number = int(match.group(2).strip())
-                exception_list.add((file_path, line_number))
-        return exception_list
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return set()
-    except Exception as e:
-        print(f"Error loading exception list: {e}")
-        return set()
-
-
-def match_exception_with_traceback(exception_list, exc_traceback):
-    """Match exception traceback with the entries in the exception list."""
-    for filename, lineno, _, _ in traceback.extract_tb(exc_traceback):
-        for file_pattern, line_pattern in exception_list:
-            if re.fullmatch(file_pattern, filename) and re.fullmatch(line_pattern, str(lineno)):
-                return True
-    return False
-
-
-def check_exception_against_list(exception_list, exc_traceback):
-    """Check if the exception traceback matches any entry in the exception list."""
-    return match_exception_with_traceback(exception_list, exc_traceback)
-
-
-if not sys.warnoptions:  # pragma: no cover
-    # The warnings filter below can be overridden by passing the -W option
-    # to the Python interpreter command line or setting the `PYTHONWARNINGS` environment variable.
-    import warnings
-    import logging
-
-    # Fuzzing data causes some modules to generate a large number of warnings
-    # which are not usually interesting and make the test output hard to read, so we ignore them.
-    warnings.simplefilter("ignore")
-    logging.getLogger().setLevel(logging.ERROR)
+# Setup the git environment
+setup_git_environment()
 
 
 def TestOneInput(data):
@@ -131,12 +81,10 @@ def TestOneInput(data):
         ):
             return -1
         except Exception as e:
-            exc_traceback = e.__traceback__
-            exception_list = load_exception_list(os.path.join(bundle_dir, "explicit-exceptions-list.txt"))
-            if check_exception_against_list(exception_list, exc_traceback):
+            if isinstance(e, ValueError) and "embedded null byte" in str(e):
                 return -1
             else:
-                raise e
+                return handle_exception(e)
 
 
 def main():
