@@ -92,12 +92,12 @@ create_seed_corpora_zips "$WORK/qa-assets/gitpython/corpora"
 prepare_dictionaries_for_fuzz_targets "$WORK/qa-assets/gitpython/dictionaries" "$SRC/gitpython/fuzzing"
 
 pushd "$SRC/gitpython/"
-# Search for 'raise' and 'assert' statements in Python files within GitPython's 'git/' directory and its submodules,
-# remove trailing colons, and save to 'explicit-exceptions-list.txt'. This file can then be used by fuzz harnesses to
-# check exception tracebacks:
-# If an exception found by the fuzzer originated in a file + line number in explicit-exceptions-list.txt, then it is not a bug.
+# Search for 'raise' and 'assert' statements in Python files within GitPython's source code and submodules, saving the
+# matched file path, line number, and line content to a file named 'explicit-exceptions-list.txt'.
+# This file can then be used by fuzz harnesses to check exception tracebacks and filter out explicitly raised or otherwise
+# anticipated exceptions to reduce false positive test failures.
 
-git grep -n --recurse-submodules -e '\braise\b' -e '\bassert\b' -- "git/**/*.py" > "$SRC/explicit-exceptions-list.txt"
+git grep -n --recurse-submodules -e '\braise\b' -e '\bassert\b' -- '*.py' -- ':!setup.py' -- ':!test/**' -- ':!fuzzing/**' > "$SRC/explicit-exceptions-list.txt"
 
 popd
 
