@@ -78,6 +78,10 @@ lint.unfixable = [
 "test/**" = [
     "B018",  # useless-expression
 ]
+"fuzzing/fuzz-targets/**" = [
+  "E402",  # environment setup must happen before the `git` module is imported, thus cannot happen at top of file
+]
+
 
 [tool.codespell]
 ignore-words-list="gud,doesnt"

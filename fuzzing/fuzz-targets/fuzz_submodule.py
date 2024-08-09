@@ -3,24 +3,15 @@ import sys
 import os
 import tempfile
 from configparser import ParsingError
-from utils import is_expected_exception_message, get_max_filename_length
+from utils import (
+    setup_git_environment,
+    handle_exception,
+    get_max_filename_length,
+)
 
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):  # pragma: no cover
-    path_to_bundled_git_binary = os.path.abspath(os.path.join(os.path.dirname(__file__), "git"))
-    os.environ["GIT_PYTHON_GIT_EXECUTABLE"] = path_to_bundled_git_binary
-
+# Setup the git environment
+setup_git_environment()
 from git import Repo, GitCommandError, InvalidGitRepositoryError
-
-if not sys.warnoptions:  # pragma: no cover
-    # The warnings filter below can be overridden by passing the -W option
-    # to the Python interpreter command line or setting the `PYTHONWARNINGS` environment variable.
-    import warnings
-    import logging
-
-    # Fuzzing data causes some modules to generate a large number of warnings
-    # which are not usually interesting and make the test output hard to read, so we ignore them.
-    warnings.simplefilter("ignore")
-    logging.getLogger().setLevel(logging.ERROR)
 
 
 def TestOneInput(data):
@@ -35,12 +26,13 @@ def TestOneInput(data):
                 sub_repo = Repo.init(submodule_temp_dir, bare=fdp.ConsumeBool())
                 sub_repo.index.commit(fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 512)))
 
-                submodule_name = f"submodule_{fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 512))}"
+                submodule_name = fdp.ConsumeUnicodeNoSurrogates(
+                    fdp.ConsumeIntInRange(1, max(1, get_max_filename_length(repo.working_tree_dir)))
+                )
                 submodule_path = os.path.join(repo.working_tree_dir, submodule_name)
-                submodule_url = sub_repo.git_dir
 
-                submodule = repo.create_submodule(submodule_name, submodule_path, url=submodule_url)
-                repo.index.commit(f"Added submodule {submodule_name}")
+                submodule = repo.create_submodule(submodule_name, submodule_path, url=sub_repo.git_dir)
+                repo.index.commit("Added submodule")
 
                 with submodule.config_writer() as writer:
                     key_length = fdp.ConsumeIntInRange(1, max(1, fdp.remaining_bytes()))
@@ -88,18 +80,11 @@ def TestOneInput(data):
             BrokenPipeError,
         ):
             return -1
-        except ValueError as e:
-            expected_messages = [
-                "SHA is empty",
-                "Reference at",
-                "embedded null byte",
-                "This submodule instance does not exist anymore",
-                "cmd stdin was empty",
-            ]
-            if is_expected_exception_message(e, expected_messages):
+        except Exception as e:
+            if isinstance(e, ValueError) and "embedded null byte" in str(e):
                 return -1
             else:
-                raise e
+                return handle_exception(e)
 
 
 def main():

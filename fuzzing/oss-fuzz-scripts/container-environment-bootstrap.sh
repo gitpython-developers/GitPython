@@ -91,6 +91,17 @@ create_seed_corpora_zips "$WORK/qa-assets/gitpython/corpora"
 
 prepare_dictionaries_for_fuzz_targets "$WORK/qa-assets/gitpython/dictionaries" "$SRC/gitpython/fuzzing"
 
+pushd "$SRC/gitpython/"
+# Search for 'raise' and 'assert' statements in Python files within GitPython's source code and submodules, saving the
+# matched file path, line number, and line content to a file named 'explicit-exceptions-list.txt'.
+# This file can then be used by fuzz harnesses to check exception tracebacks and filter out explicitly raised or otherwise
+# anticipated exceptions to reduce false positive test failures.
+
+git grep -n --recurse-submodules -e '\braise\b' -e '\bassert\b' -- '*.py' -- ':!setup.py' -- ':!test/**' -- ':!fuzzing/**' > "$SRC/explicit-exceptions-list.txt"
+
+popd
+
+
 # The OSS-Fuzz base image has outdated dependencies by default so we upgrade them below.
 python3 -m pip install --upgrade pip
 # Upgrade to the latest versions known to work at the time the below changes were introduced:
