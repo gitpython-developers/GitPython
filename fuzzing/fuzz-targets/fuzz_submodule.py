@@ -78,6 +78,7 @@ def TestOneInput(data):
             IsADirectoryError,
             NotADirectoryError,
             BrokenPipeError,
+            PermissionError,
         ):
             return -1
         except Exception as e:
