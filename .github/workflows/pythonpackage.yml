@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude:
         - os-type: macos
           python-version: "3.7"
@@ -23,6 +23,8 @@ jobs:
           python-version: "3.7"
           os-ver: "22.04"
         - experimental: false
+        - python-version: "3.13"
+          experimental: true
 
       fail-fast: false
 
