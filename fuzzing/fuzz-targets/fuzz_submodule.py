@@ -3,7 +3,6 @@ import sys
 import os
 import tempfile
 from configparser import ParsingError
-from git import Repo, GitCommandError, InvalidGitRepositoryError
 from utils import (
     setup_git_environment,
     handle_exception,
@@ -12,6 +11,7 @@ from utils import (
 
 # Setup the git environment
 setup_git_environment()
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 
 
 def TestOneInput(data):
