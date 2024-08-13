@@ -84,6 +84,8 @@ def TestOneInput(data):
         except Exception as e:
             if isinstance(e, ValueError) and "embedded null byte" in str(e):
                 return -1
+            elif isinstance(e, OSError) and "File name too long" in str(e):
+                return -1
             else:
                 return handle_exception(e)
 
