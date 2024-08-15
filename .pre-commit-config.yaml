@@ -4,7 +4,7 @@ repos:
   hooks:
   - id: codespell
     additional_dependencies: [tomli]
-    exclude: "test/fixtures/"
+    exclude: ^test/fixtures/
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.6.0
@@ -26,7 +26,7 @@ repos:
   rev: v4.6.0
   hooks:
   - id: end-of-file-fixer
-    exclude: test/fixtures/
+    exclude: ^test/fixtures/
   - id: check-toml
   - id: check-yaml
   - id: check-merge-conflict
