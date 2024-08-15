@@ -34,4 +34,4 @@ repos:
 - repo: https://github.com/abravalheri/validate-pyproject
   rev: v0.19
   hooks:
-    - id: validate-pyproject
+  - id: validate-pyproject
