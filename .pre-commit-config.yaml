@@ -4,7 +4,7 @@ repos:
   hooks:
   - id: codespell
     additional_dependencies: [tomli]
-    # args: ["--write-changes"]  # consider enabling for auto-fif
+    # args: ["--write-changes"]  # consider enabling for auto-fix
     exclude: "test/fixtures/"
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
