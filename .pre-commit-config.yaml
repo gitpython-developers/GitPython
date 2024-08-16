@@ -26,7 +26,7 @@ repos:
   rev: v4.6.0
   hooks:
   - id: end-of-file-fixer
-    exclude: ^test/fixtures/
+    exclude: ^test/fixtures/|COPYING|LICENSE
   - id: check-symlinks
   - id: check-toml
   - id: check-yaml
