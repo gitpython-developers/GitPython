@@ -84,6 +84,6 @@ lint.unfixable = [
 
 
 [tool.codespell]
-ignore-words-list="gud,doesnt"
+ignore-words-list="afile,assertIn,doesnt,gud,uptodate"
 #count = true
 quiet-level = 3
