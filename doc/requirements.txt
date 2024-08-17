@@ -1,8 +1,9 @@
-sphinx == 4.3.2
+sphinx >= 7.1.2, < 7.2 ; python_version >= "3.8"
+sphinx == 4.3.2 ; python_version < "3.8"
+sphinxcontrib-applehelp >= 1.0.2, <= 1.0.4 ; python_version < "3.8"
+sphinxcontrib-devhelp == 1.0.2 ; python_version < "3.8"
+sphinxcontrib-htmlhelp >= 2.0.0, <= 2.0.1 ; python_version < "3.8"
+sphinxcontrib-qthelp == 1.0.3 ; python_version < "3.8"
+sphinxcontrib-serializinghtml == 1.1.5 ; python_version < "3.8"
 sphinx_rtd_theme
-sphinxcontrib-applehelp >= 1.0.2, <= 1.0.4
-sphinxcontrib-devhelp == 1.0.2
-sphinxcontrib-htmlhelp >= 2.0.0, <= 2.0.1
-sphinxcontrib-qthelp == 1.0.3
-sphinxcontrib-serializinghtml == 1.1.5
 sphinx-autodoc-typehints
