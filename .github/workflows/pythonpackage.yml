@@ -99,6 +99,7 @@ jobs:
       continue-on-error: false
 
     - name: Documentation
+      if: matrix.python-version != '3.7'
       run: |
         pip install ".[doc]"
         make -C doc html
