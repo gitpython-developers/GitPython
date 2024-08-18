@@ -28,6 +28,7 @@ from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitReposito
 from git.objects import Blob, Commit, Object, Submodule, Tree
 from git.objects.util import Serializable
 from git.util import (
+    Actor,
     LazyMixin,
     LockedFD,
     join_path_native,
@@ -76,7 +77,6 @@ if TYPE_CHECKING:
 
     from git.refs.reference import Reference
     from git.repo import Repo
-    from git.util import Actor
 
 
 Treeish = Union[Tree, Commit, str, bytes]
@@ -1117,8 +1117,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         message: str,
         parent_commits: Union[List[Commit], None] = None,
         head: bool = True,
-        author: Union[None, "Actor"] = None,
-        committer: Union[None, "Actor"] = None,
+        author: Union[None, Actor] = None,
+        committer: Union[None, Actor] = None,
         author_date: Union[datetime.datetime, str, None] = None,
         commit_date: Union[datetime.datetime, str, None] = None,
         skip_hooks: bool = False,

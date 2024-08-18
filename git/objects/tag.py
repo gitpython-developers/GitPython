@@ -14,7 +14,7 @@ __all__ = ["TagObject"]
 import sys
 
 from git.compat import defenc
-from git.util import hex_to_bin
+from git.util import Actor, hex_to_bin
 
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
@@ -30,7 +30,6 @@ else:
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.util import Actor
 
     from .blob import Blob
     from .commit import Commit
@@ -64,7 +63,7 @@ class TagObject(base.Object):
         binsha: bytes,
         object: Union[None, base.Object] = None,
         tag: Union[None, str] = None,
-        tagger: Union[None, "Actor"] = None,
+        tagger: Union[None, Actor] = None,
         tagged_date: Union[int, None] = None,
         tagger_tz_offset: Union[int, None] = None,
         message: Union[str, None] = None,
