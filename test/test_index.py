@@ -1189,7 +1189,7 @@ class TestIndex(TestBase):
         file.touch()
         non_normalized_path = file.as_posix()
         if os.name != "nt":
-            non_normalized_path = non_normalized_path.replace("/", "\\")
+            non_normalized_path = "/" + non_normalized_path[1:].replace("/", "//")
 
         rw_repo.index.add(non_normalized_path)
 
