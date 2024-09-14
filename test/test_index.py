@@ -1181,6 +1181,18 @@ class TestIndex(TestBase):
 
         rw_repo.index.add(file)
 
+    @with_rw_repo("HEAD")
+    def test_index_add_non_normalized_path(self, rw_repo):
+        git_dir = Path(rw_repo.git_dir)
+
+        file = git_dir / "file.txt"
+        file.touch()
+        non_normalized_path = file.as_posix()
+        if os.name != "nt":
+            non_normalized_path = non_normalized_path.replace("/", "\\")
+
+        rw_repo.index.add(non_normalized_path)
+
 
 class TestIndexUtils:
     @pytest.mark.parametrize("file_path_type", [str, Path])
