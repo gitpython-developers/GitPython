@@ -182,7 +182,7 @@ class Repo:
             The path to either the root git directory or the bare git repo::
 
                 repo = Repo("/Users/mtrier/Development/git-python")
-                repo = Repo("/Users/mtrier/Development/git-python.git")
+                repo = Repo("/Users/mtrier/Development/git-python/.git")
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
                 repo = Repo(R"C:\Users\mtrier\Development\git-python\.git")
