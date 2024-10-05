@@ -179,7 +179,7 @@ class Repo:
         R"""Create a new :class:`Repo` instance.
 
         :param path:
-            The path to either the root git directory or the bare git repo::
+            The path to either the worktree directory or the .git directory itself::
 
                 repo = Repo("/Users/mtrier/Development/git-python")
                 repo = Repo("/Users/mtrier/Development/git-python.git")
