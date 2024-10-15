@@ -1269,6 +1269,7 @@ class Git(metaclass=_GitMeta):
                 stdout=stdout_sink,
                 shell=shell,
                 universal_newlines=universal_newlines,
+                encoding=defenc if universal_newlines else None,
                 **subprocess_kwargs,
             )
         except cmd_not_found_exception as err:
