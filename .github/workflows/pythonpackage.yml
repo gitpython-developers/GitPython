@@ -40,7 +40,7 @@ jobs:
 
     - name: Set up WSL (Windows)
       if: startsWith(matrix.os, 'windows')
-      uses: Vampire/setup-wsl@v3.1.1
+      uses: Vampire/setup-wsl@v4.0.0
       with:
         distribution: Alpine
         additional-packages: bash
