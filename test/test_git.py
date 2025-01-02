@@ -762,14 +762,14 @@ class TestGit(TestBase):
     def test_handle_process_output(self):
         from git.cmd import handle_process_output, safer_popen
 
-        line_count = 5002
-        count = [None, 0, 0]
+        expected_line_count = 5002
+        actual_lines = [None, [], []]
 
-        def counter_stdout(line):
-            count[1] += 1
+        def stdout_handler(line):
+            actual_lines[1].append(line)
 
-        def counter_stderr(line):
-            count[2] += 1
+        def stderr_handler(line):
+            actual_lines[2].append(line)
 
         cmdline = [
             sys.executable,
@@ -784,10 +784,10 @@ class TestGit(TestBase):
             shell=False,
         )
 
-        handle_process_output(proc, counter_stdout, counter_stderr, finalize_process)
+        handle_process_output(proc, stdout_handler, stderr_handler, finalize_process)
 
-        self.assertEqual(count[1], line_count)
-        self.assertEqual(count[2], line_count)
+        self.assertEqual(len(actual_lines[1]), expected_line_count, repr(actual_lines[1]))
+        self.assertEqual(len(actual_lines[2]), expected_line_count, repr(actual_lines[2]))
 
     def test_execute_kwargs_set_agrees_with_method(self):
         parameter_names = inspect.signature(cmd.Git.execute).parameters.keys()

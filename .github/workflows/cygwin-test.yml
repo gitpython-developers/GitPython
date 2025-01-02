@@ -55,10 +55,10 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Ensure the "pip" command is available
+    - name: Set up virtualenv
       run: |
-        # This is used unless, and before, an updated pip is installed.
-        ln -s pip3 /usr/bin/pip
+        python -m venv .venv
+        echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
 
     - name: Update PyPA packages
       run: |
