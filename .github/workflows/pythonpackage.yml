@@ -12,20 +12,21 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os-type: [ubuntu, macos, windows]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        exclude:
+        - os-type: macos
+          python-version: "3.7"
         include:
+        - os-ver: latest
+        - os-type: ubuntu
+          python-version: "3.7"
+          os-ver: "22.04"
         - experimental: false
-        - os: ubuntu-22.04
-          python-version: "3.7"
-          experimental: false
-        - os: windows-latest
-          python-version: "3.7"
-          experimental: false
 
       fail-fast: false
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os-type }}-${{ matrix.os-ver }}
 
     defaults:
       run:
@@ -43,7 +44,7 @@ jobs:
         allow-prereleases: ${{ matrix.experimental }}
 
     - name: Set up WSL (Windows)
-      if: startsWith(matrix.os, 'windows')
+      if: matrix.os-type == 'windows'
       uses: Vampire/setup-wsl@v4.0.0
       with:
         distribution: Alpine
@@ -80,7 +81,7 @@ jobs:
 
     # For debugging hook tests on native Windows systems that may have WSL.
     - name: Show bash.exe candidates (Windows)
-      if: startsWith(matrix.os, 'windows')
+      if: matrix.os-type == 'windows'
       run: |
         set +e
         bash.exe -c 'printenv WSL_DISTRO_NAME; uname -a'
