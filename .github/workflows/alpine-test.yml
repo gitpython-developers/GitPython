@@ -17,7 +17,7 @@ jobs:
     - name: Prepare Alpine Linux
       run: |
         apk add sudo git git-daemon python3 py3-pip py3-virtualenv
-        echo 'Defaults env_keep += "CI ENV GITHUB_* RUNNER_*"' >/etc/sudoers.d/ci_env
+        echo 'Defaults env_keep += "CI GITHUB_* RUNNER_*"' >/etc/sudoers.d/ci_env
         addgroup -g 127 docker
         adduser -D -u 1001 runner  # TODO: Check if this still works on GHA as intended.
         adduser runner docker
@@ -47,19 +47,21 @@ jobs:
     - name: Set up virtualenv
       run: |
         python -m venv .venv
-        echo 'ENV=.venv/bin/activate' >> "$GITHUB_ENV"  # ENV (not BASH_ENV) for BusyBox sh.
 
     - name: Update PyPA packages
       run: |
         # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
+        . .venv/bin/activate
         python -m pip install -U pip $(pip freeze --all | grep -ow ^setuptools) wheel
 
     - name: Install project and test dependencies
       run: |
+        . .venv/bin/activate
         pip install ".[test]"
 
     - name: Show version and platform information
       run: |
+        . .venv/bin/activate
         uname -a
         command -v git python
         git version
@@ -68,4 +70,5 @@ jobs:
 
     - name: Test with pytest
       run: |
+        . .venv/bin/activate
         pytest --color=yes -p no:sugar --instafail -vv
