@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
