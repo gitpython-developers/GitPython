@@ -25,12 +25,15 @@ jobs:
           python-version: "3.7"
           os-ver: "22.04"
         - experimental: false
-        - python-version: "3.13"
+        - os-type: windows
+          python-version: "3.13"
           experimental: true
 
       fail-fast: false
 
     runs-on: ${{ matrix.os-type }}-${{ matrix.os-ver }}
+
+    continue-on-error: ${{ matrix.experimental }}
 
     defaults:
       run:
