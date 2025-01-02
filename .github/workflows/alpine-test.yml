@@ -16,10 +16,10 @@ jobs:
     steps:
     - name: Prepare Alpine Linux
       run: |
-        apk add sudo git git-daemon python3 py3-pip
+        apk add sudo git git-daemon python3 py3-pip py3-setuptools py3-virtualenv py3-wheel
         echo 'Defaults env_keep += "CI GITHUB_* RUNNER_*"' >/etc/sudoers.d/ci_env
         addgroup -g 127 docker
-        adduser -D -u 1001 runner
+        adduser -D -u 1001 runner  # TODO: Check if this still works on GHA as intended.
         adduser runner docker
       shell: sh -exo pipefail {0}  # Run this as root, not the "runner" user.
 
@@ -50,17 +50,14 @@ jobs:
         . .venv/bin/activate
         printf '%s=%s\n' 'PATH' "$PATH" 'VIRTUAL_ENV' "$VIRTUAL_ENV" >>"$GITHUB_ENV"
 
-    - name: Update PyPA packages
-      run: |
-        # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
-        python -m pip install -U pip $(pip freeze --all | grep -ow ^setuptools) wheel
-
     - name: Install project and test dependencies
       run: |
+        . .venv/bin/activate
         pip install ".[test]"
 
     - name: Show version and platform information
       run: |
+        . .venv/bin/activate
         uname -a
         command -v git python
         git version
@@ -69,4 +66,5 @@ jobs:
 
     - name: Test with pytest
       run: |
+        . .venv/bin/activate
         pytest --color=yes -p no:sugar --instafail -vv
