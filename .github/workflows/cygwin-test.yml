@@ -7,6 +7,16 @@ jobs:
     runs-on: windows-latest
 
     strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+        include:
+        - python-version: "3.9"
+          python-cygwin: python39
+          python-command: python3.9
+        - python-version: "3.12"
+          python-cygwin: python312
+          python-command: python3.12
+
       fail-fast: false
 
     env:
@@ -30,7 +40,7 @@ jobs:
     - name: Set up Cygwin
       uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: python39 python39-pip python39-virtualenv git
+        packages: ${{ matrix.python-cygwin }} ${{ matrix.python-cygwin }}-pip ${{ matrix.python-cygwin }}-virtualenv git
 
     - name: Arrange for verbose output
       run: |
@@ -57,7 +67,7 @@ jobs:
 
     - name: Set up virtualenv
       run: |
-        python -m venv .venv
+        ${{ matrix.python-command }} -m venv .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
 
     - name: Update PyPA packages
