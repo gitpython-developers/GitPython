@@ -13,10 +13,12 @@ jobs:
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         exclude:
         - os-type: macos
-          python-version: "3.7"
+          python-version: "3.7"  # Not available for the ARM-based macOS runners.
+        - os-type: windows
+          python-version: "3.13"  # FIXME: Fix and enable Python 3.13 on Windows (#1955).
         include:
         - os-ver: latest
         - os-type: ubuntu
