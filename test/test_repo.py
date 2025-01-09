@@ -1064,9 +1064,9 @@ class TestRepo(TestBase):
         # TODO: Dereference tag into a blob 0.1.7^{blob} - quite a special one.
         # Needs a tag which points to a blob.
 
-        # ref^0 returns commit being pointed to, same with ref~0, and ^{}
+        # ref^0 returns commit being pointed to, same with ref~0, ^{}, and ^{commit}
         tag = rev_parse("0.1.4")
-        for token in ("~0", "^0", "^{}"):
+        for token in ("~0", "^0", "^{}", "^{commit}"):
             self.assertEqual(tag.object, rev_parse("0.1.4%s" % token))
         # END handle multiple tokens
 
