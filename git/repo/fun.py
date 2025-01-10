@@ -301,7 +301,13 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
 
             # Handle type.
             if output_type == "commit":
-                pass  # Default.
+                obj = cast("TagObject", obj)
+                if obj and obj.type == "tag":
+                    obj = deref_tag(obj)
+                else:
+                    # Cannot do anything for non-tags.
+                    pass
+                # END handle tag
             elif output_type == "tree":
                 try:
                     obj = cast(AnyGitObject, obj)
