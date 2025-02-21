@@ -30,7 +30,7 @@ jobs:
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@v5
       with:
-        packages: python39 python39-pip python39-virtualenv python39-wheel git
+        packages: python39 python39-pip python39-virtualenv git
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
     - name: Arrange for verbose output
@@ -61,9 +61,9 @@ jobs:
         python3.9 -m venv --without-pip .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
 
-    - name: Install pip in virtualenv
+    - name: Bootstrap pip in virtualenv
       run: |
-        python -m ensurepip
+        wget -qO- https://bootstrap.pypa.io/get-pip.py | python
 
     - name: Update PyPA packages
       run: |
