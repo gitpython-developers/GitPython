@@ -58,8 +58,12 @@ jobs:
 
     - name: Set up virtualenv
       run: |
-        python3.9 -m venv .venv
+        python3.9 -m venv --without-pip .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
+
+    - name: Install pip in virtualenv
+      run: |
+        python -m ensurepip
 
     - name: Update PyPA packages
       run: |
