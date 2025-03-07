@@ -17,8 +17,12 @@ jobs:
         exclude:
         - os-type: macos
           python-version: "3.7"  # Not available for the ARM-based macOS runners.
+        - os-type: macos
+          python-version: "3.13t"
         - os-type: windows
           python-version: "3.13"  # FIXME: Fix and enable Python 3.13 on Windows (#1955).
+        - os-type: windows
+          python-version: "3.13t"
         include:
         - os-ver: latest
         - os-type: ubuntu
