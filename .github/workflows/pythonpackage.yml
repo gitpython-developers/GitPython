@@ -27,6 +27,7 @@ jobs:
         - experimental: false
         - os-type: windows
           python-version: "3.13"
+          os-ver: latest  # Somehow the fallback (`- os-ver: latest` by itself) no longer covers this.
           experimental: true
 
       fail-fast: false
