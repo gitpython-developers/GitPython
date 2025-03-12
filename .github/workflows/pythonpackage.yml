@@ -49,6 +49,7 @@ jobs:
       if: matrix.os-type == 'windows'
       uses: Vampire/setup-wsl@v5.0.0
       with:
+        wsl-version: 1
         distribution: Alpine
         additional-packages: bash
 
