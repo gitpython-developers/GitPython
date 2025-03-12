@@ -655,7 +655,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             raise InvalidGitRepositoryError("require non-bare repository")
         if not osp.normpath(str(path)).startswith(str(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
-        return os.path.relpath(path, self.repo.working_tree_dir)
+        result = os.path.relpath(path, self.repo.working_tree_dir)
+        if str(path).endswith(os.sep) and not result.endswith(os.sep):
+            result += os.sep
+        return result
 
     def _preprocess_add_items(
         self, items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]]

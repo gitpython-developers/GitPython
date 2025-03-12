@@ -16,6 +16,7 @@ from stat import S_ISLNK, ST_MODE
 import subprocess
 import sys
 import tempfile
+from unittest import mock
 
 from gitdb.base import IStream
 
@@ -1014,6 +1015,27 @@ class TestIndex(TestBase):
 
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
+
+    def test__to_relative_path_absolute_trailing_slash(self):
+        repo_root = os.path.join(osp.abspath(os.sep), "directory1", "repo_root")
+
+        class Mocked:
+            bare = False
+            git_dir = repo_root
+            working_tree_dir = repo_root
+
+        repo = Mocked()
+        path = os.path.join(repo_root, f"directory2{os.sep}")
+        index = IndexFile(repo)
+
+        expected_path = f"directory2{os.sep}"
+        actual_path = index._to_relative_path(path)
+        self.assertEqual(expected_path, actual_path)
+
+        with mock.patch("git.index.base.os.path") as ospath_mock:
+            ospath_mock.relpath.return_value = f"directory2{os.sep}"
+            actual_path = index._to_relative_path(path)
+            self.assertEqual(expected_path, actual_path)
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
