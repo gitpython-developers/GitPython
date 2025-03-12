@@ -13,12 +13,16 @@ jobs:
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.13t"]
         exclude:
         - os-type: macos
           python-version: "3.7"  # Not available for the ARM-based macOS runners.
+        - os-type: macos
+          python-version: "3.13t"
         - os-type: windows
           python-version: "3.13"  # FIXME: Fix and enable Python 3.13 on Windows (#1955).
+        - os-type: windows
+          python-version: "3.13t"
         include:
         - os-ver: latest
         - os-type: ubuntu
@@ -40,7 +44,16 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Python ${{ matrix.python-version }}
+      if: |-
+        !endsWith(matrix.python-version, 't')
       uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        allow-prereleases: ${{ matrix.experimental }}
+
+    - name: Set up Python ${{ matrix.python-version }} (free-threaded)
+      if: endsWith(matrix.python-version, 't')
+      uses: Quansight-Labs/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
