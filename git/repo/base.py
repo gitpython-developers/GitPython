@@ -512,7 +512,7 @@ class Repo:
     def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """An iterator yielding Submodule instances.
 
-        See the `~git.objects.util.Traversable` interface for a description of `args`
+        See the :class:`~git.objects.util.Traversable` interface for a description of `args`
         and `kwargs`.
 
         :return:

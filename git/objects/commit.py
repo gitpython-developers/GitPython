@@ -289,7 +289,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """
         :return:
             String describing the commits hex sha based on the closest
-            `~git.refs.reference.Reference`.
+            :class:`~git.refs.reference.Reference`.
 
         :note:
             Mostly useful for UI purposes.
@@ -349,7 +349,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return cls._iter_from_process_or_stream(repo, proc)
 
     def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> Iterator["Commit"]:
-        R"""Iterate _all_ parents of this commit.
+        R"""Iterate *all* parents of this commit.
 
         :param paths:
             Optional path or list of paths limiting the :class:`Commit`\s to those that

@@ -508,7 +508,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :param predicate:
             Function(t) returning ``True`` if tuple(stage, Blob) should be yielded by
-            the iterator. A default filter, the `~git.index.typ.BlobFilter`, allows you
+            the iterator. A default filter, the :class:`~git.index.typ.BlobFilter`, allows you
             to yield blobs only if they match a given list of paths.
         """
         for entry in self.entries.values():
@@ -770,7 +770,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             - path string
 
                 Strings denote a relative or absolute path into the repository pointing
-                to an existing file, e.g., ``CHANGES``, `lib/myfile.ext``,
+                to an existing file, e.g., ``CHANGES``, ``lib/myfile.ext``,
                 ``/home/gitrepo/lib/myfile.ext``.
 
                 Absolute paths must start with working tree directory of this index's
@@ -789,7 +789,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
                 They are added at stage 0.
 
-            - :class:~`git.objects.blob.Blob` or
+            - :class:`~git.objects.blob.Blob` or
               :class:`~git.objects.submodule.base.Submodule` object
 
                 Blobs are added as they are assuming a valid mode is set.
@@ -815,7 +815,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             - :class:`~git.index.typ.BaseIndexEntry` or type
 
-                Handling equals the one of :class:~`git.objects.blob.Blob` objects, but
+                Handling equals the one of :class:`~git.objects.blob.Blob` objects, but
                 the stage may be explicitly set. Please note that Index Entries require
                 binary sha's.
 
@@ -998,7 +998,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
                 The path string may include globs, such as ``*.c``.
 
-            - :class:~`git.objects.blob.Blob` object
+            - :class:`~git.objects.blob.Blob` object
 
                 Only the path portion is used in this case.
 

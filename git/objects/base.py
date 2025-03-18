@@ -122,7 +122,7 @@ class Object(LazyMixin):
         :return:
             New :class:`Object` instance of a type appropriate to the object type behind
             `id`. The id of the newly created object will be a binsha even though the
-            input id may have been a `~git.refs.reference.Reference` or rev-spec.
+            input id may have been a :class:`~git.refs.reference.Reference` or rev-spec.
 
         :param id:
             :class:`~git.refs.reference.Reference`, rev-spec, or hexsha.
@@ -218,7 +218,7 @@ class IndexObject(Object):
     """Base for all objects that can be part of the index file.
 
     The classes representing git object types that can be part of the index file are
-    :class:`~git.objects.tree.Tree and :class:`~git.objects.blob.Blob`. In addition,
+    :class:`~git.objects.tree.Tree` and :class:`~git.objects.blob.Blob`. In addition,
     :class:`~git.objects.submodule.base.Submodule`, which is not really a git object
     type but can be part of an index file, is also a subclass.
     """
