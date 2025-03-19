@@ -354,20 +354,18 @@ class Repo:
     def __hash__(self) -> int:
         return hash(self.git_dir)
 
-    # Description property
-    def _get_description(self) -> str:
+    @property
+    def description(self) -> str:
+        """The project's description"""
         filename = osp.join(self.git_dir, "description")
         with open(filename, "rb") as fp:
             return fp.read().rstrip().decode(defenc)
 
-    def _set_description(self, descr: str) -> None:
+    @description.setter
+    def description(self, descr: str) -> None:
         filename = osp.join(self.git_dir, "description")
         with open(filename, "wb") as fp:
             fp.write((descr + "\n").encode(defenc))
-
-    description = property(_get_description, _set_description, doc="the project's description")
-    del _get_description
-    del _set_description
 
     @property
     def working_tree_dir(self) -> Optional[PathLike]:
@@ -885,13 +883,14 @@ class Repo:
         elif not value and fileexists:
             os.unlink(filename)
 
-    daemon_export = property(
-        _get_daemon_export,
-        _set_daemon_export,
-        doc="If True, git-daemon may export this repository",
-    )
-    del _get_daemon_export
-    del _set_daemon_export
+    @property
+    def daemon_export(self) -> bool:
+        """If True, git-daemon may export this repository"""
+        return self._get_daemon_export()
+
+    @daemon_export.setter
+    def daemon_export(self, value: object) -> None:
+        self._set_daemon_export(value)
 
     def _get_alternates(self) -> List[str]:
         """The list of alternates for this repo from which objects can be retrieved.
@@ -929,11 +928,14 @@ class Repo:
             with open(alternates_path, "wb") as f:
                 f.write("\n".join(alts).encode(defenc))
 
-    alternates = property(
-        _get_alternates,
-        _set_alternates,
-        doc="Retrieve a list of alternates paths or set a list paths to be used as alternates",
-    )
+    @property
+    def alternates(self) -> List[str]:
+        """Retrieve a list of alternates paths or set a list paths to be used as alternates"""
+        return self._get_alternates()
+
+    @alternates.setter
+    def alternates(self, alts: List[str]) -> None:
+        self._set_alternates(alts)
 
     def is_dirty(
         self,
