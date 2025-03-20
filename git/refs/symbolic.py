@@ -39,7 +39,6 @@ from git.types import AnyGitObject, PathLike
 if TYPE_CHECKING:
     from git.config import GitConfigParser
     from git.objects.commit import Actor
-    from git.refs import Head, TagReference, RemoteReference, Reference
     from git.refs.log import RefLogEntry
     from git.repo import Repo
 
@@ -387,17 +386,23 @@ class SymbolicReference:
         # set the commit on our reference
         return self._get_reference().set_object(object, logmsg)
 
-    commit = property(
-        _get_commit,
-        set_commit,  # type: ignore[arg-type]
-        doc="Query or set commits directly",
-    )
+    @property
+    def commit(self) -> "Commit":
+        """Query or set commits directly"""
+        return self._get_commit()
 
-    object = property(
-        _get_object,
-        set_object,  # type: ignore[arg-type]
-        doc="Return the object our ref currently refers to",
-    )
+    @commit.setter
+    def commit(self, commit: Union[Commit, "SymbolicReference", str]) -> "SymbolicReference":
+        return self.set_commit(commit)
+
+    @property
+    def object(self) -> AnyGitObject:
+        """Return the object our ref currently refers to"""
+        return self._get_object()
+
+    @object.setter
+    def object(self, object: Union[AnyGitObject, "SymbolicReference", str]) -> "SymbolicReference":
+        return self.set_object(object)
 
     def _get_reference(self) -> "SymbolicReference":
         """
@@ -496,12 +501,14 @@ class SymbolicReference:
         return self
 
     # Aliased reference
-    reference: Union["Head", "TagReference", "RemoteReference", "Reference"]
-    reference = property(  # type: ignore[assignment]
-        _get_reference,
-        set_reference,  # type: ignore[arg-type]
-        doc="Returns the Reference we point to",
-    )
+    @property
+    def reference(self) -> "SymbolicReference":
+        return self._get_reference()
+
+    @reference.setter
+    def reference(self, ref: Union[AnyGitObject, "SymbolicReference", str]) -> "SymbolicReference":
+        return self.set_reference(ref)
+
     ref = reference
 
     def is_valid(self) -> bool:
