@@ -44,16 +44,7 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Python ${{ matrix.python-version }}
-      if: |-
-        !endsWith(matrix.python-version, 't')
       uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        allow-prereleases: ${{ matrix.experimental }}
-
-    - name: Set up Python ${{ matrix.python-version }} (free-threaded)
-      if: endsWith(matrix.python-version, 't')
-      uses: Quansight-Labs/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
