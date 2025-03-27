@@ -1193,7 +1193,7 @@ class TestRepo(TestBase):
     @with_rw_directory
     def test_empty_repo(self, rw_dir):
         """Assure we can handle empty repositories"""
-        r = Repo.init(rw_dir, mkdir=False)
+        r = Repo.init(rw_dir, mkdir=False, initial_branch="master")
         # It's ok not to be able to iterate a commit, as there is none.
         self.assertRaises(ValueError, r.iter_commits)
         self.assertEqual(r.active_branch.name, "master")
@@ -1352,7 +1352,7 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_rebasing(self, rw_dir):
-        r = Repo.init(rw_dir)
+        r = Repo.init(rw_dir, initial_branch="master")
         fp = osp.join(rw_dir, "hello.txt")
         r.git.commit(
             "--allow-empty",
@@ -1377,13 +1377,23 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_do_not_strip_newline_in_stdout(self, rw_dir):
+        r = self.create_repo_commit_hello_newline(rw_dir)
+        self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")
+
+    def create_repo_commit_hello_newline(self, rw_dir):
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, "hello.txt")
         with open(fp, "w") as fs:
             fs.write("hello\n")
         r.git.add(Git.polish_url(fp))
         r.git.commit(message="init")
-        self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")
+        return r
+
+    @with_rw_directory
+    def test_warn_when_strip_newline_in_stdout(self, rw_dir):
+        r = self.create_repo_commit_hello_newline(rw_dir)
+        with pytest.warns(DeprecationWarning):
+            self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=True), "hello")
 
     @pytest.mark.xfail(
         sys.platform == "win32",
