@@ -463,7 +463,13 @@ def _is_cygwin_git(git_executable: str) -> bool:
                 git_dir = osp.dirname(res[0]) if res else ""
 
             # Just a name given, not a real path.
+            # Let's see if the same path has uname
             uname_cmd = osp.join(git_dir, "uname")
+            if not (osp.isfile(uname_cmd) and os.access(uname_cmd, os.X_OK)):
+                _logger.debug(f"File {uname_cmd} either does not exist or is not executable.")
+                _is_cygwin_cache[git_executable] = is_cygwin
+                return is_cygwin
+
             process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE, universal_newlines=True)
             uname_out, _ = process.communicate()
             # retcode = process.poll()
