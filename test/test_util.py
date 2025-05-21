@@ -34,6 +34,7 @@ from git.util import (
     LockFile,
     cygpath,
     decygpath,
+    is_cygwin_git,
     get_user_id,
     remove_password_if_present,
     rmtree,
@@ -347,6 +348,24 @@ class TestCygpath:
     def test_decygpath(self, wpath, cpath):
         wcpath = decygpath(cpath)
         assert wcpath == wpath.replace("/", "\\"), cpath
+
+
+class TestIsCygwinGit:
+    """Tests for :func:`is_cygwin_git`"""
+
+    def test_on_path_executable(self):
+        match sys.platform:
+            case "cygwin":
+                assert is_cygwin_git("git")
+            case _:
+                assert not is_cygwin_git("git")
+
+    def test_none_executable(self):
+        assert not is_cygwin_git(None)
+
+    def test_with_missing_uname(self):
+        """Test for handling when `uname` isn't in the same directory as `git`"""
+        assert not is_cygwin_git("/bogus_path/git")
 
 
 class _Member:
