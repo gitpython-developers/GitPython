@@ -490,7 +490,7 @@ def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if sys.platform == "win32":  # TODO: See if we can use `sys.platform != "cygwin"`.
+    if sys.platform != "cygwin":
         return False
     elif git_executable is None:
         return False
