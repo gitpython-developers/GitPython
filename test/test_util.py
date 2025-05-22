@@ -354,11 +354,10 @@ class TestIsCygwinGit:
     """Tests for :func:`is_cygwin_git`"""
 
     def test_on_path_executable(self):
-        match sys.platform:
-            case "cygwin":
-                assert is_cygwin_git("git")
-            case _:
-                assert not is_cygwin_git("git")
+        if sys.platform == "cygwin":
+            assert is_cygwin_git("git")
+        else:
+            assert not is_cygwin_git("git")
 
     def test_none_executable(self):
         assert not is_cygwin_git(None)
