@@ -96,7 +96,6 @@ from git.types import (
     Files_TD,
     Has_id_attribute,
     HSH_TD,
-    Literal,
     PathLike,
     Protocol,
     SupportsIndex,
@@ -344,44 +343,6 @@ def _get_exe_extensions() -> Sequence[str]:
         return ()
 
 
-def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
-    """Perform a path search to assist :func:`is_cygwin_git`.
-
-    This is not robust for general use. It is an implementation detail of
-    :func:`is_cygwin_git`. When a search following all shell rules is needed,
-    :func:`shutil.which` can be used instead.
-
-    :note:
-        Neither this function nor :func:`shutil.which` will predict the effect of an
-        executable search on a native Windows system due to a :class:`subprocess.Popen`
-        call without ``shell=True``, because shell and non-shell executable search on
-        Windows differ considerably.
-    """
-    # From: http://stackoverflow.com/a/377028/548792
-    winprog_exts = _get_exe_extensions()
-
-    def is_exec(fpath: str) -> bool:
-        return (
-            osp.isfile(fpath)
-            and os.access(fpath, os.X_OK)
-            and (
-                sys.platform != "win32" or not winprog_exts or any(fpath.upper().endswith(ext) for ext in winprog_exts)
-            )
-        )
-
-    progs = []
-    if not path:
-        path = os.environ["PATH"]
-    for folder in str(path).split(os.pathsep):
-        folder = folder.strip('"')
-        if folder:
-            exe_path = osp.join(folder, program)
-            for f in [exe_path] + ["%s%s" % (exe_path, e) for e in winprog_exts]:
-                if is_exec(f):
-                    progs.append(f)
-    return progs
-
-
 def _cygexpath(drive: Optional[str], path: str) -> str:
     if osp.isabs(path) and not drive:
         # Invoked from `cygpath()` directly with `D:Apps\123`?
@@ -445,51 +406,6 @@ def decygpath(path: PathLike) -> str:
         path = "%s:%s" % (drive.upper(), rest_path or "")
 
     return path.replace("/", "\\")
-
-
-#: Store boolean flags denoting if a specific Git executable
-#: is from a Cygwin installation (since `cache_lru()` unsupported on PY2).
-_is_cygwin_cache: Dict[str, Optional[bool]] = {}
-
-
-def _is_cygwin_git(git_executable: str) -> bool:
-    is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
-    if is_cygwin is None:
-        is_cygwin = False
-        try:
-            git_dir = osp.dirname(git_executable)
-            if not git_dir:
-                res = py_where(git_executable)
-                git_dir = osp.dirname(res[0]) if res else ""
-
-            # Just a name given, not a real path.
-            uname_cmd = osp.join(git_dir, "uname")
-            process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE, universal_newlines=True)
-            uname_out, _ = process.communicate()
-            # retcode = process.poll()
-            is_cygwin = "CYGWIN" in uname_out
-        except Exception as ex:
-            _logger.debug("Failed checking if running in CYGWIN due to: %r", ex)
-        _is_cygwin_cache[git_executable] = is_cygwin
-
-    return is_cygwin
-
-
-@overload
-def is_cygwin_git(git_executable: None) -> Literal[False]: ...
-
-
-@overload
-def is_cygwin_git(git_executable: PathLike) -> bool: ...
-
-
-def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if sys.platform == "win32":  # TODO: See if we can use `sys.platform != "cygwin"`.
-        return False
-    elif git_executable is None:
-        return False
-    else:
-        return _is_cygwin_git(str(git_executable))
 
 
 def get_user_id() -> str:

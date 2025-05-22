@@ -32,7 +32,6 @@ from git.exc import (
 from git.util import (
     cygpath,
     expand_path,
-    is_cygwin_git,
     patch_env,
     remove_password_if_present,
     stream_copy,
@@ -661,7 +660,7 @@ class Git(metaclass=_GitMeta):
 
     @classmethod
     def is_cygwin(cls) -> bool:
-        return is_cygwin_git(cls.GIT_PYTHON_GIT_EXECUTABLE)
+        return cls.GIT_PYTHON_GIT_EXECUTABLE is not None and sys.platform == "cygwin"
 
     @overload
     @classmethod
