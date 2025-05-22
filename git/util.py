@@ -465,7 +465,7 @@ def _is_cygwin_git(git_executable: str) -> bool:
             # Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, "uname")
 
-            if not (pathlib.Path(uname_cmd).exists() and os.access(uname_cmd, os.X_OK)):
+            if not (pathlib.Path(uname_cmd).isfile() and os.access(uname_cmd, os.X_OK)):
                 _logger.debug(f"Failed checking if running in CYGWIN: {uname_cmd} is not an executable")
                 _is_cygwin_cache[git_executable] = is_cygwin
                 return is_cygwin
