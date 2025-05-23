@@ -10,6 +10,8 @@ __pycache__/
 # Transient editor files
 *.swp
 *~
+\#*#
+.#*#
 
 # Editor configuration
 nbproject
