@@ -131,6 +131,9 @@ class Repo:
     git_dir: PathLike
     """The ``.git`` repository directory."""
 
+    safe: None
+    """Whether this is operating using restricted protocol and execution access."""
+
     _common_dir: PathLike = ""
 
     # Precompiled regex
@@ -175,6 +178,7 @@ class Repo:
         odbt: Type[LooseObjectDB] = GitCmdObjectDB,
         search_parent_directories: bool = False,
         expand_vars: bool = True,
+        safe: bool = False,
     ) -> None:
         R"""Create a new :class:`Repo` instance.
 
@@ -203,6 +207,44 @@ class Repo:
 
             Please note that this was the default behaviour in older versions of
             GitPython, which is considered a bug though.
+
+        :param safe:
+            Lock down the configuration to make it as safe as possible
+            when working with publicly accessible, untrusted
+            repositories.  This disables all known options that can run
+            external programs and limits networking to the HTTP protocol
+            via ``https://`` URLs.  This might not cover Git config
+            options that were added since this was implemented, or
+            options that have unknown exploit vectors.  It is a best
+            effort defense rather than an exhaustive protection measure.
+
+            In order to make this more likely to work with submodules,
+            some attempts are made to rewrite remote URLs to ``https://``
+            using `insteadOf` in the config. This might not work on all
+            projects, so submodules should always use ``https://`` URLs.
+
+            :envvar:`GIT_TERMINAL_PROMPT` is set to `false` and these
+            environment variables are forced to `/bin/true`:
+            :envvar:`GIT_ASKPASS`, :envvar:`GIT_EDITOR`,
+            :envvar:`GIT_PAGER`, :envvar:`GIT_SSH`,
+            :envvar:`GIT_SSH_COMMAND`, and :envvar:`SSH_ASKPASS`.
+
+            Git config options are supplied via the command line to set
+            up key parts of safe mode.
+
+            - Direct options for executing external commands are set to ``/bin/true``:
+              ``core.askpass``, ``core.sshCommand`` and ``credential.helper``.
+
+            - External password prompts are disabled by skipping authentication using
+              ``http.emptyAuth=true``.
+
+            - Any use of an fsmonitor daemon is disabled using ``core.fsmonitor=false``.
+
+            - Hook scripts are disabled using ``core.hooksPath=/dev/null``.
+
+            It was not possible to cover all config items that might execute an external
+            command, for example, ``receive.procReceiveRefs``,
+            ``uploadpack.packObjectsHook`` and ``remote.<name>.vcs``.
 
         :raise git.exc.InvalidGitRepositoryError:
 
@@ -234,6 +276,8 @@ class Repo:
         if epath is not None:
             if not os.path.exists(epath):
                 raise NoSuchPathError(epath)
+
+        self.safe = safe
 
         # Walk up the path to find the `.git` dir.
         curpath = epath
@@ -309,7 +353,7 @@ class Repo:
         # END working dir handling
 
         self.working_dir: PathLike = self._working_tree_dir or self.common_dir
-        self.git = self.GitCommandWrapperType(self.working_dir)
+        self.git = self.GitCommandWrapperType(self.working_dir, safe)
 
         # Special handling, in special times.
         rootpath = osp.join(self.common_dir, "objects")
@@ -1305,6 +1349,7 @@ class Repo:
         mkdir: bool = True,
         odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         expand_vars: bool = True,
+        safe: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         """Initialize a git repository at the given path if specified.
@@ -1329,6 +1374,44 @@ class Repo:
             information disclosure, allowing attackers to access the contents of
             environment variables.
 
+        :param safe:
+            Lock down the configuration to make it as safe as possible
+            when working with publicly accessible, untrusted
+            repositories.  This disables all known options that can run
+            external programs and limits networking to the HTTP protocol
+            via ``https://`` URLs.  This might not cover Git config
+            options that were added since this was implemented, or
+            options that have unknown exploit vectors.  It is a best
+            effort defense rather than an exhaustive protection measure.
+
+            In order to make this more likely to work with submodules,
+            some attempts are made to rewrite remote URLs to ``https://``
+            using `insteadOf` in the config. This might not work on all
+            projects, so submodules should always use ``https://`` URLs.
+
+            :envvar:`GIT_TERMINAL_PROMPT` is set to `false` and these
+            environment variables are forced to `/bin/true`:
+            :envvar:`GIT_ASKPASS`, :envvar:`GIT_EDITOR`,
+            :envvar:`GIT_PAGER`, :envvar:`GIT_SSH`,
+            :envvar:`GIT_SSH_COMMAND`, and :envvar:`SSH_ASKPASS`.
+
+            Git config options are supplied via the command line to set
+            up key parts of safe mode.
+
+            - Direct options for executing external commands are set to ``/bin/true``:
+              ``core.askpass``, ``core.sshCommand`` and ``credential.helper``.
+
+            - External password prompts are disabled by skipping authentication using
+              ``http.emptyAuth=true``.
+
+            - Any use of an fsmonitor daemon is disabled using ``core.fsmonitor=false``.
+
+            - Hook scripts are disabled using ``core.hooksPath=/dev/null``.
+
+            It was not possible to cover all config items that might execute an external
+            command, for example, ``receive.procReceiveRefs``,
+            ``uploadpack.packObjectsHook`` and ``remote.<name>.vcs``.
+
         :param kwargs:
             Keyword arguments serving as additional options to the
             :manpage:`git-init(1)` command.
@@ -1342,9 +1425,9 @@ class Repo:
             os.makedirs(path, 0o755)
 
         # git command automatically chdir into the directory
-        git = cls.GitCommandWrapperType(path)
+        git = cls.GitCommandWrapperType(path, safe)
         git.init(**kwargs)
-        return cls(path, odbt=odbt)
+        return cls(path, odbt=odbt, safe=safe)
 
     @classmethod
     def _clone(
@@ -1357,6 +1440,7 @@ class Repo:
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
+        safe: Union[bool, None] = None,
         **kwargs: Any,
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
@@ -1418,7 +1502,11 @@ class Repo:
         if not osp.isabs(path):
             path = osp.join(git._working_dir, path) if git._working_dir is not None else path
 
-        repo = cls(path, odbt=odbt)
+        # if safe is not explicitly defined, then the new Repo instance should inherit the safe value
+        if safe is None:
+            safe = git._safe
+
+        repo = cls(path, odbt=odbt, safe=safe)
 
         # Retain env values that were passed to _clone().
         repo.git.update_environment(**git.environment())
@@ -1501,6 +1589,7 @@ class Repo:
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
+        safe: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         """Create a clone from the given URL.
@@ -1531,13 +1620,52 @@ class Repo:
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
 
+        :param safe:
+            Lock down the configuration to make it as safe as possible
+            when working with publicly accessible, untrusted
+            repositories.  This disables all known options that can run
+            external programs and limits networking to the HTTP protocol
+            via ``https://`` URLs.  This might not cover Git config
+            options that were added since this was implemented, or
+            options that have unknown exploit vectors.  It is a best
+            effort defense rather than an exhaustive protection measure.
+
+            In order to make this more likely to work with submodules,
+            some attempts are made to rewrite remote URLs to ``https://``
+            using `insteadOf` in the config. This might not work on all
+            projects, so submodules should always use ``https://`` URLs.
+
+            :envvar:`GIT_TERMINAL_PROMPT` is set to `false` and these
+            environment variables are forced to `/bin/true`:
+            :envvar:`GIT_ASKPASS`, :envvar:`GIT_EDITOR`,
+            :envvar:`GIT_PAGER`, :envvar:`GIT_SSH`,
+            :envvar:`GIT_SSH_COMMAND`, and :envvar:`SSH_ASKPASS`.
+
+            Git config options are supplied via the command line to set
+            up key parts of safe mode.
+
+            - Direct options for executing external commands are set to ``/bin/true``:
+              ``core.askpass``, ``core.sshCommand`` and ``credential.helper``.
+
+            - External password prompts are disabled by skipping authentication using
+              ``http.emptyAuth=true``.
+
+            - Any use of an fsmonitor daemon is disabled using ``core.fsmonitor=false``.
+
+            - Hook scripts are disabled using ``core.hooksPath=/dev/null``.
+
+            It was not possible to cover all config items that might execute an external
+            command, for example, ``receive.procReceiveRefs``,
+            ``uploadpack.packObjectsHook`` and ``remote.<name>.vcs``.
+
         :param kwargs:
             See the :meth:`clone` method.
 
         :return:
             :class:`Repo` instance pointing to the cloned directory.
+
         """
-        git = cls.GitCommandWrapperType(os.getcwd())
+        git = cls.GitCommandWrapperType(os.getcwd(), safe)
         if env is not None:
             git.update_environment(**env)
         return cls._clone(
@@ -1549,6 +1677,7 @@ class Repo:
             multi_options,
             allow_unsafe_protocols=allow_unsafe_protocols,
             allow_unsafe_options=allow_unsafe_options,
+            safe=safe,
             **kwargs,
         )
 

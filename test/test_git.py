@@ -26,6 +26,7 @@ else:
 import ddt
 
 from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
+from git.exc import UnsafeExecutionError
 from git.util import cwd, finalize_process
 
 from test.lib import TestBase, fixture_path, with_rw_directory
@@ -797,3 +798,26 @@ class TestGit(TestBase):
         self.assertEqual(command_param, "command")
         self.assertEqual(set(most_params), cmd.execute_kwargs)  # Most important.
         self.assertEqual(extra_kwargs_param, "subprocess_kwargs")
+
+    def test_safe_mode_shell_none_works(self):
+        self.assertIn("git version", Git(".", safe=True).execute(["git", "version"], shell=None))
+
+    def test_safe_mode_shell_false_works(self):
+        self.assertIn("git version", Git(".", safe=True).execute(["git", "version"], shell=False))
+
+    def test_safe_mode_blocks_shell(self):
+        with self.assertRaises(UnsafeExecutionError):
+            Git(".", safe=True).execute(["git", "version"], shell=True)
+
+    @mock.patch.object(Git, "USE_SHELL", True)
+    def test_safe_mode_blocks_use_shell(self):
+        with self.assertRaises(UnsafeExecutionError):
+            Git(".", safe=True).execute(["git", "version"])
+
+    def test_safe_mode_only_git(self):
+        with self.assertRaises(UnsafeExecutionError):
+            Git(".", safe=True).execute(["echo", "something"])
+
+    def test_safe_mode_only_right_git(self):
+        with self.assertRaises(UnsafeExecutionError):
+            Git(".", safe=True).execute(["/path/to/fake/git", "version"])
