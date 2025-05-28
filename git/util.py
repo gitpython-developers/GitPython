@@ -490,7 +490,8 @@ def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    _logger.debug(f"sys.platform = {sys.platform}, git_executable = {git_executable}")
+    # TODO: when py3.7 support is dropped, use the new interpolation f"{variable=}"
+    _logger.debug(f"sys.platform={sys.platform!r}, git_executable={git_executable!r}")
     if sys.platform != "cygwin":
         return False
     elif git_executable is None:

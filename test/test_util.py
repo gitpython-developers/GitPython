@@ -354,6 +354,7 @@ class TestIsCygwinGit:
     """Tests for :func:`is_cygwin_git`"""
 
     def test_on_path_executable(self):
+        # Currently we assume tests run on Cygwin use Cygwin git. See #533 and #1455 for background.
         if sys.platform == "cygwin":
             assert is_cygwin_git("git")
         else:
