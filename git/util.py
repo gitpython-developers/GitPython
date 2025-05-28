@@ -464,6 +464,12 @@ def _is_cygwin_git(git_executable: str) -> bool:
 
             # Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, "uname")
+
+            if not (pathlib.Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
+                _logger.debug(f"Failed checking if running in CYGWIN: {uname_cmd} is not an executable")
+                _is_cygwin_cache[git_executable] = is_cygwin
+                return is_cygwin
+
             process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE, universal_newlines=True)
             uname_out, _ = process.communicate()
             # retcode = process.poll()
@@ -484,7 +490,9 @@ def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if sys.platform == "win32":  # TODO: See if we can use `sys.platform != "cygwin"`.
+    # TODO: when py3.7 support is dropped, use the new interpolation f"{variable=}"
+    _logger.debug(f"sys.platform={sys.platform!r}, git_executable={git_executable!r}")
+    if sys.platform != "cygwin":
         return False
     elif git_executable is None:
         return False
