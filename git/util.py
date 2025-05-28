@@ -457,24 +457,23 @@ def _is_cygwin_git(git_executable: str) -> bool:
     if is_cygwin is None:
         is_cygwin = False
         try:
-            git_cmd = pathlib.Path(git_executable)
-            git_dir = git_cmd.parent
-
+            git_dir = osp.dirname(git_executable)
             if not git_dir:
                 res = py_where(git_executable)
-                git_dir = pathlib.Path(res[0]).parent if res else ""
+                git_dir = osp.dirname(res[0]) if res else ""
 
-            # If it's a cygwin git, it'll have cygwin in the output of `strings git`
-            strings_cmd = pathlib.Path(git_dir, "strings")
+            # Just a name given, not a real path.
+            uname_cmd = osp.join(git_dir, "uname")
 
-            if not (pathlib.Path(strings_cmd).is_file() and os.access(strings_cmd, os.X_OK)):
-                _logger.debug(f"Failed checking if running in CYGWIN: {strings_cmd} is not an executable")
-                _is_cygwin_cache[git_executable] = False
+            if not (pathlib.Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
+                _logger.debug(f"Failed checking if running in CYGWIN: {uname_cmd} is not an executable")
+                _is_cygwin_cache[git_executable] = is_cygwin
                 return is_cygwin
 
-            process = subprocess.Popen([strings_cmd, git_cmd], stdout=subprocess.PIPE, text=True)
-            strings_output, _ = process.communicate()
-            is_cygwin = any(x for x in strings_output if "cygwin" in x.lower())
+            process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE, universal_newlines=True)
+            uname_out, _ = process.communicate()
+            # retcode = process.poll()
+            is_cygwin = "CYGWIN" in uname_out
         except Exception as ex:
             _logger.debug("Failed checking if running in CYGWIN due to: %r", ex)
         _is_cygwin_cache[git_executable] = is_cygwin
