@@ -475,8 +475,6 @@ def _is_cygwin_git(git_executable: str) -> bool:
             process = subprocess.Popen([strings_cmd, git_cmd], stdout=subprocess.PIPE, text=True)
             strings_output, _ = process.communicate()
             is_cygwin = any(x for x in strings_output if "cygwin" in x.lower())
-            if not is_cygwin:
-                _logger.debug(f"is not cygwin: {strings_output}")
         except Exception as ex:
             _logger.debug("Failed checking if running in CYGWIN due to: %r", ex)
         _is_cygwin_cache[git_executable] = is_cygwin
