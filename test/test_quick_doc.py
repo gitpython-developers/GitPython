@@ -173,7 +173,7 @@ class QuickDoc(TestBase):
         # [15-test_cloned_repo_object]
         def print_files_from_git(root, level=0):
             for entry in root:
-                print(f'{"-" * 4 * level}| {entry.path}, {entry.type}')
+                print(f"{'-' * 4 * level}| {entry.path}, {entry.type}")
                 if entry.type == "tree":
                     print_files_from_git(entry, level + 1)
 

@@ -126,7 +126,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
         elif len(fields) == 2:
             info, msg = fields
         else:
-            raise ValueError("Line must have up to two TAB-separated fields." " Got %s" % repr(line_str))
+            raise ValueError("Line must have up to two TAB-separated fields. Got %s" % repr(line_str))
         # END handle first split
 
         oldhexsha = info[:40]

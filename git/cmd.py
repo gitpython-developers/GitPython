@@ -207,7 +207,7 @@ def handle_process_output(
                 )
             if stderr_handler:
                 error_str: Union[str, bytes] = (
-                    "error: process killed because it timed out." f" kill_after_timeout={kill_after_timeout} seconds"
+                    f"error: process killed because it timed out. kill_after_timeout={kill_after_timeout} seconds"
                 )
                 if not decode_streams and isinstance(p_stderr, BinaryIO):
                     # Assume stderr_handler needs binary input.
@@ -1319,7 +1319,7 @@ class Git(metaclass=_GitMeta):
                 out, err = proc.communicate()
                 watchdog.cancel()
                 if kill_check.is_set():
-                    err = 'Timeout: the command "%s" did not complete in %d ' "secs." % (
+                    err = 'Timeout: the command "%s" did not complete in %d secs.' % (
                         " ".join(redacted_command),
                         timeout,
                     )

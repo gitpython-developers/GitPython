@@ -405,7 +405,7 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
             # END end handle tag
         except (IndexError, AttributeError) as e:
             raise BadName(
-                f"Invalid revision spec '{rev}' - not enough " f"parent commits to reach '{token}{int(num)}'"
+                f"Invalid revision spec '{rev}' - not enough parent commits to reach '{token}{int(num)}'"
             ) from e
         # END exception handling
     # END parse loop
