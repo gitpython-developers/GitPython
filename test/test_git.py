@@ -747,7 +747,7 @@ class TestGit(TestBase):
 
         path = osp.join(rw_dir, "failing-script.sh")
         with open(path, "wt") as stream:
-            stream.write("#!/usr/bin/env sh\n" "echo FOO\n")
+            stream.write("#!/usr/bin/env sh\necho FOO\n")
         os.chmod(path, 0o777)
 
         rw_repo = Repo.init(osp.join(rw_dir, "repo"))
