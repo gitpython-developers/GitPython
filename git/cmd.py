@@ -1210,6 +1210,14 @@ class Git(metaclass=_GitMeta):
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != "full" or as_process):
             _logger.info(" ".join(redacted_command))
 
+        if strip_newline_in_stdout and command[:2] == ["git", "show"]:
+            warnings.warn(
+                "Git.show() has strip_newline_in_stdout=True by default, which probably isn't what you want and will "
+                "change in a future version. It is recommended to use Git.show(..., strip_newline_in_stdout=False)",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+
         # Allow the user to have the command executed in their working dir.
         try:
             cwd = self._working_dir or os.getcwd()  # type: Union[None, str]
