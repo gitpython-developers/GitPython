@@ -391,7 +391,7 @@ class TestBase(TestCase):
         with GitConfigParser(file_obj, read_only=False) as w_config:
             self.assertEqual(
                 w_config.get("alias", "rbi"),
-                '"!g() { git rebase -i origin/${1:-master} ; } ; g"',
+                "!g() { git rebase -i origin/${1:-master} ; } ; g",
             )
         self.assertEqual(
             file_obj.getvalue(),
@@ -405,6 +405,12 @@ class TestBase(TestCase):
 
         with self.assertRaises(cp.NoOptionError):
             cr.get_value("color", "ui")
+
+    def test_config_with_quotes(self):
+        cr = GitConfigParser(fixture_path("git_config_with_quotes"), read_only=True)
+
+        self.assertEqual(cr.get("user", "name"), "Cody Veal")
+        self.assertEqual(cr.get("user", "email"), "cveal05@gmail.com")
 
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
