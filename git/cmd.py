@@ -273,12 +273,12 @@ if sys.platform == "win32":
         if shell:
             # The original may be immutable, or the caller may reuse it. Mutate a copy.
             env = {} if env is None else dict(env)
-            env["NoDefaultCurrentDirectoryInExePath"] = "1"  # The "1" can be an value.
+            env["NoDefaultCurrentDirectoryInExePath"] = "1"  # The "1" can be any value.
 
         # When not using a shell, the current process does the search in a
         # CreateProcessW API call, so the variable must be set in our environment. With
         # a shell, that's unnecessary if https://github.com/python/cpython/issues/101283
-        # is patched. In Python versions where it is unpatched, and in the rare case the
+        # is patched. In Python versions where it is unpatched, in the rare case the
         # ComSpec environment variable is unset, the search for the shell itself is
         # unsafe. Setting NoDefaultCurrentDirectoryInExePath in all cases, as done here,
         # is simpler and protects against that. (As above, the "1" can be any value.)
