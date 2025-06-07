@@ -60,6 +60,11 @@ from typing import (
     overload,
 )
 
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
 from git.types import Literal, PathLike, TBD
 
 if TYPE_CHECKING:
@@ -952,9 +957,9 @@ class Git(metaclass=_GitMeta):
                         f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
                     )
 
-    AutoInterrupt = _AutoInterrupt
+    AutoInterrupt: TypeAlias = _AutoInterrupt
 
-    CatFileContentStream = _CatFileContentStream
+    CatFileContentStream: TypeAlias = _CatFileContentStream
 
     def __init__(self, working_dir: Union[None, PathLike] = None) -> None:
         """Initialize this instance with:
