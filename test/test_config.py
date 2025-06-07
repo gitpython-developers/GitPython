@@ -398,6 +398,10 @@ class TestBase(TestCase):
             self._to_memcache(fixture_path(".gitconfig")).getvalue(),
         )
 
+    def test_config_with_extra_whitespace(self):
+        cr = GitConfigParser(fixture_path("git_config_with_extra_whitespace"), read_only=True)
+        self.assertEqual(cr.get("init", "defaultBranch"), "trunk")
+
     def test_empty_config_value(self):
         cr = GitConfigParser(fixture_path("git_config_with_empty_value"), read_only=True)
 
@@ -413,8 +417,12 @@ class TestBase(TestCase):
         self.assertEqual(cr.get("user", "email"), "cveal05@gmail.com")
 
     def test_config_with_quotes_with_literal_whitespace(self):
-        cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace"), read_only=True)
+        cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace_inside"), read_only=True)
         self.assertEqual(cr.get("core", "commentString"), "# ")
+
+    def test_config_with_quotes_with_whitespace_outside_value(self):
+        cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace_outside"), read_only=True)
+        self.assertEqual(cr.get("init", "defaultBranch"), "trunk")
 
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
