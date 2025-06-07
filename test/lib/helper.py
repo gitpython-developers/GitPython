@@ -415,9 +415,15 @@ class VirtualEnvironment:
 
         if with_pip:
             # The upgrade_deps parameter to venv.create is 3.9+ only, so do it this way.
-            command = [self.python, "-m", "pip", "install", "--upgrade", "pip"]
-            if sys.version_info < (3, 12):
-                command.append("setuptools")
+            command = [
+                self.python,
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "pip",
+                'setuptools; python_version<"3.12"',
+            ]
             subprocess.check_output(command)
 
     @property
