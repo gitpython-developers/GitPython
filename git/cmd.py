@@ -55,11 +55,15 @@ from typing import (
     TYPE_CHECKING,
     TextIO,
     Tuple,
-    TypeAlias,
     Union,
     cast,
     overload,
 )
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 from git.types import Literal, PathLike, TBD
 
