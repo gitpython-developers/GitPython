@@ -93,6 +93,6 @@ jobs:
         python --version
         python -c 'import os, sys; print(f"sys.platform={sys.platform!r}, os.name={os.name!r}")'
 
-    - name: Test with pytest
+    - name: Test with pytest (${{ matrix.additional-pytest-args }})
       run: |
         pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
