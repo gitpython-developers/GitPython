@@ -97,7 +97,7 @@ jobs:
 
     - name: Check types with mypy
       run: |
-        mypy --python-version="${PYTHON_VERSION%t}"
+        mypy --python-version="${PYTHON_VERSION%t}"  # Version only, with no "t" for free-threaded.
       env:
         MYPY_FORCE_COLOR: "1"
         TERM: "xterm-256color"  # For color: https://github.com/python/mypy/issues/13817
