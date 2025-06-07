@@ -16,7 +16,7 @@ jobs:
         - selection: fast
           additional-pytest-args: --ignore=test/performance
         - selection: perf
-          additional-pytest-args: test/performance/
+          additional-pytest-args: test/performance
 
       fail-fast: false
 
