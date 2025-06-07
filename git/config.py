@@ -508,6 +508,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     if len(optval) > 1 and optval[0] == '"' and optval[-1] != '"':
                         is_multi_line = True
                         optval = string_decode(optval[1:])
+                    elif len(optval) > 1 and optval[0] == '"' and optval[-1] == '"':
+                        optval = optval[1:-1].strip()
                     # END handle multi-line
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
