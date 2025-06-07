@@ -550,7 +550,7 @@ _USE_SHELL_DANGER_MESSAGE = (
 )
 
 
-def _warn_use_shell(extra_danger: bool) -> None:
+def _warn_use_shell(*, extra_danger: bool) -> None:
     warnings.warn(
         _USE_SHELL_DANGER_MESSAGE if extra_danger else _USE_SHELL_DEFAULT_MESSAGE,
         DeprecationWarning,
@@ -566,12 +566,12 @@ class _GitMeta(type):
 
     def __getattribute(cls, name: str) -> Any:
         if name == "USE_SHELL":
-            _warn_use_shell(False)
+            _warn_use_shell(extra_danger=False)
         return super().__getattribute__(name)
 
     def __setattr(cls, name: str, value: Any) -> Any:
         if name == "USE_SHELL":
-            _warn_use_shell(value)
+            _warn_use_shell(extra_danger=value)
         super().__setattr__(name, value)
 
     if not TYPE_CHECKING:
@@ -988,7 +988,7 @@ class Git(metaclass=_GitMeta):
 
     def __getattribute__(self, name: str) -> Any:
         if name == "USE_SHELL":
-            _warn_use_shell(False)
+            _warn_use_shell(extra_danger=False)
         return super().__getattribute__(name)
 
     def __getattr__(self, name: str) -> Any:
