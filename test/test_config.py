@@ -412,6 +412,10 @@ class TestBase(TestCase):
         self.assertEqual(cr.get("user", "name"), "Cody Veal")
         self.assertEqual(cr.get("user", "email"), "cveal05@gmail.com")
 
+    def test_config_with_quotes_with_literal_whitespace(self):
+        cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace"), read_only=True)
+        self.assertEqual(cr.get("core", "commentString"), "# ")
+
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         cr = GitConfigParser(file_obj, read_only=True)
