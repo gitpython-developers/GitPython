@@ -10,6 +10,14 @@ jobs:
     runs-on: windows-latest
 
     strategy:
+      matrix:
+        selection: [fast, perf]
+        include:
+        - selection: fast
+          additional-pytest-args: --ignore=test/performance
+        - selection: perf
+          additional-pytest-args: test/performance/
+
       fail-fast: false
 
     env:
@@ -87,4 +95,4 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv
+        pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
