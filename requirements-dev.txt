@@ -2,7 +2,7 @@
 -r test-requirements.txt
 
 # For additional local testing/linting - to be added elsewhere eventually.
-ruff
+ruff >=0.8
 shellcheck
 pytest-icdiff
 # pytest-profiling
