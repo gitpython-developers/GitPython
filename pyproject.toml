@@ -66,7 +66,7 @@ lint.extend-select = [
     "TC004",  # See: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
 ]
 lint.ignore = [
-    "E731",  # Do not assign a `lambda` expression, use a `def`
+    # If it becomes necessary to ignore any rules, list them here.
 ]
 lint.unfixable = [
     "F401",  # Module imported but unused

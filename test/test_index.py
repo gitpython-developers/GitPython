@@ -330,7 +330,10 @@ class TestIndex(TestBase):
         assert len([e for e in three_way_index.entries.values() if e.stage != 0])
 
         # ITERATE BLOBS
-        merge_required = lambda t: t[0] != 0
+
+        def merge_required(t):
+            return t[0] != 0
+
         merge_blobs = list(three_way_index.iter_blobs(merge_required))
         assert merge_blobs
         assert merge_blobs[0][0] in (1, 2, 3)

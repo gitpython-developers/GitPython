@@ -50,7 +50,9 @@ TraversedTreeTup = Union[Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submod
 
 # --------------------------------------------------------
 
-cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
+
+def cmp(a: str, b: str) -> int:
+    return (a > b) - (a < b)
 
 
 class TreeModifier:
