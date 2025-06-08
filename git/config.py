@@ -501,9 +501,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         if pos != -1 and optval[pos - 1].isspace():
                             optval = optval[:pos]
                     optval = optval.strip()
-                    if optval == '""':
-                        optval = ""
-                    # END handle empty string
                     optname = self.optionxform(optname.rstrip())
                     if len(optval) > 1 and optval[0] == '"' and optval[-1] != '"':
                         is_multi_line = True
