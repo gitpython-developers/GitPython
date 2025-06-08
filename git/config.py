@@ -505,13 +505,16 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     optval = optval.strip()
 
                     if len(optval) < 2 or optval[0] != '"':
-                        pass  # Nothing to treat as opening quotation.
+                        # Does not open quoting.
+                        pass
                     elif optval[-1] != '"':
+                        # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
                         optval = string_decode(optval[1:])
-                    # END handle multi-line
-                    else:
+                    elif optval.find("\\", 1, -1) == -1 and optval.find('"', 1, -1) == -1:
+                        # Opens and closes quoting. Single line, and all we need is quote removal.
                         optval = optval[1:-1]
+                    # TODO: Handle other quoted content, especially well-formed backslash escapes.
 
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
