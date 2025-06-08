@@ -243,6 +243,7 @@ class TestFun(TestBase):
         B_old = self.rorepo.tree("1f66cfbbce58b4b552b041707a12d437cc5f400a")  # old base tree
 
         # Two very different trees.
+
         entries = traverse_trees_recursive(odb, [B_old.binsha, H.binsha], "")
         self._assert_tree_entries(entries, 2)
 
@@ -251,7 +252,10 @@ class TestFun(TestBase):
         self._assert_tree_entries(oentries, 2)
 
         # Single tree.
-        is_no_tree = lambda i, d: i.type != "tree"
+
+        def is_no_tree(i, _d):
+            return i.type != "tree"
+
         entries = traverse_trees_recursive(odb, [B.binsha], "")
         assert len(entries) == len(list(B.traverse(predicate=is_no_tree)))
         self._assert_tree_entries(entries, 1)

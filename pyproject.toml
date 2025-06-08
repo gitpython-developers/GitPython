@@ -60,16 +60,14 @@ lint.select = [
     # "UP",  # See: https://docs.astral.sh/ruff/rules/#pyupgrade-up
 ]
 lint.extend-select = [
-    # "A",     # See: https://pypi.org/project/flake8-builtins
-    "B",       # See: https://pypi.org/project/flake8-bugbear
-    "C4",      # See: https://pypi.org/project/flake8-comprehensions
-    "TCH004",  # See: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
+    # "A",    # See: https://pypi.org/project/flake8-builtins
+    "B",      # See: https://pypi.org/project/flake8-bugbear
+    "C4",     # See: https://pypi.org/project/flake8-comprehensions
+    "TC004",  # See: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
 ]
 lint.ignore = [
-    "E203",  # Whitespace before ':'
-    "E731",  # Do not assign a `lambda` expression, use a `def`
+    # If it becomes necessary to ignore any rules, list them here.
 ]
-lint.ignore-init-module-imports = true
 lint.unfixable = [
     "F401",  # Module imported but unused
 ]

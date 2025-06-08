@@ -530,7 +530,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             stage. That is, a file removed on the 'other' branch whose entries are at
             stage 3 will not have a stage 3 entry.
         """
-        is_unmerged_blob = lambda t: t[0] != 0
+
+        def is_unmerged_blob(t: Tuple[StageType, Blob]) -> bool:
+            return t[0] != 0
+
         path_map: Dict[PathLike, List[Tuple[StageType, Blob]]] = {}
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
@@ -690,12 +693,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             This must be ensured in the calling code.
         """
         st = os.lstat(filepath)  # Handles non-symlinks as well.
+
         if S_ISLNK(st.st_mode):
             # In PY3, readlink is a string, but we need bytes.
             # In PY2, it was just OS encoded bytes, we assumed UTF-8.
-            open_stream: Callable[[], BinaryIO] = lambda: BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
+            def open_stream() -> BinaryIO:
+                return BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
         else:
-            open_stream = lambda: open(filepath, "rb")
+
+            def open_stream() -> BinaryIO:
+                return open(filepath, "rb")
+
         with open_stream() as stream:
             fprogress(filepath, False, filepath)
             istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
@@ -1336,8 +1344,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             kwargs["as_process"] = True
             kwargs["istream"] = subprocess.PIPE
             proc = self.repo.git.checkout_index(args, **kwargs)
+
             # FIXME: Reading from GIL!
-            make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
+            def make_exc() -> GitCommandError:
+                return GitCommandError(("git-checkout-index", *args), 128, proc.stderr.read())
+
             checked_out_files: List[PathLike] = []
 
             for path in paths:
