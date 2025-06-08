@@ -416,6 +416,10 @@ class TestBase(TestCase):
         self.assertEqual(cr.get("user", "name"), "Cody Veal")
         self.assertEqual(cr.get("user", "email"), "cveal05@gmail.com")
 
+    def test_config_with_empty_quotes(self):
+        cr = GitConfigParser(fixture_path("git_config_with_empty_quotes"), read_only=True)
+        self.assertEqual(cr.get("core", "filemode"), "", "quotes can form a literal empty string as value")
+
     def test_config_with_quotes_with_literal_whitespace(self):
         cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace_inside"), read_only=True)
         self.assertEqual(cr.get("core", "commentString"), "# ")
