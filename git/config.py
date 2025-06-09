@@ -496,18 +496,26 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 if mo:
                     # We might just have handled the last line, which could contain a quotation we want to remove.
                     optname, vi, optval = mo.group("option", "vi", "value")
+                    optname = self.optionxform(optname.rstrip())
+
                     if vi in ("=", ":") and ";" in optval and not optval.strip().startswith('"'):
                         pos = optval.find(";")
                         if pos != -1 and optval[pos - 1].isspace():
                             optval = optval[:pos]
                     optval = optval.strip()
-                    optname = self.optionxform(optname.rstrip())
-                    if len(optval) > 1 and optval[0] == '"' and optval[-1] != '"':
+
+                    if len(optval) < 2 or optval[0] != '"':
+                        # Does not open quoting.
+                        pass
+                    elif optval[-1] != '"':
+                        # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
                         optval = string_decode(optval[1:])
-                    elif len(optval) > 1 and optval[0] == '"' and optval[-1] == '"':
+                    elif optval.find("\\", 1, -1) == -1 and optval.find('"', 1, -1) == -1:
+                        # Opens and closes quoting. Single line, and all we need is quote removal.
                         optval = optval[1:-1]
-                    # END handle multi-line
+                    # TODO: Handle other quoted content, especially well-formed backslash escapes.
+
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
                 else:

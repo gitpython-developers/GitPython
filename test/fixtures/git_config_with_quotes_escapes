@@ -1,0 +1,9 @@
+[custom]
+  hasnewline = "first\nsecond"
+  hasbackslash = "foo\\bar"
+  hasquote = "ab\"cd"
+  hastrailingbackslash = "word\\"
+  hasunrecognized = "p\qrs"
+  hasunescapedquotes = "ab"cd"e"
+  ordinary = "hello world"
+  unquoted = good evening

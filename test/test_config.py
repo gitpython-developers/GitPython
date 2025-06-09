@@ -428,6 +428,26 @@ class TestBase(TestCase):
         cr = GitConfigParser(fixture_path("git_config_with_quotes_whitespace_outside"), read_only=True)
         self.assertEqual(cr.get("init", "defaultBranch"), "trunk")
 
+    def test_config_with_quotes_containing_escapes(self):
+        """For now just suppress quote removal. But it would be good to interpret most of these."""
+        cr = GitConfigParser(fixture_path("git_config_with_quotes_escapes"), read_only=True)
+
+        # These can eventually be supported by substituting the represented character.
+        self.assertEqual(cr.get("custom", "hasnewline"), R'"first\nsecond"')
+        self.assertEqual(cr.get("custom", "hasbackslash"), R'"foo\\bar"')
+        self.assertEqual(cr.get("custom", "hasquote"), R'"ab\"cd"')
+        self.assertEqual(cr.get("custom", "hastrailingbackslash"), R'"word\\"')
+        self.assertEqual(cr.get("custom", "hasunrecognized"), R'"p\qrs"')
+
+        # It is less obvious whether and what to eventually do with this.
+        self.assertEqual(cr.get("custom", "hasunescapedquotes"), '"ab"cd"e"')
+
+        # Cases where quote removal is clearly safe should happen even after those.
+        self.assertEqual(cr.get("custom", "ordinary"), "hello world")
+
+        # Cases without quotes should still parse correctly even after those, too.
+        self.assertEqual(cr.get("custom", "unquoted"), "good evening")
+
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         cr = GitConfigParser(file_obj, read_only=True)
