@@ -353,6 +353,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                 os.makedirs(module_abspath_dir)
             module_checkout_path = osp.join(str(repo.working_tree_dir), path)
 
+        if url.startswith("../"):
+            remote_name = repo.active_branch.tracking_branch().remote_name
+            repo_remote_url = repo.remote(remote_name).url
+            url = os.path.join(repo_remote_url, url)
+
         clone = git.Repo.clone_from(
             url,
             module_checkout_path,
