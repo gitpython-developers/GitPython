@@ -755,6 +755,22 @@ class TestSubmodule(TestBase):
 
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
+    def test_update_submodule_with_relative_path(self, rwdir):
+        repo_path = osp.join(rwdir, "parent")
+        repo = git.Repo.init(repo_path)
+        module_repo_path = osp.join(rwdir, "module")
+        module_repo = git.Repo.init(module_repo_path)
+        module_repo.git.commit(m="test", allow_empty=True)
+        repo.git.submodule("add", "../module", "module")
+        repo.index.commit("add submodule")
+
+        cloned_repo_path = osp.join(rwdir, "cloned_repo")
+        cloned_repo = git.Repo.clone_from(repo_path, cloned_repo_path)
+
+        cloned_repo.submodule_update(init=True, recursive=True)
+
+    @with_rw_directory
+    @_patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
