@@ -159,6 +159,10 @@ class GitCommandError(CommandError):
         super().__init__(command, status, stderr, stdout)
 
 
+class UnsafeExecutionError(CommandError):
+    """Thrown if anything but git is executed when in safe mode."""
+
+
 class CheckoutError(GitError):
     """Thrown if a file could not be checked out from the index as it contained
     changes.
