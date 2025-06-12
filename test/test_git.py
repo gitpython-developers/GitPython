@@ -773,6 +773,7 @@ class TestGit(TestBase):
 
         cmdline = [
             sys.executable,
+            "-S",  # Keep any `CoverageWarning` messages out of the subprocess stderr.
             fixture_path("cat_file.py"),
             str(fixture_path("issue-301_stderr")),
         ]
