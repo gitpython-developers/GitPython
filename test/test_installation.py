@@ -4,19 +4,11 @@
 import ast
 import os
 import subprocess
-import sys
-
-import pytest
 
 from test.lib import TestBase, VirtualEnvironment, with_rw_directory
 
 
 class TestInstallation(TestBase):
-    @pytest.mark.xfail(
-        sys.platform == "cygwin" and "CI" in os.environ,
-        reason="Trouble with pip on Cygwin CI, see issue #2004",
-        raises=subprocess.CalledProcessError,
-    )
     @with_rw_directory
     def test_installation(self, rw_dir):
         venv = self._set_up_venv(rw_dir)
