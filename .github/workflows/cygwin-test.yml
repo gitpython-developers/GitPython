@@ -7,8 +7,6 @@ permissions:
 
 jobs:
   test:
-    runs-on: windows-latest
-
     strategy:
       matrix:
         selection: [fast, perf]
@@ -19,6 +17,8 @@ jobs:
           additional-pytest-args: test/performance
 
       fail-fast: false
+
+    runs-on: windows-latest
 
     env:
       CHERE_INVOKING: "1"
@@ -32,7 +32,7 @@ jobs:
     - name: Force LF line endings
       run: |
         git config --global core.autocrlf false  # Affects the non-Cygwin git.
-      shell: bash  # Use Git Bash instead of Cygwin Bash for this step.
+      shell: pwsh  # Do this outside Cygwin, to affect actions/checkout.
 
     - uses: actions/checkout@v4
       with:
@@ -41,7 +41,7 @@ jobs:
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@v5
       with:
-        packages: python39 python39-pip python39-virtualenv git wget
+        packages: git python39 python-pip-wheel python-setuptools-wheel python-wheel-wheel
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
     - name: Arrange for verbose output
@@ -67,18 +67,13 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Set up virtualenv
+    - name: Set up virtual environment
       run: |
-        python3.9 -m venv --without-pip .venv
+        python3.9 -m venv .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
-
-    - name: Bootstrap pip in virtualenv
-      run: |
-        wget -qO- https://bootstrap.pypa.io/get-pip.py | python
 
     - name: Update PyPA packages
       run: |
-        # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
         python -m pip install -U pip 'setuptools; python_version<"3.12"' wheel
 
     - name: Install project and test dependencies
