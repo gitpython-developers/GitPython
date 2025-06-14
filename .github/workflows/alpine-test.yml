@@ -47,13 +47,12 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Set up virtualenv
+    - name: Set up virtual environment
       run: |
         python -m venv .venv
 
     - name: Update PyPA packages
       run: |
-        # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
         . .venv/bin/activate
         python -m pip install -U pip 'setuptools; python_version<"3.12"' wheel
 
