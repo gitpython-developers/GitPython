@@ -15,31 +15,19 @@ class TestInstallation(TestBase):
         venv, run = self._set_up_venv(rw_dir)
 
         result = run([venv.pip, "install", "."])
-        self.assertEqual(
-            0,
-            result.returncode,
-            msg=result.stderr or result.stdout or "Can't install project",
-        )
+        self._check_result(result, "Can't install project")
 
         result = run([venv.python, "-c", "import git"])
-        self.assertEqual(
-            0,
-            result.returncode,
-            msg=result.stderr or result.stdout or "Self-test failed",
-        )
+        self._check_result(result, "Self-test failed")
 
         result = run([venv.python, "-c", "import gitdb; import smmap"])
-        self.assertEqual(
-            0,
-            result.returncode,
-            msg=result.stderr or result.stdout or "Dependencies not installed",
-        )
+        self._check_result(result, "Dependencies not installed")
 
         # Even IF gitdb or any other dependency is supplied during development by
         # inserting its location into PYTHONPATH or otherwise patched into sys.path,
         # make sure it is not wrongly inserted as the *first* entry.
         result = run([venv.python, "-c", "import sys; import git; print(sys.path)"])
-        syspath = result.stdout.decode("utf-8").splitlines()[0]
+        syspath = result.stdout.splitlines()[0]
         syspath = ast.literal_eval(syspath)
         self.assertEqual(
             "",
@@ -63,8 +51,17 @@ class TestInstallation(TestBase):
         run = functools.partial(
             subprocess.run,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
             cwd=venv.sources,
             env={**os.environ, "PYTHONWARNINGS": "error"},
         )
 
         return venv, run
+
+    def _check_result(self, result, failure_summary):
+        self.assertEqual(
+            0,
+            result.returncode,
+            f"{failure_summary}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+        )
