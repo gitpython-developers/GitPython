@@ -2,6 +2,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import ast
+import functools
 import os
 import subprocess
 
@@ -11,35 +12,23 @@ from test.lib import TestBase, VirtualEnvironment, with_rw_directory
 class TestInstallation(TestBase):
     @with_rw_directory
     def test_installation(self, rw_dir):
-        venv = self._set_up_venv(rw_dir)
+        venv, run = self._set_up_venv(rw_dir)
 
-        result = subprocess.run(
-            [venv.pip, "install", "."],
-            stdout=subprocess.PIPE,
-            cwd=venv.sources,
-        )
+        result = run([venv.pip, "install", "."])
         self.assertEqual(
             0,
             result.returncode,
             msg=result.stderr or result.stdout or "Can't install project",
         )
 
-        result = subprocess.run(
-            [venv.python, "-c", "import git"],
-            stdout=subprocess.PIPE,
-            cwd=venv.sources,
-        )
+        result = run([venv.python, "-c", "import git"])
         self.assertEqual(
             0,
             result.returncode,
             msg=result.stderr or result.stdout or "Self-test failed",
         )
 
-        result = subprocess.run(
-            [venv.python, "-c", "import gitdb; import smmap"],
-            stdout=subprocess.PIPE,
-            cwd=venv.sources,
-        )
+        result = run([venv.python, "-c", "import gitdb; import smmap"])
         self.assertEqual(
             0,
             result.returncode,
@@ -49,11 +38,7 @@ class TestInstallation(TestBase):
         # Even IF gitdb or any other dependency is supplied during development by
         # inserting its location into PYTHONPATH or otherwise patched into sys.path,
         # make sure it is not wrongly inserted as the *first* entry.
-        result = subprocess.run(
-            [venv.python, "-c", "import sys; import git; print(sys.path)"],
-            stdout=subprocess.PIPE,
-            cwd=venv.sources,
-        )
+        result = run([venv.python, "-c", "import sys; import git; print(sys.path)"])
         syspath = result.stdout.decode("utf-8").splitlines()[0]
         syspath = ast.literal_eval(syspath)
         self.assertEqual(
@@ -74,4 +59,11 @@ class TestInstallation(TestBase):
             target_is_directory=True,
         )
 
-        return venv
+        # Create a convenience function to run commands in it.
+        run = functools.partial(
+            subprocess.run,
+            stdout=subprocess.PIPE,
+            cwd=venv.sources,
+        )
+
+        return venv, run
