@@ -64,6 +64,7 @@ class TestInstallation(TestBase):
             subprocess.run,
             stdout=subprocess.PIPE,
             cwd=venv.sources,
+            env={**os.environ, "PYTHONWARNINGS": "error"},
         )
 
         return venv, run
