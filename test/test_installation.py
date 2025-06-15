@@ -64,10 +64,14 @@ class TestInstallation(TestBase):
 
     @staticmethod
     def _set_up_venv(rw_dir):
+        # Initialize the virtual environment.
         venv = VirtualEnvironment(rw_dir, with_pip=True)
+
+        # Make its src directory a symlink to our own top-level source tree.
         os.symlink(
             os.path.dirname(os.path.dirname(__file__)),
             venv.sources,
             target_is_directory=True,
         )
+
         return venv
