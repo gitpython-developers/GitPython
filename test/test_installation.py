@@ -63,7 +63,7 @@ class TestInstallation(TestBase):
         self.assertEqual(
             0,
             result.returncode,
-            self._prepare_failure_message(result, failure_summary),
+            msg=self._prepare_failure_message(result, failure_summary),
         )
 
     @staticmethod
