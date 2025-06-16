@@ -63,5 +63,11 @@ class TestInstallation(TestBase):
         self.assertEqual(
             0,
             result.returncode,
-            f"{failure_summary}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}",
+            self._prepare_failure_message(result, failure_summary),
         )
+
+    @staticmethod
+    def _prepare_failure_message(result, failure_summary):
+        stdout = result.stdout.rstrip()
+        stderr = result.stderr.rstrip()
+        return f"{failure_summary}\n\nstdout:\n{stdout}\n\nstderr:\n{stderr}"
