@@ -207,7 +207,7 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
     version, num_entries = unpacked
 
     # TODO: Handle version 3: extended data, see read-cache.c.
-    assert version in (1, 2)
+    assert version in (1, 2), "Unsupported git index version %i, only 1 and 2 are supported" % version
     return version, num_entries
 
 
