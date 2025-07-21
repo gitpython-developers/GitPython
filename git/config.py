@@ -87,15 +87,15 @@ class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
             mutating_methods = clsdict[kmm]
             for base in bases:
                 methods = (t for t in inspect.getmembers(base, inspect.isroutine) if not t[0].startswith("_"))
-                for name, method in methods:
-                    if name in clsdict:
+                for method_name, method in methods:
+                    if method_name in clsdict:
                         continue
                     method_with_values = needs_values(method)
-                    if name in mutating_methods:
+                    if method_name in mutating_methods:
                         method_with_values = set_dirty_and_flush_changes(method_with_values)
                     # END mutating methods handling
 
-                    clsdict[name] = method_with_values
+                    clsdict[method_name] = method_with_values
                 # END for each name/method pair
             # END for each base
         # END if mutating methods configuration is set
