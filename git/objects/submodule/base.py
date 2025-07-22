@@ -11,6 +11,7 @@ import os.path as osp
 import stat
 import sys
 import uuid
+import urllib
 
 import git
 from git.cmd import Git
@@ -799,9 +800,13 @@ class Submodule(IndexObject, TraversableIterableObj):
                     + "Cloning url '%s' to '%s' in submodule %r" % (self.url, checkout_module_abspath, self.name),
                 )
                 if not dry_run:
+                    if self.url.startswith("."):
+                        url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
+                    else:
+                        url = self.url
                     mrepo = self._clone_repo(
                         self.repo,
-                        self.url,
+                        url,
                         self.path,
                         self.name,
                         n=True,
