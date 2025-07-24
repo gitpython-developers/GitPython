@@ -1350,3 +1350,23 @@ class TestSubmodule(TestBase):
             for unsafe_option in unsafe_options:
                 with self.assertRaises(GitCommandError):
                     submodule.update(clone_multi_options=[unsafe_option], allow_unsafe_options=True)
+
+    @with_rw_directory
+    @_patch_git_config("protocol.file.allow", "always")
+    def test_submodule_update_relative_url(self, rwdir):
+        parent_path = osp.join(rwdir, "parent")
+        parent_repo = git.Repo.init(parent_path)
+        submodule_path = osp.join(rwdir, "module")
+        submodule_repo = git.Repo.init(submodule_path)
+        submodule_repo.git.commit(m="initial commit", allow_empty=True)
+
+        parent_repo.git.submodule("add", "../module", "module")
+        parent_repo.index.commit("add submodule with relative URL")
+
+        cloned_path = osp.join(rwdir, "cloned_repo")
+        cloned_repo = git.Repo.clone_from(parent_path, cloned_path)
+
+        cloned_repo.submodule_update(init=True, recursive=True)
+
+        has_module = any(sm.name == "module" for sm in cloned_repo.submodules)
+        assert has_module, "Relative submodule was not updated properly"
