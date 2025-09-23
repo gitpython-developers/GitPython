@@ -292,9 +292,4 @@ def refresh(path: Optional[PathLike] = None) -> None:
     GIT_OK = True
 
 
-try:
-    refresh()
-except Exception as _exc:
-    raise ImportError("Failed to initialize: {0}".format(_exc)) from _exc
-
 # } END initialize git executable path
