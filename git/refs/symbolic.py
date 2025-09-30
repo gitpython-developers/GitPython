@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from git.config import GitConfigParser
     from git.objects.commit import Actor
     from git.refs.log import RefLogEntry
+    from git.refs.reference import Reference
     from git.repo import Repo
 
 
@@ -404,7 +405,7 @@ class SymbolicReference:
     def object(self, object: Union[AnyGitObject, "SymbolicReference", str]) -> "SymbolicReference":
         return self.set_object(object)
 
-    def _get_reference(self) -> "SymbolicReference":
+    def _get_reference(self) -> "Reference":
         """
         :return:
             :class:`~git.refs.reference.Reference` object we point to
@@ -416,7 +417,7 @@ class SymbolicReference:
         sha, target_ref_path = self._get_ref_info(self.repo, self.path)
         if target_ref_path is None:
             raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
-        return self.from_path(self.repo, target_ref_path)
+        return cast("Reference", self.from_path(self.repo, target_ref_path))
 
     def set_reference(
         self,
@@ -502,7 +503,7 @@ class SymbolicReference:
 
     # Aliased reference
     @property
-    def reference(self) -> "SymbolicReference":
+    def reference(self) -> "Reference":
         return self._get_reference()
 
     @reference.setter
