@@ -373,6 +373,41 @@ class TestBase(TestCase):
             assert not config._has_includes()
             assert config._included_paths() == []
 
+    @with_rw_directory
+    def test_conditional_includes_remote_url(self, rw_dir):
+        # Initiate mocked repository.
+        repo = mock.Mock()
+        repo.remotes = [mock.Mock(url="https://github.com/foo/repo")]
+
+        # Initiate config files.
+        path1 = osp.join(rw_dir, "config1")
+        path2 = osp.join(rw_dir, "config2")
+        template = '[includeIf "hasconfig:remote.*.url:{}"]\n    path={}\n'
+
+        # Ensure that config with hasconfig and full url is correct.
+        with open(path1, "w") as stream:
+            stream.write(template.format("https://github.com/foo/repo", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that config with hasconfig and incorrect url is incorrect.
+        with open(path1, "w") as stream:
+            stream.write(template.format("incorrect", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
+        # Ensure that config with hasconfig and url using glob pattern is correct.
+        with open(path1, "w") as stream:
+            stream.write(template.format("**/**github.com*/**", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
     def test_rename(self):
         file_obj = self._to_memcache(fixture_path("git_config"))
         with GitConfigParser(file_obj, read_only=False, merge_includes=False) as cw:
