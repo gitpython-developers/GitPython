@@ -592,7 +592,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     paths += self.items(section)
             elif keyword == "hasconfig:remote.*.url":
                 for remote in self._repo.remotes:
-                    if fnmatch.fnmatch(remote.url, value):
+                    if fnmatch.fnmatchcase(remote.url, value):
                         paths += self.items(section)
                         break
         return paths
