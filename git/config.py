@@ -66,7 +66,7 @@ _logger = logging.getLogger(__name__)
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 """The configuration level of a configuration file."""
 
-CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch):(.+)\"")
+CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)\"")
 """Section pattern to detect conditional includes.
 
 See: https://git-scm.com/docs/git-config#_conditional_includes
@@ -590,7 +590,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
                 if fnmatch.fnmatchcase(branch_name, value):
                     paths += self.items(section)
-
+            elif keyword == "hasconfig:remote.*.url":
+                for remote in self._repo.remotes:
+                    if fnmatch.fnmatchcase(remote.url, value):
+                        paths += self.items(section)
+                        break
         return paths
 
     def read(self) -> None:  # type: ignore[override]
