@@ -857,7 +857,7 @@ class Git(metaclass=_GitMeta):
                     if mode in warn:
                         _logger.critical(err)
                     else:
-                        raise ImportError(err)
+                        raise GitCommandNotFound(new_git, err)
                 else:
                     err = dedent(
                         """\
@@ -1575,6 +1575,8 @@ class Git(metaclass=_GitMeta):
             default (especially ``as_process = False``, ``stdout_as_string = True``) and
             return :class:`str`.
         """
+        if not self.GIT_PYTHON_GIT_EXECUTABLE:
+            self.refresh()
         # Handle optional arguments prior to calling transform_kwargs.
         # Otherwise these'll end up in args, which is bad.
         exec_kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
