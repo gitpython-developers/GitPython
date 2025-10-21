@@ -520,7 +520,7 @@ class Repo:
         """
         return RootModule(self).traverse(*args, **kwargs)
 
-    def submodule_update(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
+    def submodule_update(self, *args: Any, **kwargs: Any) -> RootModule:
         """Update the submodules, keeping the repository consistent as it will
         take the previous state into consideration.
 
