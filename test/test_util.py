@@ -45,7 +45,13 @@ from test.lib import TestBase, with_rw_repo
 
 @pytest.fixture
 def permission_error_tmpdir(tmp_path):
-    """Fixture to test permissions errors in situations where they are not overcome."""
+    """Fixture to test permissions errors when they cannot be bypassed.
+
+    On Unix-like systems the setup relies on running as a non-root user so that
+    removing a read-only directory raises ``PermissionError``.  When the tests
+    execute with root privileges the expected error will not occur, so we skip
+    them explicitly to avoid false failures.
+    """
     td = tmp_path / "testdir"
     td.mkdir()
     (td / "x").touch()
@@ -54,9 +60,12 @@ def permission_error_tmpdir(tmp_path):
     (td / "x").chmod(stat.S_IRUSR)
 
     # Set up PermissionError on Unix, where non-root users can't delete files in
-    # read-only directories. (Tests that rely on this and assert that rmtree raises
-    # PermissionError will fail if they are run as root.)
+    # read-only directories. Skip when running as root because the permission
+    # change would not trigger the expected failure.
     td.chmod(stat.S_IRUSR | stat.S_IXUSR)
+
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("permission_error_tmpdir requires non-root privileges to raise PermissionError")
 
     yield td
 
