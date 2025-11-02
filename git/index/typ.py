@@ -32,6 +32,9 @@ CE_EXTENDED = 0x4000
 CE_VALID = 0x8000
 CE_STAGESHIFT = 12
 
+CE_EXT_SKIP_WORKTREE = 0x4000
+CE_EXT_INTENT_TO_ADD = 0x2000
+
 # } END invariants
 
 
@@ -87,6 +90,8 @@ class BaseIndexEntryHelper(NamedTuple):
     uid: int = 0
     gid: int = 0
     size: int = 0
+    # version 3 extended flags, only when (flags & CE_EXTENDED) is set
+    extended_flags: int = 0
 
 
 class BaseIndexEntry(BaseIndexEntryHelper):
@@ -102,7 +107,7 @@ class BaseIndexEntry(BaseIndexEntryHelper):
         cls,
         inp_tuple: Union[
             Tuple[int, bytes, int, PathLike],
-            Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int],
+            Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int, int],
         ],
     ) -> "BaseIndexEntry":
         """Override ``__new__`` to allow construction from a tuple for backwards
@@ -133,6 +138,14 @@ class BaseIndexEntry(BaseIndexEntryHelper):
             For more information, see :manpage:`git-read-tree(1)`.
         """
         return (self.flags & CE_STAGEMASK) >> CE_STAGESHIFT
+
+    @property
+    def skip_worktree(self) -> bool:
+        return (self.extended_flags & CE_EXT_SKIP_WORKTREE) > 0
+
+    @property
+    def intent_to_add(self) -> bool:
+        return (self.extended_flags & CE_EXT_INTENT_TO_ADD) > 0
 
     @classmethod
     def from_blob(cls, blob: Blob, stage: int = 0) -> "BaseIndexEntry":

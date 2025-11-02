@@ -1218,6 +1218,31 @@ class TestIndex(TestBase):
 
         rw_repo.index.add(non_normalized_path)
 
+    @with_rw_directory
+    def test_index_version_v3(self, tmp_dir):
+        tmp_dir = Path(tmp_dir)
+        with cwd(tmp_dir):
+            subprocess.run(["git", "init", "-q"], check=True)
+            file = tmp_dir / "file.txt"
+            file.write_text("hello")
+            subprocess.run(["git", "add", "-N", "file.txt"], check=True)
+
+            repo = Repo(tmp_dir)
+
+            assert len(repo.index.entries) == 1
+            entry = list(repo.index.entries.values())[0]
+            assert entry.path == "file.txt"
+            assert entry.intent_to_add
+
+            file2 = tmp_dir / "file2.txt"
+            file2.write_text("world")
+            repo.index.add(["file2.txt"])
+            repo.index.write()
+
+            status_str = subprocess.check_output(["git", "status", "--porcelain"], text=True)
+            assert " A file.txt\n" in status_str
+            assert "A  file2.txt\n" in status_str
+
 
 class TestIndexUtils:
     @pytest.mark.parametrize("file_path_type", [str, Path])
