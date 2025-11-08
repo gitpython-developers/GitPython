@@ -1218,30 +1218,47 @@ class TestIndex(TestBase):
 
         rw_repo.index.add(non_normalized_path)
 
+    def test_index_file_v3(self):
+        index = IndexFile(self.rorepo, fixture_path("index_extended_flags"))
+        assert index.entries
+        assert index.version == 3
+        assert len(index.entries) == 4
+        assert index.entries[('init.t', 0)].skip_worktree
+
+        # Write the data - it must match the original.
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            index.write(tmpfile.name)
+            assert Path(tmpfile.name).read_bytes() == Path(fixture_path("index_extended_flags")).read_bytes()
+
     @with_rw_directory
-    def test_index_version_v3(self, tmp_dir):
+    def test_index_file_v3_with_git_command(self, tmp_dir):
         tmp_dir = Path(tmp_dir)
         with cwd(tmp_dir):
-            subprocess.run(["git", "init", "-q"], check=True)
+            git = Git(tmp_dir)
+            git.init()
+
             file = tmp_dir / "file.txt"
             file.write_text("hello")
-            subprocess.run(["git", "add", "-N", "file.txt"], check=True)
+            git.add("--intent-to-add", "file.txt")  # intent-to-add sets extended flag
 
             repo = Repo(tmp_dir)
+            index = repo.index
 
-            assert len(repo.index.entries) == 1
-            entry = list(repo.index.entries.values())[0]
+            assert len(index.entries) == 1
+            assert index.version == 3
+            entry = list(index.entries.values())[0]
             assert entry.path == "file.txt"
             assert entry.intent_to_add
 
             file2 = tmp_dir / "file2.txt"
             file2.write_text("world")
-            repo.index.add(["file2.txt"])
-            repo.index.write()
+            index.add(["file2.txt"])
+            index.write()
 
-            status_str = subprocess.check_output(["git", "status", "--porcelain"], text=True)
-            assert " A file.txt\n" in status_str
-            assert "A  file2.txt\n" in status_str
+            status_str = git.status(porcelain=True)
+            status_lines = status_str.splitlines()
+            assert " A file.txt" in status_lines
+            assert "A  file2.txt" in status_lines
 
 
 class TestIndexUtils:
