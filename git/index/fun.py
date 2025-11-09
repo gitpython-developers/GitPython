@@ -36,7 +36,7 @@ from git.objects.fun import (
 )
 from git.util import IndexFileSHA1Writer, finalize_process
 
-from .typ import BaseIndexEntry, IndexEntry, CE_NAMEMASK, CE_STAGESHIFT
+from .typ import CE_EXTENDED, BaseIndexEntry, IndexEntry, CE_NAMEMASK, CE_STAGESHIFT
 from .util import pack, unpack
 
 # typing -----------------------------------------------------------------------------
@@ -158,7 +158,7 @@ def write_cache(
     write = stream_sha.write
 
     # Header
-    version = 2
+    version = 3 if any(entry.extended_flags for entry in entries) else 2
     write(b"DIRC")
     write(pack(">LL", version, len(entries)))
 
@@ -172,6 +172,8 @@ def write_cache(
         plen = len(path) & CE_NAMEMASK  # Path length
         assert plen == len(path), "Path %s too long to fit into index" % entry.path
         flags = plen | (entry.flags & CE_NAMEMASK_INV)  # Clear possible previous values.
+        if entry.extended_flags:
+            flags |= CE_EXTENDED
         write(
             pack(
                 ">LLLLLL20sH",
@@ -185,6 +187,8 @@ def write_cache(
                 flags,
             )
         )
+        if entry.extended_flags:
+            write(pack(">H", entry.extended_flags))
         write(path)
         real_size = (tell() - beginoffset + 8) & ~7
         write(b"\0" * ((beginoffset + real_size) - tell()))
@@ -206,8 +210,7 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
     unpacked = cast(Tuple[int, int], unpack(">LL", stream.read(4 * 2)))
     version, num_entries = unpacked
 
-    # TODO: Handle version 3: extended data, see read-cache.c.
-    assert version in (1, 2), "Unsupported git index version %i, only 1 and 2 are supported" % version
+    assert version in (1, 2, 3), "Unsupported git index version %i, only 1, 2, and 3 are supported" % version
     return version, num_entries
 
 
@@ -260,12 +263,15 @@ def read_cache(
         ctime = unpack(">8s", read(8))[0]
         mtime = unpack(">8s", read(8))[0]
         (dev, ino, mode, uid, gid, size, sha, flags) = unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
+        extended_flags = 0
+        if flags & CE_EXTENDED:
+            extended_flags = unpack(">H", read(2))[0]
         path_size = flags & CE_NAMEMASK
         path = read(path_size).decode(defenc)
 
         real_size = (tell() - beginoffset + 8) & ~7
         read((beginoffset + real_size) - tell())
-        entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
+        entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size, extended_flags))
         # entry_key would be the method to use, but we save the effort.
         entries[(path, entry.stage)] = entry
         count += 1
