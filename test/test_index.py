@@ -1223,7 +1223,7 @@ class TestIndex(TestBase):
         assert index.entries
         assert index.version == 3
         assert len(index.entries) == 4
-        assert index.entries[('init.t', 0)].skip_worktree
+        assert index.entries[("init.t", 0)].skip_worktree
 
         # Write the data - it must match the original.
         with tempfile.NamedTemporaryFile() as tmpfile:
