@@ -223,7 +223,7 @@ class Repo:
 
         epath = epath or path or os.getcwd()
         if not isinstance(epath, str):
-            epath = str(epath)
+            epath = epath.__fspath__()
         if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn(
                 "The use of environment variables in paths is deprecated"
