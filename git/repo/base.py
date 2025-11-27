@@ -1362,8 +1362,10 @@ class Repo:
         odbt = kwargs.pop("odbt", odb_default_type)
 
         # When pathlib.Path or other class-based path is passed
+        if not isinstance(url, str):
+            url = url.__fspath__()
         if not isinstance(path, str):
-            path = str(path)
+            path = path.__fspath__()
 
         ## A bug win cygwin's Git, when `--bare` or `--separate-git-dir`
         #  it prepends the cwd or(?) the `url` into the `path, so::
@@ -1380,7 +1382,7 @@ class Repo:
             multi = shlex.split(" ".join(multi_options))
 
         if not allow_unsafe_protocols:
-            Git.check_unsafe_protocols(str(url))
+            Git.check_unsafe_protocols(url)
         if not allow_unsafe_options:
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=cls.unsafe_git_clone_options)
         if not allow_unsafe_options and multi_options:
