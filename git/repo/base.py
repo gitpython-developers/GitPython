@@ -554,7 +554,7 @@ class Repo:
 
     @staticmethod
     def _to_full_tag_path(path: PathLike) -> str:
-        path_str = str(path)
+        path_str = os.fspath(path)
         if path_str.startswith(TagReference._common_path_default + "/"):
             return path_str
         if path_str.startswith(TagReference._common_default + "/"):
@@ -959,7 +959,7 @@ class Repo:
         if not submodules:
             default_args.append("--ignore-submodules")
         if path:
-            default_args.extend(["--", str(path)])
+            default_args.extend(["--", os.fspath(path)])
         if index:
             # diff index against HEAD.
             if osp.isfile(self.index.path) and len(self.git.diff("--cached", *default_args)):

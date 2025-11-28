@@ -106,7 +106,7 @@ def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     @wraps(func)
     def set_git_working_dir(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
         cur_wd = os.getcwd()
-        os.chdir(str(self.repo.working_tree_dir))
+        os.chdir(os.fspath(self.repo.working_tree_dir))
         try:
             return func(self, *args, **kwargs)
         finally:

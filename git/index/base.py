@@ -404,10 +404,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         def raise_exc(e: Exception) -> NoReturn:
             raise e
 
-        r = str(self.repo.working_tree_dir)
+        r = os.fspath(self.repo.working_tree_dir)
         rs = r + os.sep
         for path in paths:
-            abs_path = str(path)
+            abs_path = os.fspath(path)
             if not osp.isabs(abs_path):
                 abs_path = osp.join(r, path)
             # END make absolute path
@@ -434,7 +434,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 #   characters.
                 if abs_path not in resolved_paths:
                     for f in self._iter_expand_paths(glob.glob(abs_path)):
-                        yield str(f).replace(rs, "")
+                        yield os.fspath(f).replace(rs, "")
                     continue
             # END glob handling
             try:
@@ -569,7 +569,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         for blob in iter_blobs:
             stage_null_key = (blob.path, 0)
             if stage_null_key in self.entries:
-                raise ValueError("Path %r already exists at stage 0" % str(blob.path))
+                raise ValueError("Path %r already exists at stage 0" % os.fspath(blob.path))
             # END assert blob is not stage 0 already
 
             # Delete all possible stages.
@@ -656,10 +656,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
-        if not osp.normpath(str(path)).startswith(str(self.repo.working_tree_dir)):
+        if not osp.normpath(os.fspath(path)).startswith(os.fspath(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         result = os.path.relpath(path, self.repo.working_tree_dir)
-        if str(path).endswith(os.sep) and not result.endswith(os.sep):
+        if os.fspath(path).endswith(os.sep) and not result.endswith(os.sep):
             result += os.sep
         return result
 
@@ -731,7 +731,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             for path in paths:
                 if osp.isabs(path):
                     abspath = path
-                    gitrelative_path = path[len(str(self.repo.working_tree_dir)) + 1 :]
+                    gitrelative_path = path[len(os.fspath(self.repo.working_tree_dir)) + 1 :]
                 else:
                     gitrelative_path = path
                     if self.repo.working_tree_dir:
@@ -1359,11 +1359,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 try:
                     self.entries[(co_path, 0)]
                 except KeyError:
-                    folder = str(co_path)
+                    folder = os.fspath(co_path)
                     if not folder.endswith("/"):
                         folder += "/"
                     for entry in self.entries.values():
-                        if str(entry.path).startswith(folder):
+                        if os.fspath(entry.path).startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc, fprogress, read_from_stdout=False)
                             checked_out_files.append(p)

@@ -3,7 +3,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from dataclasses import dataclass
 import gc
 import glob
 import io
@@ -41,7 +40,7 @@ from git.exc import BadObject
 from git.repo.fun import touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
 
-from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
+from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo, PathLikeMock
 
 
 def iter_flatten(lol):
@@ -108,13 +107,6 @@ class TestRepo(TestBase):
 
     @with_rw_repo("0.3.2.1")
     def test_repo_creation_pathlike(self, rw_repo):
-        @dataclass
-        class PathLikeMock:
-            path: str
-
-            def __fspath__(self) -> str:
-                return self.path
-
         r_from_gitdir = Repo(PathLikeMock(rw_repo.git_dir))
         self.assertEqual(r_from_gitdir.git_dir, rw_repo.git_dir)
 

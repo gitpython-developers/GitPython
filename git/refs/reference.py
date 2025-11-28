@@ -3,6 +3,7 @@
 
 __all__ = ["Reference"]
 
+import os
 from git.util import IterableObj, LazyMixin
 
 from .symbolic import SymbolicReference, T_References
@@ -65,7 +66,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
             If ``False``, you can provide any path.
             Otherwise the path must start with the default path prefix of this type.
         """
-        if check_path and not str(path).startswith(self._common_path_default + "/"):
+        if check_path and not os.fspath(path).startswith(self._common_path_default + "/"):
             raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
         self.path: str  # SymbolicReference converts to string at the moment.
         super().__init__(repo, path)

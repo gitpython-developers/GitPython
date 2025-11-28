@@ -37,14 +37,7 @@ from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
 
-from test.lib import (
-    TestBase,
-    VirtualEnvironment,
-    fixture,
-    fixture_path,
-    with_rw_directory,
-    with_rw_repo,
-)
+from test.lib import TestBase, VirtualEnvironment, fixture, fixture_path, with_rw_directory, with_rw_repo, PathLikeMock
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
@@ -586,7 +579,7 @@ class TestIndex(TestBase):
                 if type_id == 0:  # path (str)
                     yield entry.path
                 elif type_id == 1:  # path (PathLike)
-                    yield Path(entry.path)
+                    yield PathLikeMock(entry.path)
                 elif type_id == 2:  # blob
                     yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
                 elif type_id == 3:  # BaseIndexEntry
@@ -1198,13 +1191,22 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @with_rw_repo("HEAD")
-    def test_index_add_pathlike(self, rw_repo):
+    def test_index_add_pathlib(self, rw_repo):
         git_dir = Path(rw_repo.git_dir)
 
         file = git_dir / "file.txt"
         file.touch()
 
         rw_repo.index.add(file)
+
+    @with_rw_repo("HEAD")
+    def test_index_add_pathlike(self, rw_repo):
+        git_dir = Path(rw_repo.git_dir)
+
+        file = git_dir / "file.txt"
+        file.touch()
+
+        rw_repo.index.add(PathLikeMock(str(file)))
 
     @with_rw_repo("HEAD")
     def test_index_add_non_normalized_path(self, rw_repo):

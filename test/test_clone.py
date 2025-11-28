@@ -1,7 +1,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from dataclasses import dataclass
 import os
 import os.path as osp
 import pathlib
@@ -12,7 +11,7 @@ from unittest import skip
 from git import GitCommandError, Repo
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 
-from test.lib import TestBase, with_rw_directory, with_rw_repo
+from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
 from pathlib import Path
 import re
@@ -51,14 +50,6 @@ class TestClone(TestBase):
     @with_rw_directory
     def test_clone_from_pathlike(self, rw_dir):
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
-
-        @dataclass
-        class PathLikeMock:
-            path: str
-
-            def __fspath__(self) -> str:
-                return self.path
-
         Repo.clone_from(PathLikeMock(original_repo.git_dir), PathLikeMock(os.path.join(rw_dir, "clone_pathlike")))
 
     @with_rw_directory
