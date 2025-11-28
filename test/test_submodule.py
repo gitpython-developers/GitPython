@@ -58,6 +58,7 @@ class TestRootProgress(RootUpdateProgress):
         print(op, cur_count, max_count, message)
 
 
+TestRootProgress.__test__ = False
 prog = TestRootProgress()
 
 
