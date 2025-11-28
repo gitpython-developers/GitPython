@@ -634,7 +634,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 self._read(file_path, file_path.name)
             else:
                 # Assume a path if it is not a file-object.
-                file_path = cast(PathLike, file_path)
+                file_path = os.fspath(file_path)
                 try:
                     with open(file_path, "rb") as fp:
                         file_ok = True

@@ -219,11 +219,9 @@ class Repo:
             # Given how the tests are written, this seems more likely to catch Cygwin
             # git used from Windows than Windows git used from Cygwin. Therefore
             # changing to Cygwin-style paths is the relevant operation.
-            epath = cygpath(epath if isinstance(epath, str) else epath.__fspath__())
+            epath = cygpath(os.fspath(epath))
 
-        epath = epath or path or os.getcwd()
-        if not isinstance(epath, str):
-            epath = epath.__fspath__()
+        epath = os.fspath(epath)
         if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn(
                 "The use of environment variables in paths is deprecated"
@@ -1361,11 +1359,8 @@ class Repo:
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
 
-        # When pathlib.Path or other class-based path is passed
-        if not isinstance(url, str):
-            url = url.__fspath__()
-        if not isinstance(path, str):
-            path = path.__fspath__()
+        url = os.fspath(url)
+        path = os.fspath(path)
 
         ## A bug win cygwin's Git, when `--bare` or `--separate-git-dir`
         #  it prepends the cwd or(?) the `url` into the `path, so::
