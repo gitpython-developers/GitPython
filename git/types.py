@@ -13,7 +13,6 @@ from typing import (
     Sequence as Sequence,
     Tuple,
     TYPE_CHECKING,
-    TypeAlias,
     TypeVar,
     Union,
 )
@@ -117,7 +116,7 @@ https://git-scm.com/docs/gitglossary#def_commit-ish
     object types.
 """
 
-GitObjectTypeString: TypeAlias = Literal["commit", "tag", "blob", "tree"]
+GitObjectTypeString = Literal["commit", "tag", "blob", "tree"]
 """Literal strings identifying git object types and the
 :class:`~git.objects.base.Object`-based types that represent them.
 
@@ -130,7 +129,8 @@ See :manpage:`gitglossary(7)` on "object type":
 https://git-scm.com/docs/gitglossary#def_object_type
 """
 
-Lit_commit_ish: TypeAlias = Literal["commit", "tag"]
+if TYPE_CHECKING:
+    Lit_commit_ish = Literal["commit", "tag"]
 """Deprecated. Type of literal strings identifying typically-commitish git object types.
 
 Prior to a bugfix, this type had been defined more broadly. Any usage is in practice
