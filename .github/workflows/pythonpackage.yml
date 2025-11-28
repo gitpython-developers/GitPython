@@ -103,7 +103,6 @@ jobs:
         PYTHON_VERSION: ${{ matrix.python-version }}
       # With new versions of mypy new issues might arise. This is a problem if there is
       # nobody able to fix them, so we have to ignore errors until that changes.
-      continue-on-error: true
 
     - name: Test with pytest
       run: |
