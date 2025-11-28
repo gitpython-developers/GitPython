@@ -95,6 +95,7 @@ jobs:
       continue-on-error: true
 
     - name: Check types with mypy
+      if: matrix.python-version != '3.7' && matrix.python-version != '3.8'
       run: |
         mypy --python-version="${PYTHON_VERSION%t}"  # Version only, with no "t" for free-threaded.
       env:
