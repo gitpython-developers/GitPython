@@ -25,6 +25,7 @@ from git.exc import (
 )
 from git.objects.base import IndexObject, Object
 from git.objects.util import TraversableIterableObj
+from ...refs.remote import RemoteReference
 from git.util import (
     IterableList,
     RemoteProgress,
@@ -355,7 +356,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_checkout_path = osp.join(str(repo.working_tree_dir), path)
 
         if url.startswith("../"):
-            remote_name = repo.active_branch.tracking_branch().remote_name
+            remote_name = cast(RemoteReference, repo.active_branch.tracking_branch()).remote_name
             repo_remote_url = repo.remote(remote_name).url
             url = os.path.join(repo_remote_url, url)
 

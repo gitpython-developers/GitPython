@@ -286,7 +286,7 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
             # END handle refname
         else:
             if ref is not None:
-                obj = cast("Commit", ref.commit)
+                obj = ref.commit
             # END handle ref
         # END initialize obj on first token
 
