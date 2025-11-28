@@ -766,7 +766,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         if self.read_only:
             raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
 
-    def add_section(self, section: str | cp._UNNAMED_SECTION) -> None:
+    def add_section(self, section: "cp._SectionName") -> None:
         """Assures added options will stay in order."""
         return super().add_section(section)
 
