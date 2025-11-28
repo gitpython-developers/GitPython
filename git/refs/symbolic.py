@@ -76,7 +76,7 @@ class SymbolicReference:
 
     def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
-        self.path = path
+        self.path = os.fspath(path)
 
     def __str__(self) -> str:
         return os.fspath(self.path)

@@ -652,14 +652,15 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :raise ValueError:
         """
+        path = os.fspath(path)
         if not osp.isabs(path):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
-        if not osp.normpath(os.fspath(path)).startswith(os.fspath(self.repo.working_tree_dir)):
+        if not osp.normpath(path).startswith(os.fspath(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         result = os.path.relpath(path, self.repo.working_tree_dir)
-        if os.fspath(path).endswith(os.sep) and not result.endswith(os.sep):
+        if path.endswith(os.sep) and not result.endswith(os.sep):
             result += os.sep
         return result
 

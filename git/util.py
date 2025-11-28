@@ -1011,7 +1011,7 @@ class LockFile:
     __slots__ = ("_file_path", "_owns_lock")
 
     def __init__(self, file_path: PathLike) -> None:
-        self._file_path = file_path
+        self._file_path = os.fspath(file_path)
         self._owns_lock = False
 
     def __del__(self) -> None:

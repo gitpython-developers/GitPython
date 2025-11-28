@@ -62,6 +62,7 @@ def is_git_dir(d: PathLike) -> bool:
         clearly indicates that we don't support it. There is the unlikely danger to
         throw if we see directories which just look like a worktree dir, but are none.
     """
+    d = os.fspath(d)
     if osp.isdir(d):
         if (osp.isdir(osp.join(d, "objects")) or "GIT_OBJECT_DIRECTORY" in os.environ) and osp.isdir(
             osp.join(d, "refs")
