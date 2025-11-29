@@ -79,7 +79,7 @@ class SymbolicReference:
         self.path = os.fspath(path)
 
     def __str__(self) -> str:
-        return os.fspath(self.path)
+        return self.path
 
     def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
