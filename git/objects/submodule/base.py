@@ -352,7 +352,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
-            module_checkout_path = osp.join(repo.working_tree_dir, path)
+            module_checkout_path = osp.join(repo.working_tree_dir, path)  # type: ignore[arg-type]
 
         if url.startswith("../"):
             remote_name = cast("RemoteReference", repo.active_branch.tracking_branch()).remote_name
