@@ -579,12 +579,14 @@ class TestIndex(TestBase):
                 if type_id == 0:  # path (str)
                     yield entry.path
                 elif type_id == 1:  # path (PathLike)
+                    yield Path(entry.path)
+                elif type_id == 2:  # path mock (PathLike)
                     yield PathLikeMock(entry.path)
-                elif type_id == 2:  # blob
+                elif type_id == 3:  # blob
                     yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
-                elif type_id == 3:  # BaseIndexEntry
+                elif type_id == 4:  # BaseIndexEntry
                     yield BaseIndexEntry(entry[:4])
-                elif type_id == 4:  # IndexEntry
+                elif type_id == 5:  # IndexEntry
                     yield entry
                 else:
                     raise AssertionError("Invalid Type")

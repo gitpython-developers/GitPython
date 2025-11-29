@@ -706,7 +706,7 @@ class SymbolicReference:
         if not force and os.path.isfile(abs_ref_path):
             target_data = str(target)
             if isinstance(target, SymbolicReference):
-                target_data = os.fspath(target.path)
+                target_data = target.path
             if not resolve:
                 target_data = "ref: " + target_data
             with open(abs_ref_path, "rb") as fd:
@@ -931,4 +931,4 @@ class SymbolicReference:
 
     def is_remote(self) -> bool:
         """:return: True if this symbolic reference points to a remote branch"""
-        return os.fspath(self.path).startswith(self._remote_common_path_default + "/")
+        return self.path.startswith(self._remote_common_path_default + "/")

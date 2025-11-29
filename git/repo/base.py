@@ -126,7 +126,7 @@ class Repo:
     working_dir: PathLike
     """The working directory of the git command."""
 
-    _working_tree_dir: Optional[PathLike] = None
+    _working_tree_dir: Optional[str] = None
 
     git_dir: PathLike
     """The ``.git`` repository directory."""
@@ -306,7 +306,7 @@ class Repo:
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir: PathLike = self._working_tree_dir or self.common_dir
+        self.working_dir: str = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # Special handling, in special times.
@@ -366,7 +366,7 @@ class Repo:
             fp.write((descr + "\n").encode(defenc))
 
     @property
-    def working_tree_dir(self) -> Optional[PathLike]:
+    def working_tree_dir(self) -> Optional[str]:
         """
         :return:
             The working tree directory of our git repository.

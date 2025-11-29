@@ -1229,7 +1229,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     wtd = mod.working_tree_dir
                     del mod  # Release file-handles (Windows).
                     gc.collect()
-                    rmtree(str(wtd))
+                    rmtree(wtd)
                 # END delete tree if possible
             # END handle force
 

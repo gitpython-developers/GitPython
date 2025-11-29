@@ -397,8 +397,7 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
                 p = cygpath(p)
         elif drive:
             p = "/proc/cygdrive/%s/%s" % (drive.lower(), p)
-    p_str = os.fspath(p)  # ensure it is a str and not AnyPath
-    return p_str.replace("\\", "/")
+    return p.replace("\\", "/")
 
 
 _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (

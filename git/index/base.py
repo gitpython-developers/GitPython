@@ -1360,7 +1360,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 try:
                     self.entries[(co_path, 0)]
                 except KeyError:
-                    folder = os.fspath(co_path)
+                    folder = co_path
                     if not folder.endswith("/"):
                         folder += "/"
                     for entry in self.entries.values():
