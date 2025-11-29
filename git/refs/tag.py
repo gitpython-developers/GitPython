@@ -45,8 +45,8 @@ class TagReference(Reference):
     _common_default = "tags"
     _common_path_default = Reference._common_path_default + "/" + _common_default
 
-    @property
-    def commit(self) -> "Commit":  # type: ignore[override]  # LazyMixin has unrelated commit method
+    @property  # type: ignore[misc]
+    def commit(self) -> "Commit":  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
         :raise ValueError:
@@ -80,8 +80,8 @@ class TagReference(Reference):
         return None
 
     # Make object read-only. It should be reasonably hard to adjust an existing tag.
-    @property
-    def object(self) -> AnyGitObject:  # type: ignore[override]
+    @property  # type: ignore[misc]
+    def object(self) -> AnyGitObject:
         return Reference._get_object(self)
 
     @classmethod

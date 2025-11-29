@@ -1143,7 +1143,7 @@ class BlockingLockFile(LockFile):
         # END endless loop
 
 
-class IterableList(List[T_IterableObj]):
+class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
     """List of iterable objects allowing to query an object by id or by named index::
 
      heads = repo.heads
@@ -1214,14 +1214,14 @@ class IterableList(List[T_IterableObj]):
             raise ValueError("Index should be an int or str")
         else:
             try:
-                return getattr(self, index)
+                return getattr(self, cast(str, index))
             except AttributeError as e:
-                raise IndexError("No item found with id %r" % (self._prefix + index)) from e
+                raise IndexError(f"No item found with id {self._prefix}{index}") from e
         # END handle getattr
 
     def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> None:
         delindex = cast(int, index)
-        if not isinstance(index, int):
+        if isinstance(index, str):
             delindex = -1
             name = self._prefix + index
             for i, item in enumerate(self):

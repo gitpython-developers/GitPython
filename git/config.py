@@ -574,7 +574,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 if keyword.endswith("/i"):
                     value = re.sub(
                         r"[a-zA-Z]",
-                        lambda m: "[{}{}]".format(m.group().lower(), m.group().upper()),
+                        lambda m: f"[{m.group().lower()!r}{m.group().upper()!r}]",
                         value,
                     )
                 if self._repo.git_dir:
@@ -633,8 +633,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 file_path = cast(IO[bytes], file_path)
                 self._read(file_path, file_path.name)
             else:
-                # Assume a path if it is not a file-object.
-                file_path = cast(PathLike, file_path)
                 try:
                     with open(file_path, "rb") as fp:
                         file_ok = True
@@ -768,7 +766,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         if self.read_only:
             raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
 
-    def add_section(self, section: str) -> None:
+    def add_section(self, section: "cp._SectionName") -> None:
         """Assures added options will stay in order."""
         return super().add_section(section)
 

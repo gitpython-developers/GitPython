@@ -145,7 +145,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
         actor = Actor._from_string(info[82 : email_end + 1])
         time, tz_offset = parse_date(info[email_end + 2 :])  # skipcq: PYL-W0621
 
-        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
+        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))  # type: ignore [arg-type]
 
 
 class RefLog(List[RefLogEntry], Serializable):

@@ -22,7 +22,6 @@ from typing import Any, Sequence, TYPE_CHECKING, Union
 from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
-    from git.objects import Commit
     from git.refs import RemoteReference
     from git.repo import Repo
 
@@ -43,9 +42,6 @@ class HEAD(SymbolicReference):
     _ORIG_HEAD_NAME = "ORIG_HEAD"
 
     __slots__ = ()
-
-    # TODO: This can be removed once SymbolicReference.commit has static type hints.
-    commit: "Commit"
 
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME) -> None:
         if path != self._HEAD_NAME:
@@ -149,7 +145,7 @@ class Head(Reference):
     k_config_remote_ref = "merge"  # Branch to merge from remote.
 
     @classmethod
-    def delete(cls, repo: "Repo", *heads: "Union[Head, str]", force: bool = False, **kwargs: Any) -> None:
+    def delete(cls, repo: "Repo", *heads: "Union[Head, str]", force: bool = False, **kwargs: Any) -> None:  # type: ignore[override]
         """Delete the given heads.
 
         :param force:

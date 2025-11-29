@@ -44,7 +44,7 @@ random.seed(0)
 class TestRemoteProgress(RemoteProgress):
     __slots__ = ("_seen_lines", "_stages_per_op", "_num_progress_messages")
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._seen_lines = []
         self._stages_per_op = {}
@@ -101,6 +101,9 @@ class TestRemoteProgress(RemoteProgress):
 
     def assert_received_message(self):
         assert self._num_progress_messages
+
+
+TestRemoteProgress.__test__ = False  # type: ignore
 
 
 class TestRemote(TestBase):

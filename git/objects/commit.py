@@ -900,7 +900,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         if self.message:
             results = re.findall(
                 r"^Co-authored-by: (.*) <(.*?)>$",
-                self.message,
+                str(self.message),
                 re.MULTILINE,
             )
             for author in results:

@@ -23,13 +23,14 @@ from typing import (
     List,
     Match,
     Optional,
+    Sequence,
     Tuple,
     TYPE_CHECKING,
     TypeVar,
     Union,
     cast,
 )
-from git.types import Literal, PathLike
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -289,7 +290,7 @@ class DiffIndex(List[T_Diff]):
     The class improves the diff handling convenience.
     """
 
-    change_type = ("A", "C", "D", "R", "M", "T")
+    change_type: Sequence[Literal["A", "C", "D", "R", "M", "T"]] = ("A", "C", "D", "R", "M", "T")  # noqa: F821
     """Change type invariant identifying possible ways a blob can have changed:
 
     * ``A`` = Added
