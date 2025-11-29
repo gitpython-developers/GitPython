@@ -1,7 +1,7 @@
 coverage[toml]
 ddt >= 1.1.1, != 1.4.3
 mock ; python_version < "3.8"
-mypy
+mypy<1.19.0
 pre-commit
 pytest >= 7.3.1
 pytest-cov
