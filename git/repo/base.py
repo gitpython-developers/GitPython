@@ -1386,7 +1386,7 @@ class Repo:
         proc = git.clone(
             multi,
             "--",
-            Git.polish_url(str(url)),
+            Git.polish_url(url),
             clone_path,
             with_extended_output=True,
             as_process=True,
