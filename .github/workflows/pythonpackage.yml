@@ -102,8 +102,6 @@ jobs:
         MYPY_FORCE_COLOR: "1"
         TERM: "xterm-256color"  # For color: https://github.com/python/mypy/issues/13817
         PYTHON_VERSION: ${{ matrix.python-version }}
-      # With new versions of mypy new issues might arise. This is a problem if there is
-      # nobody able to fix them, so we have to ignore errors until that changes.
 
     - name: Test with pytest
       run: |
