@@ -352,7 +352,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
-            module_checkout_path = osp.join(os.fspath(repo.working_tree_dir), path)
+            module_checkout_path = osp.join(repo.working_tree_dir, path)
 
         if url.startswith("../"):
             remote_name = cast("RemoteReference", repo.active_branch.tracking_branch()).remote_name
@@ -1016,7 +1016,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             return self
         # END handle no change
 
-        module_checkout_abspath = join_path_native(os.fspath(self.repo.working_tree_dir), module_checkout_path)
+        module_checkout_abspath = join_path_native(str(self.repo.working_tree_dir), module_checkout_path)
         if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files
@@ -1229,7 +1229,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     wtd = mod.working_tree_dir
                     del mod  # Release file-handles (Windows).
                     gc.collect()
-                    rmtree(wtd)
+                    rmtree(str(wtd))
                 # END delete tree if possible
             # END handle force
 
@@ -1313,7 +1313,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # If check is False, we might see a parent-commit that doesn't even contain the
         # submodule anymore. in that case, mark our sha as being NULL.
         try:
-            self.binsha = pctree[os.fspath(self.path)].binsha
+            self.binsha = pctree[str(self.path)].binsha
         except KeyError:
             self.binsha = self.NULL_BIN_SHA
 
@@ -1395,7 +1395,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             destination_module_abspath = self._module_abspath(self.repo, self.path, new_name)
             source_dir = mod.git_dir
             # Let's be sure the submodule name is not so obviously tied to a directory.
-            if os.fspath(destination_module_abspath).startswith(os.fspath(mod.git_dir)):
+            if str(destination_module_abspath).startswith(str(mod.git_dir)):
                 tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
                 os.renames(source_dir, tmp_dir)
                 source_dir = tmp_dir

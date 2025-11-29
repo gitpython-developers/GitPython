@@ -36,7 +36,7 @@ import getpass
 import logging
 import os
 import os.path as osp
-import pathlib
+from pathlib import Path
 import platform
 import re
 import shutil
@@ -397,7 +397,8 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
                 p = cygpath(p)
         elif drive:
             p = "/proc/cygdrive/%s/%s" % (drive.lower(), p)
-    return p.replace("\\", "/")
+    p_str = os.fspath(p)  # ensure it is a str and not AnyPath
+    return p_str.replace("\\", "/")
 
 
 _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
@@ -464,7 +465,7 @@ def _is_cygwin_git(git_executable: str) -> bool:
             # Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, "uname")
 
-            if not (pathlib.Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
+            if not (Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
                 _logger.debug(f"Failed checking if running in CYGWIN: {uname_cmd} is not an executable")
                 _is_cygwin_cache[git_executable] = is_cygwin
                 return is_cygwin
@@ -496,7 +497,7 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
     elif git_executable is None:
         return False
     else:
-        return _is_cygwin_git(os.fspath(git_executable))
+        return _is_cygwin_git(str(git_executable))
 
 
 def get_user_id() -> str:
@@ -522,7 +523,7 @@ def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
 
 
 def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[PathLike]:
-    if isinstance(p, pathlib.Path):
+    if isinstance(p, Path):
         return p.resolve()
     try:
         p = osp.expanduser(p)  # type: ignore[arg-type]
@@ -1010,7 +1011,7 @@ class LockFile:
     __slots__ = ("_file_path", "_owns_lock")
 
     def __init__(self, file_path: PathLike) -> None:
-        self._file_path = os.fspath(file_path)
+        self._file_path = file_path
         self._owns_lock = False
 
     def __del__(self) -> None:

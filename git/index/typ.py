@@ -58,9 +58,9 @@ class BlobFilter:
 
     def __call__(self, stage_blob: Tuple[StageType, Blob]) -> bool:
         blob_pathlike: PathLike = stage_blob[1].path
-        blob_path = Path(blob_pathlike)
+        blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
         for pathlike in self.paths:
-            path = Path(pathlike)
+            path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
             # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no
             # longer supported.
             filter_parts = path.parts

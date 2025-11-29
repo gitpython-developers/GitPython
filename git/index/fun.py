@@ -87,7 +87,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         return
 
     env = os.environ.copy()
-    env["GIT_INDEX_FILE"] = safe_decode(index.path)
+    env["GIT_INDEX_FILE"] = safe_decode(os.fspath(index.path))
     env["GIT_EDITOR"] = ":"
     cmd = [hp]
     try:
@@ -167,7 +167,7 @@ def write_cache(
         beginoffset = tell()
         write(entry.ctime_bytes)  # ctime
         write(entry.mtime_bytes)  # mtime
-        path_str = os.fspath(entry.path)
+        path_str = str(entry.path)
         path: bytes = force_bytes(path_str, encoding=defenc)
         plen = len(path) & CE_NAMEMASK  # Path length
         assert plen == len(path), "Path %s too long to fit into index" % entry.path

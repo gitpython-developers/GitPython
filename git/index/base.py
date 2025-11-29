@@ -434,7 +434,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 #   characters.
                 if abs_path not in resolved_paths:
                     for f in self._iter_expand_paths(glob.glob(abs_path)):
-                        yield os.fspath(f).replace(rs, "")
+                        yield str(f).replace(rs, "")
                     continue
             # END glob handling
             try:
@@ -569,7 +569,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         for blob in iter_blobs:
             stage_null_key = (blob.path, 0)
             if stage_null_key in self.entries:
-                raise ValueError("Path %r already exists at stage 0" % os.fspath(blob.path))
+                raise ValueError("Path %r already exists at stage 0" % str(blob.path))
             # END assert blob is not stage 0 already
 
             # Delete all possible stages.
@@ -652,7 +652,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :raise ValueError:
         """
-        path = os.fspath(path)
         if not osp.isabs(path):
             return path
         if self.repo.bare:
@@ -660,7 +659,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if not osp.normpath(path).startswith(os.fspath(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         result = os.path.relpath(path, self.repo.working_tree_dir)
-        if path.endswith(os.sep) and not result.endswith(os.sep):
+        if os.fspath(path).endswith(os.sep) and not result.endswith(os.sep):
             result += os.sep
         return result
 
@@ -1364,7 +1363,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     if not folder.endswith("/"):
                         folder += "/"
                     for entry in self.entries.values():
-                        if os.fspath(entry.path).startswith(folder):
+                        if entry.path.startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc, fprogress, read_from_stdout=False)
                             checked_out_files.append(p)

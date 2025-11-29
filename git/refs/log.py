@@ -4,7 +4,6 @@
 __all__ = ["RefLog", "RefLogEntry"]
 
 from mmap import mmap
-import os
 import os.path as osp
 import re
 import time as _time
@@ -168,7 +167,7 @@ class RefLog(List[RefLogEntry], Serializable):
         """Initialize this instance with an optional filepath, from which we will
         initialize our data. The path is also used to write changes back using the
         :meth:`write` method."""
-        self._path = None if filepath is None else os.fspath(filepath)
+        self._path = filepath
         if filepath is not None:
             self._read_from_file()
         # END handle filepath

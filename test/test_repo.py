@@ -15,6 +15,7 @@ import pickle
 import sys
 import tempfile
 from unittest import mock
+from pathlib import Path
 
 import pytest
 
@@ -368,6 +369,15 @@ class TestRepo(TestBase):
             f.write("junk")
         assert rwrepo.is_dirty(path="doc") is False
         assert rwrepo.is_dirty(untracked_files=True, path="doc") is True
+
+    @with_rw_repo("HEAD")
+    def test_is_dirty_with_pathlib_and_pathlike(self, rwrepo):
+        with open(osp.join(rwrepo.working_dir, "git", "util.py"), "at") as f:
+            f.write("junk")
+        assert rwrepo.is_dirty(path=Path("git")) is True
+        assert rwrepo.is_dirty(path=PathLikeMock("git")) is True
+        assert rwrepo.is_dirty(path=Path("doc")) is False
+        assert rwrepo.is_dirty(path=PathLikeMock("doc")) is False
 
     def test_head(self):
         self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)

@@ -37,8 +37,8 @@ class TemporaryFileSwap:
     __slots__ = ("file_path", "tmp_file_path")
 
     def __init__(self, file_path: PathLike) -> None:
-        self.file_path = os.fspath(file_path)
-        dirname, basename = osp.split(self.file_path)
+        self.file_path = file_path
+        dirname, basename = osp.split(file_path)
         fd, self.tmp_file_path = tempfile.mkstemp(prefix=basename, dir=dirname)
         os.close(fd)
         with contextlib.suppress(OSError):  # It may be that the source does not exist.
@@ -106,7 +106,7 @@ def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     @wraps(func)
     def set_git_working_dir(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
         cur_wd = os.getcwd()
-        os.chdir(os.fspath(self.repo.working_tree_dir))
+        os.chdir(self.repo.working_tree_dir)
         try:
             return func(self, *args, **kwargs)
         finally:

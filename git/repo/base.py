@@ -126,7 +126,8 @@ class Repo:
     working_dir: PathLike
     """The working directory of the git command."""
 
-    _working_tree_dir: Optional[str] = None
+    # stored as string for easier processing, but annotated as path for clearer intention
+    _working_tree_dir: Optional[PathLike] = None
 
     git_dir: PathLike
     """The ``.git`` repository directory."""
@@ -215,13 +216,13 @@ class Repo:
         epath = path or os.getenv("GIT_DIR")
         if not epath:
             epath = os.getcwd()
+        epath = os.fspath(epath)
         if Git.is_cygwin():
             # Given how the tests are written, this seems more likely to catch Cygwin
             # git used from Windows than Windows git used from Cygwin. Therefore
             # changing to Cygwin-style paths is the relevant operation.
-            epath = cygpath(os.fspath(epath))
+            epath = cygpath(epath)
 
-        epath = os.fspath(epath)
         if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn(
                 "The use of environment variables in paths is deprecated"
@@ -306,7 +307,7 @@ class Repo:
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir: str = self._working_tree_dir or self.common_dir
+        self.working_dir: PathLike = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # Special handling, in special times.
@@ -366,7 +367,7 @@ class Repo:
             fp.write((descr + "\n").encode(defenc))
 
     @property
-    def working_tree_dir(self) -> Optional[str]:
+    def working_tree_dir(self) -> Optional[PathLike]:
         """
         :return:
             The working tree directory of our git repository.
@@ -554,7 +555,7 @@ class Repo:
 
     @staticmethod
     def _to_full_tag_path(path: PathLike) -> str:
-        path_str = os.fspath(path)
+        path_str = str(path)
         if path_str.startswith(TagReference._common_path_default + "/"):
             return path_str
         if path_str.startswith(TagReference._common_default + "/"):
@@ -1355,6 +1356,7 @@ class Repo:
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
 
+        # url may be a path and this has no effect if it is a string
         url = os.fspath(url)
         path = os.fspath(path)
 

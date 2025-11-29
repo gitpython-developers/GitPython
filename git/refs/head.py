@@ -8,7 +8,6 @@ Note the distinction between the :class:`HEAD` and :class:`Head` classes.
 
 __all__ = ["HEAD", "Head"]
 
-import os
 from git.config import GitConfigParser, SectionConstraint
 from git.exc import GitCommandError
 from git.util import join_path
@@ -45,7 +44,6 @@ class HEAD(SymbolicReference):
     __slots__ = ()
 
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME) -> None:
-        path = os.fspath(path)
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super().__init__(repo, path)
