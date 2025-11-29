@@ -1214,9 +1214,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
             raise ValueError("Index should be an int or str")
         else:
             try:
-                if not isinstance(index, str):
-                    raise AttributeError(f"{index} is not a valid attribute")
-                return getattr(self, index)
+                return getattr(self, cast(str, index))
             except AttributeError as e:
                 raise IndexError(f"No item found with id {self._prefix}{index}") from e
         # END handle getattr
