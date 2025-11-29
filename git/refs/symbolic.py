@@ -103,7 +103,7 @@ class SymbolicReference:
             In case of symbolic references, the shortest assumable name is the path
             itself.
         """
-        return os.fspath(self.path)
+        return self.path
 
     @property
     def abspath(self) -> PathLike:
