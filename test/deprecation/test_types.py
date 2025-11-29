@@ -36,7 +36,7 @@ def test_can_access_lit_commit_ish_but_it_is_not_usable() -> None:
     assert 'Literal["commit", "tag"]' in message, "Has new definition."
     assert "GitObjectTypeString" in message, "Has new type name for old definition."
 
-    _: Lit_commit_ish = "commit"  # type: ignore[valid-type]
+    _: Lit_commit_ish = "commit"
 
     # It should be as documented (even though deliberately unusable in static checks).
     assert Lit_commit_ish == Literal["commit", "tag"]

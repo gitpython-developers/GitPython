@@ -13,7 +13,6 @@ from typing import (
     Sequence as Sequence,
     Tuple,
     TYPE_CHECKING,
-    Type,
     TypeVar,
     Union,
 )
@@ -130,7 +129,8 @@ See :manpage:`gitglossary(7)` on "object type":
 https://git-scm.com/docs/gitglossary#def_object_type
 """
 
-Lit_commit_ish: Type[Literal["commit", "tag"]]
+if TYPE_CHECKING:
+    Lit_commit_ish = Literal["commit", "tag"]
 """Deprecated. Type of literal strings identifying typically-commitish git object types.
 
 Prior to a bugfix, this type had been defined more broadly. Any usage is in practice

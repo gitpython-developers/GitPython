@@ -916,8 +916,7 @@ class SymbolicReference:
             SymbolicReference,
         ):
             try:
-                instance: T_References
-                instance = ref_type(repo, path)
+                instance = cast(T_References, ref_type(repo, path))
                 if instance.__class__ is SymbolicReference and instance.is_detached:
                     raise ValueError("SymbolicRef was detached, we drop it")
                 else:

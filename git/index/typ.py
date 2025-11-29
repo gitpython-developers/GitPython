@@ -192,7 +192,7 @@ class IndexEntry(BaseIndexEntry):
             Instance of type :class:`BaseIndexEntry`.
         """
         time = pack(">LL", 0, 0)
-        return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
+        return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))  # type: ignore[arg-type]
 
     @classmethod
     def from_blob(cls, blob: Blob, stage: int = 0) -> "IndexEntry":
@@ -211,5 +211,5 @@ class IndexEntry(BaseIndexEntry):
                 0,
                 0,
                 blob.size,
-            )
+            )  # type: ignore[arg-type]
         )

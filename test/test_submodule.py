@@ -58,6 +58,7 @@ class TestRootProgress(RootUpdateProgress):
         print(op, cur_count, max_count, message)
 
 
+TestRootProgress.__test__ = False
 prog = TestRootProgress()
 
 
@@ -932,7 +933,7 @@ class TestSubmodule(TestBase):
         csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
         assert csm.url == "bar"
 
-        self.assertRaises(
+        self.assertRaises(  # noqa: B017
             Exception,
             rsm.update,
             recursive=True,

@@ -682,11 +682,7 @@ class Repo:
         git_dir: Optional[PathLike] = None,
     ) -> GitConfigParser:
         if config_level is None:
-            files = [
-                self._get_config_path(cast(Lit_config_levels, f), git_dir)
-                for f in self.config_level
-                if cast(Lit_config_levels, f)
-            ]
+            files = [self._get_config_path(f, git_dir) for f in self.config_level if f]
         else:
             files = [self._get_config_path(config_level, git_dir)]
         return GitConfigParser(files, read_only=True, repo=self)
@@ -1481,7 +1477,7 @@ class Repo:
             self.common_dir,
             path,
             type(self.odb),
-            progress,
+            progress,  # type: ignore[arg-type]
             multi_options,
             allow_unsafe_protocols=allow_unsafe_protocols,
             allow_unsafe_options=allow_unsafe_options,
@@ -1542,7 +1538,7 @@ class Repo:
             url,
             to_path,
             GitCmdObjectDB,
-            progress,
+            progress,  # type: ignore[arg-type]
             multi_options,
             allow_unsafe_protocols=allow_unsafe_protocols,
             allow_unsafe_options=allow_unsafe_options,
