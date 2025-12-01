@@ -1213,6 +1213,15 @@ class TestIndex(TestBase):
         rw_repo.index.add(PathLikeMock(str(file)))
 
     @with_rw_repo("HEAD")
+    def test_index_add_pathlike_unicode(self, rw_repo):
+        git_dir = Path(rw_repo.git_dir)
+
+        file = git_dir / "file-áēñöưḩ̣.txt"
+        file.touch()
+
+        rw_repo.index.add(PathLikeMock(str(file)))
+
+    @with_rw_repo("HEAD")
     def test_index_add_non_normalized_path(self, rw_repo):
         git_dir = Path(rw_repo.git_dir)
 
