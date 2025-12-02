@@ -6,7 +6,6 @@
 __all__ = ["Blob"]
 
 from mimetypes import guess_type
-import os
 import sys
 
 if sys.version_info >= (3, 8):
@@ -45,5 +44,5 @@ class Blob(base.IndexObject):
         """
         guesses = None
         if self.path:
-            guesses = guess_type(os.fspath(self.path))
+            guesses = guess_type(str(self.path))
         return guesses and guesses[0] or self.DEFAULT_MIME_TYPE

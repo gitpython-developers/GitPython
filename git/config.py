@@ -578,7 +578,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         value,
                     )
                 if self._repo.git_dir:
-                    if fnmatch.fnmatchcase(os.fspath(self._repo.git_dir), value):
+                    if fnmatch.fnmatchcase(str(self._repo.git_dir), value):
                         paths += self.items(section)
 
             elif keyword == "onbranch":
