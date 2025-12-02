@@ -28,7 +28,7 @@ from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, join_path_native, to_native_path_linux
 
-from test.lib import TestBase, with_rw_directory, with_rw_repo
+from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
 
 @contextlib.contextmanager
@@ -173,6 +173,10 @@ class TestSubmodule(TestBase):
             # Preliminary tests.
             # Adding existing returns exactly the existing.
             sma = Submodule.add(rwrepo, sm.name, sm.path)
+            assert sma.path == sm.path
+
+            # Adding existing as pathlike
+            sma = Submodule.add(rwrepo, sm.name, PathLikeMock(sm.path))
             assert sma.path == sm.path
 
             # No url and no module at path fails.

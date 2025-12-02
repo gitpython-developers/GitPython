@@ -25,7 +25,7 @@ from git.objects.tag import TagObject
 import git.refs as refs
 from git.util import Actor
 
-from test.lib import TestBase, with_rw_repo
+from test.lib import TestBase, with_rw_repo, PathLikeMock
 
 
 class TestRefs(TestBase):
@@ -43,6 +43,25 @@ class TestRefs(TestBase):
         self.assertRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
         # Works without path check.
         TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
+        # Check remoteness
+        assert Reference(self.rorepo, "refs/remotes/origin").is_remote()
+
+    def test_from_pathlike(self):
+        # Should be able to create any reference directly.
+        for ref_type in (Reference, Head, TagReference, RemoteReference):
+            for name in ("rela_name", "path/rela_name"):
+                full_path = ref_type.to_full_path(PathLikeMock(name))
+                instance = ref_type.from_path(self.rorepo, PathLikeMock(full_path))
+                assert isinstance(instance, ref_type)
+            # END for each name
+        # END for each type
+
+        # Invalid path.
+        self.assertRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
+        # Works without path check.
+        TagReference(self.rorepo, PathLikeMock("refs/invalid/tag"), check_path=False)
+        # Check remoteness
+        assert Reference(self.rorepo, PathLikeMock("refs/remotes/origin")).is_remote()
 
     def test_tag_base(self):
         tag_object_refs = []
