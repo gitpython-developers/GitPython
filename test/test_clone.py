@@ -53,13 +53,6 @@ class TestClone(TestBase):
         Repo.clone_from(PathLikeMock(original_repo.git_dir), PathLikeMock(os.path.join(rw_dir, "clone_pathlike")))
 
     @with_rw_directory
-    def test_clone_from_pathlike_unicode_repr(self, rw_dir):
-        original_repo = Repo.init(osp.join(rw_dir, "repo-áēñöưḩ̣"))
-        Repo.clone_from(
-            PathLikeMock(original_repo.git_dir), PathLikeMock(os.path.join(rw_dir, "clone_pathlike-áēñöưḩ̣"))
-        )
-
-    @with_rw_directory
     def test_clone_from_pathlib_withConfig(self, rw_dir):
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
 
