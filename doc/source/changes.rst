@@ -2,6 +2,19 @@
 Changelog
 =========
 
+4.0.0
+=====
+
+GitPython will no longer throw an ImportError when no git executable can
+be found at import time. Instead, errors are deferred until the first
+attempt at using it. Consumers with special handling for
+the old ImportError behaviour should instead call `git.refresh` and handle
+GitCommandNotFoundErrors themselves.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/4.0.0
+
+
 3.1.45
 ======
 
