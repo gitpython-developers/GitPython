@@ -36,7 +36,7 @@ import getpass
 import logging
 import os
 import os.path as osp
-import pathlib
+from pathlib import Path
 import platform
 import re
 import shutil
@@ -272,9 +272,9 @@ def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 *
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
     R"""Join path tokens together similar to osp.join, but always use ``/`` instead of
     possibly ``\`` on Windows."""
-    path = str(a)
+    path = os.fspath(a)
     for b in p:
-        b = str(b)
+        b = os.fspath(b)
         if not b:
             continue
         if b.startswith("/"):
@@ -290,18 +290,18 @@ def join_path(a: PathLike, *p: PathLike) -> PathLike:
 if sys.platform == "win32":
 
     def to_native_path_windows(path: PathLike) -> PathLike:
-        path = str(path)
+        path = os.fspath(path)
         return path.replace("/", "\\")
 
     def to_native_path_linux(path: PathLike) -> str:
-        path = str(path)
+        path = os.fspath(path)
         return path.replace("\\", "/")
 
     to_native_path = to_native_path_windows
 else:
     # No need for any work on Linux.
     def to_native_path_linux(path: PathLike) -> str:
-        return str(path)
+        return os.fspath(path)
 
     to_native_path = to_native_path_linux
 
@@ -372,7 +372,7 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     progs = []
     if not path:
         path = os.environ["PATH"]
-    for folder in str(path).split(os.pathsep):
+    for folder in os.fspath(path).split(os.pathsep):
         folder = folder.strip('"')
         if folder:
             exe_path = osp.join(folder, program)
@@ -397,7 +397,7 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
                 p = cygpath(p)
         elif drive:
             p = "/proc/cygdrive/%s/%s" % (drive.lower(), p)
-    p_str = str(p)  # ensure it is a str and not AnyPath
+    p_str = os.fspath(p)  # ensure it is a str and not AnyPath
     return p_str.replace("\\", "/")
 
 
@@ -418,7 +418,7 @@ _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
 
 def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
-    path = str(path)  # Ensure is str and not AnyPath.
+    path = os.fspath(path)  # Ensure is str and not AnyPath.
     # Fix to use Paths when 3.5 dropped. Or to be just str if only for URLs?
     if not path.startswith(("/cygdrive", "//", "/proc/cygdrive")):
         for regex, parser, recurse in _cygpath_parsers:
@@ -438,7 +438,7 @@ _decygpath_regex = re.compile(r"(?:/proc)?/cygdrive/(\w)(/.*)?")
 
 
 def decygpath(path: PathLike) -> str:
-    path = str(path)
+    path = os.fspath(path)
     m = _decygpath_regex.match(path)
     if m:
         drive, rest_path = m.groups()
@@ -465,7 +465,7 @@ def _is_cygwin_git(git_executable: str) -> bool:
             # Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, "uname")
 
-            if not (pathlib.Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
+            if not (Path(uname_cmd).is_file() and os.access(uname_cmd, os.X_OK)):
                 _logger.debug(f"Failed checking if running in CYGWIN: {uname_cmd} is not an executable")
                 _is_cygwin_cache[git_executable] = is_cygwin
                 return is_cygwin
@@ -523,7 +523,7 @@ def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
 
 
 def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[PathLike]:
-    if isinstance(p, pathlib.Path):
+    if isinstance(p, Path):
         return p.resolve()
     try:
         p = osp.expanduser(p)  # type: ignore[arg-type]

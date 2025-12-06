@@ -407,7 +407,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         r = str(self.repo.working_tree_dir)
         rs = r + os.sep
         for path in paths:
-            abs_path = str(path)
+            abs_path = os.fspath(path)
             if not osp.isabs(abs_path):
                 abs_path = osp.join(r, path)
             # END make absolute path
@@ -656,10 +656,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
-        if not osp.normpath(str(path)).startswith(str(self.repo.working_tree_dir)):
+        if not osp.normpath(path).startswith(str(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         result = os.path.relpath(path, self.repo.working_tree_dir)
-        if str(path).endswith(os.sep) and not result.endswith(os.sep):
+        if os.fspath(path).endswith(os.sep) and not result.endswith(os.sep):
             result += os.sep
         return result
 
@@ -1036,7 +1036,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         args.append("--")
 
         # Preprocess paths.
-        paths = self._items_to_rela_paths(items)
+        paths = list(map(os.fspath, self._items_to_rela_paths(items)))  # type: ignore[arg-type]
         removed_paths = self.repo.git.rm(args, paths, **kwargs).splitlines()
 
         # Process output to gain proper paths.
@@ -1359,11 +1359,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 try:
                     self.entries[(co_path, 0)]
                 except KeyError:
-                    folder = str(co_path)
+                    folder = co_path
                     if not folder.endswith("/"):
                         folder += "/"
                     for entry in self.entries.values():
-                        if str(entry.path).startswith(folder):
+                        if os.fspath(entry.path).startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc, fprogress, read_from_stdout=False)
                             checked_out_files.append(p)

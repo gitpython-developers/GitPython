@@ -15,7 +15,7 @@ from types import TracebackType
 
 # typing ----------------------------------------------------------------------
 
-from typing import Any, Callable, TYPE_CHECKING, Optional, Type
+from typing import Any, Callable, TYPE_CHECKING, Optional, Type, cast
 
 from git.types import Literal, PathLike, _T
 
@@ -106,7 +106,7 @@ def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     @wraps(func)
     def set_git_working_dir(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
         cur_wd = os.getcwd()
-        os.chdir(str(self.repo.working_tree_dir))
+        os.chdir(cast(PathLike, self.repo.working_tree_dir))
         try:
             return func(self, *args, **kwargs)
         finally:

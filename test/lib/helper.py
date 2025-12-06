@@ -10,6 +10,7 @@ __all__ = [
     "with_rw_directory",
     "with_rw_repo",
     "with_rw_and_rw_remote_repo",
+    "PathLikeMock",
     "TestBase",
     "VirtualEnvironment",
     "TestCase",
@@ -20,6 +21,7 @@ __all__ = [
 ]
 
 import contextlib
+from dataclasses import dataclass
 from functools import wraps
 import gc
 import io
@@ -48,6 +50,15 @@ GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(__file
 GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
 
 _logger = logging.getLogger(__name__)
+
+
+@dataclass
+class PathLikeMock:
+    path: str
+
+    def __fspath__(self) -> str:
+        return self.path
+
 
 # { Routines
 

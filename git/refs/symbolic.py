@@ -4,6 +4,7 @@
 __all__ = ["SymbolicReference"]
 
 import os
+from pathlib import Path
 
 from gitdb.exc import BadName, BadObject
 
@@ -76,10 +77,10 @@ class SymbolicReference:
 
     def __init__(self, repo: "Repo", path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
-        self.path = path
+        self.path: PathLike = path
 
     def __str__(self) -> str:
-        return str(self.path)
+        return os.fspath(self.path)
 
     def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
@@ -103,7 +104,7 @@ class SymbolicReference:
             In case of symbolic references, the shortest assumable name is the path
             itself.
         """
-        return str(self.path)
+        return os.fspath(self.path)
 
     @property
     def abspath(self) -> PathLike:
@@ -178,7 +179,7 @@ class SymbolicReference:
         """
         previous: Union[str, None] = None
         one_before_previous: Union[str, None] = None
-        for c in str(ref_path):
+        for c in os.fspath(ref_path):
             if c in " ~^:?*[\\":
                 raise ValueError(
                     f"Invalid reference '{ref_path}': references cannot contain spaces, tildes (~), carets (^),"
@@ -212,7 +213,7 @@ class SymbolicReference:
             raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a forward slash (/)")
         elif previous == "@" and one_before_previous is None:
             raise ValueError(f"Invalid reference '{ref_path}': references cannot be '@'")
-        elif any(component.endswith(".lock") for component in str(ref_path).split("/")):
+        elif any(component.endswith(".lock") for component in Path(ref_path).parts):
             raise ValueError(
                 f"Invalid reference '{ref_path}': references cannot have slash-separated components that end with"
                 " '.lock'"
@@ -235,7 +236,7 @@ class SymbolicReference:
         tokens: Union[None, List[str], Tuple[str, str]] = None
         repodir = _git_dir(repo, ref_path)
         try:
-            with open(os.path.join(repodir, str(ref_path)), "rt", encoding="UTF-8") as fp:
+            with open(os.path.join(repodir, ref_path), "rt", encoding="UTF-8") as fp:  # type: ignore[arg-type]
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like:
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -614,7 +615,7 @@ class SymbolicReference:
         full_ref_path = path
         if not cls._common_path_default:
             return full_ref_path
-        if not str(path).startswith(cls._common_path_default + "/"):
+        if not os.fspath(path).startswith(cls._common_path_default + "/"):
             full_ref_path = "%s/%s" % (cls._common_path_default, path)
         return full_ref_path
 
@@ -706,7 +707,7 @@ class SymbolicReference:
         if not force and os.path.isfile(abs_ref_path):
             target_data = str(target)
             if isinstance(target, SymbolicReference):
-                target_data = str(target.path)
+                target_data = os.fspath(target.path)
             if not resolve:
                 target_data = "ref: " + target_data
             with open(abs_ref_path, "rb") as fd:
@@ -842,7 +843,7 @@ class SymbolicReference:
 
         # Read packed refs.
         for _sha, rela_path in cls._iter_packed_refs(repo):
-            if rela_path.startswith(str(common_path)):
+            if rela_path.startswith(os.fspath(common_path)):
                 rela_paths.add(rela_path)
             # END relative path matches common path
         # END packed refs reading
@@ -930,4 +931,4 @@ class SymbolicReference:
 
     def is_remote(self) -> bool:
         """:return: True if this symbolic reference points to a remote branch"""
-        return str(self.path).startswith(self._remote_common_path_default + "/")
+        return os.fspath(self.path).startswith(self._remote_common_path_default + "/")

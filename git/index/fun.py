@@ -87,7 +87,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         return
 
     env = os.environ.copy()
-    env["GIT_INDEX_FILE"] = safe_decode(str(index.path))
+    env["GIT_INDEX_FILE"] = safe_decode(os.fspath(index.path))
     env["GIT_EDITOR"] = ":"
     cmd = [hp]
     try:
