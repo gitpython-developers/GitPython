@@ -281,6 +281,38 @@ class TestDiff(TestBase):
         self.assertEqual(res[13].a_path, 'a/"with-quotes"')
         self.assertEqual(res[13].b_path, 'b/"with even more quotes"')
 
+    def test_diff_mnemonic_prefix(self):
+        """Test that diff parsing works with mnemonicPrefix enabled.
+        
+        When diff.mnemonicPrefix=true is set in git config, git uses different
+        prefixes for diff paths:
+        - c/ for commit
+        - w/ for worktree  
+        - i/ for index
+        - o/ for object
+        
+        This addresses issue #2013 where the regex only matched [ab]/ prefixes.
+        """
+        # Create a diff with mnemonicPrefix-style c/ and w/ prefixes
+        # Using valid 40-char hex SHAs
+        diff_mnemonic = b"""diff --git c/.vscode/launch.json w/.vscode/launch.json
+index 1234567890abcdef1234567890abcdef12345678..abcdef1234567890abcdef1234567890abcdef12 100644
+--- c/.vscode/launch.json
++++ w/.vscode/launch.json
+@@ -1,3 +1,3 @@
+-old content
++new content
+"""
+        diff_proc = StringProcessAdapter(diff_mnemonic)
+        diffs = Diff._index_from_patch_format(self.rorepo, diff_proc)
+        
+        # Should parse successfully (previously would fail or return empty)
+        self.assertEqual(len(diffs), 1)
+        diff = diffs[0]
+        # The path should be extracted correctly (without the c/ or w/ prefix)
+        self.assertEqual(diff.a_path, ".vscode/launch.json")
+        self.assertEqual(diff.b_path, ".vscode/launch.json")
+
     def test_diff_patch_format(self):
         # Test all of the 'old' format diffs for completeness - it should at least be
         # able to deal with it.
