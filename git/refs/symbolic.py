@@ -123,7 +123,7 @@ class SymbolicReference:
             The packed refs file will be kept open as long as we iterate.
         """
         try:
-            with open(cls._get_packed_refs_path(repo), "rt", encoding="UTF-8") as fp:
+            with open(cls._get_packed_refs_path(repo), "rt", encoding="UTF-8", errors="surrogateescape") as fp:
                 for line in fp:
                     line = line.strip()
                     if not line:
