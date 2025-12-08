@@ -1154,9 +1154,9 @@ class TestIndex(TestBase):
         """
         index = rw_repo.index
 
-        # Create a custom hooks directory (use absolute path for bare repo)
-        # Use a unique name based on the repo to avoid conflicts
-        custom_hooks_dir = Path(rw_repo.git_dir).parent / "bare-custom-hooks"
+        # Create a custom hooks directory inside the git_dir for bare repo
+        # This ensures the path is relative to working_dir (which equals git_dir for bare repos)
+        custom_hooks_dir = Path(rw_repo.git_dir) / "custom-hooks"
         custom_hooks_dir.mkdir(exist_ok=True)
 
         # Create a hook in the custom location
@@ -1171,7 +1171,7 @@ class TestIndex(TestBase):
         # Run the hook - it should use the custom path
         run_commit_hook("fake-hook", index)
 
-        # Output goes to cwd, which for bare repos during hook execution is git_dir
+        # Output goes to cwd, which for bare repos during hook execution is working_dir (same as git_dir)
         output_file = Path(rw_repo.git_dir) / "output.txt"
         self.assertTrue(output_file.exists(), "Hook should have created output.txt")
         output = output_file.read_text(encoding="utf-8")
