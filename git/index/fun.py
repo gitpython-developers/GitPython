@@ -48,6 +48,7 @@ from git.types import PathLike
 if TYPE_CHECKING:
     from git.db import GitCmdObjectDB
     from git.objects.tree import TreeCacheTup
+    from git.repo import Repo
 
     from .base import IndexFile
 
@@ -61,7 +62,7 @@ CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 def hook_path(name: str, git_dir: PathLike) -> str:
     """:return: path to the given named hook in the given git repository directory
-    
+
     Note: This function does not respect the core.hooksPath configuration.
     For commit hooks that should respect this config, use run_commit_hook() instead.
     """
@@ -70,25 +71,22 @@ def hook_path(name: str, git_dir: PathLike) -> str:
 
 def _get_hooks_dir(repo: "Repo") -> str:
     """Get the hooks directory, respecting core.hooksPath configuration.
-    
+
     :param repo: The repository to get the hooks directory for.
     :return: Path to the hooks directory.
-    
+
     Per git-config documentation, core.hooksPath can be:
     - An absolute path: used as-is
     - A relative path: relative to the directory where hooks are run from
       (typically the working tree root for non-bare repos)
     - If not set: defaults to $GIT_DIR/hooks
     """
-    # Import here to avoid circular imports
-    from git.repo.base import Repo
-    
     try:
         hooks_path = repo.config_reader().get_value("core", "hooksPath")
     except Exception:
         # Config key not found or other error - use default
         hooks_path = None
-    
+
     if hooks_path:
         hooks_path = str(hooks_path)
         if osp.isabs(hooks_path):

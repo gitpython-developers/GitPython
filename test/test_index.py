@@ -1135,6 +1135,48 @@ class TestIndex(TestBase):
         output = output_file.read_text(encoding="utf-8")
         self.assertEqual(output, "ran from relative hooks path\n")
 
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook_respects_core_hookspath_bare_repo(self, rw_repo):
+        """Test that run_commit_hook() respects core.hooksPath in bare repositories.
+
+        For bare repos, relative paths should be resolved relative to git_dir since
+        there is no working tree.
+        """
+        index = rw_repo.index
+
+        # Create a custom hooks directory (use absolute path for bare repo)
+        # Use a unique name based on the repo to avoid conflicts
+        custom_hooks_dir = Path(rw_repo.git_dir).parent / "bare-custom-hooks"
+        custom_hooks_dir.mkdir(exist_ok=True)
+        
+        # Create a hook in the custom location
+        custom_hook = custom_hooks_dir / "fake-hook"
+        custom_hook.write_text(HOOKS_SHEBANG + "echo 'ran from custom hooks path in bare repo' >output.txt")
+        custom_hook.chmod(0o744)
+        
+        # Set core.hooksPath in the repo config (absolute path)
+        with rw_repo.config_writer() as config:
+            config.set_value("core", "hooksPath", str(custom_hooks_dir))
+        
+        # Run the hook - it should use the custom path
+        run_commit_hook("fake-hook", index)
+        
+        # Output goes to cwd, which for bare repos during hook execution is git_dir
+        output_file = Path(rw_repo.git_dir) / "output.txt"
+        self.assertTrue(output_file.exists(), "Hook should have created output.txt")
+        output = output_file.read_text(encoding="utf-8")
+        self.assertEqual(output, "ran from custom hooks path in bare repo\n")
+
     @ddt.data((False,), (True,))
     @with_rw_directory
     def test_hook_uses_shell_not_from_cwd(self, rw_dir, case):
