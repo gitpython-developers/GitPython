@@ -283,14 +283,14 @@ class TestDiff(TestBase):
 
     def test_diff_mnemonic_prefix(self):
         """Test that diff parsing works with mnemonicPrefix enabled.
-        
+
         When diff.mnemonicPrefix=true is set in git config, git uses different
         prefixes for diff paths:
         - c/ for commit
-        - w/ for worktree  
+        - w/ for worktree
         - i/ for index
         - o/ for object
-        
+
         This addresses issue #2013 where the regex only matched [ab]/ prefixes.
         """
         # Create a diff with mnemonicPrefix-style c/ and w/ prefixes
@@ -305,7 +305,7 @@ index 1234567890abcdef1234567890abcdef12345678..abcdef1234567890abcdef1234567890
 """
         diff_proc = StringProcessAdapter(diff_mnemonic)
         diffs = Diff._index_from_patch_format(self.rorepo, diff_proc)
-        
+
         # Should parse successfully (previously would fail or return empty)
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]

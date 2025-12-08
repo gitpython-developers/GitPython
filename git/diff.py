@@ -116,7 +116,7 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
         # Support standard (a/b) and mnemonicPrefix (c/w/i/o/h) prefixes
         # See git-config diff.mnemonicPrefix documentation
         valid_prefixes = (b"a/", b"b/", b"c/", b"w/", b"i/", b"o/", b"h/")
-        assert any(path.startswith(p) for p in valid_prefixes), f"Unexpected path prefix: {path[:10]}"
+        assert any(path.startswith(p) for p in valid_prefixes), f"Unexpected path prefix: {path[:10]!r}"
         path = path[2:]
 
     return path
