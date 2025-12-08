@@ -632,39 +632,40 @@ class TestRefs(TestBase):
     @with_rw_repo("0.1.6")
     def test_packed_refs_with_non_utf8_encoding(self, rw_repo):
         """Test that packed-refs files with non-UTF8 encoded ref names can be read.
-        
+
         This addresses issue #2064 where GitPython would fail with UnicodeDecodeError
         when reading packed-refs files containing non-UTF8 characters (e.g., Latin-1
         encoded tag names).
         """
         # Create a tag with ASCII name first
         TagReference.create(rw_repo, "normal-tag")
-        
+
         # Pack refs
         rw_repo.git.pack_refs(all=True)
-        
+
         # Manually insert a non-UTF8 ref into the packed-refs file
         # Using Latin-1 characters that are invalid UTF-8
         packed_refs_path = osp.join(rw_repo.common_dir, "packed-refs")
-        
+
         with open(packed_refs_path, "rb") as f:
             content = f.read()
-        
+
         # Add a fake ref with Latin-1 encoded name (ñ = 0xF1 in Latin-1, invalid UTF-8)
         # Using a valid SHA from the repo
         head_sha = rw_repo.head.commit.hexsha
         non_utf8_line = f"\n{head_sha} refs/tags/caf\xf1\n".encode("latin-1")
-        
+
         with open(packed_refs_path, "wb") as f:
             f.write(content + non_utf8_line)
-        
+
         # This should NOT raise UnicodeDecodeError with the fix
         # It should successfully read all tags including the non-UTF8 one
         tags = list(rw_repo.tags)
         assert len(tags) >= 1
-        
+
         # Verify we can iterate packed refs without error
         from git.refs import SymbolicReference
+
         packed_refs = list(SymbolicReference._iter_packed_refs(rw_repo))
         assert len(packed_refs) >= 2  # At least normal-tag and the non-UTF8 tag
 
