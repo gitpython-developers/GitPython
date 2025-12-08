@@ -653,7 +653,7 @@ class TestRefs(TestBase):
         # Add a fake ref with Latin-1 encoded name (ñ = 0xF1 in Latin-1, invalid UTF-8)
         # Using a valid SHA from the repo
         head_sha = rw_repo.head.commit.hexsha
-        non_utf8_line = f"\n{head_sha} refs/tags/caf\xf1\n".encode("latin-1")
+        non_utf8_line = f"\n{head_sha} refs/tags/test-\xf1ame\n".encode("latin-1")
 
         with open(packed_refs_path, "wb") as f:
             f.write(content + non_utf8_line)
