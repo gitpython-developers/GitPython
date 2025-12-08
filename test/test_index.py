@@ -1068,28 +1068,28 @@ class TestIndex(TestBase):
     @with_rw_repo("HEAD", bare=False)
     def test_run_commit_hook_respects_core_hookspath(self, rw_repo):
         """Test that run_commit_hook() respects core.hooksPath configuration.
-        
+
         This addresses issue #2083 where commit hooks were always looked for in
         $GIT_DIR/hooks instead of respecting the core.hooksPath config setting.
         """
         index = rw_repo.index
-        
+
         # Create a custom hooks directory outside of .git
         custom_hooks_dir = Path(rw_repo.working_tree_dir) / "custom-hooks"
         custom_hooks_dir.mkdir()
-        
+
         # Create a hook in the custom location
         custom_hook = custom_hooks_dir / "fake-hook"
         custom_hook.write_text(HOOKS_SHEBANG + "echo 'ran from custom hooks path' >output.txt")
         custom_hook.chmod(0o744)
-        
+
         # Set core.hooksPath in the repo config
         with rw_repo.config_writer() as config:
             config.set_value("core", "hooksPath", str(custom_hooks_dir))
-        
+
         # Run the hook - it should use the custom path
         run_commit_hook("fake-hook", index)
-        
+
         output_file = Path(rw_repo.working_tree_dir) / "output.txt"
         self.assertTrue(output_file.exists(), "Hook should have created output.txt")
         output = output_file.read_text(encoding="utf-8")
@@ -1108,28 +1108,28 @@ class TestIndex(TestBase):
     @with_rw_repo("HEAD", bare=False)
     def test_run_commit_hook_respects_relative_core_hookspath(self, rw_repo):
         """Test that run_commit_hook() handles relative core.hooksPath correctly.
-        
+
         Per git-config docs, relative paths for core.hooksPath are relative to
         the directory where hooks are run (typically the working tree root).
         """
         index = rw_repo.index
-        
+
         # Create a custom hooks directory with a relative path
         custom_hooks_dir = Path(rw_repo.working_tree_dir) / "relative-hooks"
         custom_hooks_dir.mkdir()
-        
+
         # Create a hook in the custom location
         custom_hook = custom_hooks_dir / "fake-hook"
         custom_hook.write_text(HOOKS_SHEBANG + "echo 'ran from relative hooks path' >output.txt")
         custom_hook.chmod(0o744)
-        
+
         # Set core.hooksPath to a relative path
         with rw_repo.config_writer() as config:
             config.set_value("core", "hooksPath", "relative-hooks")
-        
+
         # Run the hook - it should resolve the relative path correctly
         run_commit_hook("fake-hook", index)
-        
+
         output_file = Path(rw_repo.working_tree_dir) / "output.txt"
         self.assertTrue(output_file.exists(), "Hook should have created output.txt")
         output = output_file.read_text(encoding="utf-8")
@@ -1158,19 +1158,19 @@ class TestIndex(TestBase):
         # Use a unique name based on the repo to avoid conflicts
         custom_hooks_dir = Path(rw_repo.git_dir).parent / "bare-custom-hooks"
         custom_hooks_dir.mkdir(exist_ok=True)
-        
+
         # Create a hook in the custom location
         custom_hook = custom_hooks_dir / "fake-hook"
         custom_hook.write_text(HOOKS_SHEBANG + "echo 'ran from custom hooks path in bare repo' >output.txt")
         custom_hook.chmod(0o744)
-        
+
         # Set core.hooksPath in the repo config (absolute path)
         with rw_repo.config_writer() as config:
             config.set_value("core", "hooksPath", str(custom_hooks_dir))
-        
+
         # Run the hook - it should use the custom path
         run_commit_hook("fake-hook", index)
-        
+
         # Output goes to cwd, which for bare repos during hook execution is git_dir
         output_file = Path(rw_repo.git_dir) / "output.txt"
         self.assertTrue(output_file.exists(), "Hook should have created output.txt")
