@@ -371,7 +371,7 @@ class Diff:
 
     # Precompiled regex.
     # Note: The path prefixes support both default (a/b) and mnemonicPrefix mode
-    # which can use prefixes like c/ (commit), w/ (worktree), i/ (index), o/ (object)
+    # which can use prefixes like c/ (commit), w/ (worktree), i/ (index), o/ (object), and h/ (HEAD)
     re_header = re.compile(
         rb"""
                                 ^diff[ ]--git

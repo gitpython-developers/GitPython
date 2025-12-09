@@ -290,28 +290,42 @@ class TestDiff(TestBase):
         - w/ for worktree
         - i/ for index
         - o/ for object
+        - h/ for HEAD
 
         This addresses issue #2013 where the regex only matched [ab]/ prefixes.
         """
-        # Create a diff with mnemonicPrefix-style c/ and w/ prefixes
-        # Using valid 40-char hex SHAs
-        diff_mnemonic = b"""diff --git c/.vscode/launch.json w/.vscode/launch.json
-index 1234567890abcdef1234567890abcdef12345678..abcdef1234567890abcdef1234567890abcdef12 100644
---- c/.vscode/launch.json
-+++ w/.vscode/launch.json
-@@ -1,3 +1,3 @@
--old content
-+new content
-"""
-        diff_proc = StringProcessAdapter(diff_mnemonic)
-        diffs = Diff._index_from_patch_format(self.rorepo, diff_proc)
+        # Test all mnemonicPrefix combinations
+        # Each tuple is (a_prefix, b_prefix) representing different comparison types
+        prefix_pairs = [
+            (b"c/", b"w/"),  # commit vs worktree
+            (b"c/", b"i/"),  # commit vs index
+            (b"i/", b"w/"),  # index vs worktree
+            (b"o/", b"w/"),  # object vs worktree
+            (b"h/", b"i/"),  # HEAD vs index
+            (b"h/", b"w/"),  # HEAD vs worktree
+        ]
 
-        # Should parse successfully (previously would fail or return empty)
-        self.assertEqual(len(diffs), 1)
-        diff = diffs[0]
-        # The path should be extracted correctly (without the c/ or w/ prefix)
-        self.assertEqual(diff.a_path, ".vscode/launch.json")
-        self.assertEqual(diff.b_path, ".vscode/launch.json")
+        for a_prefix, b_prefix in prefix_pairs:
+            with self.subTest(a_prefix=a_prefix, b_prefix=b_prefix):
+                diff_mnemonic = (
+                    b"diff --git " + a_prefix + b".vscode/launch.json " + b_prefix + b".vscode/launch.json\n"
+                    b"index 1234567890abcdef1234567890abcdef12345678.."
+                    b"abcdef1234567890abcdef1234567890abcdef12 100644\n"
+                    b"--- " + a_prefix + b".vscode/launch.json\n"
+                    b"+++ " + b_prefix + b".vscode/launch.json\n"
+                    b"@@ -1,3 +1,3 @@\n"
+                    b"-old content\n"
+                    b"+new content\n"
+                )
+                diff_proc = StringProcessAdapter(diff_mnemonic)
+                diffs = Diff._index_from_patch_format(self.rorepo, diff_proc)
+
+                # Should parse successfully (previously would fail or return empty)
+                self.assertEqual(len(diffs), 1)
+                diff = diffs[0]
+                # The path should be extracted correctly (without the prefix)
+                self.assertEqual(diff.a_path, ".vscode/launch.json")
+                self.assertEqual(diff.b_path, ".vscode/launch.json")
 
     def test_diff_patch_format(self):
         # Test all of the 'old' format diffs for completeness - it should at least be
