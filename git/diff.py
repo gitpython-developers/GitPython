@@ -113,7 +113,10 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
     path = _octal_byte_re.sub(_octal_repl, path)
 
     if has_ab_prefix:
-        assert path.startswith(b"a/") or path.startswith(b"b/")
+        # Support standard (a/b) and mnemonicPrefix (c/w/i/o/h) prefixes
+        # See git-config diff.mnemonicPrefix documentation
+        valid_prefixes = (b"a/", b"b/", b"c/", b"w/", b"i/", b"o/", b"h/")
+        assert any(path.startswith(p) for p in valid_prefixes), f"Unexpected path prefix: {path[:10]!r}"
         path = path[2:]
 
     return path
@@ -367,10 +370,12 @@ class Diff:
     """
 
     # Precompiled regex.
+    # Note: The path prefixes support both default (a/b) and mnemonicPrefix mode
+    # which can use prefixes like c/ (commit), w/ (worktree), i/ (index), o/ (object), and h/ (HEAD)
     re_header = re.compile(
         rb"""
                                 ^diff[ ]--git
-                                    [ ](?P<a_path_fallback>"?[ab]/.+?"?)[ ](?P<b_path_fallback>"?[ab]/.+?"?)\n
+                                    [ ](?P<a_path_fallback>"?[abciwoh]/.+?"?)[ ](?P<b_path_fallback>"?[abciwoh]/.+?"?)\n
                                 (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
                                    ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
