@@ -209,13 +209,13 @@ class TestTree(TestBase):
     @with_rw_repo("0.3.2.1")
     def test_repo_lookup_folder_string_path(self, rw_repo):
         repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / "git"
-        assert isinstance(blob, Tree)
-        assert blob.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
+        tree = repo.tree() / "git"
+        assert isinstance(tree, Tree)
+        assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
 
     @with_rw_repo("0.3.2.1")
     def test_repo_lookup_folder_pathlike_path(self, rw_repo):
         repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / PathLikeMock("git")
-        assert isinstance(blob, Tree)
-        assert blob.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
+        tree = repo.tree() / PathLikeMock("git")
+        assert isinstance(tree, Tree)
+        assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
