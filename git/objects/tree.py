@@ -5,6 +5,7 @@
 
 __all__ = ["TreeModifier", "Tree"]
 
+import os
 import sys
 
 import git.diff as git_diff
@@ -230,7 +231,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
                 raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path)) from e
         # END for each item
 
-    def join(self, file: str) -> IndexObjUnion:
+    def join(self, file: PathLike) -> IndexObjUnion:
         """Find the named object in this tree's contents.
 
         :return:
@@ -241,6 +242,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             If the given file or tree does not exist in this tree.
         """
         msg = "Blob or Tree named %r not found"
+        file = os.fspath(file)
         if "/" in file:
             tree = self
             item = self
@@ -269,7 +271,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             raise KeyError(msg % file)
         # END handle long paths
 
-    def __truediv__(self, file: str) -> IndexObjUnion:
+    def __truediv__(self, file: PathLike) -> IndexObjUnion:
         """The ``/`` operator is another syntax for joining.
 
         See :meth:`join` for details.
