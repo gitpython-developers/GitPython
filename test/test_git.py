@@ -434,7 +434,7 @@ class TestGit(TestBase):
             Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, env_vars):
-                with self.assertRaisesRegex(ImportError, r"\ABad git executable.\n"):
+                with self.assertRaisesRegex(GitCommandNotFound, r"Bad git executable."):
                     refresh()
 
     def test_initial_refresh_from_good_absolute_git_path_env(self):
