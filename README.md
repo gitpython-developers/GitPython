@@ -46,7 +46,7 @@ by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 - Git (1.7.x or newer)
 - Python >= 3.7
 
-The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
+The list of dependencies are listed in [`./requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/requirements.txt) and [`./test-requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/test-requirements.txt).
 The installer takes care of installing them for you.
 
 ### INSTALL
@@ -180,7 +180,7 @@ Style and formatting checks, and running tests on all the different supported Py
 
 #### Configuration files
 
-Specific tools are all configured in the `./pyproject.toml` file:
+Specific tools are all configured in the [`./pyproject.toml`](https://github.com/gitpython-developers/GitPython/blob/main/pyproject.toml) file:
 
 - `pytest` (test runner)
 - `coverage.py` (code coverage)
@@ -189,9 +189,9 @@ Specific tools are all configured in the `./pyproject.toml` file:
 
 Orchestration tools:
 
-- Configuration for `pre-commit` is in the `./.pre-commit-config.yaml` file.
-- Configuration for `tox` is in `./tox.ini`.
-- Configuration for GitHub Actions (CI) is in files inside `./.github/workflows/`.
+- Configuration for `pre-commit` is in the [`./.pre-commit-config.yaml`](https://github.com/gitpython-developers/GitPython/blob/main/.pre-commit-config.yaml) file.
+- Configuration for `tox` is in [`./tox.ini`](https://github.com/gitpython-developers/GitPython/blob/main/tox.ini).
+- Configuration for GitHub Actions (CI) is in files inside [`./.github/workflows/`](https://github.com/gitpython-developers/GitPython/tree/main/.github/workflows).
 
 ### Contributions
 
@@ -212,8 +212,8 @@ Please have a look at the [contributions file][contributing].
 
 ### How to make a new release
 
-1. Update/verify the **version** in the `VERSION` file.
-2. Update/verify that the `doc/source/changes.rst` changelog file was updated. It should include a link to the forthcoming release page: `https://github.com/gitpython-developers/GitPython/releases/tag/<version>`
+1. Update/verify the **version** in the [`VERSION`](https://github.com/gitpython-developers/GitPython/blob/main/VERSION) file.
+2. Update/verify that the [`doc/source/changes.rst`](https://github.com/gitpython-developers/GitPython/blob/main/doc/source/changes.rst) changelog file was updated. It should include a link to the forthcoming release page: `https://github.com/gitpython-developers/GitPython/releases/tag/<version>`
 3. Commit everything.
 4. Run `git tag -s <version>` to tag the version in Git.
 5. _Optionally_ create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment). (Then the next step can install `build` and `twine`.)
@@ -240,7 +240,7 @@ Please have a look at the [contributions file][contributing].
 
 [3-Clause BSD License](https://opensource.org/license/bsd-3-clause/), also known as the New BSD License. See the [LICENSE file][license].
 
-One file exclusively used for fuzz testing is subject to [a separate license, detailed here](./fuzzing/README.md#license).
+One file exclusively used for fuzz testing is subject to [a separate license, detailed here](https://github.com/gitpython-developers/GitPython/blob/main/fuzzing/README.md#license).
 This file is not included in the wheel or sdist packages published by the maintainers of GitPython.
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md
