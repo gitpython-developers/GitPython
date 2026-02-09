@@ -549,11 +549,21 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             The list of paths, where each path is a tuple of (option, value).
         """
+
+        def _all_items(section: str) -> List[Tuple[str, str]]:
+            """Return all (key, value) pairs for a section, including duplicate keys."""
+            return [
+                (key, value)
+                for key, values in self._sections[section].items_all()
+                if key != "__name__"
+                for value in values
+            ]
+
         paths = []
 
         for section in self.sections():
             if section == "include":
-                paths += self.items(section)
+                paths += _all_items(section)
 
             match = CONDITIONAL_INCLUDE_REGEXP.search(section)
             if match is None or self._repo is None:
@@ -579,7 +589,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     )
                 if self._repo.git_dir:
                     if fnmatch.fnmatchcase(os.fspath(self._repo.git_dir), value):
-                        paths += self.items(section)
+                        paths += _all_items(section)
 
             elif keyword == "onbranch":
                 try:
@@ -589,11 +599,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     continue
 
                 if fnmatch.fnmatchcase(branch_name, value):
-                    paths += self.items(section)
+                    paths += _all_items(section)
             elif keyword == "hasconfig:remote.*.url":
                 for remote in self._repo.remotes:
                     if fnmatch.fnmatchcase(remote.url, value):
-                        paths += self.items(section)
+                        paths += _all_items(section)
                         break
         return paths
 
