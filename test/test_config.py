@@ -246,6 +246,43 @@ class TestBase(TestCase):
         with GitConfigParser(fpa, read_only=True) as cr:
             check_test_value(cr, tv)
 
+    @with_rw_directory
+    def test_multiple_include_paths_with_same_key(self, rw_dir):
+        """Test that multiple 'path' entries under [include] are all respected.
+
+        Regression test for https://github.com/gitpython-developers/GitPython/issues/2099.
+        Git config allows multiple ``path`` values under ``[include]``, e.g.::
+
+            [include]
+                path = file1
+                path = file2
+
+        Previously only one of these was included because _OMD.items() returns
+        only the last value for each key.
+        """
+        # Create two config files to be included.
+        fp_inc1 = osp.join(rw_dir, "inc1.cfg")
+        fp_inc2 = osp.join(rw_dir, "inc2.cfg")
+        fp_main = osp.join(rw_dir, "main.cfg")
+
+        with GitConfigParser(fp_inc1, read_only=False) as cw:
+            cw.set_value("user", "name", "from-inc1")
+
+        with GitConfigParser(fp_inc2, read_only=False) as cw:
+            cw.set_value("core", "bar", "from-inc2")
+
+        # Write a config with two path entries under a single [include] section.
+        # We write it manually because set_value would overwrite the key.
+        with open(fp_main, "w") as f:
+            f.write("[include]\n")
+            f.write(f"\tpath = {fp_inc1}\n")
+            f.write(f"\tpath = {fp_inc2}\n")
+
+        with GitConfigParser(fp_main, read_only=True) as cr:
+            # Both included files should be loaded.
+            assert cr.get_value("user", "name") == "from-inc1"
+            assert cr.get_value("core", "bar") == "from-inc2"
+
     @pytest.mark.xfail(
         sys.platform == "win32",
         reason='Second config._has_includes() assertion fails (for "config is included if path is matching git_dir")',
