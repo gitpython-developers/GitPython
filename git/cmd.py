@@ -26,6 +26,7 @@ from git.exc import (
     CommandError,
     GitCommandError,
     GitCommandNotFound,
+    UnsafeExecutionError,
     UnsafeOptionError,
     UnsafeProtocolError,
 )
@@ -627,6 +628,7 @@ class Git(metaclass=_GitMeta):
 
     __slots__ = (
         "_working_dir",
+        "_safe",
         "cat_file_all",
         "cat_file_header",
         "_version_info",
@@ -961,7 +963,7 @@ class Git(metaclass=_GitMeta):
 
     CatFileContentStream: TypeAlias = _CatFileContentStream
 
-    def __init__(self, working_dir: Union[None, PathLike] = None) -> None:
+    def __init__(self, working_dir: Union[None, PathLike] = None, safe: bool = False) -> None:
         """Initialize this instance with:
 
         :param working_dir:
@@ -969,9 +971,48 @@ class Git(metaclass=_GitMeta):
             directory as returned by :func:`os.getcwd`.
             This is meant to be the working tree directory if available, or the
             ``.git`` directory in case of bare repositories.
+
+        :param safe:
+            Lock down the configuration to make it as safe as possible
+            when working with publicly accessible, untrusted
+            repositories.  This disables all known options that can run
+            external programs and limits networking to the HTTP protocol
+            via ``https://`` URLs.  This might not cover Git config
+            options that were added since this was implemented, or
+            options that have unknown exploit vectors.  It is a best
+            effort defense rather than an exhaustive protection measure.
+
+            In order to make this more likely to work with submodules,
+            some attempts are made to rewrite remote URLs to ``https://``
+            using `insteadOf` in the config. This might not work on all
+            projects, so submodules should always use ``https://`` URLs.
+
+            :envvar:`GIT_TERMINAL_PROMPT` is set to `false` and these
+            environment variables are forced to `/bin/true`:
+            :envvar:`GIT_ASKPASS`, :envvar:`GIT_EDITOR`,
+            :envvar:`GIT_PAGER`, :envvar:`GIT_SSH`,
+            :envvar:`GIT_SSH_COMMAND`, and :envvar:`SSH_ASKPASS`.
+
+            Git config options are supplied via the command line to set
+            up key parts of safe mode.
+
+            - Direct options for executing external commands are set to ``/bin/true``:
+              ``core.askpass``, ``core.sshCommand`` and ``credential.helper``.
+
+            - External password prompts are disabled by skipping authentication using
+              ``http.emptyAuth=true``.
+
+            - Any use of an fsmonitor daemon is disabled using ``core.fsmonitor=false``.
+
+            - Hook scripts are disabled using ``core.hooksPath=/dev/null``.
+
+            It was not possible to cover all config items that might execute an external
+            command, for example, ``receive.procReceiveRefs``,
+            ``uploadpack.packObjectsHook`` and ``remote.<name>.vcs``.
         """
         super().__init__()
         self._working_dir = expand_path(working_dir)
+        self._safe = safe
         self._git_options: Union[List[str], Tuple[str, ...]] = ()
         self._persistent_git_options: List[str] = []
 
@@ -1218,6 +1259,8 @@ class Git(metaclass=_GitMeta):
 
         :raise git.exc.GitCommandError:
 
+        :raise git.exc.UnsafeExecutionError:
+
         :note:
             If you add additional keyword arguments to the signature of this method, you
             must update the ``execute_kwargs`` variable housed in this module.
@@ -1226,6 +1269,64 @@ class Git(metaclass=_GitMeta):
         redacted_command = remove_password_if_present(command)
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != "full" or as_process):
             _logger.info(" ".join(redacted_command))
+
+        if shell is None:
+            # Get the value of USE_SHELL with no deprecation warning. Do this without
+            # warnings.catch_warnings, to avoid a race condition with application code
+            # configuring warnings. The value could be looked up in type(self).__dict__
+            # or Git.__dict__, but those can break under some circumstances. This works
+            # the same as self.USE_SHELL in more situations; see Git.__getattribute__.
+            shell = super().__getattribute__("USE_SHELL")
+
+        if self._safe:
+            if shell:
+                raise UnsafeExecutionError(
+                    redacted_command,
+                    "Command cannot be executed in a shell when in safe mode.",
+                )
+            if not isinstance(command, Sequence):
+                raise UnsafeExecutionError(
+                    redacted_command,
+                    "Command must be a Sequence to be executed in safe mode.",
+                )
+            if command[0] != self.GIT_PYTHON_GIT_EXECUTABLE:
+                raise UnsafeExecutionError(
+                    redacted_command,
+                    f'Only "{self.GIT_PYTHON_GIT_EXECUTABLE}" can be executed when in safe mode.',
+                )
+            config_args = [
+                "-c",
+                "core.askpass=/bin/true",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+                "-c",
+                "core.sshCommand=/bin/true",
+                "-c",
+                "credential.helper=/bin/true",
+                "-c",
+                "http.emptyAuth=true",
+                "-c",
+                "protocol.allow=never",
+                "-c",
+                "protocol.https.allow=always",
+                "-c",
+                "url.https://bitbucket.org/.insteadOf=git@bitbucket.org:",
+                "-c",
+                "url.https://codeberg.org/.insteadOf=git@codeberg.org:",
+                "-c",
+                "url.https://github.com/.insteadOf=git@github.com:",
+                "-c",
+                "url.https://gitlab.com/.insteadOf=git@gitlab.com:",
+                "-c",
+                "url.https://.insteadOf=git://",
+                "-c",
+                "url.https://.insteadOf=http://",
+                "-c",
+                "url.https://.insteadOf=ssh://",
+            ]
+            command = [command.pop(0)] + config_args + command
 
         # Allow the user to have the command executed in their working dir.
         try:
@@ -1244,6 +1345,15 @@ class Git(metaclass=_GitMeta):
         # just to be sure.
         env["LANGUAGE"] = "C"
         env["LC_ALL"] = "C"
+        # Globally disable things that can execute commands, including password prompts.
+        if self._safe:
+            env["GIT_ASKPASS"] = "/bin/true"
+            env["GIT_EDITOR"] = "/bin/true"
+            env["GIT_PAGER"] = "/bin/true"
+            env["GIT_SSH"] = "/bin/true"
+            env["GIT_SSH_COMMAND"] = "/bin/true"
+            env["GIT_TERMINAL_PROMPT"] = "false"
+            env["SSH_ASKPASS"] = "/bin/true"
         env.update(self._environment)
         if inline_env is not None:
             env.update(inline_env)
@@ -1260,13 +1370,6 @@ class Git(metaclass=_GitMeta):
         # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
-        if shell is None:
-            # Get the value of USE_SHELL with no deprecation warning. Do this without
-            # warnings.catch_warnings, to avoid a race condition with application code
-            # configuring warnings. The value could be looked up in type(self).__dict__
-            # or Git.__dict__, but those can break under some circumstances. This works
-            # the same as self.USE_SHELL in more situations; see Git.__getattribute__.
-            shell = super().__getattribute__("USE_SHELL")
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
