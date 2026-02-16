@@ -51,7 +51,7 @@ class TestDiff(TestBase):
     @with_rw_directory
     def test_diff_with_staged_file(self, rw_dir):
         # SET UP INDEX WITH MULTIPLE STAGES
-        r = Repo.init(rw_dir)
+        r = Repo.init(rw_dir, initial_branch="master")
         fp = osp.join(rw_dir, "hello.txt")
         with open(fp, "w") as fs:
             fs.write("hello world")
