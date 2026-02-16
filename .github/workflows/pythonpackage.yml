@@ -24,15 +24,24 @@ jobs:
         - os-type: windows
           python-version: "3.13t"
         include:
+        # Defaults, added to all automatically generated jobs.
         - os-ver: latest
+        - experimental: false
+        # Customized jobs.
         - os-type: ubuntu
           python-version: "3.7"
           os-ver: "22.04"
-        - experimental: false
+          experimental: false
+        - os-type: windows
+          python-version: "3.13"
+          os-ver: latest
+          experimental: true
 
       fail-fast: false
 
     runs-on: ${{ matrix.os-type }}-${{ matrix.os-ver }}
+
+    continue-on-error: ${{ matrix.experimental }}
 
     defaults:
       run:
