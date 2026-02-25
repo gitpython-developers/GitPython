@@ -247,6 +247,17 @@ class TestBase(TestCase):
             check_test_value(cr, tv)
 
     @with_rw_directory
+    def test_relative_include_with_relative_config_path(self, rw_dir):
+        fpa = osp.join(rw_dir, "a")
+        fpb = osp.join(rw_dir, "b")
+        with GitConfigParser(fpb, read_only=False) as cw:
+            cw.set_value("b", "value", "b")
+        with GitConfigParser(fpa, read_only=False) as cw:
+            cw.set_value("include", "path", "b")
+        with GitConfigParser(osp.relpath(fpa), read_only=True) as cr:
+            assert cr.get_value("b", "value") == "b"
+
+    @with_rw_directory
     def test_multiple_include_paths_with_same_key(self, rw_dir):
         """Test that multiple 'path' entries under [include] are all respected.
 

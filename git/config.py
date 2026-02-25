@@ -661,7 +661,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                             continue
                         # END ignore relative paths if we don't know the configuration file path
                         file_path = cast(PathLike, file_path)
-                        assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
+                        if not osp.isabs(file_path):
+                            file_path = osp.abspath(file_path)
                         include_path = osp.join(osp.dirname(file_path), include_path)
                     # END make include path absolute
                     include_path = osp.normpath(include_path)
