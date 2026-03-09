@@ -54,8 +54,7 @@ jobs:
       uses: Vampire/setup-wsl@v6.0.0
       with:
         wsl-version: 1
-        distribution: Alpine
-        additional-packages: bash
+        distribution: Debian
 
     - name: Prepare this repo for tests
       run: |
