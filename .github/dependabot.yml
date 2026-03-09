@@ -1,11 +1,20 @@
 version: 2
+enable-beta-ecosystems: true
 updates:
-- package-ecosystem: "github-actions"
+- package-ecosystem: github-actions
   directory: "/"
   schedule:
-    interval: "weekly"
+    interval: weekly
 
-- package-ecosystem: "gitsubmodule"
+- package-ecosystem: gitsubmodule
   directory: "/"
   schedule:
-    interval: "weekly"
+    interval: weekly
+
+- package-ecosystem: pre-commit
+  directory: "/"
+  schedule:
+    interval: monthly
+  groups:
+    pre-commit:
+      patterns: ["*"]
