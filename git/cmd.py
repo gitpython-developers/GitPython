@@ -368,8 +368,12 @@ class _AutoInterrupt:
             status = proc.wait()  # Ensure the process goes away.
 
             self.status = self._status_code_if_terminate or status
-        except OSError as ex:
-            _logger.info("Ignored error after process had died: %r", ex)
+        except (OSError, AttributeError) as ex:
+            # On interpreter shutdown (notably on Windows), parts of the stdlib used by
+            # subprocess can already be torn down (e.g. `subprocess._winapi` becomes None),
+            # which can cause AttributeError during terminate(). In that case, we prefer
+            # to silently ignore to avoid noisy "Exception ignored in: __del__" messages.
+            _logger.info("Ignored error while terminating process: %r", ex)
         # END exception handling
 
     def __del__(self) -> None:
