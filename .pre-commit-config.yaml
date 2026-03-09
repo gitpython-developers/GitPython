@@ -1,13 +1,13 @@
 repos:
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.4.1
+  rev: v2.4.2
   hooks:
   - id: codespell
     additional_dependencies: [tomli]
     exclude: ^test/fixtures/
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.12
+  rev: v0.15.5
   hooks:
   - id: ruff-check
     args: ["--fix"]
@@ -16,14 +16,14 @@ repos:
     exclude: ^git/ext/
 
 - repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.10.0.1
+  rev: v0.11.0.1
   hooks:
   - id: shellcheck
     args: [--color]
     exclude: ^test/fixtures/polyglot$|^git/ext/
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: end-of-file-fixer
     exclude: ^test/fixtures/|COPYING|LICENSE
@@ -33,6 +33,6 @@ repos:
   - id: check-merge-conflict
 
 - repo: https://github.com/abravalheri/validate-pyproject
-  rev: v0.24.1
+  rev: v0.25
   hooks:
   - id: validate-pyproject
