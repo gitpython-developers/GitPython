@@ -1,5 +1,3 @@
-import pytest
-
 from git.cmd import Git
 
 
