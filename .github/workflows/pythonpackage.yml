@@ -30,6 +30,11 @@ jobs:
         - os-type: ubuntu
           python-version: "3.7"
           os-ver: "22.04"
+        - build-docs: true  # We ensure documentation builds, except on very old interpreters.
+        - python-version: "3.7"
+          build-docs: false
+        - python-version: "3.8"
+          build-docs: false
         - experimental: false
 
       fail-fast: false
@@ -110,7 +115,7 @@ jobs:
       continue-on-error: false
 
     - name: Documentation
-      if: matrix.python-version != '3.7'
+      if: matrix.build-docs
       run: |
         pip install '.[doc]'
         make -C doc html
