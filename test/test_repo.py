@@ -962,6 +962,46 @@ class TestRepo(TestBase):
 
         assert "BAD MESSAGE" not in contents, "log is corrupt"
 
+    @with_rw_directory
+    def test_active_branch_raises_value_error_when_head_ref_is_invalid(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        with open(osp.join(rw_dir, ".git", "HEAD"), "w") as f:
+            f.write("ref: refs/heads/.invalid\n")
+
+        self.assertRaisesRegex(
+            ValueError,
+            r"refs/heads/\.invalid.*older clients",
+            lambda: repo.active_branch,
+        )
+
+    @with_rw_directory
+    def test_empty_repo_reftable_active_branch(self, rw_dir):
+        git = Git(rw_dir)
+        try:
+            git.init(ref_format="reftable")
+        except GitCommandError as err:
+            if err.status == 129:
+                pytest.skip("git init --ref-format is not supported by this git version")
+            raise
+
+        repo = Repo(rw_dir)
+        self.assertEqual(repo.head.reference.name, ".invalid")
+        self.assertRaisesRegex(
+            ValueError,
+            r"refs/heads/\.invalid.*older clients",
+            lambda: repo.active_branch,
+        )
+
+    @with_rw_directory
+    def test_active_branch_raises_type_error_when_head_is_detached(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        with open(osp.join(rw_dir, "a.txt"), "w") as f:
+            f.write("a")
+        repo.index.add(["a.txt"])
+        repo.index.commit("initial commit")
+        repo.git.checkout(repo.head.commit.hexsha)
+        self.assertRaisesRegex(TypeError, "detached symbolic reference", lambda: repo.active_branch)
+
     def test_merge_base(self):
         repo = self.rorepo
         c1 = "f6aa8d1"
