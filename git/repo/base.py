@@ -1042,11 +1042,19 @@ class Repo:
         :raise TypeError:
             If HEAD is detached.
 
+        :raise ValueError:
+            If HEAD points to the ``.invalid`` ref Git uses to mark refs as
+            incompatible with older clients.
+
         :return:
             :class:`~git.refs.head.Head` to the active branch
         """
-        # reveal_type(self.head.reference)  # => Reference
-        return self.head.reference
+        active_branch = self.head.reference
+        if active_branch.name == ".invalid":
+            raise ValueError(
+                "HEAD points to 'refs/heads/.invalid', which Git uses to mark refs as incompatible with older clients"
+            )
+        return active_branch
 
     def blame_incremental(self, rev: str | HEAD | None, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
         """Iterator for blame information for the given file at the given revision.
