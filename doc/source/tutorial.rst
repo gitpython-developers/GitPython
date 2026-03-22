@@ -513,6 +513,12 @@ The GitDB is a pure-python implementation of the git object database. It is the 
 
     repo = Repo("path/to/repo", odbt=GitDB)
 
+.. warning::
+   ``GitDB`` may fail or become extremely slow when traversing trees in
+   repositories with very large commits (thousands of changed files in a
+   single commit). If you encounter ``RecursionError`` or excessive
+   slowness during tree traversal, switch to ``GitCmdObjectDB`` instead.
+
 
 GitCmdObjectDB
 ==============
