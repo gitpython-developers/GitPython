@@ -570,6 +570,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         committer: Union[None, Actor] = None,
         author_date: Union[None, str, datetime.datetime] = None,
         commit_date: Union[None, str, datetime.datetime] = None,
+        trailers: Union[None, Dict[str, str], List[Tuple[str, str]]] = None,
     ) -> "Commit":
         """Commit the given tree, creating a :class:`Commit` object.
 
@@ -608,6 +609,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         :param commit_date:
             The timestamp for the committer field.
+
+        :param trailers:
+            Optional trailer key-value pairs to append to the commit message.
+            Can be a dictionary mapping trailer keys to values, or a list of
+            ``(key, value)`` tuples (useful when the same key appears multiple
+            times, e.g. multiple ``Signed-off-by`` trailers). Trailers are
+            appended using ``git interpret-trailers``.
+            See :manpage:`git-interpret-trailers(1)`.
 
         :return:
             :class:`Commit` object representing the new commit.
@@ -677,6 +686,27 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         if isinstance(tree, str):
             tree = repo.tree(tree)
         # END tree conversion
+
+        # APPLY TRAILERS
+        if trailers:
+            trailer_args: List[str] = []
+            if isinstance(trailers, dict):
+                for key, val in trailers.items():
+                    trailer_args.append("--trailer")
+                    trailer_args.append(f"{key}: {val}")
+            else:
+                for key, val in trailers:
+                    trailer_args.append("--trailer")
+                    trailer_args.append(f"{key}: {val}")
+
+            cmd = ["git", "interpret-trailers"] + trailer_args
+            proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
+                cmd,
+                as_process=True,
+                istream=PIPE,
+            )
+            message = proc.communicate(str(message).encode())[0].decode("utf8")
+        # END apply trailers
 
         # CREATE NEW COMMIT
         new_commit = cls(

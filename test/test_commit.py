@@ -566,3 +566,77 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
             Actor("test_user_2", "another_user-email@github.com"),
             Actor("test_user_3", "test_user_3@github.com"),
         ]
+
+    @with_rw_directory
+    def test_create_from_tree_with_trailers_dict(self, rw_dir):
+        """Test that create_from_tree supports adding trailers via a dict."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_dict"))
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+
+        trailers = {"Issue": "123", "Signed-off-by": "Test User <test@test.com>"}
+        commit = Commit.create_from_tree(
+            rw_repo,
+            tree,
+            "Test commit with trailers",
+            head=True,
+            trailers=trailers,
+        )
+
+        assert "Issue: 123" in commit.message
+        assert "Signed-off-by: Test User <test@test.com>" in commit.message
+        assert commit.trailers_dict == {
+            "Issue": ["123"],
+            "Signed-off-by": ["Test User <test@test.com>"],
+        }
+
+    @with_rw_directory
+    def test_create_from_tree_with_trailers_list(self, rw_dir):
+        """Test that create_from_tree supports adding trailers via a list of tuples."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_list"))
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+
+        trailers = [
+            ("Signed-off-by", "Alice <alice@example.com>"),
+            ("Signed-off-by", "Bob <bob@example.com>"),
+            ("Issue", "456"),
+        ]
+        commit = Commit.create_from_tree(
+            rw_repo,
+            tree,
+            "Test commit with multiple trailers",
+            head=True,
+            trailers=trailers,
+        )
+
+        assert "Signed-off-by: Alice <alice@example.com>" in commit.message
+        assert "Signed-off-by: Bob <bob@example.com>" in commit.message
+        assert "Issue: 456" in commit.message
+        assert commit.trailers_dict == {
+            "Signed-off-by": ["Alice <alice@example.com>", "Bob <bob@example.com>"],
+            "Issue": ["456"],
+        }
+
+    @with_rw_directory
+    def test_index_commit_with_trailers(self, rw_dir):
+        """Test that IndexFile.commit() supports adding trailers."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_index_trailers"))
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+
+        trailers = {"Reviewed-by": "Reviewer <reviewer@example.com>"}
+        commit = rw_repo.index.commit(
+            "Test index commit with trailers",
+            trailers=trailers,
+        )
+
+        assert "Reviewed-by: Reviewer <reviewer@example.com>" in commit.message
+        assert commit.trailers_dict == {
+            "Reviewed-by": ["Reviewer <reviewer@example.com>"],
+        }
