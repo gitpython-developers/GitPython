@@ -1572,7 +1572,7 @@ class Git(metaclass=_GitMeta):
 
         turns into::
 
-            git rev-list max-count 10 --header master
+            git rev-list --max-count=10 --header=master
 
         :return:
             Same as :meth:`execute`. If no args are given, used :meth:`execute`'s
