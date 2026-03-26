@@ -196,6 +196,13 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         if gpgsig is not None:
             self.gpgsig = gpgsig
 
+    @property
+    def patch(self) -> str:
+        """Textual patch comparing this commit against its first parent."""
+        if not self.parents:
+            return self.repo.git.diff_tree(self.hexsha, root=True, p=True)
+        return self.repo.git.diff("%s..%s" % (self.parents[0].hexsha, self.hexsha), p=True)
+
     @classmethod
     def _get_intermediate_items(cls, commit: "Commit") -> Tuple["Commit", ...]:
         return tuple(commit.parents)
