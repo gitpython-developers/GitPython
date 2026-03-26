@@ -27,6 +27,8 @@ or low-level like git-plumbing.
 It provides abstractions of git objects for easy access of repository data often backed by calling the `git`
 command-line program.
 
+For file discovery convenience, repositories expose both `Repo.untracked_files` and `Repo.tracked_files`.
+
 ### DEVELOPMENT STATUS
 
 This project is in **maintenance mode**, which means that
