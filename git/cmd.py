@@ -995,6 +995,28 @@ class Git(metaclass=_GitMeta):
             _warn_use_shell(extra_danger=False)
         return super().__getattribute__(name)
 
+    def latest_remote_tag(self, repository: PathLike) -> Optional[str]:
+        output = self.ls_remote("--tags", "--sort=-version:refname", repository)
+        if not output:
+            return None
+
+        for line in output.splitlines():
+            if not line:
+                continue
+            try:
+                _, ref = line.split("\t", 1)
+            except ValueError:
+                continue
+            if not ref.startswith("refs/tags/"):
+                continue
+            tag = ref[len("refs/tags/") :]
+            if tag.endswith("^{}"):
+                tag = tag[:-3]
+            if tag:
+                return tag
+
+        return None
+
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was an object.
 
