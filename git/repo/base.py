@@ -170,6 +170,11 @@ class Repo:
     """Subclasses may easily bring in their own custom types by placing a constructor or
     type here."""
 
+    @property
+    def tracked_files(self) -> List[str]:
+        """Files currently tracked by git."""
+        return self.git.ls_files().splitlines()
+
     def __init__(
         self,
         path: Optional[PathLike] = None,
