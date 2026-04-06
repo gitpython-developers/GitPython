@@ -699,13 +699,15 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                     trailer_args.append("--trailer")
                     trailer_args.append(f"{key}: {val}")
 
-            cmd = ["git", "interpret-trailers"] + trailer_args
+            cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers"] + trailer_args
             proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
                 cmd,
                 as_process=True,
                 istream=PIPE,
             )
-            message = proc.communicate(str(message).encode())[0].decode("utf8")
+            stdout_bytes, _ = proc.communicate(str(message).encode())
+            finalize_process(proc)
+            message = stdout_bytes.decode("utf8")
         # END apply trailers
 
         # CREATE NEW COMMIT
