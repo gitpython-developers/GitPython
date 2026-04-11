@@ -32,6 +32,7 @@ from typing import (
     List,
     Dict,
     Sequence,
+    Set,
     TYPE_CHECKING,
     Tuple,
     TypeVar,
@@ -631,11 +632,17 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             files_to_read = list(self._file_or_files)
         # END ensure we have a copy of the paths to handle
 
-        seen = set(files_to_read)
+        def path_key(file_path: Union[PathLike, IO]) -> Union[str, IO]:
+            if isinstance(file_path, (str, os.PathLike)):
+                return osp.normpath(osp.abspath(file_path))
+            return file_path
+
+        seen: Set[Union[str, IO]] = {path_key(file_path) for file_path in files_to_read}
         num_read_include_files = 0
         while files_to_read:
             file_path = files_to_read.pop(0)
             file_ok = False
+            abs_file_path: Union[str, None] = None
 
             if hasattr(file_path, "seek"):
                 # Must be a file-object.
@@ -644,6 +651,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 self._read(file_path, file_path.name)
             else:
                 try:
+                    abs_file_path = osp.normpath(osp.abspath(file_path))
                     with open(file_path, "rb") as fp:
                         file_ok = True
                         self._read(fp, fp.name)
@@ -660,9 +668,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         if not file_ok:
                             continue
                         # END ignore relative paths if we don't know the configuration file path
-                        file_path = cast(PathLike, file_path)
-                        assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
-                        include_path = osp.join(osp.dirname(file_path), include_path)
+                        assert abs_file_path is not None, "Need a source path to resolve relative include paths"
+                        include_path = osp.join(osp.dirname(abs_file_path), include_path)
                     # END make include path absolute
                     include_path = osp.normpath(include_path)
                     if include_path in seen or not os.access(include_path, os.R_OK):
