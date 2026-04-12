@@ -1133,6 +1133,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         author_date: Union[datetime.datetime, str, None] = None,
         commit_date: Union[datetime.datetime, str, None] = None,
         skip_hooks: bool = False,
+        trailers: Union[None, "Dict[str, str]", "List[Tuple[str, str]]"] = None,
     ) -> Commit:
         """Commit the current default index file, creating a
         :class:`~git.objects.commit.Commit` object.
@@ -1169,6 +1170,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             committer=committer,
             author_date=author_date,
             commit_date=commit_date,
+            trailers=trailers,
         )
         if not skip_hooks:
             run_commit_hook("post-commit", self)
