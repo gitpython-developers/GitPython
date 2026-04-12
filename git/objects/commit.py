@@ -450,7 +450,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             List containing key-value tuples of whitespace stripped trailer information.
         """
-        trailer = self._interpret_trailers(self.repo, self.message, ["--parse"], self.encoding).strip()
+        trailer = self._interpret_trailers(self.repo, self.message, ["--parse"]).strip()
 
         if not trailer:
             return []
@@ -462,17 +462,17 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         return trailer_list
 
-    @staticmethod
-    def _interpret_trailers(repo: "Repo", message: str, trailer_args: Sequence[str], encoding: str) -> str:
+    @classmethod
+    def _interpret_trailers(cls, repo: "Repo", message: str, trailer_args: Sequence[str]) -> str:
         cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers", *trailer_args]
         proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
             cmd,
             as_process=True,
             istream=PIPE,
         )
-        stdout_bytes, _ = proc.communicate(message.encode(encoding, errors="strict"))
+        stdout_bytes, _ = proc.communicate(message.encode(cls.default_encoding, errors="strict"))
         finalize_process(proc)
-        return stdout_bytes.decode(encoding, errors="strict")
+        return stdout_bytes.decode(cls.default_encoding, errors="strict")
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
@@ -704,7 +704,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                     trailer_args.append("--trailer")
                     trailer_args.append(f"{key}: {val}")
 
-            message = cls._interpret_trailers(repo, str(message), trailer_args, conf_encoding)
+            message = cls._interpret_trailers(repo, str(message), trailer_args)
         # END apply trailers
 
         # CREATE NEW COMMIT
