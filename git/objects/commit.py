@@ -463,14 +463,15 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return trailer_list
 
     @classmethod
-    def _interpret_trailers(cls, repo: "Repo", message: str, trailer_args: Sequence[str]) -> str:
+    def _interpret_trailers(cls, repo: "Repo", message: Union[str, bytes], trailer_args: Sequence[str]) -> str:
         cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers", *trailer_args]
         proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
             cmd,
             as_process=True,
             istream=PIPE,
         )
-        stdout_bytes, _ = proc.communicate(message.encode(cls.default_encoding, errors="strict"))
+        message_bytes = message if isinstance(message, bytes) else message.encode(cls.default_encoding, errors="strict")
+        stdout_bytes, _ = proc.communicate(message_bytes)
         finalize_process(proc)
         return stdout_bytes.decode(cls.default_encoding, errors="strict")
 
