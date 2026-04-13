@@ -667,9 +667,14 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
             trailers={"Reviewed-by": "André <andre@example.com>"},
         )
 
-        commit.message = commit.message.encode(commit.encoding)
+        bytes_commit = Commit(
+            rw_repo,
+            commit.binsha,
+            message=commit.message.encode(commit.encoding),
+            encoding=commit.encoding,
+        )
 
-        assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
+        assert bytes_commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
 
     @with_rw_directory
     def test_index_commit_with_trailers(self, rw_dir):
