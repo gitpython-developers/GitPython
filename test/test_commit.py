@@ -648,6 +648,30 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
         assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
 
     @with_rw_directory
+    def test_trailers_list_with_non_utf8_message_bytes(self, rw_dir):
+        """Test that trailer parsing handles non-UTF-8 commit message bytes."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_non_utf8_bytes"))
+        with rw_repo.config_writer() as writer:
+            writer.set_value("i18n", "commitencoding", "ISO-8859-1")
+
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+
+        commit = Commit.create_from_tree(
+            rw_repo,
+            tree,
+            "Résumé",
+            head=True,
+            trailers={"Reviewed-by": "André <andre@example.com>"},
+        )
+
+        commit.message = commit.message.encode(commit.encoding)
+
+        assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
+
+    @with_rw_directory
     def test_index_commit_with_trailers(self, rw_dir):
         """Test that IndexFile.commit() supports adding trailers."""
         rw_repo = Repo.init(osp.join(rw_dir, "test_index_trailers"))
