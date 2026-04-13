@@ -676,6 +676,17 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
 
         assert bytes_commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
 
+    def test_interpret_trailers_encodes_before_launching_process(self):
+        """Test that encoding failures happen before spawning interpret-trailers."""
+        repo = Mock()
+        repo.git = Mock()
+        repo.git.GIT_PYTHON_GIT_EXECUTABLE = "git"
+
+        with self.assertRaises(UnicodeEncodeError):
+            Commit._interpret_trailers(repo, "Euro: €", ["--parse"], encoding="ISO-8859-1")
+
+        repo.git.execute.assert_not_called()
+
     @with_rw_directory
     def test_index_commit_with_trailers(self, rw_dir):
         """Test that IndexFile.commit() supports adding trailers."""

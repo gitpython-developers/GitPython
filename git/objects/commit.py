@@ -470,16 +470,18 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         trailer_args: Sequence[str],
         encoding: str = default_encoding,
     ) -> str:
+        message_bytes = message if isinstance(message, bytes) else message.encode(encoding, errors="strict")
         cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers", *trailer_args]
         proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
             cmd,
             as_process=True,
             istream=PIPE,
         )
-        message_bytes = message if isinstance(message, bytes) else message.encode(encoding, errors="strict")
-        stdout_bytes, _ = proc.communicate(message_bytes)
-        finalize_process(proc)
-        return stdout_bytes.decode(encoding, errors="strict")
+        try:
+            stdout_bytes, _ = proc.communicate(message_bytes)
+            return stdout_bytes.decode(encoding, errors="strict")
+        finally:
+            finalize_process(proc)
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
