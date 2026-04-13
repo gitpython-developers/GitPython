@@ -450,14 +450,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             List containing key-value tuples of whitespace stripped trailer information.
         """
-        cmd = ["git", "interpret-trailers", "--parse"]
-        proc: Git.AutoInterrupt = self.repo.git.execute(  # type: ignore[call-overload]
-            cmd,
-            as_process=True,
-            istream=PIPE,
-        )
-        trailer: str = proc.communicate(str(self.message).encode())[0].decode("utf8")
-        trailer = trailer.strip()
+        trailer = self._interpret_trailers(self.repo, self.message, ["--parse"], encoding=self.encoding).strip()
 
         if not trailer:
             return []
@@ -468,6 +461,27 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             trailer_list.append((key.strip(), val.strip()))
 
         return trailer_list
+
+    @classmethod
+    def _interpret_trailers(
+        cls,
+        repo: "Repo",
+        message: Union[str, bytes],
+        trailer_args: Sequence[str],
+        encoding: str = default_encoding,
+    ) -> str:
+        message_bytes = message if isinstance(message, bytes) else message.encode(encoding, errors="strict")
+        cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers", *trailer_args]
+        proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
+            cmd,
+            as_process=True,
+            istream=PIPE,
+        )
+        try:
+            stdout_bytes, _ = proc.communicate(message_bytes)
+            return stdout_bytes.decode(encoding, errors="strict")
+        finally:
+            finalize_process(proc)
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
@@ -699,15 +713,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                     trailer_args.append("--trailer")
                     trailer_args.append(f"{key}: {val}")
 
-            cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers"] + trailer_args
-            proc: Git.AutoInterrupt = repo.git.execute(  # type: ignore[call-overload]
-                cmd,
-                as_process=True,
-                istream=PIPE,
-            )
-            stdout_bytes, _ = proc.communicate(str(message).encode())
-            finalize_process(proc)
-            message = stdout_bytes.decode("utf8")
+            message = cls._interpret_trailers(repo, str(message), trailer_args)
         # END apply trailers
 
         # CREATE NEW COMMIT

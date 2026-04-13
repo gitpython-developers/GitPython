@@ -623,6 +623,71 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
         }
 
     @with_rw_directory
+    def test_create_from_tree_with_non_utf8_trailers(self, rw_dir):
+        """Test that trailer creation and parsing respect the configured commit encoding."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_non_utf8"))
+        with rw_repo.config_writer() as writer:
+            writer.set_value("i18n", "commitencoding", "ISO-8859-1")
+
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+
+        commit = Commit.create_from_tree(
+            rw_repo,
+            tree,
+            "Résumé",
+            head=True,
+            trailers={"Reviewed-by": "André <andre@example.com>"},
+        )
+
+        assert commit.encoding == "ISO-8859-1"
+        assert "Résumé" in commit.message
+        assert "Reviewed-by: André <andre@example.com>" in commit.message
+        assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
+
+    @with_rw_directory
+    def test_trailers_list_with_non_utf8_message_bytes(self, rw_dir):
+        """Test that trailer parsing handles non-UTF-8 commit message bytes."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_non_utf8_bytes"))
+        with rw_repo.config_writer() as writer:
+            writer.set_value("i18n", "commitencoding", "ISO-8859-1")
+
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+
+        commit = Commit.create_from_tree(
+            rw_repo,
+            tree,
+            "Résumé",
+            head=True,
+            trailers={"Reviewed-by": "André <andre@example.com>"},
+        )
+
+        bytes_commit = Commit(
+            rw_repo,
+            commit.binsha,
+            message=commit.message.encode(commit.encoding),
+            encoding=commit.encoding,
+        )
+
+        assert bytes_commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
+
+    def test_interpret_trailers_encodes_before_launching_process(self):
+        """Test that encoding failures happen before spawning interpret-trailers."""
+        repo = Mock()
+        repo.git = Mock()
+        repo.git.GIT_PYTHON_GIT_EXECUTABLE = "git"
+
+        with self.assertRaises(UnicodeEncodeError):
+            Commit._interpret_trailers(repo, "Euro: €", ["--parse"], encoding="ISO-8859-1")
+
+        repo.git.execute.assert_not_called()
+
+    @with_rw_directory
     def test_index_commit_with_trailers(self, rw_dir):
         """Test that IndexFile.commit() supports adding trailers."""
         rw_repo = Repo.init(osp.join(rw_dir, "test_index_trailers"))
