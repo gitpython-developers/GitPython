@@ -6,6 +6,7 @@
 import contextlib
 import gc
 import inspect
+import io
 import logging
 import os
 import os.path as osp
@@ -200,6 +201,25 @@ class TestGit(TestBase):
 
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
+
+    def test_it_output_stream_with_stdout_is_false(self):
+        temp_stream = io.BytesIO()
+        self.git.execute(
+            ["git", "version"],
+            output_stream=temp_stream,
+            with_stdout=False,
+        )
+        self.assertEqual(temp_stream.tell(), 0)
+
+    def test_it_executes_git_without_stdout_redirect(self):
+        returncode, stdout, stderr = self.git.execute(
+            ["git", "version"],
+            with_extended_output=True,
+            with_stdout=False,
+        )
+        self.assertEqual(returncode, 0)
+        self.assertIsNone(stdout)
+        self.assertIsNotNone(stderr)
 
     @ddt.data(
         # chdir_to_repo, shell, command, use_shell_impostor
