@@ -113,7 +113,7 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
-    def test_avoids_changing_permissions_outside_tree(self, tmp_path):
+    def test_avoids_changing_permissions_outside_tree(self, tmp_path, request):
         # Automatically works on Windows, but on Unix requires either special handling
         # or refraining from attempting to fix PermissionError by making chmod calls.
 
@@ -125,8 +125,31 @@ class TestRmtree:
 
         dir2 = tmp_path / "dir2"
         dir2.mkdir()
-        (dir2 / "symlink").symlink_to(dir1 / "file")
+        symlink = dir2 / "symlink"
+        symlink.symlink_to(dir1 / "file")
         dir2.chmod(stat.S_IRUSR | stat.S_IXUSR)
+
+        def preen_dir2():
+            """Don't leave unwritable directories behind.
+
+            pytest has difficulties cleaning up after the fact on some platforms,
+            e.g., macOS, and whines incessantly until the issue is resolved--regardless
+            of the pytest session.
+            """
+            rwx = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
+            if not dir2.exists():
+                return
+            if symlink.exists():
+                try:
+                    # Try lchmod first, if the platform supports it.
+                    symlink.lchmod(rwx)
+                except NotImplementedError:
+                    # The platform (probably win32) doesn't support lchmod; fall back to chmod.
+                    symlink.chmod(rwx)
+            dir2.chmod(rwx)
+            rmtree(dir2)
+
+        request.addfinalizer(preen_dir2)
 
         try:
             rmtree(dir2)

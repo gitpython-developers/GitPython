@@ -1364,25 +1364,29 @@ class Git(metaclass=_GitMeta):
             if output_stream is None:
                 stdout_value, stderr_value = communicate()
                 # Strip trailing "\n".
-                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore[arg-type]
+                if stdout_value is not None and stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore[arg-type]
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith(newline):  # type: ignore[arg-type]
+                if stderr_value is not None and stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
 
                 status = proc.returncode
             else:
                 max_chunk_size = max_chunk_size if max_chunk_size and max_chunk_size > 0 else io.DEFAULT_BUFFER_SIZE
-                stream_copy(proc.stdout, output_stream, max_chunk_size)
-                stdout_value = proc.stdout.read()
-                stderr_value = proc.stderr.read()
+                if proc.stdout is not None:
+                    stream_copy(proc.stdout, output_stream, max_chunk_size)
+                    stdout_value = proc.stdout.read()
+                if proc.stderr is not None:
+                    stderr_value = proc.stderr.read()
                 # Strip trailing "\n".
-                if stderr_value.endswith(newline):  # type: ignore[arg-type]
+                if stderr_value is not None and stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling
         finally:
-            proc.stdout.close()
-            proc.stderr.close()
+            if proc.stdout is not None:
+                proc.stdout.close()
+            if proc.stderr is not None:
+                proc.stderr.close()
 
         if self.GIT_PYTHON_TRACE == "full":
             cmdstr = " ".join(redacted_command)
