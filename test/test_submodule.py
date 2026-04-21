@@ -1333,6 +1333,17 @@ class TestSubmodule(TestBase):
                 assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
+    def test_submodule_update_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            payload = "--single-branch --config protocol.ext.allow=always"
+            submodule = Submodule(rw_repo, b"\0" * 20, name="new", path="new", url=str(tmp_dir))
+
+            with self.assertRaises(UnsafeOptionError):
+                submodule.update(clone_multi_options=[payload])
+            assert not submodule.module_exists()
+
+    @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
