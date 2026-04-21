@@ -137,6 +137,15 @@ class TestClone(TestBase):
                     rw_repo.clone(tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
+    @with_rw_repo("HEAD")
+    def test_clone_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            payload = "--single-branch --config protocol.ext.allow=always"
+
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.clone(tmp_dir, multi_options=[payload])
+
     @pytest.mark.xfail(
         sys.platform == "win32",
         reason=(
@@ -215,6 +224,15 @@ class TestClone(TestBase):
                 with self.assertRaises(UnsafeOptionError):
                     Repo.clone_from(rw_repo.working_dir, tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
+
+    @with_rw_repo("HEAD")
+    def test_clone_from_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            payload = "--single-branch --config protocol.ext.allow=always"
+
+            with self.assertRaises(UnsafeOptionError):
+                Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[payload])
 
     @pytest.mark.xfail(
         sys.platform == "win32",
