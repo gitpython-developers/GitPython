@@ -964,11 +964,9 @@ class TestRemote(TestBase):
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
-                {
-                    "receive-pack": f"touch {tmp_file}",
-                    "receive_pack": f"touch {tmp_file}",
-                    "exec": f"touch {tmp_file}",
-                }
+                {"receive-pack": f"touch {tmp_file}"},
+                {"receive_pack": f"touch {tmp_file}"},
+                {"exec": f"touch {tmp_file}"},
             ]
             for unsafe_option in unsafe_options:
                 assert not tmp_file.exists()
@@ -992,10 +990,9 @@ class TestRemote(TestBase):
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
-                {
-                    "receive-pack": f"touch {tmp_file}",
-                    "exec": f"touch {tmp_file}",
-                }
+                {"receive-pack": f"touch {tmp_file}"},
+                {"receive_pack": f"touch {tmp_file}"},
+                {"exec": f"touch {tmp_file}"},
             ]
             for unsafe_option in unsafe_options:
                 # The options will be allowed, but the command will fail.

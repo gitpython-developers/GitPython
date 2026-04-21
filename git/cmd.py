@@ -946,9 +946,18 @@ class Git(metaclass=_GitMeta):
 
     @classmethod
     def _canonicalize_option_name(cls, option: str) -> str:
-        """Normalize an option or kwarg name for unsafe-option checks."""
-        option_name = option.lstrip("-").split("=", 1)[0].split(None, 1)[0]
-        return dashify(option_name)
+        """Return the option name used for unsafe-option checks.
+
+        Examples:
+            ``"--upload-pack=/tmp/helper"`` -> ``"upload-pack"``
+            ``"upload_pack"`` -> ``"upload-pack"``
+            ``"--config core.filemode=false"`` -> ``"config"``
+        """
+        option_name = option.lstrip("-").split("=", 1)[0]
+        option_tokens = option_name.split(None, 1)
+        if not option_tokens:
+            return ""
+        return dashify(option_tokens[0])
 
     @classmethod
     def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
