@@ -962,9 +962,7 @@ class Git(metaclass=_GitMeta):
         for option in options:
             unsafe_option = canonical_unsafe_options.get(cls._canonicalize_option_name(option))
             if unsafe_option is not None:
-                raise UnsafeOptionError(
-                    f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
-                )
+                raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
 
     AutoInterrupt: TypeAlias = _AutoInterrupt
 
