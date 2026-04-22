@@ -49,6 +49,7 @@ from typing import (
     Callable,
     Dict,
     Iterator,
+    List,
     Mapping,
     Sequence,
     TYPE_CHECKING,
@@ -1265,6 +1266,36 @@ class Submodule(IndexObject, TraversableIterableObj):
                 sc_writer.remove_section()
         # END delete configuration
 
+        return self
+
+    @unbare_repo
+    def deinit(self, force: bool = False) -> "Submodule":
+        """Run ``git submodule deinit`` on this submodule.
+
+        This is a thin wrapper around ``git submodule deinit <path>``, paralleling
+        :meth:`add`, :meth:`update`, and :meth:`remove`. It unregisters the
+        submodule (removes its entry from ``.git/config`` and empties the
+        working-tree directory) without deleting the submodule from
+        ``.gitmodules`` or its checked-out repository under ``.git/modules/``.
+        A subsequent :meth:`update` will re-initialize the submodule from the
+        retained contents.
+
+        :param force:
+            If ``True``, pass ``--force`` to ``git submodule deinit``. This
+            allows deinitialization even when the submodule's working tree has
+            local modifications that would otherwise block the command.
+
+        :return:
+            self
+
+        :note:
+            Doesn't work in bare repositories.
+        """
+        args: List[str] = []
+        if force:
+            args.append("--force")
+        args.extend(["--", self.path])
+        self.repo.git.submodule("deinit", *args)
         return self
 
     def set_parent_commit(self, commit: Union[Commit_ish, str, None], check: bool = True) -> "Submodule":
