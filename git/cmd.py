@@ -109,7 +109,7 @@ def handle_process_output(
     stderr_handler: Union[None, Callable[[AnyStr], None], Callable[[List[AnyStr]], None]],
     finalizer: Union[None, Callable[[Union[Popen, "Git.AutoInterrupt"]], None]] = None,
     decode_streams: bool = True,
-    kill_after_timeout: Optional[float, int] = None,
+    kill_after_timeout: Optional[Union[float, int]] = None,
 ) -> None:
     R"""Register for notifications to learn that process output is ready to read, and
     dispatch lines to the respective line handlers.
@@ -335,7 +335,7 @@ class _AutoInterrupt:
         self,
         proc: subprocess.Popen | None,
         args: Any,
-        timeout: Optional[float, int] = None,
+        timeout: Optional[Union[float, int]] = None,
     ) -> None:
         self.proc = proc
         self.args = args
@@ -370,10 +370,15 @@ class _AutoInterrupt:
         # Try to kill it.
         try:
             proc.terminate()
-            status = proc.wait(timeout=self.timeout)  # Ensure the process goes away.
+            status = proc.wait(timeout=self.timeout)  # Gracefully wait for the process to terminate.
 
             self.status = self._status_code_if_terminate or status
-        except (OSError, AttributeError, subprocess.TimeoutExpired) as ex:
+        except subprocess.TimeoutExpired:
+            _logger.warning("Process did not complete successfully in %s seconds; will forcefully kill", exc_info=True)
+            proc.kill()
+            status = proc.wait()  # Ensure the process goes away by blocking with `timeout=None`.
+            self.status = self._status_code_if_terminate or status
+        except (OSError, AttributeError) as ex:
             # On interpreter shutdown (notably on Windows), parts of the stdlib used by
             # subprocess can already be torn down (e.g. `subprocess._winapi` becomes None),
             # which can cause AttributeError during terminate(). In that case, we prefer
@@ -389,7 +394,7 @@ class _AutoInterrupt:
         return getattr(self.proc, attr)
 
     # TODO: Bad choice to mimic `proc.wait()` but with different args.
-    def wait(self, stderr: Union[None, str, bytes] = b"") -> int:
+    def wait(self, stderr: Optional[Union[str, bytes]] = b"", timeout: Optional[Union[int, float]] = None) -> int:
         """Wait for the process and return its status code.
 
         :param stderr:
@@ -406,7 +411,8 @@ class _AutoInterrupt:
         stderr_b = force_bytes(data=stderr, encoding="utf-8")
         status: Union[int, None]
         if self.proc is not None:
-            status = self.proc.wait(timeout=self.timeout)
+            timeout = self.timeout if timeout is None else timeout
+            status = self.proc.wait(timeout=timeout)
             p_stderr = self.proc.stderr
         else:  # Assume the underlying proc was killed earlier or never existed.
             status = self.status
@@ -1112,7 +1118,7 @@ class Git(metaclass=_GitMeta):
         as_process: bool = False,
         output_stream: Union[None, BinaryIO] = None,
         stdout_as_string: bool = True,
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
         with_stdout: bool = True,
         universal_newlines: bool = False,
         shell: Union[None, bool] = None,
@@ -1325,8 +1331,9 @@ class Git(metaclass=_GitMeta):
                 "error: process killed because it timed out. kill_after_timeout=%s seconds",
                 kill_after_timeout,
             )
-            proc.terminate()
-            stdout_value, stderr_value = proc.communicate()
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                proc.kill()
+                stdout_value, stderr_value = proc.communicate(timeout=0.1)
             if with_exceptions:
                 raise GitCommandError(redacted_command, proc.returncode, stderr_value, stdout_value) from err
         finally:

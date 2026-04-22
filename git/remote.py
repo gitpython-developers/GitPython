@@ -875,7 +875,7 @@ class Remote(LazyMixin, IterableObj):
         self,
         proc: "Git.AutoInterrupt",
         progress: Union[Callable[..., Any], RemoteProgress, None],
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
     ) -> IterableList["FetchInfo"]:
         progress = to_progress_instance(progress)
 
@@ -946,7 +946,7 @@ class Remote(LazyMixin, IterableObj):
         self,
         proc: "Git.AutoInterrupt",
         progress: Union[Callable[..., Any], RemoteProgress, None],
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
     ) -> PushInfoList:
         progress = to_progress_instance(progress)
 
@@ -1004,7 +1004,7 @@ class Remote(LazyMixin, IterableObj):
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, None, "UpdateProgress"] = None,
         verbose: bool = True,
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
@@ -1084,7 +1084,7 @@ class Remote(LazyMixin, IterableObj):
         self,
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, "UpdateProgress", None] = None,
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
@@ -1138,7 +1138,7 @@ class Remote(LazyMixin, IterableObj):
         self,
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None] = None,
-        kill_after_timeout: Optional[float, int] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
