@@ -1127,6 +1127,42 @@ class TestRepo(TestBase):
             self.assertEqual(r.working_dir, repo_dir)
 
     @with_rw_directory
+    def test_git_work_tree_env_in_linked_worktree(self, rw_dir):
+        """Check that Repo() autodiscovers a linked worktree when GIT_DIR is set."""
+        git = Git(rw_dir)
+        if git.version_info[:3] < (2, 5, 1):
+            raise RuntimeError("worktree feature unsupported (test needs git 2.5.1 or later)")
+
+        rw_master = self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
+        branch = rw_master.create_head("bbbbbbbb")
+        worktree_path = join_path_native(rw_dir, "worktree_repo")
+        if Git.is_cygwin():
+            worktree_path = cygpath(worktree_path)
+
+        rw_master.git.worktree("add", worktree_path, branch.name)
+
+        git_dir = Git(worktree_path).rev_parse("--git-dir")
+
+        patched_env = dict(os.environ)
+        patched_env["GIT_DIR"] = git_dir
+        patched_env.pop("GIT_WORK_TREE", None)
+        patched_env.pop("GIT_COMMON_DIR", None)
+
+        with mock.patch.dict(os.environ, patched_env, clear=True):
+            old_cwd = os.getcwd()
+            try:
+                os.chdir(worktree_path)
+
+                explicit = Repo(os.getcwd())
+                autodiscovered = Repo()
+
+                self.assertTrue(osp.samefile(explicit.working_tree_dir, worktree_path))
+                self.assertTrue(osp.samefile(autodiscovered.working_tree_dir, worktree_path))
+                self.assertTrue(osp.samefile(autodiscovered.working_tree_dir, explicit.working_tree_dir))
+            finally:
+                os.chdir(old_cwd)
+
+    @with_rw_directory
     def test_rebasing(self, rw_dir):
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, "hello.txt")
