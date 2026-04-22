@@ -945,21 +945,33 @@ class Git(metaclass=_GitMeta):
             )
 
     @classmethod
+    def _canonicalize_option_name(cls, option: str) -> str:
+        """Return the option name used for unsafe-option checks.
+
+        Examples:
+            ``"--upload-pack=/tmp/helper"`` -> ``"upload-pack"``
+            ``"upload_pack"`` -> ``"upload-pack"``
+            ``"--config core.filemode=false"`` -> ``"config"``
+        """
+        option_name = option.lstrip("-").split("=", 1)[0]
+        option_tokens = option_name.split(None, 1)
+        if not option_tokens:
+            return ""
+        return dashify(option_tokens[0])
+
+    @classmethod
     def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
         """Check for unsafe options.
 
         Some options that are passed to ``git <command>`` can be used to execute
         arbitrary commands. These are blocked by default.
         """
-        # Options can be of the form `foo`, `--foo bar`, or `--foo=bar`, so we need to
-        # check if they start with "--foo" or if they are equal to "foo".
-        bare_unsafe_options = [option.lstrip("-") for option in unsafe_options]
+        # Options can be of the form `foo`, `--foo`, `--foo bar`, or `--foo=bar`.
+        canonical_unsafe_options = {cls._canonicalize_option_name(option): option for option in unsafe_options}
         for option in options:
-            for unsafe_option, bare_option in zip(unsafe_options, bare_unsafe_options):
-                if option.startswith(unsafe_option) or option == bare_option:
-                    raise UnsafeOptionError(
-                        f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
-                    )
+            unsafe_option = canonical_unsafe_options.get(cls._canonicalize_option_name(option))
+            if unsafe_option is not None:
+                raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
 
     AutoInterrupt: TypeAlias = _AutoInterrupt
 

@@ -27,6 +27,7 @@ else:
 import ddt
 
 from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
+from git.exc import UnsafeOptionError
 from git.util import cwd, finalize_process
 
 from test.lib import TestBase, fixture_path, with_rw_directory
@@ -153,6 +154,21 @@ class TestGit(TestBase):
         # Order is undefined.
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
+
+    def test_check_unsafe_options_normalizes_kwargs(self):
+        cases = [
+            (["upload_pack"], ["--upload-pack"]),
+            (["receive_pack"], ["--receive-pack"]),
+            (["exec"], ["--exec"]),
+            (["u"], ["-u"]),
+            (["c"], ["-c"]),
+            (["--upload-pack=/tmp/helper"], ["--upload-pack"]),
+            (["--config core.filemode=false"], ["--config"]),
+        ]
+
+        for options, unsafe_options in cases:
+            with self.assertRaises(UnsafeOptionError):
+                Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
 
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg
