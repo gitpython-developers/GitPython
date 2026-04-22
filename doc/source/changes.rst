@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.47
+======
+
+Address various security issues related to bypassing injection-protection
+of unsafe Git flags.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.47
+
 3.1.46
 ======
 
