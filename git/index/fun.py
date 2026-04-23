@@ -48,6 +48,7 @@ from git.types import PathLike
 if TYPE_CHECKING:
     from git.db import GitCmdObjectDB
     from git.objects.tree import TreeCacheTup
+    from git.repo import Repo
 
     from .base import IndexFile
 
@@ -60,8 +61,43 @@ CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 
 def hook_path(name: str, git_dir: PathLike) -> str:
-    """:return: path to the given named hook in the given git repository directory"""
+    """:return: path to the given named hook in the given git repository directory
+
+    Note: This function does not respect the core.hooksPath configuration.
+    For commit hooks that should respect this config, use run_commit_hook() instead.
+    """
     return osp.join(git_dir, "hooks", name)
+
+
+def _get_hooks_dir(repo: "Repo") -> str:
+    """Get the hooks directory, respecting core.hooksPath configuration.
+
+    :param repo: The repository to get the hooks directory for.
+    :return: Path to the hooks directory.
+
+    Per git-config documentation, core.hooksPath can be:
+    - An absolute path: used as-is
+    - A relative path: relative to the directory where hooks are run from
+      (typically the working tree root for non-bare repos)
+    - If not set: defaults to $GIT_DIR/hooks
+    """
+    try:
+        hooks_path = repo.config_reader().get_value("core", "hooksPath")
+    except Exception:
+        # Config key not found or other error - use default
+        hooks_path = None
+
+    if hooks_path:
+        hooks_path = str(hooks_path)
+        if osp.isabs(hooks_path):
+            return hooks_path
+        else:
+            # Relative paths are relative to the working tree (or git_dir for bare repos)
+            base_dir = repo.working_tree_dir if repo.working_tree_dir else repo.git_dir
+            return osp.normpath(osp.join(base_dir, hooks_path))
+    else:
+        # Default: $GIT_DIR/hooks
+        return osp.join(repo.git_dir, "hooks")
 
 
 def _has_file_extension(path: str) -> str:
@@ -82,7 +118,8 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
 
     :raise git.exc.HookExecutionError:
     """
-    hp = hook_path(name, index.repo.git_dir)
+    hooks_dir = _get_hooks_dir(index.repo)
+    hp = osp.join(hooks_dir, name)
     if not os.access(hp, os.X_OK):
         return
 
