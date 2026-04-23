@@ -170,6 +170,12 @@ class Repo:
     """Subclasses may easily bring in their own custom types by placing a constructor or
     type here."""
 
+    def create_branch(self, *args: Any, **kwargs: Any) -> Head:
+        return self.create_head(*args, **kwargs)
+
+    def merge(self, *args: Any, **kwargs: Any) -> str:
+        return self.git.merge(*args, **kwargs)
+
     def __init__(
         self,
         path: Optional[PathLike] = None,
