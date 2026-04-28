@@ -824,7 +824,7 @@ class Repo:
 
         return res
 
-    def is_ancestor(self, ancestor_rev: Commit, rev: Commit) -> bool:
+    def is_ancestor(self, ancestor_rev: TBD, rev: TBD) -> bool:
         """Check if a commit is an ancestor of another.
 
         :param ancestor_rev:
