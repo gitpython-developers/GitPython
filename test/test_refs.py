@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import contextlib
 from itertools import chain
 import os.path as osp
 from pathlib import Path
@@ -18,6 +19,7 @@ from git import (
     RefLog,
     Reference,
     RemoteReference,
+    Repo,
     SymbolicReference,
     TagReference,
 )
@@ -29,6 +31,18 @@ from test.lib import TestBase, with_rw_repo, PathLikeMock
 
 
 class TestRefs(TestBase):
+    @contextlib.contextmanager
+    def _repo_with_initial_commit(self, base_dir):
+        repo_dir = base_dir / "repo"
+        repo = Repo.init(repo_dir)
+        (repo_dir / "file.txt").write_text("initial\n", encoding="utf-8")
+        repo.index.add(["file.txt"])
+        repo.index.commit("initial")
+        try:
+            yield repo
+        finally:
+            repo.git.clear_cache()
+
     def test_from_path(self):
         # Should be able to create any reference directly.
         for ref_type in (Reference, Head, TagReference, RemoteReference):
@@ -647,6 +661,115 @@ class TestRefs(TestBase):
             ref_file.flush()
             ref_file_name = Path(ref_file.name).name
             self.assertRaises(BadName, self.rorepo.commit, f"../../{ref_file_name}")
+
+    def test_reference_create_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_write.txt"
+
+                self.assertRaises(ValueError, Reference.create, repo, "../../../outside_write.txt", "HEAD")
+                assert not outside_path.exists()
+
+    def test_symbolic_reference_create_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_write.txt"
+
+                self.assertRaises(ValueError, SymbolicReference.create, repo, "../../outside_write.txt", "HEAD")
+                assert not outside_path.exists()
+
+    def test_symbolic_reference_set_reference_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_write.txt"
+
+                self.assertRaises(ValueError, SymbolicReference(repo, "../../outside_write.txt").set_reference, "HEAD")
+                assert not outside_path.exists()
+
+    def test_symbolic_reference_rename_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_move.txt"
+                ref = SymbolicReference.create(repo, "SAFE_RENAME_SOURCE", "HEAD")
+
+                self.assertRaises(ValueError, ref.rename, "../../outside_move.txt")
+                assert not outside_path.exists()
+                assert Path(ref.abspath).is_file()
+
+    def test_symbolic_reference_delete_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_delete.txt"
+                outside_path.write_text("do not delete\n", encoding="utf-8")
+
+                self.assertRaises(ValueError, SymbolicReference.delete, repo, "../../outside_delete.txt")
+                assert outside_path.read_text(encoding="utf-8") == "do not delete\n"
+
+    def test_symbolic_reference_log_append_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_path = base_dir / "outside_reflog.txt"
+
+                ref = SymbolicReference(repo, "../../../outside_reflog.txt")
+                self.assertRaises(
+                    ValueError, ref.log_append, Commit.NULL_BIN_SHA, "do not write", repo.head.commit.binsha
+                )
+                assert not outside_path.exists()
+
+    def test_symbolic_reference_set_reference_rejects_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                outside_dir = base_dir / "outside_refs"
+                outside_dir.mkdir()
+                outside_path = outside_dir / "escaped"
+
+                refs_heads_dir = Path(repo.common_dir) / "refs" / "heads"
+                refs_heads_dir.mkdir(parents=True, exist_ok=True)
+                symlink_path = refs_heads_dir / "link_out"
+                try:
+                    symlink_path.symlink_to(outside_dir, target_is_directory=True)
+                except (OSError, NotImplementedError) as ex:
+                    self.skipTest("symlinks unavailable on this platform: %s" % ex)
+                if osp.realpath(symlink_path / "escaped") == osp.abspath(symlink_path / "escaped"):
+                    self.skipTest("realpath does not resolve directory symlinks on this platform")
+
+                ref = SymbolicReference(repo, "refs/heads/link_out/escaped")
+                self.assertRaises(ValueError, ref.set_reference, "HEAD")
+                assert not outside_path.exists()
+
+    def test_remote_reference_delete_cleanup_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            git_dir = base_dir / "repo" / ".git"
+            git_dir.mkdir(parents=True)
+            outside_path = base_dir / "outside_remote_delete.txt"
+            outside_path.write_text("do not delete\n", encoding="utf-8")
+
+            class GitStub:
+                branch_called = False
+
+                def branch(self, *args):
+                    self.branch_called = True
+
+            class RepoStub:
+                pass
+
+            repo = RepoStub()
+            repo.git = GitStub()
+            repo.common_dir = str(git_dir)
+            repo.git_dir = str(git_dir)
+            ref = RemoteReference(repo, "../../outside_remote_delete.txt", check_path=False)
+
+            self.assertRaises(ValueError, RemoteReference.delete, repo, ref)
+            assert not repo.git.branch_called
+            assert outside_path.read_text(encoding="utf-8") == "do not delete\n"
 
     def test_validity_ref_names(self):
         """Ensure ref names are checked for validity.

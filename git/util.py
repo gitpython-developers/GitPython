@@ -289,7 +289,7 @@ def join_path(a: PathLike, *p: PathLike) -> PathLike:
 
 if sys.platform == "win32":
 
-    def to_native_path_windows(path: PathLike) -> PathLike:
+    def to_native_path_windows(path: PathLike) -> str:
         path = os.fspath(path)
         return path.replace("/", "\\")
 

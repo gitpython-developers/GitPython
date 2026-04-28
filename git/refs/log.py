@@ -4,7 +4,6 @@
 __all__ = ["RefLog", "RefLogEntry"]
 
 from mmap import mmap
-import os.path as osp
 import re
 import time as _time
 
@@ -212,8 +211,11 @@ class RefLog(List[RefLogEntry], Serializable):
 
         :param ref:
             :class:`~git.refs.symbolic.SymbolicReference` instance
+
+        :raise ValueError:
+            If `ref.path` is invalid or escapes the repository's reflog directory.
         """
-        return osp.join(ref.repo.git_dir, "logs", to_native_path(ref.path))
+        return to_native_path(ref._get_validated_reflog_path(ref.repo, ref.path))
 
     @classmethod
     def iter_entries(cls, stream: Union[str, "BytesIO", mmap]) -> Iterator[RefLogEntry]:

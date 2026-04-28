@@ -58,17 +58,20 @@ class RemoteReference(Head):
             `kwargs` are given for comparability with the base class method as we
             should not narrow the signature.
         """
+        for ref in refs:
+            cls._check_ref_name_valid(ref.path)
+
         repo.git.branch("-d", "-r", *refs)
         # The official deletion method will ignore remote symbolic refs - these are
         # generally ignored in the refs/ folder. We don't though and delete remainders
         # manually.
         for ref in refs:
             try:
-                os.remove(os.path.join(repo.common_dir, ref.path))
+                os.remove(cls._get_validated_path(repo.common_dir, ref.path))
             except OSError:
                 pass
             try:
-                os.remove(os.path.join(repo.git_dir, ref.path))
+                os.remove(cls._get_validated_path(repo.git_dir, ref.path))
             except OSError:
                 pass
         # END for each ref
