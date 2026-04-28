@@ -106,9 +106,11 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     merge = rev_parse_repo["merge"]
     side = rev_parse_repo["side"]
     main = rev_parse_repo["main"]
+    release = rev_parse_repo["release"]
 
     assert repo.rev_parse("@{0}") == merge
     assert repo.rev_parse("@{+0}") == merge
+    assert repo.rev_parse("@{1}") == release
     assert repo.rev_parse("%s@{0}" % main.name) == merge
     assert repo.rev_parse("@{-1}") == side
 

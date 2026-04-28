@@ -865,8 +865,13 @@ class TestRepo(TestBase):
         # Currently, nothing more is supported.
         self.assertRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 
-        # The last position.
-        assert rev_parse("@{1}") != head.commit
+        # The previous position, if this checkout has enough reflog history.
+        try:
+            previous = rev_parse("@{1}")
+        except IndexError:
+            pass
+        else:
+            self.assertNotEqual(previous, head.commit)
 
     def test_repo_odbtype(self):
         target_type = GitCmdObjectDB

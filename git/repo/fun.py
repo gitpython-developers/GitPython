@@ -41,7 +41,7 @@ from git.types import AnyGitObject, Literal, PathLike
 
 if TYPE_CHECKING:
     from git.db import GitCmdObjectDB
-    from git.objects import Commit, TagObject
+    from git.objects import Commit
     from git.refs.reference import Reference
     from git.refs.log import RefLog, RefLogEntry
     from git.refs.tag import Tag
@@ -256,13 +256,30 @@ def _object_from_hexsha(repo: "Repo", hexsha: str) -> AnyGitObject:
 
 
 def _current_reflog_ref(repo: "Repo") -> SymbolicReference:
-    return repo.head
+    try:
+        return repo.head.ref
+    except TypeError:
+        return repo.head
+    # END handle detached head
+
+
+def _common_reflog_path(repo: "Repo", ref: SymbolicReference) -> Optional[str]:
+    if repo.common_dir == repo.git_dir:
+        return None
+    # END handle normal repository
+    return SymbolicReference._get_validated_path(osp.join(repo.common_dir, "logs"), ref.path)
 
 
 def _ref_log(repo: "Repo", ref: SymbolicReference) -> "RefLog":
     try:
         return ref.log()
     except FileNotFoundError:
+        common_path = _common_reflog_path(repo, ref)
+        if common_path and osp.isfile(common_path):
+            from git.refs.log import RefLog
+
+            return RefLog.from_file(common_path)
+        # END handle linked-worktree branch logs
         try:
             if ref.path == repo.head.ref.path:
                 return repo.head.log()
@@ -278,6 +295,12 @@ def _ref_log_entry(repo: "Repo", ref: SymbolicReference, index: int) -> "RefLogE
     try:
         return ref.log_entry(index)
     except FileNotFoundError:
+        common_path = _common_reflog_path(repo, ref)
+        if common_path and osp.isfile(common_path):
+            from git.refs.log import RefLog
+
+            return RefLog.entry_at(common_path, index)
+        # END handle linked-worktree branch logs
         try:
             if ref.path == repo.head.ref.path:
                 return repo.head.log_entry(index)
@@ -464,7 +487,11 @@ def _find_commit_by_message(
     # END handle starting point
 
     for commit in commits:
-        matches = regex.search(commit.message or "") is not None
+        message = commit.message
+        if isinstance(message, bytes):
+            message = message.decode(commit.encoding, "replace")
+        # END handle bytes message
+        matches = regex.search(message or "") is not None
         if matches != negated:
             return commit
         # END found commit
@@ -505,7 +532,7 @@ def _peel(obj: AnyGitObject, output_type: str, repo: "Repo", rev: str) -> AnyGit
     if output_type.startswith("/"):
         return _find_commit_by_message(repo, obj, output_type[1:], braced=True)
     if output_type == "":
-        return deref_tag(cast("TagObject", obj)) if obj.type == "tag" else obj
+        return deref_tag(obj) if obj.type == "tag" else obj
     if output_type == "object":
         return obj
     if output_type == "commit":
@@ -513,7 +540,7 @@ def _peel(obj: AnyGitObject, output_type: str, repo: "Repo", rev: str) -> AnyGit
     if output_type == "tree":
         return to_commit(cast(Object, obj)).tree if obj.type != "tree" else obj
     if output_type == "blob":
-        obj = deref_tag(cast("TagObject", obj)) if obj.type == "tag" else obj
+        obj = deref_tag(obj) if obj.type == "tag" else obj
         if obj.type == output_type:
             return obj
         # END handle matching type
@@ -615,14 +642,14 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
         # END handle reflog
 
         if token == ":":
-            return _tree_lookup(cast(AnyGitObject, obj), rev[start + 1 :])
+            return _tree_lookup(obj, rev[start + 1 :])
         # END handle path
 
         start += 1
 
         if token == "^" and start < lr and rev[start] == "{":
             end = _find_closing_brace(rev, start)
-            obj = _peel(cast(AnyGitObject, obj), rev[start + 1 : end], repo, rev)
+            obj = _peel(obj, rev[start + 1 : end], repo, rev)
             ref = None
             start = end + 1
             continue
@@ -645,7 +672,6 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
         # END set default num
 
         try:
-            obj = cast(AnyGitObject, obj)
             if token == "~":
                 obj = to_commit(obj)
                 for _ in range(num):
