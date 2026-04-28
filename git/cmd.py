@@ -13,7 +13,6 @@ import itertools
 import logging
 import os
 import re
-import signal
 import subprocess
 from subprocess import DEVNULL, PIPE, Popen
 import sys
@@ -110,7 +109,7 @@ def handle_process_output(
     stderr_handler: Union[None, Callable[[AnyStr], None], Callable[[List[AnyStr]], None]],
     finalizer: Union[None, Callable[[Union[Popen, "Git.AutoInterrupt"]], None]] = None,
     decode_streams: bool = True,
-    kill_after_timeout: Union[None, float] = None,
+    kill_after_timeout: Optional[Union[float, int]] = None,
 ) -> None:
     R"""Register for notifications to learn that process output is ready to read, and
     dispatch lines to the respective line handlers.
@@ -139,7 +138,7 @@ def handle_process_output(
         - decoding must happen later, such as for :class:`~git.diff.Diff`\s.
 
     :param kill_after_timeout:
-        :class:`float` or ``None``, Default = ``None``
+        :class:``int``, ``float``, or ``None`` (block indefinitely), Default = ``None``.
 
         To specify a timeout in seconds for the git command, after which the process
         should be killed.
@@ -326,16 +325,22 @@ class _AutoInterrupt:
     raise.
     """
 
-    __slots__ = ("proc", "args", "status")
+    __slots__ = ("proc", "args", "status", "timeout")
 
     # If this is non-zero it will override any status code during _terminate, used
     # to prevent race conditions in testing.
     _status_code_if_terminate: int = 0
 
-    def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
+    def __init__(
+        self,
+        proc: subprocess.Popen | None,
+        args: Any,
+        timeout: Optional[Union[float, int]] = None,
+    ) -> None:
         self.proc = proc
         self.args = args
         self.status: Union[int, None] = None
+        self.timeout = timeout
 
     def _terminate(self) -> None:
         """Terminate the underlying process."""
@@ -365,8 +370,13 @@ class _AutoInterrupt:
         # Try to kill it.
         try:
             proc.terminate()
-            status = proc.wait()  # Ensure the process goes away.
+            status = proc.wait(timeout=self.timeout)  # Gracefully wait for the process to terminate.
 
+            self.status = self._status_code_if_terminate or status
+        except subprocess.TimeoutExpired:
+            _logger.warning("Process did not complete successfully in %s seconds; will forcefully kill", exc_info=True)
+            proc.kill()
+            status = proc.wait()  # Ensure the process goes away by blocking with `timeout=None`.
             self.status = self._status_code_if_terminate or status
         except (OSError, AttributeError) as ex:
             # On interpreter shutdown (notably on Windows), parts of the stdlib used by
@@ -374,6 +384,7 @@ class _AutoInterrupt:
             # which can cause AttributeError during terminate(). In that case, we prefer
             # to silently ignore to avoid noisy "Exception ignored in: __del__" messages.
             _logger.info("Ignored error while terminating process: %r", ex)
+
         # END exception handling
 
     def __del__(self) -> None:
@@ -383,7 +394,7 @@ class _AutoInterrupt:
         return getattr(self.proc, attr)
 
     # TODO: Bad choice to mimic `proc.wait()` but with different args.
-    def wait(self, stderr: Union[None, str, bytes] = b"") -> int:
+    def wait(self, stderr: Optional[Union[str, bytes]] = b"", timeout: Optional[Union[int, float]] = None) -> int:
         """Wait for the process and return its status code.
 
         :param stderr:
@@ -400,7 +411,8 @@ class _AutoInterrupt:
         stderr_b = force_bytes(data=stderr, encoding="utf-8")
         status: Union[int, None]
         if self.proc is not None:
-            status = self.proc.wait()
+            timeout = self.timeout if timeout is None else timeout
+            status = self.proc.wait(timeout=timeout)
             p_stderr = self.proc.stderr
         else:  # Assume the underlying proc was killed earlier or never existed.
             status = self.status
@@ -1118,7 +1130,7 @@ class Git(metaclass=_GitMeta):
         as_process: bool = False,
         output_stream: Union[None, BinaryIO] = None,
         stdout_as_string: bool = True,
-        kill_after_timeout: Union[None, float] = None,
+        kill_after_timeout: Optional[Union[float, int]] = None,
         with_stdout: bool = True,
         universal_newlines: bool = False,
         shell: Union[None, bool] = None,
@@ -1168,18 +1180,10 @@ class Git(metaclass=_GitMeta):
             should be killed. This will have no effect if `as_process` is set to
             ``True``. It is set to ``None`` by default and will let the process run
             until the timeout is explicitly specified. Uses of this feature should be
-            carefully considered, due to the following limitations:
+            carefully considered, due to the following limitation:
 
-            1. This feature is not supported at all on Windows.
-            2. Effectiveness may vary by operating system. ``ps --ppid`` is used to
-               enumerate child processes, which is available on most GNU/Linux systems
-               but not most others.
-            3. Deeper descendants do not receive signals, though they may sometimes
+            1. Deeper descendants do not receive signals, though they may sometimes
                terminate as a consequence of their parent processes being killed.
-            4. `kill_after_timeout` uses ``SIGKILL``, which can have negative side
-               effects on a repository. For example, stale locks in case of
-               :manpage:`git-gc(1)` could render the repository incapable of accepting
-               changes until the lock is manually removed.
 
         :param with_stdout:
             If ``True``, default ``True``, we open stdout on the created process.
@@ -1264,15 +1268,7 @@ class Git(metaclass=_GitMeta):
         if inline_env is not None:
             env.update(inline_env)
 
-        if sys.platform == "win32":
-            if kill_after_timeout is not None:
-                raise GitCommandError(
-                    redacted_command,
-                    '"kill_after_timeout" feature is not supported on Windows.',
-                )
-            cmd_not_found_exception = OSError
-        else:
-            cmd_not_found_exception = FileNotFoundError
+        cmd_not_found_exception = OSError if sys.platform == "win32" else FileNotFoundError
         # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
@@ -1315,58 +1311,6 @@ class Git(metaclass=_GitMeta):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        if sys.platform != "win32" and kill_after_timeout is not None:
-            # Help mypy figure out this is not None even when used inside communicate().
-            timeout = kill_after_timeout
-
-            def kill_process(pid: int) -> None:
-                """Callback to kill a process.
-
-                This callback implementation would be ineffective and unsafe on Windows.
-                """
-                p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
-                child_pids = []
-                if p.stdout is not None:
-                    for line in p.stdout:
-                        if len(line.split()) > 0:
-                            local_pid = (line.split())[0]
-                            if local_pid.isdigit():
-                                child_pids.append(int(local_pid))
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                    for child_pid in child_pids:
-                        try:
-                            os.kill(child_pid, signal.SIGKILL)
-                        except OSError:
-                            pass
-                    # Tell the main routine that the process was killed.
-                    kill_check.set()
-                except OSError:
-                    # It is possible that the process gets completed in the duration
-                    # after timeout happens and before we try to kill the process.
-                    pass
-                return
-
-            def communicate() -> Tuple[AnyStr, AnyStr]:
-                watchdog.start()
-                out, err = proc.communicate()
-                watchdog.cancel()
-                if kill_check.is_set():
-                    err = 'Timeout: the command "%s" did not complete in %d secs.' % (
-                        " ".join(redacted_command),
-                        timeout,
-                    )
-                    if not universal_newlines:
-                        err = err.encode(defenc)
-                return out, err
-
-            # END helpers
-
-            kill_check = threading.Event()
-            watchdog = threading.Timer(timeout, kill_process, args=(proc.pid,))
-        else:
-            communicate = proc.communicate
-
         # Wait for the process to return.
         status = 0
         stdout_value: Union[str, bytes] = b""
@@ -1374,7 +1318,7 @@ class Git(metaclass=_GitMeta):
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
-                stdout_value, stderr_value = communicate()
+                stdout_value, stderr_value = proc.communicate(timeout=kill_after_timeout)
                 # Strip trailing "\n".
                 if stdout_value is not None and stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore[arg-type]
                     stdout_value = stdout_value[:-1]
@@ -1392,8 +1336,18 @@ class Git(metaclass=_GitMeta):
                 # Strip trailing "\n".
                 if stderr_value is not None and stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
-                status = proc.wait()
+                status = proc.wait(timeout=kill_after_timeout)
             # END stdout handling
+        except subprocess.TimeoutExpired as err:
+            _logger.info(
+                "error: process killed because it timed out. kill_after_timeout=%s seconds",
+                kill_after_timeout,
+            )
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                proc.kill()
+                stdout_value, stderr_value = proc.communicate(timeout=0.1)
+            if with_exceptions:
+                raise GitCommandError(redacted_command, proc.returncode, stderr_value, stdout_value) from err
         finally:
             if proc.stdout is not None:
                 proc.stdout.close()
