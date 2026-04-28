@@ -882,6 +882,24 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             return str(value)
         return force_text(value)
 
+    def _value_to_string_safe(self, value: Union[str, bytes, int, float, bool]) -> str:
+        value_str = self._value_to_string(value)
+        if re.search(r"[\r\n\x00]", value_str):
+            raise ValueError("Git config values must not contain CR, LF, or NUL")
+        return value_str
+
+    @needs_values
+    @set_dirty_and_flush_changes
+    def set(
+        self,
+        section: str,
+        option: str,
+        value: Union[str, bytes, int, float, bool, None] = None,
+    ) -> None:
+        if value is not None:
+            value = self._value_to_string_safe(value)
+        return super().set(section, option, value)
+
     @needs_values
     @set_dirty_and_flush_changes
     def set_value(self, section: str, option: str, value: Union[str, bytes, int, float, bool]) -> "GitConfigParser":
@@ -902,9 +920,10 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             This instance
         """
+        value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
             self.add_section(section)
-        self.set(section, option, self._value_to_string(value))
+        self.set(section, option, value_str)
         return self
 
     @needs_values
@@ -929,9 +948,10 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             This instance
         """
+        value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
             self.add_section(section)
-        self._sections[section].add(option, self._value_to_string(value))
+        self._sections[section].add(option, value_str)
         return self
 
     def rename_section(self, section: str, new_name: str) -> "GitConfigParser":

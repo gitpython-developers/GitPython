@@ -150,6 +150,39 @@ class TestBase(TestCase):
         git_config = GitConfigParser(config_file)
         git_config.read()  # This should not throw an exception
 
+    @with_rw_directory
+    def test_set_value_rejects_config_injection(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        payload = "foo\n[core]\nhooksPath=/tmp/hooks"
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                git_config.set_value("user", "name", payload)
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertFalse(git_config.has_section("user"))
+            self.assertFalse(git_config.has_section("core"))
+
+    @with_rw_directory
+    def test_set_and_add_value_reject_unsafe_value_characters(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        bad_values = ("foo\rbar", "foo\nbar", "foo\x00bar", b"foo\nbar")
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.add_section("user")
+            for bad_value in bad_values:
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set("user", "name", bad_value)
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set_value("user", "name", bad_value)
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.add_value("user", "name", bad_value)
+
+            git_config.set_value("user", "name", "safe")
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value("user", "name"), "safe")
+
     def test_base(self):
         path_repo = fixture_path("git_config")
         path_global = fixture_path("git_config_global")
