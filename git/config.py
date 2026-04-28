@@ -923,7 +923,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
             self.add_section(section)
-        self.set(section, option, value_str)
+        super().set(section, option, value_str)
         return self
 
     @needs_values
