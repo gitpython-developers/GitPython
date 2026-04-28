@@ -110,6 +110,32 @@ class SymbolicReference:
     def abspath(self) -> PathLike:
         return join_path_native(_git_dir(self.repo, self.path), self.path)
 
+    @staticmethod
+    def _get_validated_path(base: PathLike, path: PathLike) -> str:
+        path = os.fspath(path)
+        base_path = os.path.realpath(os.fspath(base))
+        abs_path = os.path.realpath(os.path.join(base_path, path))
+        try:
+            common_path = os.path.commonpath([base_path, abs_path])
+        except ValueError as e:
+            raise ValueError("Reference path %r escapes the repository" % path) from e
+        if os.path.normcase(common_path) != os.path.normcase(base_path):
+            raise ValueError("Reference path %r escapes the repository" % path)
+        return abs_path
+
+    @classmethod
+    def _get_validated_ref_path(cls, repo: "Repo", path: PathLike) -> str:
+        """Return the absolute filesystem path for a ref after validating it."""
+        cls._check_ref_name_valid(path)
+        ref_path = os.fspath(path)
+        return cls._get_validated_path(_git_dir(repo, ref_path), ref_path)
+
+    @classmethod
+    def _get_validated_reflog_path(cls, repo: "Repo", path: PathLike) -> str:
+        """Return the absolute filesystem path for a reflog after validating it."""
+        cls._check_ref_name_valid(path)
+        return cls._get_validated_path(os.path.join(repo.git_dir, "logs"), path)
+
     @classmethod
     def _get_packed_refs_path(cls, repo: "Repo") -> str:
         return os.path.join(repo.common_dir, "packed-refs")
@@ -485,7 +511,7 @@ class SymbolicReference:
             # END handle non-existing
         # END retrieve old hexsha
 
-        fpath = self.abspath
+        fpath = self._get_validated_ref_path(self.repo, self.path)
         assure_directory_exists(fpath, is_file=True)
 
         lfd = LockedFD(fpath)
@@ -632,7 +658,7 @@ class SymbolicReference:
             Alternatively the symbolic reference to be deleted.
         """
         full_ref_path = cls.to_full_path(path)
-        abs_path = os.path.join(repo.common_dir, full_ref_path)
+        abs_path = cls._get_validated_ref_path(repo, full_ref_path)
         if os.path.exists(abs_path):
             os.remove(abs_path)
         else:
@@ -695,9 +721,8 @@ class SymbolicReference:
         symbolic reference. Otherwise it will be resolved to the corresponding object
         and a detached symbolic reference will be created instead.
         """
-        git_dir = _git_dir(repo, path)
         full_ref_path = cls.to_full_path(path)
-        abs_ref_path = os.path.join(git_dir, full_ref_path)
+        abs_ref_path = cls._get_validated_ref_path(repo, full_ref_path)
 
         # Figure out target data.
         target = reference
@@ -789,8 +814,8 @@ class SymbolicReference:
         if self.path == new_path:
             return self
 
-        new_abs_path = os.path.join(_git_dir(self.repo, new_path), new_path)
-        cur_abs_path = os.path.join(_git_dir(self.repo, self.path), self.path)
+        new_abs_path = self._get_validated_ref_path(self.repo, new_path)
+        cur_abs_path = self._get_validated_ref_path(self.repo, self.path)
         if os.path.isfile(new_abs_path):
             if not force:
                 # If they point to the same file, it's not an error.

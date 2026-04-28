@@ -63,12 +63,13 @@ class RemoteReference(Head):
         # generally ignored in the refs/ folder. We don't though and delete remainders
         # manually.
         for ref in refs:
+            cls._check_ref_name_valid(ref.path)
             try:
-                os.remove(os.path.join(repo.common_dir, ref.path))
+                os.remove(cls._get_validated_path(repo.common_dir, ref.path))
             except OSError:
                 pass
             try:
-                os.remove(os.path.join(repo.git_dir, ref.path))
+                os.remove(cls._get_validated_path(repo.git_dir, ref.path))
             except OSError:
                 pass
         # END for each ref
