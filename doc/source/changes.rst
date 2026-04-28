@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.48
+======
+
+Safe reference creation in the face of untrusted input.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.48
+
+
 3.1.47
 ======
 
