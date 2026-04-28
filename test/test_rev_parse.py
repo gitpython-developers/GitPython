@@ -1,8 +1,15 @@
+# Copyright (C) 2026 Michael Trier (mtrier@gmail.com) and contributors
+#
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 from pathlib import Path
 
 import pytest
 
 from git import Repo
+from git.refs import RemoteReference
+from git.refs import SymbolicReference
 from gitdb.exc import BadName
 
 
@@ -31,14 +38,12 @@ def rev_parse_repo(tmp_path):
     repo.create_tag("v1.0", ref=release)
     main = repo.active_branch
 
-    side = repo.create_head("side", root)
-    side.checkout()
     _write(repo, "side.txt", "side\n")
-    side_commit = repo.index.commit("side branch")
+    side_commit = repo.index.commit("side branch", parent_commits=[root], head=False, skip_hooks=True)
+    repo.create_head("side", side_commit)
 
-    main.checkout()
-    repo.git.merge("--no-ff", "side", "-m", "merge side")
-    merge = repo.head.commit
+    merge = repo.index.commit("merge side", parent_commits=[release, side_commit], skip_hooks=True)
+    repo.head.log_append(side_commit.binsha, "checkout: moving from side to main", merge.binsha)
 
     repo.create_head("aaaaaaaa", merge)
     repo.create_tag("@foo", ref=merge)
@@ -55,15 +60,20 @@ def rev_parse_repo(tmp_path):
 
 def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
     repo = rev_parse_repo["repo"]
+    release = rev_parse_repo["release"]
     merge = rev_parse_repo["merge"]
 
     assert repo.rev_parse("@") == merge
     assert repo.rev_parse("@foo") == merge
     assert repo.rev_parse("aaaaaaaa") == merge
     assert repo.rev_parse(merge.hexsha[:7]) == merge
+    describe_name = "anything-9-g%s" % merge.hexsha[:7]
     assert repo.rev_parse("v1.0-1-g%s" % merge.hexsha[:7]) == merge
-    assert repo.rev_parse("anything-9-g%s" % merge.hexsha[:7]) == merge
+    assert repo.rev_parse(describe_name) == merge
     assert repo.rev_parse("%s-dirty" % merge.hexsha[:7]) == merge
+
+    repo.create_tag(describe_name, ref=release)
+    assert repo.rev_parse(describe_name) == release
 
 
 def test_rev_parse_navigation_and_peeling(rev_parse_repo):
@@ -87,7 +97,8 @@ def test_rev_parse_navigation_and_peeling(rev_parse_repo):
     assert repo.rev_parse("ann^{}") == root
     assert repo.rev_parse("ann^{commit}") == root
     assert repo.rev_parse("HEAD^{tree}") == merge.tree
-    assert repo.rev_parse("HEAD^{/}") == merge
+    with pytest.raises(ValueError):
+        repo.rev_parse("HEAD^{/}")
 
 
 def test_rev_parse_tree_and_index_paths(rev_parse_repo):
@@ -114,6 +125,10 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     assert repo.rev_parse("%s@{0}" % main.name) == merge
     assert repo.rev_parse("@{-1}") == side
 
+    SymbolicReference.create(repo, "refs/remotes/origin/%s" % main.name, merge)
+    main.set_tracking_branch(RemoteReference(repo, "refs/remotes/origin/%s" % main.name))
+    assert repo.rev_parse("%s@{upstream}" % main.name) == merge
+
 
 def test_rev_parse_commit_message_search(rev_parse_repo):
     repo = rev_parse_repo["repo"]
@@ -132,6 +147,10 @@ def test_rev_parse_rejects_invalid_object_specs(rev_parse_repo):
         repo.rev_parse(":")
     with pytest.raises(ValueError):
         repo.rev_parse(":/")
+    with pytest.raises(ValueError):
+        repo.rev_parse(":/[")
+    with pytest.raises(ValueError):
+        repo.rev_parse("HEAD^{/[}")
     with pytest.raises(ValueError):
         repo.rev_parse("@{-0}")
     with pytest.raises(ValueError):

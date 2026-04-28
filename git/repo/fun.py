@@ -35,7 +35,7 @@ from git.util import cygpath, bin_to_hex, hex_to_bin
 
 # Typing ----------------------------------------------------------------------
 
-from typing import Optional, TYPE_CHECKING, Tuple, Union, cast, overload
+from typing import Iterator, Optional, TYPE_CHECKING, Tuple, Union, cast, overload
 
 from git.types import AnyGitObject, Literal, PathLike
 
@@ -190,10 +190,6 @@ def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[A
         # END handle short shas
     # END find sha if it matches
 
-    if hexsha is None:
-        hexsha = _describe_to_long(repo, name)
-    # END handle describe output
-
     # If we couldn't find an object for what seemed to be a short hexsha, try to find it
     # as reference anyway, it could be named 'aaa' for instance.
     if hexsha is None:
@@ -215,6 +211,10 @@ def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[A
                 pass
         # END for each base
     # END handle hexsha
+
+    if hexsha is None:
+        hexsha = _describe_to_long(repo, name)
+    # END handle describe output
 
     # Didn't find any ref, this is an error.
     if return_ref:
@@ -363,6 +363,8 @@ def _tracking_branch_object(repo: "Repo", ref: Optional[SymbolicReference]) -> A
             raise BadName("@{upstream}") from e
     elif isinstance(ref, Head):
         head = ref
+    elif os.fspath(ref.path).startswith("refs/heads/"):
+        head = Head(repo, ref.path)
     else:
         raise BadName("%s@{upstream}" % ref.name)
     # END handle head
@@ -479,11 +481,15 @@ def _find_commit_by_message(
     repo: "Repo", rev: Optional[AnyGitObject], pattern: str, braced: bool = False
 ) -> AnyGitObject:
     pattern, negated = _parse_search(_unescape_braced_regex(pattern) if braced else pattern)
-    regex = re.compile(pattern)
+    try:
+        regex = re.compile(pattern)
+    except re.error as e:
+        raise ValueError("Invalid commit message regex %r" % pattern) from e
+    # END handle invalid regex
     if rev is None:
-        commits = repo.iter_commits("--all")
+        commits = _all_ref_commits(repo)
     else:
-        commits = repo.iter_commits(to_commit(cast(Object, rev)).hexsha)
+        commits = _reachable_commits([to_commit(cast(Object, rev))])
     # END handle starting point
 
     for commit in commits:
@@ -497,6 +503,38 @@ def _find_commit_by_message(
         # END found commit
     # END for each commit
     raise BadName("No commit found matching message pattern %r" % pattern)
+
+
+def _all_ref_commits(repo: "Repo") -> Iterator["Commit"]:
+    starts = []
+    for ref in repo.references:
+        try:
+            starts.append(to_commit(cast(Object, ref.object)))
+        except (BadName, ValueError):
+            pass
+        # END skip refs that do not point to commits
+    # END for each ref
+    try:
+        starts.append(repo.head.commit)
+    except ValueError:
+        pass
+    # END handle unborn head
+    return _reachable_commits(starts)
+
+
+def _reachable_commits(starts: list["Commit"]) -> Iterator["Commit"]:
+    seen = set()
+    pending = starts[:]
+    while pending:
+        pending.sort(key=lambda commit: commit.committed_date, reverse=True)
+        commit = pending.pop(0)
+        if commit.binsha in seen:
+            continue
+        # END skip seen commit
+        seen.add(commit.binsha)
+        yield commit
+        pending.extend(commit.parents)
+    # END while commits remain
 
 
 def _index_lookup(repo: "Repo", spec: str) -> AnyGitObject:
@@ -527,8 +565,6 @@ def _tree_lookup(obj: AnyGitObject, path: str) -> AnyGitObject:
 
 
 def _peel(obj: AnyGitObject, output_type: str, repo: "Repo", rev: str) -> AnyGitObject:
-    if output_type == "/":
-        return obj
     if output_type.startswith("/"):
         return _find_commit_by_message(repo, obj, output_type[1:], braced=True)
     if output_type == "":
