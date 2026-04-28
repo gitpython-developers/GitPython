@@ -146,6 +146,23 @@ class TestRepo(TestBase):
         self.assertEqual(commit.type, "commit")
         self.assertEqual(self.rorepo.commit(commit), commit)
 
+    @with_rw_directory
+    def test_commit_from_tag_starting_with_at(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        with repo.config_writer() as writer:
+            writer.set_value("user", "name", "GitPython Tests")
+            writer.set_value("user", "email", "gitpython@example.com")
+
+        tracked_file = Path(rw_dir) / "hello.txt"
+        tracked_file.write_text("hello")
+        repo.index.add([str(tracked_file)])
+        commit = repo.index.commit("init")
+        repo.create_tag("@foo")
+
+        self.assertEqual(repo.tags["@foo"].commit, commit)
+        self.assertEqual(repo.commit("@"), commit)
+        self.assertEqual(repo.commit("@foo"), commit)
+
     def test_commits(self):
         mc = 10
         commits = list(self.rorepo.iter_commits("0.1.6", max_count=mc))
