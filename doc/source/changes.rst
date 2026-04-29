@@ -2,6 +2,17 @@
 Changelog
 =========
 
+3.1.49
+======
+
+Save setting of configuration values, 
+which cuold be used to inject other more configuration.
+
+Also more conforming `rev-parse` implementation.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.49
+
 3.1.48
 ======
 
