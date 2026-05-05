@@ -72,6 +72,9 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 See: https://git-scm.com/docs/git-config#_conditional_includes
 """
 
+UNSAFE_CONFIG_CHARS_RE = re.compile(r"[\r\n\x00]")
+"""Characters that cannot be safely written in config names or values."""
+
 
 class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
     """Utility class wrapping base-class methods into decorators that assure read-only
@@ -778,6 +781,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def add_section(self, section: "cp._SectionName") -> None:
         """Assures added options will stay in order."""
+        self._assure_config_name_safe(section, "section")
         return super().add_section(section)
 
     @property
@@ -884,9 +888,13 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def _value_to_string_safe(self, value: Union[str, bytes, int, float, bool]) -> str:
         value_str = self._value_to_string(value)
-        if re.search(r"[\r\n\x00]", value_str):
+        if UNSAFE_CONFIG_CHARS_RE.search(value_str):
             raise ValueError("Git config values must not contain CR, LF, or NUL")
         return value_str
+
+    def _assure_config_name_safe(self, name: "cp._SectionName", label: str) -> None:
+        if isinstance(name, str) and UNSAFE_CONFIG_CHARS_RE.search(name):
+            raise ValueError("Git config %s names must not contain CR, LF, or NUL" % label)
 
     @needs_values
     @set_dirty_and_flush_changes
@@ -896,6 +904,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         option: str,
         value: Union[str, bytes, int, float, bool, None] = None,
     ) -> None:
+        self._assure_config_name_safe(section, "section")
+        self._assure_config_name_safe(option, "option")
         if value is not None:
             value = self._value_to_string_safe(value)
         return super().set(section, option, value)
@@ -920,6 +930,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             This instance
         """
+        self._assure_config_name_safe(section, "section")
+        self._assure_config_name_safe(option, "option")
         value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
             self.add_section(section)
@@ -948,6 +960,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             This instance
         """
+        self._assure_config_name_safe(section, "section")
+        self._assure_config_name_safe(option, "option")
         value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
             self.add_section(section)
@@ -968,6 +982,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """
         if not self.has_section(section):
             raise ValueError("Source section '%s' doesn't exist" % section)
+        self._assure_config_name_safe(new_name, "section")
         if self.has_section(new_name):
             raise ValueError("Destination section '%s' already exists" % new_name)
 
