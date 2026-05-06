@@ -242,6 +242,28 @@ class Repo:
             # It's important to normalize the paths, as submodules will otherwise
             # initialize their repo instances with paths that depend on path-portions
             # that will not exist after being removed. It's just cleaner.
+            if (
+                osp.isfile(osp.join(curpath, "gitdir"))
+                and osp.isfile(osp.join(curpath, "commondir"))
+                and osp.isfile(osp.join(curpath, "HEAD"))
+            ):
+                git_dir = curpath
+
+                if "GIT_WORK_TREE" in os.environ:
+                    self._working_tree_dir = os.getenv("GIT_WORK_TREE")
+                else:
+                    # Linked worktree administrative directories store the path to the
+                    # worktree's .git file in their gitdir file (without "gitdir: " prefix).
+                    with open(osp.join(git_dir, "gitdir")) as fp:
+                        worktree_gitfile = fp.read().strip()
+
+                    if not osp.isabs(worktree_gitfile):
+                        worktree_gitfile = osp.normpath(osp.join(git_dir, worktree_gitfile))
+
+                    self._working_tree_dir = osp.dirname(worktree_gitfile)
+
+                break
+
             if is_git_dir(curpath):
                 git_dir = curpath
                 # from man git-config : core.worktree
