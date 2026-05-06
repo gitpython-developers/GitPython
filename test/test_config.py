@@ -164,6 +164,37 @@ class TestBase(TestCase):
             self.assertFalse(git_config.has_section("core"))
 
     @with_rw_directory
+    def test_set_value_rejects_unsafe_section_and_option_names(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        bad_keys = ("user]\n[core", "user]\r[core", "user]\x00[core")
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.add_section("user")
+            for bad_key in bad_keys:
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.add_section(bad_key)
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set(bad_key, "hooksPath", "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set("user", bad_key, "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set_value(bad_key, "hooksPath", "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.set_value("user", bad_key, "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.add_value(bad_key, "hooksPath", "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.add_value("user", bad_key, "/tmp/hooks")
+                with pytest.raises(ValueError, match="CR, LF, or NUL"):
+                    git_config.rename_section("user", bad_key)
+
+            git_config.set_value("user", "name", "safe")
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value("user", "name"), "safe")
+            self.assertFalse(git_config.has_section("core"))
+
+    @with_rw_directory
     def test_set_and_add_value_reject_unsafe_value_characters(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
         bad_values = ("foo\rbar", "foo\nbar", "foo\x00bar", b"foo\nbar")
