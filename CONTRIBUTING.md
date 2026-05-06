@@ -15,8 +15,10 @@ Contributions must be made with care and meet the quality bar of the surrounding
 That means a change should not leave GitPython worse than it was before: it should be
 readable, maintainable, tested where practical, documented and consistent with the
 existing style and behavior.
+
 A contribution that works only narrowly but lowers the quality of the
-codebase may be declined, and the pull request closed without warning.
+codebase may be declined. The maintainers may not always be able to provide
+detailed feedback.
 
 ## AI-assisted contributions
 
