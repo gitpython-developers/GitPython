@@ -20,46 +20,53 @@ jobs:
 
     runs-on: windows-latest
 
-    env:
+    env: &cygwin-env
       CHERE_INVOKING: "1"
       CYGWIN_NOWINPATH: "1"
 
-    defaults:
+    defaults: &cygwin-defaults
       run:
         shell: C:\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr "{0}"
 
     steps:
-    - name: Force LF line endings
+    - &force-lf
+      name: Force LF line endings
       run: |
         git config --global core.autocrlf false  # Affects the non-Cygwin git.
       shell: pwsh  # Do this outside Cygwin, to affect actions/checkout.
 
-    - uses: actions/checkout@v6
+    - &checkout
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
-    - name: Install Cygwin
+    - &install-cygwin
+      name: Install Cygwin
       uses: cygwin/cygwin-install-action@v6
       with:
         packages: git python39 python-pip-wheel python-setuptools-wheel python-wheel-wheel
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
-    - name: Arrange for verbose output
+    - &verbose-output
+      name: Arrange for verbose output
       run: |
         # Arrange for verbose output but without shell environment setup details.
         echo 'set -x' >~/.bash_profile
 
-    - name: Special configuration for Cygwin git
+    - &safe-directory
+      name: Special configuration for Cygwin git
       run: |
         git config --global --add safe.directory "$(pwd)"
         git config --global --add safe.directory "$(pwd)/.git"
         git config --global core.autocrlf false
 
-    - name: Prepare this repo for tests
+    - &prepare-repo
+      name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
 
-    - name: Set git user identity and command aliases for the tests
+    - &git-identity
+      name: Set git user identity and command aliases for the tests
       run: |
         git config --global user.email "travis@ci.com"
         git config --global user.name "Travis Runner"
@@ -67,16 +74,19 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Set up virtual environment
+    - &setup-venv
+      name: Set up virtual environment
       run: |
         python3.9 -m venv .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
 
-    - name: Update PyPA packages
+    - &update-pypa
+      name: Update PyPA packages
       run: |
         python -m pip install -U pip 'setuptools; python_version<"3.12"' wheel
 
-    - name: Install project and test dependencies
+    - &install-deps
+      name: Install project and test dependencies
       run: |
         pip install '.[test]'
 
@@ -91,3 +101,34 @@ jobs:
     - name: Test with pytest (${{ matrix.additional-pytest-args }})
       run: |
         pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
+
+  reproduce-safe-dir:
+    strategy:
+      matrix:
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256]
+      fail-fast: false
+
+    runs-on: windows-latest
+
+    env: *cygwin-env
+
+    defaults: *cygwin-defaults
+
+    steps:
+    - *force-lf
+    - *checkout
+    - *install-cygwin
+    - *verbose-output
+    - *safe-directory
+    - *prepare-repo
+    - *git-identity
+    - *setup-venv
+    - *update-pypa
+    - *install-deps
+
+    - name: Run submodule tests
+      run: |
+        python -m pytest -vv \
+          test/test_docs.py::Tutorials::test_submodules \
+          test/test_repo.py::TestRepo::test_submodules \
+          test/test_submodule.py::TestSubmodule::test_root_module

@@ -481,11 +481,6 @@ class TestSubmodule(TestBase):
         self._do_base_tests(rwrepo)
 
     @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError,
-    )
-    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
         reason=(
             '"The process cannot access the file because it is being used by another process"'
