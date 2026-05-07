@@ -61,6 +61,8 @@ jobs:
       run: |
         git config --global --add safe.directory "$(pwd)"
         git config --global --add safe.directory "$(pwd)/.git"
+        git config --global --add safe.directory "$(pwd)/git/ext/gitdb"
+        git config --global --add safe.directory "$(pwd)/git/ext/gitdb/gitdb/ext/smmap"
         git config --global core.autocrlf false
 
     - &prepare-repo
