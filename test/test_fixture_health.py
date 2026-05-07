@@ -3,25 +3,15 @@
 
 """Verify that fixture directories are usable by git.
 
-If a directory the test suite relies on is rejected by git for "dubious
-ownership" -- because the directory's owner doesn't match the running user
-and there is no ``safe.directory`` entry overriding the check -- three
-submodule-related tests fail in confusing ways. The checks here name the
-root cause clearly so a misconfigured environment is recognizable from the
-test output.
+If a fixture directory is missing, isn't an initialized git repository,
+or is rejected by git for "dubious ownership", dependent tests
+elsewhere in the suite fail in opaque ways. The checks here name the
+preconditions directly so a misconfigured environment is recognizable
+from the test output rather than from a cascade of unrelated-seeming
+failures.
 
-The rejection is most often a CI-workflow problem (the workflow's
-``safe.directory`` list doesn't cover the path); on a developer's own
-clone, it usually reflects an ownership mismatch (sudo clone, restored
-backup, container mount, networked filesystem) rather than a config gap.
-
-These tests do not exercise GitPython's production code. They verify the
-conditions under which production code is exercised are valid.
-
-A check is skipped, rather than failed, if a fixture directory is missing or
-has no ``.git`` marker, since that condition is more naturally diagnosed as
-"``init-tests-after-clone.sh`` hasn't been run" than as a problem with
-``safe.directory``.
+These tests do not exercise GitPython's production code. They verify
+the conditions under which production code is exercised are valid.
 """
 
 import subprocess
@@ -38,6 +28,19 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # accepting another directory.
 FIXTURE_DIRS = [
     pytest.param(REPO_ROOT, id="repo_root"),
+    pytest.param(REPO_ROOT / "git" / "ext" / "gitdb", id="gitdb"),
+    pytest.param(
+        REPO_ROOT / "git" / "ext" / "gitdb" / "gitdb" / "ext" / "smmap",
+        id="smmap",
+    ),
+]
+
+# Submodule working trees that must be present and initialized for the
+# test suite to operate normally: gitdb at `git/ext/gitdb`, and smmap
+# nested inside gitdb at `git/ext/gitdb/gitdb/ext/smmap`. The paths
+# below are anchored at REPO_ROOT (the GitPython source tree), not at
+# any rorepo redirection target.
+SUBMODULE_DIRS = [
     pytest.param(REPO_ROOT / "git" / "ext" / "gitdb", id="gitdb"),
     pytest.param(
         REPO_ROOT / "git" / "ext" / "gitdb" / "gitdb" / "ext" / "smmap",
@@ -88,4 +91,41 @@ def test_fixture_dir_is_trusted_by_git(fixture_dir: Path) -> None:
         f"not as {fixture_dir} itself. "
         "This usually means the directory is not an initialized git "
         "repository (its `.git` marker may be stale or pointing elsewhere)."
+    )
+
+
+@pytest.mark.parametrize("submodule_dir", SUBMODULE_DIRS)
+def test_required_submodule_is_initialized(submodule_dir: Path) -> None:
+    """The submodule's working tree is present and initialized.
+
+    Failure means the source tree is a git clone but the submodule's
+    working tree hasn't been populated. Skipped when the source tree
+    itself isn't a git clone (e.g. an extracted release tarball), since
+    ``git submodule update`` cannot operate there; setups that handle
+    submodules in a separately-prepared tree (via
+    ``GIT_PYTHON_TEST_GIT_REPO_BASE``) are exempted from this check.
+    """
+    if not (REPO_ROOT / ".git").exists():
+        pytest.skip(
+            "Source tree is not a git clone (no .git in REPO_ROOT); submodules "
+            "cannot be initialized via `git submodule update` here. Setups "
+            "that prepare submodules in a separately-pointed tree (via "
+            "GIT_PYTHON_TEST_GIT_REPO_BASE) are exempted from this check."
+        )
+    # The assertion messages below recommend `git submodule update --init
+    # --recursive` rather than `init-tests-after-clone.sh`, even though the
+    # latter is the documented entry point for first-time test setup. Two
+    # reasons: the script performs `git reset --hard` operations that can
+    # destroy local work, and #1713 showed the script itself can carry
+    # submodule-init regressions, in which case recommending it would lead
+    # developers in a circle. The direct git command is a safe minimal fix
+    # for this test's specific failure mode and bypasses any such regression.
+    assert submodule_dir.is_dir(), (
+        f"Submodule working tree missing: {submodule_dir}.\n"
+        "Run `git submodule update --init --recursive` from the repo root."
+    )
+    assert (submodule_dir / ".git").exists(), (
+        f"Submodule directory exists but has no .git marker: {submodule_dir}.\n"
+        "The submodule hasn't been initialized. "
+        "Run `git submodule update --init --recursive` from the repo root."
     )
