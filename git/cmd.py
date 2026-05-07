@@ -1131,9 +1131,16 @@ class Git(metaclass=_GitMeta):
         information (stdout).
 
         :param command:
-            The command argument list to execute.
-            It should be a sequence of program arguments, or a string. The
-            program to execute is the first item in the args sequence or string.
+            The command to execute. A sequence of program arguments is the
+            recommended form when `shell` is ``False`` (the default), e.g.
+            ``["git", "log", "-n", "1"]``.
+
+            A string is accepted, but with `shell` set to ``False`` it is passed
+            as a single executable name to :class:`subprocess.Popen`. For example,
+            ``"git log -n 1"`` looks for an executable literally named
+            ``git log -n 1`` and will fail with :class:`GitCommandNotFound`. To
+            split a command string into argv tokens, pass ``shlex.split(...)`` as
+            a sequence or set `shell` to ``True`` (see the warning below).
 
         :param istream:
             Standard input filehandle passed to :class:`subprocess.Popen`.
