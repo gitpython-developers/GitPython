@@ -254,68 +254,90 @@ class DecompressMemMapReader(LazyMixin):
         # copied once, and another copy of a part of it when it creates the unconsumed
         # tail. We have to use it to hand in the appropriate amount of bytes during
         # the next read.
-        tail = self._zip.unconsumed_tail
-        if tail:
-            # move the window, make it as large as size demands. For code-clarity,
-            # we just take the chunk from our map again instead of reusing the unconsumed
-            # tail. The latter one would safe some memory copying, but we could end up
-            # with not getting enough data uncompressed, so we had to sort that out as well.
-            # Now we just assume the worst case, hence the data is uncompressed and the window
-            # needs to be as large as the uncompressed bytes we want to read.
-            self._cws = self._cwe - len(tail)
-            self._cwe = self._cws + size
-        else:
-            cws = self._cws
-            self._cws = self._cwe
-            self._cwe = cws + size
-        # END handle tail
+        #
+        # Decompress in a loop until we have produced `size` bytes or run out
+        # of progress. Iteration (instead of recursion) keeps the call bounded
+        # for streams that consume many input bytes per produced output byte
+        # (e.g. zlib stored blocks of length zero); the previous recursive
+        # form blew the stack on inputs > ~1500 empty blocks (issue #120
+        # follow-up).
+        dcompdat = b''
+        while True:
+            tail = self._zip.unconsumed_tail
+            remaining = size - len(dcompdat)
+            if tail:
+                # move the window, make it as large as size demands. For code-clarity,
+                # we just take the chunk from our map again instead of reusing the unconsumed
+                # tail. The latter one would safe some memory copying, but we could end up
+                # with not getting enough data uncompressed, so we had to sort that out as well.
+                # Now we just assume the worst case, hence the data is uncompressed and the window
+                # needs to be as large as the uncompressed bytes we want to read.
+                self._cws = self._cwe - len(tail)
+                self._cwe = self._cws + remaining
+            else:
+                cws = self._cws
+                self._cws = self._cwe
+                self._cwe = cws + remaining
+            # END handle tail
 
-        # if window is too small, make it larger so zip can decompress something
-        if self._cwe - self._cws < 8:
-            self._cwe = self._cws + 8
-        # END adjust winsize
+            # if window is too small, make it larger so zip can decompress something
+            if self._cwe - self._cws < 8:
+                self._cwe = self._cws + 8
+            # END adjust winsize
 
-        # takes a slice, but doesn't copy the data, it says ...
-        indata = self._m[self._cws:self._cwe]
+            # takes a slice, but doesn't copy the data, it says ...
+            indata = self._m[self._cws:self._cwe]
 
-        # get the actual window end to be sure we don't use it for computations
-        self._cwe = self._cws + len(indata)
-        dcompdat = self._zip.decompress(indata, size)
-        # update the amount of compressed bytes read
-        # We feed possibly overlapping chunks, which is why the unconsumed tail
-        # has to be taken into consideration, as well as the unused data
-        # if we hit the end of the stream
-        # NOTE: Behavior changed in PY2.7 onward, which requires special handling to make the tests work properly.
-        # They are thorough, and I assume it is truly working.
-        # Why is this logic as convoluted as it is ? Please look at the table in
-        # https://github.com/gitpython-developers/gitdb/issues/19 to learn about the test-results.
-        # Basically, on py2.6, you want to use branch 1, whereas on all other python version, the second branch
-        # will be the one that works.
-        # However, the zlib VERSIONs as well as the platform check is used to further match the entries in the
-        # table in the github issue. This is it ... it was the only way I could make this work everywhere.
-        # IT's CERTAINLY GOING TO BITE US IN THE FUTURE ... .
-        if getattr(zlib, 'ZLIB_RUNTIME_VERSION', zlib.ZLIB_VERSION) in ('1.2.7', '1.2.5') and not sys.platform == 'darwin':
-            unused_datalen = len(self._zip.unconsumed_tail)
-        else:
-            unused_datalen = len(self._zip.unconsumed_tail) + len(self._zip.unused_data)
-        # # end handle very special case ...
+            # get the actual window end to be sure we don't use it for computations
+            self._cwe = self._cws + len(indata)
+            chunk = self._zip.decompress(indata, remaining)
+            # update the amount of compressed bytes read
+            # We feed possibly overlapping chunks, which is why the unconsumed tail
+            # has to be taken into consideration, as well as the unused data
+            # if we hit the end of the stream
+            # NOTE: Behavior changed in PY2.7 onward, which requires special handling to make the tests work properly.
+            # They are thorough, and I assume it is truly working.
+            # Why is this logic as convoluted as it is ? Please look at the table in
+            # https://github.com/gitpython-developers/gitdb/issues/19 to learn about the test-results.
+            # Basically, on py2.6, you want to use branch 1, whereas on all other python version, the second branch
+            # will be the one that works.
+            # However, the zlib VERSIONs as well as the platform check is used to further match the entries in the
+            # table in the github issue. This is it ... it was the only way I could make this work everywhere.
+            # IT's CERTAINLY GOING TO BITE US IN THE FUTURE ... .
+            if getattr(zlib, 'ZLIB_RUNTIME_VERSION', zlib.ZLIB_VERSION) in ('1.2.7', '1.2.5') and not sys.platform == 'darwin':
+                unused_datalen = len(self._zip.unconsumed_tail)
+            else:
+                unused_datalen = len(self._zip.unconsumed_tail) + len(self._zip.unused_data)
+            # # end handle very special case ...
 
-        self._cbr += len(indata) - unused_datalen
-        self._br += len(dcompdat)
+            consumed = len(indata) - unused_datalen
+            self._cbr += consumed
+            self._br += len(chunk)
+            dcompdat += chunk
+
+            # Stop when we have enough or there is no path to more output.
+            # `chunk` may legitimately be empty mid-stream when zlib is
+            # consuming header / dictionary frames; in that case we keep
+            # iterating as long as we are still feeding zlib new bytes
+            # (consumed > 0) and zlib has not flagged end-of-stream. The
+            # compressed_bytes_read() scrub loop drives this same code with
+            # _br manipulated to 0 past zip EOF; it terminates here because
+            # `getattr(_zip, 'eof', False)` is True or no compressed bytes
+            # are consumed. The empty-block recursion attack from issue #120
+            # follow-up is bounded by the iteration; each empty block does
+            # consume input, so the loop walks the stream forward a constant
+            # amount per iteration without growing the call stack.
+            if len(dcompdat) >= size or self._br >= self._s:
+                break
+            zip_eof = getattr(self._zip, 'eof', False)
+            if not chunk and (zip_eof or len(indata) == 0 or consumed == 0):
+                break
+        # END iterative decompress
 
         if dat:
             dcompdat = dat + dcompdat
         # END prepend our cached data
 
-        # it can happen, depending on the compression, that we get less bytes
-        # than ordered as it needs the final portion of the data as well.
-        # Recursively resolve that.
-        # Note: dcompdat can be empty even though we still appear to have bytes
-        # to read, if we are called by compressed_bytes_read - it manipulates
-        # us to empty the stream
-        if dcompdat and (len(dcompdat) - len(dat)) < size and self._br < self._s:
-            dcompdat += self.read(size - len(dcompdat))
-        # END handle special case
         return dcompdat
 
 
