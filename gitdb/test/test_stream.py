@@ -179,7 +179,8 @@ class TestStream(TestBase):
         data = b"hello world! " * 1000
         zdata = zlib.compress(data)
 
-        # Loop with a small chunk size to force many sub-_s recursions.
+        # Loop with a small chunk size to force many internal read/decompression
+        # iterations before EOF.
         for chunk_size in (1, 4, 16, 64):
             reader = DecompressMemMapReader(
                 zdata, close_on_deletion=False, size=len(data)

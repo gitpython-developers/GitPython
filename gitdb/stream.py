@@ -268,7 +268,7 @@ class DecompressMemMapReader(LazyMixin):
             if tail:
                 # move the window, make it as large as size demands. For code-clarity,
                 # we just take the chunk from our map again instead of reusing the unconsumed
-                # tail. The latter one would safe some memory copying, but we could end up
+                # tail. The latter one would save some memory copying, but we could end up
                 # with not getting enough data uncompressed, so we had to sort that out as well.
                 # Now we just assume the worst case, hence the data is uncompressed and the window
                 # needs to be as large as the uncompressed bytes we want to read.
@@ -313,7 +313,10 @@ class DecompressMemMapReader(LazyMixin):
             consumed = len(indata) - unused_datalen
             self._cbr += consumed
             self._br += len(chunk)
-            dcompdat += chunk
+            if chunk:
+                if not isinstance(dcompdat, bytearray):
+                    dcompdat = bytearray(dcompdat)
+                dcompdat.extend(chunk)
 
             # Stop when we have enough or there is no path to more output.
             # `chunk` may legitimately be empty mid-stream when zlib is
