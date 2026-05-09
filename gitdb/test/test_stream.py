@@ -162,3 +162,39 @@ class TestStream(TestBase):
             dump = mdb.store(IStream(ostream.type, ostream.size, BytesIO(data)))
             assert dump.hexsha == sha
         # end for each loose object sha to test
+
+    def test_decompress_reader_chunked_read_does_not_terminate_early(self):
+        """Regression test for #120: read(N) must not return b'' before EOF.
+
+        zlib can consume input without producing decompressed output (e.g.
+        while ingesting block headers). The reader's internal recursion
+        previously bailed on any empty zip output, so a caller reading in
+        small chunks via the standard `while chunk := stream.read(N)` idiom
+        would terminate at the first empty chunk -- before the actual end
+        of the uncompressed stream.
+        """
+        # Highly compressible data exposes the bug because each zlib chunk
+        # spans many uncompressed bytes -- intermediate decompress() calls
+        # often return empty while consuming input.
+        data = b"hello world! " * 1000
+        zdata = zlib.compress(data)
+
+        # Loop with a small chunk size to force many internal read/decompression
+        # iterations before EOF.
+        for chunk_size in (1, 4, 16, 64):
+            reader = DecompressMemMapReader(
+                zdata, close_on_deletion=False, size=len(data)
+            )
+            out = bytearray()
+            while True:
+                chunk = reader.read(chunk_size)
+                if not chunk:
+                    break
+                out.extend(chunk)
+            assert bytes(out) == data, (
+                f"chunk_size={chunk_size}: got {len(out)}/{len(data)} bytes"
+            )
+            assert reader._br == reader._s, (
+                f"chunk_size={chunk_size}: stream stopped at "
+                f"{reader._br}/{reader._s}"
+            )
