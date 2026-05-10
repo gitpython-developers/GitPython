@@ -20,41 +20,36 @@ jobs:
 
     runs-on: windows-latest
 
-    env: &cygwin-env
+    env:
       CHERE_INVOKING: "1"
       CYGWIN_NOWINPATH: "1"
 
-    defaults: &cygwin-defaults
+    defaults:
       run:
         shell: C:\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr "{0}"
 
     steps:
-    - &force-lf
-      name: Force LF line endings
+    - name: Force LF line endings
       run: |
         git config --global core.autocrlf false  # Affects the non-Cygwin git.
       shell: pwsh  # Do this outside Cygwin, to affect actions/checkout.
 
-    - &checkout
-      uses: actions/checkout@v6
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
-    - &install-cygwin
-      name: Install Cygwin
+    - name: Install Cygwin
       uses: cygwin/cygwin-install-action@v6
       with:
         packages: git python39 python-pip-wheel python-setuptools-wheel python-wheel-wheel
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
-    - &verbose-output
-      name: Arrange for verbose output
+    - name: Arrange for verbose output
       run: |
         # Arrange for verbose output but without shell environment setup details.
         echo 'set -x' >~/.bash_profile
 
-    - &safe-directory
-      name: Special configuration for Cygwin git
+    - name: Special configuration for Cygwin git
       run: |
         git config --global --add safe.directory "$(pwd)"
         git config --global --add safe.directory "$(pwd)/.git"
@@ -62,13 +57,11 @@ jobs:
         git config --global --add safe.directory "$(pwd)/git/ext/gitdb/gitdb/ext/smmap"
         git config --global core.autocrlf false
 
-    - &prepare-repo
-      name: Prepare this repo for tests
+    - name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
 
-    - &git-identity
-      name: Set git user identity and command aliases for the tests
+    - name: Set git user identity and command aliases for the tests
       run: |
         git config --global user.email "travis@ci.com"
         git config --global user.name "Travis Runner"
@@ -76,24 +69,20 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - &setup-venv
-      name: Set up virtual environment
+    - name: Set up virtual environment
       run: |
         python3.9 -m venv .venv
         echo 'BASH_ENV=.venv/bin/activate' >>"$GITHUB_ENV"
 
-    - &update-pypa
-      name: Update PyPA packages
+    - name: Update PyPA packages
       run: |
         python -m pip install -U pip 'setuptools; python_version<"3.12"' wheel
 
-    - &install-deps
-      name: Install project and test dependencies
+    - name: Install project and test dependencies
       run: |
         pip install '.[test]'
 
-    - &ownership-posix-display
-      name: Show POSIX file ownership
+    - name: Show POSIX file ownership
       # Cygwin's `ls -ld` reports the NTFS Owner SID via Cygwin's SID-to-uid
       # mapping (well-known SIDs by their RID, machine-local accounts by
       # 0x30000+RID). That mapping is what Cygwin git's
@@ -114,8 +103,7 @@ jobs:
           ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
         done
 
-    - &ownership-ntfs-display
-      name: Show NTFS file ownership
+    - name: Show NTFS file ownership
       # Authoritative NTFS Owner via Get-Acl, with no Cygwin SID-to-uid layer
       # in between -- useful for confirming what the Cygwin view reports as
       # "Administrators" is the BUILTIN\Administrators SID (S-1-5-32-544).
@@ -145,8 +133,7 @@ jobs:
           }
         }
 
-    - &safe-directory-display
-      name: Show safe.directory entries
+    - name: Show safe.directory entries
       run: git config --global --get-all safe.directory
 
     - name: Show version and platform information
@@ -160,104 +147,3 @@ jobs:
     - name: Test with pytest (${{ matrix.additional-pytest-args }})
       run: |
         pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
-
-  diag-token:
-    runs-on: windows-latest
-
-    env: *cygwin-env
-
-    defaults: *cygwin-defaults
-
-    steps:
-    - *force-lf
-    - *checkout
-    - *install-cygwin
-
-    - name: PowerShell-side token state and file-creation tests
-      shell: pwsh
-      run: |
-        $repo = "D:\a\GitPython\GitPython"
-        Write-Host "==================== whoami /all (PowerShell) ===================="
-        whoami /all
-        Write-Host ""
-        Write-Host "==================== Test A: PowerShell New-Item directory ===================="
-        $td = "$repo\test-pwsh-mkdir"
-        New-Item -ItemType Directory -Path $td -Force | Out-Null
-        $acl = Get-Acl -LiteralPath $td
-        Write-Host "Owner of $td : $($acl.Owner)"
-        Remove-Item $td -Force
-        Write-Host ""
-        Write-Host "==================== Test D: PowerShell -> Git Bash -> PowerShell New-Item ===================="
-        $td4 = "$repo\test-pwsh-bash-pwsh-mkdir"
-        $scriptPath = "$repo\inner-mkdir.ps1"
-        "New-Item -ItemType Directory -Path '$td4' -Force | Out-Null" |
-          Set-Content -Path $scriptPath -Encoding utf8
-        $env:MSYS2_ARG_CONV_EXCL = '*'
-        try {
-          & "C:\Program Files\Git\bin\bash.exe" -c "powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$scriptPath'" 2>&1 | Out-Null
-        } finally {
-          Remove-Item Env:MSYS2_ARG_CONV_EXCL -ErrorAction SilentlyContinue
-        }
-        if (Test-Path -LiteralPath $td4) {
-          $acl = Get-Acl -LiteralPath $td4
-          Write-Host "Owner of $td4 (PowerShell -> bash -> PowerShell New-Item) : $($acl.Owner)"
-          Remove-Item $td4 -Force
-        } else {
-          Write-Host "Owner of $td4 (PowerShell -> bash -> PowerShell New-Item) : (directory not created)"
-        }
-        Remove-Item $scriptPath -Force -ErrorAction SilentlyContinue
-
-    - name: Cygwin-side token state and file-creation tests
-      run: |
-        set +e
-        echo "==================== id (Cygwin) ===================="
-        id
-        echo
-        echo "==================== Test B: Cygwin mkdir ===================="
-        td="$(pwd)/test-cygwin-mkdir"
-        mkdir "$td"
-        echo "Owner: $(stat -c '%U(%u)' "$td")"
-        rmdir "$td"
-        echo
-        echo "==================== Test C: Cygwin-spawned Git for Windows git init ===================="
-        td3="$(pwd)/test-cygwin-spawns-wingit"
-        mkdir "$td3"
-        ( cd "$td3" && /cygdrive/c/Program\ Files/Git/bin/git.exe init -q )
-        echo "Owner of $td3 (Cygwin-mkdir)             : $(stat -c '%U(%u)' "$td3")"
-        echo "Owner of $td3/.git (Cygwin->Win git init): $(stat -c '%U(%u)' "$td3/.git")"
-        rm -rf "$td3"
-        true
-
-  reproduce-safe-dir:
-    strategy:
-      matrix:
-        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256]
-      fail-fast: false
-
-    runs-on: windows-latest
-
-    env: *cygwin-env
-
-    defaults: *cygwin-defaults
-
-    steps:
-    - *force-lf
-    - *checkout
-    - *install-cygwin
-    - *verbose-output
-    - *safe-directory
-    - *prepare-repo
-    - *git-identity
-    - *setup-venv
-    - *update-pypa
-    - *install-deps
-    - *ownership-posix-display
-    - *ownership-ntfs-display
-    - *safe-directory-display
-
-    - name: Run submodule tests
-      run: |
-        python -m pytest -vv \
-          test/test_docs.py::Tutorials::test_submodules \
-          test/test_repo.py::TestRepo::test_submodules \
-          test/test_submodule.py::TestSubmodule::test_root_module
