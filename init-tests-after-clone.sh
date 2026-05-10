@@ -40,6 +40,11 @@ fi
 git tag __testing_point__
 
 # The tests need a branch called master.
+#
+# If master is locally absent but more than one remote has it, checkout fails
+# by default even if all remotes agree, and we fall back to creating it at
+# HEAD. The reflog we populate below then traces HEAD's history rather than
+# a remote master's, but master is reset to __testing_point__ either way.
 git checkout master -- || git checkout -b master
 
 # The tests need a reflog history on the master branch.
