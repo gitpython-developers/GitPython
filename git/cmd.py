@@ -1222,8 +1222,8 @@ class Git(metaclass=_GitMeta):
 
             On Unix-like systems, when migrating away from passing string commands with
             ``shell=True``, :func:`shlex.split` may serve as a transitional step in rare
-            cases, but this should be undertaken with extreme care. See the `command`
-            parameter above on the risks.
+            cases, with extreme care. (Drop ``shell=True`` and pass the resulting
+            sequence as the command.) See the `command` parameter above on the risks.
 
         :param env:
             A dictionary of environment variables to be passed to
