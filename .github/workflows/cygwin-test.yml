@@ -102,6 +102,73 @@ jobs:
       run: |
         pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
 
+  diag-token:
+    runs-on: windows-latest
+
+    env: *cygwin-env
+
+    defaults: *cygwin-defaults
+
+    steps:
+    - *force-lf
+    - *checkout
+    - *install-cygwin
+
+    - name: PowerShell-side token state and file-creation tests
+      shell: pwsh
+      run: |
+        $repo = "D:\a\GitPython\GitPython"
+        Write-Host "==================== whoami /all (PowerShell) ===================="
+        whoami /all
+        Write-Host ""
+        Write-Host "==================== Test A: PowerShell New-Item directory ===================="
+        $td = "$repo\test-pwsh-mkdir"
+        New-Item -ItemType Directory -Path $td -Force | Out-Null
+        $acl = Get-Acl -LiteralPath $td
+        Write-Host "Owner of $td : $($acl.Owner)"
+        Remove-Item $td -Force
+        Write-Host ""
+        Write-Host "==================== Test D: PowerShell -> Git Bash -> PowerShell New-Item ===================="
+        $td4 = "$repo\test-pwsh-bash-pwsh-mkdir"
+        $scriptPath = "$repo\inner-mkdir.ps1"
+        "New-Item -ItemType Directory -Path '$td4' -Force | Out-Null" |
+          Set-Content -Path $scriptPath -Encoding utf8
+        $env:MSYS2_ARG_CONV_EXCL = '*'
+        try {
+          & "C:\Program Files\Git\bin\bash.exe" -c "powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$scriptPath'" 2>&1 | Out-Null
+        } finally {
+          Remove-Item Env:MSYS2_ARG_CONV_EXCL -ErrorAction SilentlyContinue
+        }
+        if (Test-Path -LiteralPath $td4) {
+          $acl = Get-Acl -LiteralPath $td4
+          Write-Host "Owner of $td4 (PowerShell -> bash -> PowerShell New-Item) : $($acl.Owner)"
+          Remove-Item $td4 -Force
+        } else {
+          Write-Host "Owner of $td4 (PowerShell -> bash -> PowerShell New-Item) : (directory not created)"
+        }
+        Remove-Item $scriptPath -Force -ErrorAction SilentlyContinue
+
+    - name: Cygwin-side token state and file-creation tests
+      run: |
+        set +e
+        echo "==================== id (Cygwin) ===================="
+        id
+        echo
+        echo "==================== Test B: Cygwin mkdir ===================="
+        td="$(pwd)/test-cygwin-mkdir"
+        mkdir "$td"
+        echo "Owner: $(stat -c '%U(%u)' "$td")"
+        rmdir "$td"
+        echo
+        echo "==================== Test C: Cygwin-spawned Git for Windows git init ===================="
+        td3="$(pwd)/test-cygwin-spawns-wingit"
+        mkdir "$td3"
+        ( cd "$td3" && /cygdrive/c/Program\ Files/Git/bin/git.exe init -q )
+        echo "Owner of $td3 (Cygwin-mkdir)             : $(stat -c '%U(%u)' "$td3")"
+        echo "Owner of $td3/.git (Cygwin->Win git init): $(stat -c '%U(%u)' "$td3/.git")"
+        rm -rf "$td3"
+        true
+
   reproduce-safe-dir:
     strategy:
       matrix:
