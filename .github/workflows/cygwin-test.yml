@@ -39,6 +39,9 @@ jobs:
       uses: actions/checkout@v6
       with:
         fetch-depth: 0
+        # Temporary, for testing. The standing decision is to NOT pre-clone
+        # submodules on CI; see https://github.com/gitpython-developers/GitPython/pull/1715
+        submodules: recursive
 
     - &install-cygwin
       name: Install Cygwin
