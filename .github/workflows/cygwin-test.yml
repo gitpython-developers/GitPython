@@ -90,6 +90,65 @@ jobs:
       run: |
         pip install '.[test]'
 
+    - &ownership-display
+      name: Show file ownership and safe.directory entries
+      run: |
+        echo "==================== File ownership (Cygwin view, ls -ld) ===================="
+        for p in \
+            "$(pwd)" \
+            "$(pwd)/.git" \
+            "$(pwd)/git/ext/gitdb" \
+            "$(pwd)/git/ext/gitdb/.git" \
+            "$(pwd)/.git/modules/gitdb" \
+            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
+            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
+            "$(pwd)/.git/modules/gitdb/modules/smmap" \
+            "${HOME:-}" \
+            "${HOME:-}/.gitconfig"; do
+          if [ -n "$p" ]; then
+            ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
+          fi
+        done
+        echo
+        echo "==================== File ownership (Win32 view, Get-Acl) ===================="
+        # Cygwin's ls -ld and stat go through Cygwin's SID-to-uid mapping
+        # (well-known SIDs by their RID, machine-local accounts by 0x30000+RID).
+        # The mapping is deterministic, but going via Win32 Get-Acl gives the
+        # NTAccount form of the NTFS Owner SID directly, with no Cygwin layer
+        # in between -- useful for confirming that what Cygwin reports as
+        # "Administrators" really is the BUILTIN\Administrators SID (S-1-5-32-544)
+        # rather than some local-machine account that Cygwin happens to map to
+        # the same uid. The workflow sets CYGWIN_NOWINPATH=1, so Windows paths
+        # are not on Cygwin's $PATH; invoke powershell.exe by absolute path.
+        ps_exe=/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+        if [ -x "$ps_exe" ]; then
+          for p in \
+              "$(pwd)" \
+              "$(pwd)/.git" \
+              "$(pwd)/git/ext/gitdb" \
+              "$(pwd)/git/ext/gitdb/.git" \
+              "$(pwd)/.git/modules/gitdb" \
+              "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
+              "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
+              "$(pwd)/.git/modules/gitdb/modules/smmap" \
+              "${HOME:-}/.gitconfig"; do
+            if [ -n "$p" ] && [ -e "$p" ]; then
+              wp=$(cygpath -w "$p")
+              # Escape single-quotes for PowerShell single-quoted string literal: ' -> ''
+              wp_escaped=${wp//\'/\'\'}
+              owner=$("$ps_exe" -NoProfile -NonInteractive -Command \
+                "try { (Get-Acl -LiteralPath '${wp_escaped}').Owner } catch { 'ERROR: ' + \$_.Exception.Message }" \
+                2>/dev/null | tr -d '\r')
+              printf "  %-44s  %s\n" "$owner" "$wp"
+            fi
+          done
+        else
+          echo "($ps_exe not found -- skipping Win32 view)"
+        fi
+        echo
+        echo "==================== safe.directory entries ===================="
+        git config --global --get-all safe.directory 2>&1 || echo "(none)"
+
     - name: Show version and platform information
       run: |
         uname -a
@@ -192,6 +251,7 @@ jobs:
     - *setup-venv
     - *update-pypa
     - *install-deps
+    - *ownership-display
 
     - name: Run submodule tests
       run: |
