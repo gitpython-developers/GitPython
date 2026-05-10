@@ -1131,16 +1131,28 @@ class Git(metaclass=_GitMeta):
         information (stdout).
 
         :param command:
-            The command to execute. A sequence of program arguments is the
-            recommended form when `shell` is ``False`` (the default), e.g.
-            ``["git", "log", "-n", "1"]``.
+            The command to execute. A sequence of program arguments is recommended.
+            A string is also accepted, but its meaning is strongly platform-dependent.
 
-            A string is accepted, but with `shell` set to ``False`` it is passed
-            as a single executable name to :class:`subprocess.Popen`. For example,
-            ``"git log -n 1"`` looks for an executable literally named
-            ``git log -n 1`` and will fail with :class:`GitCommandNotFound`. To
-            split a command string into argv tokens, pass ``shlex.split(...)`` as
-            a sequence or set `shell` to ``True`` (see the warning below).
+            By default, a shell is not used. On Unix-like systems, a string is the whole
+            program name (so ``"git log -n 1"`` raises :class:`GitCommandNotFound`). On
+            Windows, the program parses the arguments itself, so multi-word strings can
+            work but are not portable.
+
+            Avoid ``shell=True`` (and :attr:`Git.USE_SHELL`): this runs the command in
+            a shell, which is generally unsafe. The shell interprets metacharacters
+            such as ``;``, ``|``, ``&``, ``$(...)``, ``$VAR``, ``%VAR%``, and ``^``
+            (depending on the platform) as syntax. Any untrusted text in the command
+            can then execute arbitrary OS commands. See :attr:`Git.USE_SHELL`.
+
+            Producing a sequence automatically by :func:`shlex.split` and passing it
+            as the command is far safer than ``shell=True``. But :func:`shlex.split`
+            parses POSIX shell syntax on all systems, and the result is still unsafe
+            for anything but *fixed, fully trusted* strings. Do not use it on strings
+            built by interpolating values: whitespace or quoting in an untrusted value
+            can still inject arguments. For input derived in any way from untrusted
+            data, build the argument sequence yourself, while ensuring each argument
+            is fully sanitized.
 
         :param istream:
             Standard input filehandle passed to :class:`subprocess.Popen`.
@@ -1207,6 +1219,11 @@ class Git(metaclass=_GitMeta):
             forward it to :meth:`Git.execute`. Passing ``shell=True`` is also no longer
             needed (nor useful) to work around any known operating system specific
             issues.
+
+            On Unix-like systems, when migrating away from passing string commands with
+            ``shell=True``, :func:`shlex.split` may serve as a transitional step in rare
+            cases, with extreme care. (Drop ``shell=True`` and pass the resulting
+            sequence as the command.) See the `command` parameter above on the risks.
 
         :param env:
             A dictionary of environment variables to be passed to
