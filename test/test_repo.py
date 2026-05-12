@@ -1094,7 +1094,7 @@ class TestRepo(TestBase):
         self.assertFalse(repo.is_valid_object(tag_sha, "commit"))
 
     @with_rw_directory
-    def test_git_work_tree_dotgit(self, rw_dir):
+    def test_git_work_tree_dotgit(self, rw_dir, use_relative_paths=False):
         """Check that we find .git as a worktree file and find the worktree
         based on it."""
         git = Git(rw_dir)
@@ -1106,7 +1106,11 @@ class TestRepo(TestBase):
         worktree_path = join_path_native(rw_dir, "worktree_repo")
         if Git.is_cygwin():
             worktree_path = cygpath(worktree_path)
-        rw_master.git.worktree("add", worktree_path, branch.name)
+        wt_add_kwargs = {"insert_kwargs_after": "add"}
+        # relative worktree paths introduced in git 2.48.0
+        if use_relative_paths and git.version_info[:3] >= (2, 48, 0):
+            wt_add_kwargs["relative_paths"] = True
+        rw_master.git.worktree("add", worktree_path, branch.name, **wt_add_kwargs)
 
         # This ensures that we can read the repo's gitdir correctly.
         repo = Repo(worktree_path)
@@ -1123,6 +1127,15 @@ class TestRepo(TestBase):
         self.assertIsInstance(origin, Remote)
 
         self.assertIsInstance(repo.heads["aaaaaaaa"], Head)
+
+    def test_git_work_tree_dotgit_relative(self):
+        """Check that we find .git as a worktree file containing a relative path
+        and find the worktree based on it."""
+        if Git().version_info[:3] < (2, 48, 0):
+            pytest.skip("relative worktree feature unsupported, needs git 2.48.0 or later")
+        # this class inherits from TestCase so we can't use pytest.mark.parametrize on
+        # test_git_work_tree_dotgit; delegate instead
+        self.test_git_work_tree_dotgit(use_relative_paths=True)
 
     @with_rw_directory
     def test_git_work_tree_env(self, rw_dir):
