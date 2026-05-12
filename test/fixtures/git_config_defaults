@@ -1,0 +1,8 @@
+# defaulted via env var in conftest.py to avoid user-specific configs breaking tests
+
+[init]
+  defaultBranch = master
+
+[user]
+	name = Sebastian Thiel
+	email = byronimo@gmail.com
