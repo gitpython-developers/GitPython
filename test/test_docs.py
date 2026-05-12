@@ -83,8 +83,7 @@ class Tutorials(TestBase):
         self.assertEqual(repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5"))  # You can access tags in various ways too.
         self.assertEqual(repo.refs.master, repo.heads["master"])  # .refs provides all refs, i.e. heads...
 
-        if "TRAVIS" not in os.environ:
-            self.assertEqual(repo.refs["origin/master"], repo.remotes.origin.refs.master)  # ... remotes ...
+        self.assertEqual(cloned_repo.refs["origin/master"], cloned_repo.remotes.origin.refs.master)  # ... remotes ...
         self.assertEqual(repo.refs["0.3.5"], repo.tags["0.3.5"])  # ... and tags.
         # ![8-test_init_repo_object]
 
