@@ -295,7 +295,7 @@ class Repo:
                 sm_gitpath = find_worktree_git_dir(dotgit)
 
             if sm_gitpath is not None:
-                git_dir = expand_path(sm_gitpath, expand_vars)
+                git_dir = osp.normpath(sm_gitpath)
                 self._working_tree_dir = curpath
                 break
 
