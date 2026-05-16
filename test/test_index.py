@@ -38,6 +38,7 @@ from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
 
 from test.lib import TestBase, VirtualEnvironment, fixture, fixture_path, with_rw_directory, with_rw_repo, PathLikeMock
+from test.lib.helper import xfail_if_raises
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
@@ -565,369 +566,369 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @pytest.mark.xfail(
-        sys.platform == "win32" and (Git().config("core.symlinks") == "true" or _windows_supports_symlinks()),
-        reason="Assumes symlinks are not created on Windows and opens a symlink to a nonexistent target.",
-        raises=(FileNotFoundError, GitCommandError),
-    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
-        index = rw_repo.index
-        num_entries = len(index.entries)
-        cur_head = rw_repo.head
+        with xfail_if_raises(
+            sys.platform == "win32" and (Git().config("core.symlinks") == "true" or _windows_supports_symlinks()),
+            raises=(FileNotFoundError, GitCommandError),
+            reason="Assumes symlinks are not created on Windows and opens a symlink to a nonexistent target.",
+        ):
+            index = rw_repo.index
+            num_entries = len(index.entries)
+            cur_head = rw_repo.head
 
-        uname = "Thomas Müller"
-        umail = "sd@company.com"
-        with rw_repo.config_writer() as writer:
-            writer.set_value("user", "name", uname)
-            writer.set_value("user", "email", umail)
-        self.assertEqual(writer.get_value("user", "name"), uname)
+            uname = "Thomas Müller"
+            umail = "sd@company.com"
+            with rw_repo.config_writer() as writer:
+                writer.set_value("user", "name", uname)
+                writer.set_value("user", "email", umail)
+            self.assertEqual(writer.get_value("user", "name"), uname)
 
-        # Remove all of the files, provide a wild mix of paths, BaseIndexEntries,
-        # IndexEntries.
-        def mixed_iterator():
-            count = 0
-            for entry in index.entries.values():
-                type_id = count % 5
-                if type_id == 0:  # path (str)
-                    yield entry.path
-                elif type_id == 1:  # path (PathLike)
-                    yield Path(entry.path)
-                elif type_id == 2:  # path mock (PathLike)
-                    yield PathLikeMock(entry.path)
-                elif type_id == 3:  # path mock in a blob
-                    yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
-                elif type_id == 4:  # blob
-                    yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
-                elif type_id == 5:  # BaseIndexEntry
-                    yield BaseIndexEntry(entry[:4])
-                elif type_id == 6:  # IndexEntry
-                    yield entry
-                else:
-                    raise AssertionError("Invalid Type")
-                count += 1
-            # END for each entry
+            # Remove all of the files, provide a wild mix of paths, BaseIndexEntries,
+            # IndexEntries.
+            def mixed_iterator():
+                count = 0
+                for entry in index.entries.values():
+                    type_id = count % 5
+                    if type_id == 0:  # path (str)
+                        yield entry.path
+                    elif type_id == 1:  # path (PathLike)
+                        yield Path(entry.path)
+                    elif type_id == 2:  # path mock (PathLike)
+                        yield PathLikeMock(entry.path)
+                    elif type_id == 3:  # path mock in a blob
+                        yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
+                    elif type_id == 4:  # blob
+                        yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
+                    elif type_id == 5:  # BaseIndexEntry
+                        yield BaseIndexEntry(entry[:4])
+                    elif type_id == 6:  # IndexEntry
+                        yield entry
+                    else:
+                        raise AssertionError("Invalid Type")
+                    count += 1
+                # END for each entry
 
-        # END mixed iterator
-        deleted_files = index.remove(mixed_iterator(), working_tree=False)
-        assert deleted_files
-        self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
-        self.assertEqual(len(index.entries), 0)
+            # END mixed iterator
+            deleted_files = index.remove(mixed_iterator(), working_tree=False)
+            assert deleted_files
+            self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
+            self.assertEqual(len(index.entries), 0)
 
-        # Reset the index to undo our changes.
-        index.reset()
-        self.assertEqual(len(index.entries), num_entries)
+            # Reset the index to undo our changes.
+            index.reset()
+            self.assertEqual(len(index.entries), num_entries)
 
-        # Remove with working copy.
-        deleted_files = index.remove(mixed_iterator(), working_tree=True)
-        assert deleted_files
-        self.assertEqual(self._count_existing(rw_repo, deleted_files), 0)
+            # Remove with working copy.
+            deleted_files = index.remove(mixed_iterator(), working_tree=True)
+            assert deleted_files
+            self.assertEqual(self._count_existing(rw_repo, deleted_files), 0)
 
-        # Reset everything.
-        index.reset(working_tree=True)
-        self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
+            # Reset everything.
+            index.reset(working_tree=True)
+            self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
 
-        # Invalid type.
-        self.assertRaises(TypeError, index.remove, [1])
+            # Invalid type.
+            self.assertRaises(TypeError, index.remove, [1])
 
-        # Absolute path.
-        deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
-        assert len(deleted_files) > 1
-        self.assertRaises(ValueError, index.remove, ["/doesnt/exists"])
+            # Absolute path.
+            deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
+            assert len(deleted_files) > 1
+            self.assertRaises(ValueError, index.remove, ["/doesnt/exists"])
 
-        # TEST COMMITTING
-        # Commit changed index.
-        cur_commit = cur_head.commit
-        commit_message = "commit default head by Frèderic Çaufl€"
+            # TEST COMMITTING
+            # Commit changed index.
+            cur_commit = cur_head.commit
+            commit_message = "commit default head by Frèderic Çaufl€"
 
-        new_commit = index.commit(commit_message, head=False)
-        assert cur_commit != new_commit
-        self.assertEqual(new_commit.author.name, uname)
-        self.assertEqual(new_commit.author.email, umail)
-        self.assertEqual(new_commit.committer.name, uname)
-        self.assertEqual(new_commit.committer.email, umail)
-        self.assertEqual(new_commit.message, commit_message)
-        self.assertEqual(new_commit.parents[0], cur_commit)
-        self.assertEqual(len(new_commit.parents), 1)
-        self.assertEqual(cur_head.commit, cur_commit)
+            new_commit = index.commit(commit_message, head=False)
+            assert cur_commit != new_commit
+            self.assertEqual(new_commit.author.name, uname)
+            self.assertEqual(new_commit.author.email, umail)
+            self.assertEqual(new_commit.committer.name, uname)
+            self.assertEqual(new_commit.committer.email, umail)
+            self.assertEqual(new_commit.message, commit_message)
+            self.assertEqual(new_commit.parents[0], cur_commit)
+            self.assertEqual(len(new_commit.parents), 1)
+            self.assertEqual(cur_head.commit, cur_commit)
 
-        # Commit with other actor.
-        cur_commit = cur_head.commit
+            # Commit with other actor.
+            cur_commit = cur_head.commit
 
-        my_author = Actor("Frèderic Çaufl€", "author@example.com")
-        my_committer = Actor("Committing Frèderic Çaufl€", "committer@example.com")
-        commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
-        assert cur_commit != commit_actor
-        self.assertEqual(commit_actor.author.name, "Frèderic Çaufl€")
-        self.assertEqual(commit_actor.author.email, "author@example.com")
-        self.assertEqual(commit_actor.committer.name, "Committing Frèderic Çaufl€")
-        self.assertEqual(commit_actor.committer.email, "committer@example.com")
-        self.assertEqual(commit_actor.message, commit_message)
-        self.assertEqual(commit_actor.parents[0], cur_commit)
-        self.assertEqual(len(new_commit.parents), 1)
-        self.assertEqual(cur_head.commit, commit_actor)
-        self.assertEqual(cur_head.log()[-1].actor, my_committer)
+            my_author = Actor("Frèderic Çaufl€", "author@example.com")
+            my_committer = Actor("Committing Frèderic Çaufl€", "committer@example.com")
+            commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
+            assert cur_commit != commit_actor
+            self.assertEqual(commit_actor.author.name, "Frèderic Çaufl€")
+            self.assertEqual(commit_actor.author.email, "author@example.com")
+            self.assertEqual(commit_actor.committer.name, "Committing Frèderic Çaufl€")
+            self.assertEqual(commit_actor.committer.email, "committer@example.com")
+            self.assertEqual(commit_actor.message, commit_message)
+            self.assertEqual(commit_actor.parents[0], cur_commit)
+            self.assertEqual(len(new_commit.parents), 1)
+            self.assertEqual(cur_head.commit, commit_actor)
+            self.assertEqual(cur_head.log()[-1].actor, my_committer)
 
-        # Commit with author_date and commit_date.
-        cur_commit = cur_head.commit
-        commit_message = "commit with dates by Avinash Sajjanshetty"
+            # Commit with author_date and commit_date.
+            cur_commit = cur_head.commit
+            commit_message = "commit with dates by Avinash Sajjanshetty"
 
-        new_commit = index.commit(
-            commit_message,
-            author_date="2006-04-07T22:13:13",
-            commit_date="2005-04-07T22:13:13",
-        )
-        assert cur_commit != new_commit
-        print(new_commit.authored_date, new_commit.committed_date)
-        self.assertEqual(new_commit.message, commit_message)
-        self.assertEqual(new_commit.authored_date, 1144447993)
-        self.assertEqual(new_commit.committed_date, 1112911993)
+            new_commit = index.commit(
+                commit_message,
+                author_date="2006-04-07T22:13:13",
+                commit_date="2005-04-07T22:13:13",
+            )
+            assert cur_commit != new_commit
+            print(new_commit.authored_date, new_commit.committed_date)
+            self.assertEqual(new_commit.message, commit_message)
+            self.assertEqual(new_commit.authored_date, 1144447993)
+            self.assertEqual(new_commit.committed_date, 1112911993)
 
-        # Same index, no parents.
-        commit_message = "index without parents"
-        commit_no_parents = index.commit(commit_message, parent_commits=[], head=True)
-        self.assertEqual(commit_no_parents.message, commit_message)
-        self.assertEqual(len(commit_no_parents.parents), 0)
-        self.assertEqual(cur_head.commit, commit_no_parents)
+            # Same index, no parents.
+            commit_message = "index without parents"
+            commit_no_parents = index.commit(commit_message, parent_commits=[], head=True)
+            self.assertEqual(commit_no_parents.message, commit_message)
+            self.assertEqual(len(commit_no_parents.parents), 0)
+            self.assertEqual(cur_head.commit, commit_no_parents)
 
-        # same index, multiple parents.
-        commit_message = "Index with multiple parents\n    commit with another line"
-        commit_multi_parent = index.commit(commit_message, parent_commits=(commit_no_parents, new_commit))
-        self.assertEqual(commit_multi_parent.message, commit_message)
-        self.assertEqual(len(commit_multi_parent.parents), 2)
-        self.assertEqual(commit_multi_parent.parents[0], commit_no_parents)
-        self.assertEqual(commit_multi_parent.parents[1], new_commit)
-        self.assertEqual(cur_head.commit, commit_multi_parent)
+            # same index, multiple parents.
+            commit_message = "Index with multiple parents\n    commit with another line"
+            commit_multi_parent = index.commit(commit_message, parent_commits=(commit_no_parents, new_commit))
+            self.assertEqual(commit_multi_parent.message, commit_message)
+            self.assertEqual(len(commit_multi_parent.parents), 2)
+            self.assertEqual(commit_multi_parent.parents[0], commit_no_parents)
+            self.assertEqual(commit_multi_parent.parents[1], new_commit)
+            self.assertEqual(cur_head.commit, commit_multi_parent)
 
-        # Re-add all files in lib.
-        # Get the lib folder back on disk, but get an index without it.
-        index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
-        lib_file_path = osp.join("lib", "git", "__init__.py")
-        assert (lib_file_path, 0) not in index.entries
-        assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
+            # Re-add all files in lib.
+            # Get the lib folder back on disk, but get an index without it.
+            index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
+            lib_file_path = osp.join("lib", "git", "__init__.py")
+            assert (lib_file_path, 0) not in index.entries
+            assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
 
-        # Directory.
-        entries = index.add(["lib"], fprogress=self._fprogress_add)
-        self._assert_entries(entries)
-        self._assert_fprogress(entries)
-        assert len(entries) > 1
+            # Directory.
+            entries = index.add(["lib"], fprogress=self._fprogress_add)
+            self._assert_entries(entries)
+            self._assert_fprogress(entries)
+            assert len(entries) > 1
 
-        # Glob.
-        entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
-        self._assert_entries(entries)
-        self._assert_fprogress(entries)
-        self.assertEqual(len(entries), 14)
+            # Glob.
+            entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
+            self._assert_entries(entries)
+            self._assert_fprogress(entries)
+            self.assertEqual(len(entries), 14)
 
-        # Same file.
-        entries = index.reset(new_commit).add(
-            [osp.join(rw_repo.working_tree_dir, "lib", "git", "head.py")] * 2,
-            fprogress=self._fprogress_add,
-        )
-        self._assert_entries(entries)
-        self.assertEqual(entries[0].mode & 0o644, 0o644)
-        # Would fail, test is too primitive to handle this case.
-        # self._assert_fprogress(entries)
-        self._reset_progress()
-        self.assertEqual(len(entries), 2)
+            # Same file.
+            entries = index.reset(new_commit).add(
+                [osp.join(rw_repo.working_tree_dir, "lib", "git", "head.py")] * 2,
+                fprogress=self._fprogress_add,
+            )
+            self._assert_entries(entries)
+            self.assertEqual(entries[0].mode & 0o644, 0o644)
+            # Would fail, test is too primitive to handle this case.
+            # self._assert_fprogress(entries)
+            self._reset_progress()
+            self.assertEqual(len(entries), 2)
 
-        # Missing path.
-        self.assertRaises(OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"])
+            # Missing path.
+            self.assertRaises(OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"])
 
-        # Blob from older revision overrides current index revision.
-        old_blob = new_commit.parents[0].tree.blobs[0]
-        entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
-        self._assert_entries(entries)
-        self._assert_fprogress(entries)
-        self.assertEqual(index.entries[(old_blob.path, 0)].hexsha, old_blob.hexsha)
-        self.assertEqual(len(entries), 1)
+            # Blob from older revision overrides current index revision.
+            old_blob = new_commit.parents[0].tree.blobs[0]
+            entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
+            self._assert_entries(entries)
+            self._assert_fprogress(entries)
+            self.assertEqual(index.entries[(old_blob.path, 0)].hexsha, old_blob.hexsha)
+            self.assertEqual(len(entries), 1)
 
-        # Mode 0 not allowed.
-        null_hex_sha = Diff.NULL_HEX_SHA
-        null_bin_sha = b"\0" * 20
-        self.assertRaises(
-            ValueError,
-            index.reset(new_commit).add,
-            [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))],
-        )
+            # Mode 0 not allowed.
+            null_hex_sha = Diff.NULL_HEX_SHA
+            null_bin_sha = b"\0" * 20
+            self.assertRaises(
+                ValueError,
+                index.reset(new_commit).add,
+                [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))],
+            )
 
-        # Add new file.
-        new_file_relapath = "my_new_file"
-        self._make_file(new_file_relapath, "hello world", rw_repo)
-        entries = index.reset(new_commit).add(
-            [BaseIndexEntry((0o10644, null_bin_sha, 0, new_file_relapath))],
-            fprogress=self._fprogress_add,
-        )
-        self._assert_entries(entries)
-        self._assert_fprogress(entries)
-        self.assertEqual(len(entries), 1)
-        self.assertNotEqual(entries[0].hexsha, null_hex_sha)
+            # Add new file.
+            new_file_relapath = "my_new_file"
+            self._make_file(new_file_relapath, "hello world", rw_repo)
+            entries = index.reset(new_commit).add(
+                [BaseIndexEntry((0o10644, null_bin_sha, 0, new_file_relapath))],
+                fprogress=self._fprogress_add,
+            )
+            self._assert_entries(entries)
+            self._assert_fprogress(entries)
+            self.assertEqual(len(entries), 1)
+            self.assertNotEqual(entries[0].hexsha, null_hex_sha)
 
-        # Add symlink.
-        if sys.platform != "win32":
-            for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
-                basename = "my_real_symlink"
+            # Add symlink.
+            if sys.platform != "win32":
+                for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
+                    basename = "my_real_symlink"
 
-                link_file = osp.join(rw_repo.working_tree_dir, basename)
-                os.symlink(target, link_file)
-                entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
-                self._assert_entries(entries)
-                self._assert_fprogress(entries)
-                self.assertEqual(len(entries), 1)
-                self.assertTrue(S_ISLNK(entries[0].mode))
-                self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
+                    link_file = osp.join(rw_repo.working_tree_dir, basename)
+                    os.symlink(target, link_file)
+                    entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
+                    self._assert_entries(entries)
+                    self._assert_fprogress(entries)
+                    self.assertEqual(len(entries), 1)
+                    self.assertTrue(S_ISLNK(entries[0].mode))
+                    self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
 
-                # We expect only the target to be written.
-                self.assertEqual(
-                    index.repo.odb.stream(entries[0].binsha).read().decode("ascii"),
-                    target,
-                )
+                    # We expect only the target to be written.
+                    self.assertEqual(
+                        index.repo.odb.stream(entries[0].binsha).read().decode("ascii"),
+                        target,
+                    )
 
-                os.remove(link_file)
-            # END for each target
-        # END real symlink test
+                    os.remove(link_file)
+                # END for each target
+            # END real symlink test
 
-        # Add fake symlink and assure it checks out as a symlink.
-        fake_symlink_relapath = "my_fake_symlink"
-        link_target = "/etc/that"
-        fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
-        fake_entry = BaseIndexEntry((0o120000, null_bin_sha, 0, fake_symlink_relapath))
-        entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
-        self._assert_entries(entries)
-        self._assert_fprogress(entries)
-        assert entries[0].hexsha != null_hex_sha
-        self.assertEqual(len(entries), 1)
-        self.assertTrue(S_ISLNK(entries[0].mode))
+            # Add fake symlink and assure it checks out as a symlink.
+            fake_symlink_relapath = "my_fake_symlink"
+            link_target = "/etc/that"
+            fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
+            fake_entry = BaseIndexEntry((0o120000, null_bin_sha, 0, fake_symlink_relapath))
+            entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
+            self._assert_entries(entries)
+            self._assert_fprogress(entries)
+            assert entries[0].hexsha != null_hex_sha
+            self.assertEqual(len(entries), 1)
+            self.assertTrue(S_ISLNK(entries[0].mode))
 
-        # Check that this also works with an alternate method.
-        full_index_entry = IndexEntry.from_base(BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path)))
-        entry_key = index.entry_key(full_index_entry)
-        index.reset(new_commit)
+            # Check that this also works with an alternate method.
+            full_index_entry = IndexEntry.from_base(BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path)))
+            entry_key = index.entry_key(full_index_entry)
+            index.reset(new_commit)
 
-        assert entry_key not in index.entries
-        index.entries[entry_key] = full_index_entry
-        index.write()
-        index.update()  # Force reread of entries.
-        new_entry = index.entries[entry_key]
-        assert S_ISLNK(new_entry.mode)
+            assert entry_key not in index.entries
+            index.entries[entry_key] = full_index_entry
+            index.write()
+            index.update()  # Force reread of entries.
+            new_entry = index.entries[entry_key]
+            assert S_ISLNK(new_entry.mode)
 
-        # A tree created from this should contain the symlink.
-        tree = index.write_tree()
-        assert fake_symlink_relapath in tree
-        index.write()  # Flush our changes for the checkout.
+            # A tree created from this should contain the symlink.
+            tree = index.write_tree()
+            assert fake_symlink_relapath in tree
+            index.write()  # Flush our changes for the checkout.
 
-        # Check out the fake link, should be a link then.
-        assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
-        os.remove(fake_symlink_path)
-        index.checkout(fake_symlink_path)
+            # Check out the fake link, should be a link then.
+            assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
+            os.remove(fake_symlink_path)
+            index.checkout(fake_symlink_path)
 
-        # On Windows, we currently assume we will never get symlinks.
-        if sys.platform == "win32":
-            # Symlinks should contain the link as text (which is what a
-            # symlink actually is).
-            with open(fake_symlink_path, "rt") as fd:
-                self.assertEqual(fd.read(), link_target)
-        else:
-            self.assertTrue(S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE]))
+            # On Windows, we currently assume we will never get symlinks.
+            if sys.platform == "win32":
+                # Symlinks should contain the link as text (which is what a
+                # symlink actually is).
+                with open(fake_symlink_path, "rt") as fd:
+                    self.assertEqual(fd.read(), link_target)
+            else:
+                self.assertTrue(S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE]))
 
-        # TEST RENAMING
-        def assert_mv_rval(rval):
-            for source, dest in rval:
-                assert not osp.exists(source) and osp.exists(dest)
-            # END for each renamed item
+            # TEST RENAMING
+            def assert_mv_rval(rval):
+                for source, dest in rval:
+                    assert not osp.exists(source) and osp.exists(dest)
+                # END for each renamed item
 
-        # END move assertion utility
+            # END move assertion utility
 
-        self.assertRaises(ValueError, index.move, ["just_one_path"])
-        # Try to move a file onto an existing file.
-        files = ["AUTHORS", "LICENSE"]
-        self.assertRaises(GitCommandError, index.move, files)
+            self.assertRaises(ValueError, index.move, ["just_one_path"])
+            # Try to move a file onto an existing file.
+            files = ["AUTHORS", "LICENSE"]
+            self.assertRaises(GitCommandError, index.move, files)
 
-        # Again, with force.
-        assert_mv_rval(index.move(files, f=True))
+            # Again, with force.
+            assert_mv_rval(index.move(files, f=True))
 
-        # Move files into a directory - dry run.
-        paths = ["LICENSE", "VERSION", "doc"]
-        rval = index.move(paths, dry_run=True)
-        self.assertEqual(len(rval), 2)
-        assert osp.exists(paths[0])
+            # Move files into a directory - dry run.
+            paths = ["LICENSE", "VERSION", "doc"]
+            rval = index.move(paths, dry_run=True)
+            self.assertEqual(len(rval), 2)
+            assert osp.exists(paths[0])
 
-        # Again, no dry run.
-        rval = index.move(paths)
-        assert_mv_rval(rval)
+            # Again, no dry run.
+            rval = index.move(paths)
+            assert_mv_rval(rval)
 
-        # Move dir into dir.
-        rval = index.move(["doc", "test"])
-        assert_mv_rval(rval)
+            # Move dir into dir.
+            rval = index.move(["doc", "test"])
+            assert_mv_rval(rval)
 
-        # TEST PATH REWRITING
-        ######################
-        count = [0]
+            # TEST PATH REWRITING
+            ######################
+            count = [0]
 
-        def rewriter(entry):
-            rval = str(count[0])
-            count[0] += 1
-            return rval
+            def rewriter(entry):
+                rval = str(count[0])
+                count[0] += 1
+                return rval
 
-        # END rewriter
+            # END rewriter
 
-        def make_paths():
-            """Help out the test by yielding two existing paths and one new path."""
-            yield "CHANGES"
-            yield "ez_setup.py"
-            yield index.entries[index.entry_key("README", 0)]
-            yield index.entries[index.entry_key(".gitignore", 0)]
+            def make_paths():
+                """Help out the test by yielding two existing paths and one new path."""
+                yield "CHANGES"
+                yield "ez_setup.py"
+                yield index.entries[index.entry_key("README", 0)]
+                yield index.entries[index.entry_key(".gitignore", 0)]
 
-            for fid in range(3):
-                fname = "newfile%i" % fid
-                with open(fname, "wb") as fd:
-                    fd.write(b"abcd")
-                yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
-            # END for each new file
+                for fid in range(3):
+                    fname = "newfile%i" % fid
+                    with open(fname, "wb") as fd:
+                        fd.write(b"abcd")
+                    yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
+                # END for each new file
 
-        # END path producer
-        paths = list(make_paths())
-        self._assert_entries(index.add(paths, path_rewriter=rewriter))
+            # END path producer
+            paths = list(make_paths())
+            self._assert_entries(index.add(paths, path_rewriter=rewriter))
 
-        for filenum in range(len(paths)):
-            assert index.entry_key(str(filenum), 0) in index.entries
+            for filenum in range(len(paths)):
+                assert index.entry_key(str(filenum), 0) in index.entries
 
-        # TEST RESET ON PATHS
-        ######################
-        arela = "aa"
-        brela = "bb"
-        afile = self._make_file(arela, "adata", rw_repo)
-        bfile = self._make_file(brela, "bdata", rw_repo)
-        akey = index.entry_key(arela, 0)
-        bkey = index.entry_key(brela, 0)
-        keys = (akey, bkey)
-        absfiles = (afile, bfile)
-        files = (arela, brela)
+            # TEST RESET ON PATHS
+            ######################
+            arela = "aa"
+            brela = "bb"
+            afile = self._make_file(arela, "adata", rw_repo)
+            bfile = self._make_file(brela, "bdata", rw_repo)
+            akey = index.entry_key(arela, 0)
+            bkey = index.entry_key(brela, 0)
+            keys = (akey, bkey)
+            absfiles = (afile, bfile)
+            files = (arela, brela)
 
-        for fkey in keys:
-            assert fkey not in index.entries
+            for fkey in keys:
+                assert fkey not in index.entries
 
-        index.add(files, write=True)
-        nc = index.commit("2 files committed", head=False)
+            index.add(files, write=True)
+            nc = index.commit("2 files committed", head=False)
 
-        for fkey in keys:
-            assert fkey in index.entries
+            for fkey in keys:
+                assert fkey in index.entries
 
-        # Just the index.
-        index.reset(paths=(arela, afile))
-        assert akey not in index.entries
-        assert bkey in index.entries
+            # Just the index.
+            index.reset(paths=(arela, afile))
+            assert akey not in index.entries
+            assert bkey in index.entries
 
-        # Now with working tree - files on disk as well as entries must be recreated.
-        rw_repo.head.commit = nc
-        for absfile in absfiles:
-            os.remove(absfile)
+            # Now with working tree - files on disk as well as entries must be recreated.
+            rw_repo.head.commit = nc
+            for absfile in absfiles:
+                os.remove(absfile)
 
-        index.reset(working_tree=True, paths=files)
+            index.reset(working_tree=True, paths=files)
 
-        for fkey in keys:
-            assert fkey in index.entries
-        for absfile in absfiles:
-            assert osp.isfile(absfile)
+            for fkey in keys:
+                assert fkey in index.entries
+            for absfile in absfiles:
+                assert osp.isfile(absfile)
 
     @with_rw_repo("HEAD")
     def test_compare_write_tree(self, rw_repo):

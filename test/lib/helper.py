@@ -18,6 +18,7 @@ __all__ = [
     "skipIf",
     "GIT_REPO",
     "GIT_DAEMON_PORT",
+    "xfail_if_raises",
 ]
 
 import contextlib
@@ -35,8 +36,10 @@ import textwrap
 import time
 import unittest
 import venv
+from typing import Union, Type, Tuple
 
 import gitdb
+import pytest
 
 from git.util import rmtree, cwd
 
@@ -465,3 +468,27 @@ class VirtualEnvironment:
         if osp.isfile(path) or osp.islink(path):
             return path
         raise RuntimeError(f"no regular file or symlink {path!r}")
+
+
+@contextlib.contextmanager
+def xfail_if_raises(
+    condition: bool,
+    *,
+    raises: Union[Type[BaseException], Tuple[Type[BaseException], ...]],
+    reason: str = "",
+    strict: bool = False,
+):
+    """Approximates the behavior of @pytest.mark.xfail(..., raises=...) as a context
+    manager that can be used within a test, such as when the condition is complex or has
+    side effects
+
+    One difference is it will not report XPASS if the test passes, but setting `strict`
+    simulates it by raising an exception"""
+    try:
+        yield
+    except raises:
+        if condition:
+            pytest.xfail(reason)
+        raise
+    if strict and condition:
+        pytest.fail("[XPASS(strict)] " + reason)
