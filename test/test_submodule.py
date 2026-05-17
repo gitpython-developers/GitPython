@@ -508,9 +508,9 @@ class TestSubmodule(TestBase):
         with rm.config_writer():
             pass
 
-        # Deep traversal gitdb / async.
+        # Deep traversal yields gitdb and its nested smmap.
         rsmsp = [sm.path for sm in rm.traverse()]
-        assert len(rsmsp) >= 2  # gitdb and async [and smmap], async being a child of gitdb.
+        assert rsmsp == ["git/ext/gitdb", "gitdb/ext/smmap"]
 
         # Cannot set the parent commit as root module's path didn't exist.
         self.assertRaises(ValueError, rm.set_parent_commit, "HEAD")
