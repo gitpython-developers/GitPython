@@ -61,25 +61,28 @@ jobs:
         . .venv/bin/activate
         pip install '.[test]'
 
-    - name: Show file ownership and safe.directory entries
+    - name: Show POSIX file ownership
       run: |
-        echo "==================== File ownership ===================="
         for p in \
-            "$(pwd)" \
-            "$(pwd)/.git" \
-            "$(pwd)/git/ext/gitdb" \
-            "$(pwd)/git/ext/gitdb/.git" \
-            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
-            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
-            "${HOME:-}" \
-            "${HOME:-}/.gitconfig"; do
-          if [ -n "$p" ]; then
-            ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
-          fi
+          "$(pwd)" \
+          "$(pwd)/.git" \
+          "$(pwd)/git/ext/gitdb" \
+          "$(pwd)/git/ext/gitdb/.git" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
+          "${HOME:?HOME is not set}/.gitconfig"
+        do
+          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
         done
-        echo
-        echo "==================== safe.directory entries ===================="
-        git config --global --get-all safe.directory 2>&1 || echo "(none)"
+
+    - name: Show safe.directory entries
+      # `actions/checkout`'s safe.directory add is only durable for the
+      # checkout itself (it writes under a throwaway HOME override and
+      # then discards it), so by the time this step runs the runner
+      # user's `~/.gitconfig` has no entries -- and the Alpine container
+      # chowns the workspace to runner:docker to match the test user, so
+      # git accepts the ownership without one. Expected: `(none)`.
+      run: git config --global --get-all safe.directory || echo "(none)"
 
     - name: Show version and platform information
       run: |

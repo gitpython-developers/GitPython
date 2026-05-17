@@ -87,25 +87,63 @@ jobs:
       run: |
         pip install '.[test]'
 
-    - name: Show file ownership and safe.directory entries
+    - name: Show POSIX file ownership
+      # Linux and macOS only. On Windows, Git Bash's `ls -ld` reports a
+      # uniform uid+gid for every path regardless of NTFS Owner (MSYS2's
+      # SID-to-uid mapping doesn't have Cygwin's fidelity), so it would
+      # not be informative here. The NTFS Owner check below covers Windows.
+      if: matrix.os-type != 'windows'
       run: |
-        echo "==================== File ownership ===================="
         for p in \
-            "$(pwd)" \
-            "$(pwd)/.git" \
-            "$(pwd)/git/ext/gitdb" \
-            "$(pwd)/git/ext/gitdb/.git" \
-            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
-            "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
-            "${HOME:-}" \
-            "${HOME:-}/.gitconfig"; do
-          if [ -n "$p" ]; then
-            ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
-          fi
+          "$(pwd)" \
+          "$(pwd)/.git" \
+          "$(pwd)/git/ext/gitdb" \
+          "$(pwd)/git/ext/gitdb/.git" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
+          "${HOME:?HOME is not set}/.gitconfig"
+        do
+          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
         done
-        echo
-        echo "==================== safe.directory entries ===================="
-        git config --global --get-all safe.directory 2>&1 || echo "(none)"
+
+    - name: Show NTFS file ownership
+      # Windows only. Reads NTFS Owner directly via Get-Acl, which is the
+      # authoritative view for Windows-side ownership questions; the POSIX
+      # view via Git Bash's MSYS2 layer is not a reliable proxy here.
+      if: matrix.os-type == 'windows'
+      shell: pwsh
+      run: |
+        $paths = @(
+          "$pwd",
+          "$pwd\.git",
+          "$pwd\git\ext\gitdb",
+          "$pwd\git\ext\gitdb\.git",
+          "$pwd\git\ext\gitdb\gitdb\ext\smmap",
+          "$pwd\git\ext\gitdb\gitdb\ext\smmap\.git",
+          "$env:USERPROFILE\.gitconfig"
+        )
+        foreach ($p in $paths) {
+          if (Test-Path -LiteralPath $p) {
+            try {
+              $owner = (Get-Acl -LiteralPath $p).Owner
+            } catch {
+              $owner = "ERROR: $($_.Exception.Message)"
+            }
+            "{0,-44}  {1}" -f $owner, $p
+          } else {
+            "(missing: $p)"
+          }
+        }
+
+    - name: Show safe.directory entries
+      # `actions/checkout`'s safe.directory add is only durable for the
+      # checkout itself (it writes under a throwaway HOME override and
+      # then discards it), so by the time this step runs the runner
+      # user's `~/.gitconfig` has no entries -- and git accepts the
+      # workspace's ownership anyway: Git for Windows via its
+      # Admins-group exemption on the windows matrix; on Linux/macOS
+      # the workspace is owned by the test user. Expected: `(none)`.
+      run: git config --global --get-all safe.directory || echo "(none)"
 
     - name: Show version and platform information
       run: |
