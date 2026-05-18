@@ -6,9 +6,6 @@
 import gc
 import os
 import os.path
-import sys
-
-import pytest
 
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
@@ -478,11 +475,6 @@ class Tutorials(TestBase):
 
         repo.git.clear_cache()
 
-    @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin GitPython can't find SHA for submodule",
-        raises=ValueError,
-    )
     def test_submodules(self):
         # [1-test_submodules]
         repo = self.rorepo

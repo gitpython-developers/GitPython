@@ -53,6 +53,8 @@ jobs:
       run: |
         git config --global --add safe.directory "$(pwd)"
         git config --global --add safe.directory "$(pwd)/.git"
+        git config --global --add safe.directory "$(pwd)/git/ext/gitdb"
+        git config --global --add safe.directory "$(pwd)/git/ext/gitdb/gitdb/ext/smmap"
         git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
@@ -79,6 +81,60 @@ jobs:
     - name: Install project and test dependencies
       run: |
         pip install '.[test]'
+
+    - name: Show POSIX file ownership
+      # Cygwin's `ls -ld` reports the NTFS Owner SID via Cygwin's SID-to-uid
+      # mapping (well-known SIDs by their RID, machine-local accounts by
+      # 0x30000+RID). That mapping is what Cygwin git's
+      # `is_path_owned_by_current_user` reduces to, so this is the view that
+      # determines whether `safe.directory` is consulted.
+      run: |
+        for p in \
+          "$(pwd)" \
+          "$(pwd)/.git" \
+          "$(pwd)/git/ext/gitdb" \
+          "$(pwd)/git/ext/gitdb/.git" \
+          "$(pwd)/.git/modules/gitdb" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
+          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
+          "$(pwd)/.git/modules/gitdb/modules/smmap" \
+          "${HOME:?HOME is not set}/.gitconfig"
+        do
+          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
+        done
+
+    - name: Show NTFS file ownership
+      # Authoritative NTFS Owner via Get-Acl, with no Cygwin SID-to-uid layer
+      # in between -- useful for confirming what the Cygwin view reports as
+      # "Administrators" is the BUILTIN\Administrators SID (S-1-5-32-544).
+      shell: pwsh
+      run: |
+        $paths = @(
+          "$pwd",
+          "$pwd\.git",
+          "$pwd\git\ext\gitdb",
+          "$pwd\git\ext\gitdb\.git",
+          "$pwd\.git\modules\gitdb",
+          "$pwd\git\ext\gitdb\gitdb\ext\smmap",
+          "$pwd\git\ext\gitdb\gitdb\ext\smmap\.git",
+          "$pwd\.git\modules\gitdb\modules\smmap",
+          "$env:USERPROFILE\.gitconfig"
+        )
+        foreach ($p in $paths) {
+          if (Test-Path -LiteralPath $p) {
+            try {
+              $owner = (Get-Acl -LiteralPath $p).Owner
+            } catch {
+              $owner = "ERROR: $($_.Exception.Message)"
+            }
+            "{0,-44}  {1}" -f $owner, $p
+          } else {
+            "(missing: $p)"
+          }
+        }
+
+    - name: Show safe.directory entries
+      run: git config --global --get-all safe.directory
 
     - name: Show version and platform information
       run: |

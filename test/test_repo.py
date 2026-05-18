@@ -877,11 +877,6 @@ class TestRepo(TestBase):
         target_type = GitCmdObjectDB
         self.assertIsInstance(self.rorepo.odb, target_type)
 
-    @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError,
-    )
     def test_submodules(self):
         self.assertEqual(len(self.rorepo.submodules), 1)  # non-recursive
         self.assertGreaterEqual(len(list(self.rorepo.iter_submodules())), 2)
