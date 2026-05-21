@@ -23,7 +23,7 @@ from gitdb.base import IStream
 import ddt
 import pytest
 
-from git import BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
+from git import BlobFilter, Diff, Git, IndexFile, NULL_TREE, Object, Repo, Tree
 from git.exc import (
     CheckoutError,
     GitCommandError,
@@ -554,6 +554,34 @@ class TestIndex(TestBase):
         rmtree(osp.join(rw_repo.working_tree_dir, "lib"))
         rval = index.checkout("lib")
         assert len(list(rval)) > 1
+
+    @with_rw_directory
+    def test_index_file_diff_null_tree_with_initial_index(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        filename = ".gitkeep"
+        file_path = osp.join(repo.working_tree_dir, filename)
+        with open(file_path, "w") as fp:
+            fp.write("# Initial file\n")
+
+        index = repo.index
+        index.add([filename])
+        index.write()
+
+        index = IndexFile(repo)
+        assert not index.diff(None)
+
+        diff = index.diff(NULL_TREE)
+        self.assertEqual(len(diff), 1)
+        self.assertEqual(diff[0].change_type, "A")
+        assert diff[0].new_file
+        self.assertEqual(diff[0].b_path, filename)
+
+        self.assertEqual(len(index.diff(NULL_TREE, paths=filename)), 1)
+        self.assertEqual(len(index.diff(NULL_TREE, paths="missing")), 0)
+
+        patch = index.diff(NULL_TREE, create_patch=True)
+        self.assertEqual(len(patch), 1)
+        self.assertIn(b"+# Initial file", patch[0].diff)
 
     def _count_existing(self, repo, files):
         """Return count of files that actually exist in the repository directory."""
