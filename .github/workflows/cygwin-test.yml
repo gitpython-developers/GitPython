@@ -89,7 +89,7 @@ jobs:
       # `is_path_owned_by_current_user` reduces to, so this is the view that
       # determines whether `safe.directory` is consulted.
       run: |
-        for p in \
+        ls -ld -- \
           "$(pwd)" \
           "$(pwd)/.git" \
           "$(pwd)/git/ext/gitdb" \
@@ -98,10 +98,8 @@ jobs:
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
           "$(pwd)/.git/modules/gitdb/modules/smmap" \
-          "${HOME:?HOME is not set}/.gitconfig"
-        do
-          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
-        done
+          "${HOME:?HOME is not set}/.gitconfig" \
+          2>&1 || true
 
     - name: Show NTFS file ownership
       # Authoritative NTFS Owner via Get-Acl, with no Cygwin SID-to-uid layer
