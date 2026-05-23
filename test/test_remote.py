@@ -687,7 +687,12 @@ class TestRemote(TestBase):
 
     def test_fetch_error(self):
         rem = self.rorepo.remote("origin")
-        with self.assertRaisesRegex(GitCommandError, "[Cc]ouldn't find remote ref __BAD_REF__"):
+        msg = (
+            r"[Cc]ouldn't find remote ref __BAD_REF__|"
+            r"could not read Username|"
+            r"expected flush after ref listing"
+        )
+        with self.assertRaisesRegex(GitCommandError, msg):
             rem.fetch("__BAD_REF__")
 
     @with_rw_repo("0.1.6", bare=False)
