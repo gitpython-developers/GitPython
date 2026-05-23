@@ -602,7 +602,14 @@ class Diff:
 
         # FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text_list: List[bytes] = []
-        handle_process_output(proc, text_list.append, None, finalize_process, decode_streams=False)
+        stderr_list: List[bytes] = []
+
+        def finalize_process_with_stderr(proc: Union["Popen", "Git.AutoInterrupt"]) -> None:
+            finalize_process(proc, stderr=b"".join(stderr_list))
+
+        handle_process_output(
+            proc, text_list.append, stderr_list.append, finalize_process_with_stderr, decode_streams=False
+        )
 
         # For now, we have to bake the stream.
         text = b"".join(text_list)
@@ -768,11 +775,16 @@ class Diff:
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
         index: "DiffIndex" = DiffIndex()
+        stderr_list: List[bytes] = []
+
+        def finalize_process_with_stderr(proc: Union["Popen", "Git.AutoInterrupt"]) -> None:
+            finalize_process(proc, stderr=b"".join(stderr_list))
+
         handle_process_output(
             proc,
             lambda byt: cls._handle_diff_line(byt, repo, index),
-            None,
-            finalize_process,
+            stderr_list.append,
+            finalize_process_with_stderr,
             decode_streams=False,
         )
 

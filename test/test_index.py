@@ -585,6 +585,10 @@ class TestIndex(TestBase):
         self.assertEqual(len(patch), 1)
         self.assertIn(b"+# Initial file", patch[0].diff)
 
+        with self.assertRaises(GitCommandError) as exc_info:
+            index.diff(NULL_TREE, bogus_option=True)
+        self.assertIn("usage: git diff", exc_info.exception.stderr)
+
     def _count_existing(self, repo, files):
         """Return count of files that actually exist in the repository directory."""
         existing = 0
