@@ -90,7 +90,7 @@ class StringProcessAdapter:
         self.stdout = io.BytesIO(input_string)
         self.stderr = io.BytesIO()
 
-    def wait(self):
+    def wait(self, stderr=None):
         return 0
 
     poll = wait
