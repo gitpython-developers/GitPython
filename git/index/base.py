@@ -1511,10 +1511,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if other is self.INDEX:
             return git_diff.DiffIndex()
 
-        if other is git_diff.NULL_TREE:
+        if other == git_diff.NULL_TREE or other == git_diff.NULL_TREE_SHA:
             args: List[Union[PathLike, str]] = [
                 "--cached",
-                "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+                git_diff.NULL_TREE_SHA,
                 "--abbrev=40",
                 "--full-index",
             ]

@@ -3,7 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-__all__ = ["DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff"]
+__all__ = ["DiffConstants", "NULL_TREE", "NULL_TREE_SHA", "INDEX", "Diffable", "DiffIndex", "Diff"]
 
 import enum
 import re
@@ -83,6 +83,9 @@ See :meth:`Diffable.diff`, which accepts this as a value of its ``other`` parame
 This is an alias of :const:`DiffConstants.NULL_TREE`, which may also be accessed as
 :const:`git.NULL_TREE` and :const:`Diffable.NULL_TREE`.
 """
+
+NULL_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+"""SHA of Git's canonical empty tree object."""
 
 INDEX: Literal[DiffConstants.INDEX] = DiffConstants.INDEX
 """Stand-in indicating you want to diff against the index.

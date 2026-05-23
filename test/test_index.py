@@ -24,6 +24,7 @@ import ddt
 import pytest
 
 from git import BlobFilter, Diff, Git, IndexFile, NULL_TREE, Object, Repo, Tree
+from git.diff import NULL_TREE_SHA
 from git.exc import (
     CheckoutError,
     GitCommandError,
@@ -568,7 +569,7 @@ class TestIndex(TestBase):
         index.write()
 
         index = IndexFile(repo)
-        assert not index.diff(None)
+        self.assertEqual(len(index.diff(None)), 0)
 
         diff = index.diff(NULL_TREE)
         self.assertEqual(len(diff), 1)
@@ -577,6 +578,7 @@ class TestIndex(TestBase):
         self.assertEqual(diff[0].b_path, filename)
 
         self.assertEqual(len(index.diff(NULL_TREE, paths=filename)), 1)
+        self.assertEqual(len(index.diff(NULL_TREE_SHA, paths=filename)), 1)
         self.assertEqual(len(index.diff(NULL_TREE, paths="missing")), 0)
 
         patch = index.diff(NULL_TREE, create_patch=True)
