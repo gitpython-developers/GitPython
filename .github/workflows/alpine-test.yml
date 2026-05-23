@@ -63,17 +63,15 @@ jobs:
 
     - name: Show POSIX file ownership
       run: |
-        for p in \
+        ls -ld -- \
           "$(pwd)" \
           "$(pwd)/.git" \
           "$(pwd)/git/ext/gitdb" \
           "$(pwd)/git/ext/gitdb/.git" \
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
-          "${HOME:?HOME is not set}/.gitconfig"
-        do
-          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
-        done
+          "${HOME:?HOME is not set}/.gitconfig" \
+          2>&1 || true
 
     - name: Show safe.directory entries
       # `actions/checkout`'s safe.directory add is only durable for the

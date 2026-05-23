@@ -94,17 +94,15 @@ jobs:
       # not be informative here. The NTFS Owner check below covers Windows.
       if: matrix.os-type != 'windows'
       run: |
-        for p in \
+        ls -ld -- \
           "$(pwd)" \
           "$(pwd)/.git" \
           "$(pwd)/git/ext/gitdb" \
           "$(pwd)/git/ext/gitdb/.git" \
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
           "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
-          "${HOME:?HOME is not set}/.gitconfig"
-        do
-          ls -ld -- "$p" 2>/dev/null || echo "(missing: $p)"
-        done
+          "${HOME:?HOME is not set}/.gitconfig" \
+          2>&1 || true
 
     - name: Show NTFS file ownership
       # Windows only. Reads NTFS Owner directly via Get-Acl, which is the
