@@ -1480,12 +1480,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         return self
 
-    # FIXME: This is documented to accept the same parameters as Diffable.diff, but this
-    # does not handle NULL_TREE for `other`. (The suppressed mypy error is about this.)
     def diff(
         self,
-        other: Union[  # type: ignore[override]
+        other: Union[
             Literal[git_diff.DiffConstants.INDEX],
+            Literal[git_diff.DiffConstants.NULL_TREE],
             "Tree",
             "Commit",
             str,
@@ -1511,6 +1510,44 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # Index against index is always empty.
         if other is self.INDEX:
             return git_diff.DiffIndex()
+
+        if other == git_diff.NULL_TREE or other == git_diff.NULL_TREE_SHA:
+            args: List[Union[PathLike, str]] = [
+                "--cached",
+                git_diff.NULL_TREE_SHA,
+                "--abbrev=40",
+                "--full-index",
+            ]
+
+            if not any(x in kwargs for x in ("find_renames", "no_renames", "M")):
+                args.append("-M")
+
+            if create_patch:
+                args.append("-p")
+                args.append("--no-ext-diff")
+            else:
+                args.append("--raw")
+                args.append("-z")
+
+            args.append("--no-color")
+
+            if paths is not None and not isinstance(paths, (tuple, list)):
+                paths = [paths]
+
+            if paths:
+                args.append("--")
+                args.extend(paths)
+
+            kwargs["as_process"] = True
+            proc = self.repo.git.diff(*args, **kwargs)
+
+            diff_method = (
+                git_diff.Diff._index_from_patch_format if create_patch else git_diff.Diff._index_from_raw_format
+            )
+            index = diff_method(self.repo, proc)
+
+            proc.wait()
+            return index
 
         # Index against anything but None is a reverse diff with the respective item.
         # Handle existing -R flags properly.

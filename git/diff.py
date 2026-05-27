@@ -3,7 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-__all__ = ["DiffConstants", "NULL_TREE", "INDEX", "Diffable", "DiffIndex", "Diff"]
+__all__ = ["DiffConstants", "NULL_TREE", "NULL_TREE_SHA", "INDEX", "Diffable", "DiffIndex", "Diff"]
 
 import enum
 import re
@@ -83,6 +83,9 @@ See :meth:`Diffable.diff`, which accepts this as a value of its ``other`` parame
 This is an alias of :const:`DiffConstants.NULL_TREE`, which may also be accessed as
 :const:`git.NULL_TREE` and :const:`Diffable.NULL_TREE`.
 """
+
+NULL_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+"""SHA of Git's canonical empty tree object."""
 
 INDEX: Literal[DiffConstants.INDEX] = DiffConstants.INDEX
 """Stand-in indicating you want to diff against the index.
@@ -599,7 +602,14 @@ class Diff:
 
         # FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text_list: List[bytes] = []
-        handle_process_output(proc, text_list.append, None, finalize_process, decode_streams=False)
+        stderr_list: List[bytes] = []
+
+        def finalize_process_with_stderr(proc: Union["Popen", "Git.AutoInterrupt"]) -> None:
+            finalize_process(proc, stderr=b"".join(stderr_list))
+
+        handle_process_output(
+            proc, text_list.append, stderr_list.append, finalize_process_with_stderr, decode_streams=False
+        )
 
         # For now, we have to bake the stream.
         text = b"".join(text_list)
@@ -765,11 +775,16 @@ class Diff:
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
         index: "DiffIndex" = DiffIndex()
+        stderr_list: List[bytes] = []
+
+        def finalize_process_with_stderr(proc: Union["Popen", "Git.AutoInterrupt"]) -> None:
+            finalize_process(proc, stderr=b"".join(stderr_list))
+
         handle_process_output(
             proc,
             lambda byt: cls._handle_diff_line(byt, repo, index),
-            None,
-            finalize_process,
+            stderr_list.append,
+            finalize_process_with_stderr,
             decode_streams=False,
         )
 
