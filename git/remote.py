@@ -517,6 +517,9 @@ class FetchInfo(IterableObj):
         raise NotImplementedError
 
 
+Progress = Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None]
+
+
 class Remote(LazyMixin, IterableObj):
     """Provides easy read and write access to a git remote.
 
@@ -872,7 +875,7 @@ class Remote(LazyMixin, IterableObj):
     def _get_fetch_info_from_stderr(
         self,
         proc: "Git.AutoInterrupt",
-        progress: Union[Callable[..., Any], RemoteProgress, None],
+        progress: Progress,
         kill_after_timeout: Union[None, float] = None,
     ) -> IterableList["FetchInfo"]:
         progress = to_progress_instance(progress)
@@ -1000,7 +1003,7 @@ class Remote(LazyMixin, IterableObj):
     def fetch(
         self,
         refspec: Union[str, List[str], None] = None,
-        progress: Union[RemoteProgress, None, "UpdateProgress"] = None,
+        progress: Progress = None,
         verbose: bool = True,
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
@@ -1081,7 +1084,7 @@ class Remote(LazyMixin, IterableObj):
     def pull(
         self,
         refspec: Union[str, List[str], None] = None,
-        progress: Union[RemoteProgress, "UpdateProgress", None] = None,
+        progress: Progress = None,
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
@@ -1135,7 +1138,7 @@ class Remote(LazyMixin, IterableObj):
     def push(
         self,
         refspec: Union[str, List[str], None] = None,
-        progress: Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None] = None,
+        progress: Progress = None,
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
