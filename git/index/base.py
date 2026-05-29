@@ -1568,4 +1568,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             raise ValueError("other must be None, Diffable.INDEX, a Tree or Commit, was %r" % other)
 
         # Diff against working copy - can be handled by superclass natively.
-        return super().diff(other, paths, create_patch, **kwargs)
+        try:
+            _ = self.repo.head.commit
+            return super().diff(other, paths, create_patch, **kwargs)
+        except ValueError:
+            # No commits yet - diff against null tree instead
+            return self.diff(git_diff.NULL_TREE, paths, create_patch, **kwargs)
