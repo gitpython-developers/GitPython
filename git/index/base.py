@@ -1569,7 +1569,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # Diff against working copy - can be handled by superclass natively.
         try:
-            self.repo.head.commit
+            _ = self.repo.head.commit
             return super().diff(other, paths, create_patch, **kwargs)
         except ValueError:
             # No commits yet - diff against null tree instead
