@@ -64,6 +64,16 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, "hooks", name)
 
 
+def _commit_hook_path(name: str, index: "IndexFile") -> str:
+    """:return: path to the named commit hook, respecting Git's core.hooksPath."""
+    hp = index.repo.git.rev_parse("--git-path", f"hooks/{name}")
+    if osp.isabs(hp):
+        return hp
+
+    base_dir = index.repo.working_dir or index.repo.git_dir
+    return osp.abspath(osp.join(base_dir, hp))
+
+
 def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
@@ -82,7 +92,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
 
     :raise git.exc.HookExecutionError:
     """
-    hp = hook_path(name, index.repo.git_dir)
+    hp = _commit_hook_path(name, index)
     if not os.access(hp, os.X_OK):
         return
 
