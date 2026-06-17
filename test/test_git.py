@@ -158,10 +158,21 @@ class TestGit(TestBase):
     def test_check_unsafe_options_normalizes_kwargs(self):
         cases = [
             (["upload_pack"], ["--upload-pack"]),
+            (["upload_p"], ["--upload-pack"]),
+            (["upload_pac"], ["--upload-pack"]),
             (["receive_pack"], ["--receive-pack"]),
+            (["receive_p"], ["--receive-pack"]),
             (["exec"], ["--exec"]),
+            (["exe"], ["--exec"]),
             (["u"], ["-u"]),
+            (["-utouch /tmp/pwn"], ["-u"]),
+            (["-futouch /tmp/pwn"], ["-u"]),
+            (["-qutouch${IFS}/tmp/pwn"], ["-u"]),
             (["c"], ["-c"]),
+            (["-cprotocol.ext.allow=always"], ["-c"]),
+            (["-vcprotocol.ext.allow=always"], ["-c"]),
+            (["conf"], ["--config"]),
+            (["confi"], ["--config"]),
             (["--upload-pack=/tmp/helper"], ["--upload-pack"]),
             (["--config core.filemode=false"], ["--config"]),
         ]
@@ -169,6 +180,35 @@ class TestGit(TestBase):
         for options, unsafe_options in cases:
             with self.assertRaises(UnsafeOptionError):
                 Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
+
+    def test_check_unsafe_options_keeps_short_options_exact(self):
+        cases = [
+            (["u"], ["--upload-pack"]),
+            (["-u helper"], ["--upload-pack"]),
+            (["c"], ["--config"]),
+            (["-c protocol.ext.allow=always"], ["--config"]),
+            (["e"], ["--exec"]),
+            (["r"], ["--receive-pack"]),
+        ]
+
+        for options, unsafe_options in cases:
+            Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
+
+    def test_check_unsafe_options_ignores_multi_option_values(self):
+        Git.check_unsafe_options(
+            options=["--origin", "upload"],
+            unsafe_options=["--upload-pack", "--config"],
+            bare_options_are_long=False,
+        )
+
+    def test_check_unsafe_options_allows_attached_safe_short_option_values(self):
+        cases = [
+            ["-oupstream"],
+            ["-bcurrent"],
+        ]
+
+        for options in cases:
+            Git.check_unsafe_options(options=options, unsafe_options=["--upload-pack", "-u", "--config", "-c"])
 
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg

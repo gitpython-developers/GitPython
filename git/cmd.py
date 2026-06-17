@@ -960,18 +960,89 @@ class Git(metaclass=_GitMeta):
         return dashify(option_tokens[0])
 
     @classmethod
-    def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
+    def _option_token(cls, option: str) -> str:
+        option_name = option.split("=", 1)[0]
+        option_tokens = option_name.split(None, 1)
+        if not option_tokens:
+            return ""
+        return option_tokens[0]
+
+    @classmethod
+    def _is_long_option(cls, option: str, bare_options_are_long: bool = True) -> bool:
+        """Return whether an option is a long option before canonicalization."""
+        option_token = cls._option_token(option)
+        if not option_token:
+            return False
+
+        if option_token.startswith("--"):
+            return True
+        if option_token.startswith("-"):
+            return False
+        return bare_options_are_long and len(option_token) > 1
+
+    @classmethod
+    def _matches_unsafe_short_option(
+        cls, option: str, canonical_unsafe_option: str, unsafe_option_is_long: bool
+    ) -> bool:
+        """Return whether a single-dash option matches an unsafe short option."""
+        if unsafe_option_is_long or len(canonical_unsafe_option) != 1:
+            return False
+
+        option_token = cls._option_token(option)
+        if not option_token:
+            return False
+
+        if not option_token.startswith("-") or option_token.startswith("--"):
+            return False
+
+        clusterable_flags = frozenset("46flnqsv")
+        for option_char in option_token[1:]:
+            if option_char == canonical_unsafe_option:
+                return True
+            if option_char not in clusterable_flags:
+                return False
+        return False
+
+    @classmethod
+    def check_unsafe_options(
+        cls, options: List[str], unsafe_options: List[str], bare_options_are_long: bool = True
+    ) -> None:
         """Check for unsafe options.
 
         Some options that are passed to ``git <command>`` can be used to execute
         arbitrary commands. These are blocked by default.
         """
         # Options can be of the form `foo`, `--foo`, `--foo bar`, or `--foo=bar`.
-        canonical_unsafe_options = {cls._canonicalize_option_name(option): option for option in unsafe_options}
+        # We also treat long-option prefix forms as unsafe, matching Git's option
+        # parser behavior for long options.
+        canonical_unsafe_options = [
+            (cls._canonicalize_option_name(option), option, cls._is_long_option(option)) for option in unsafe_options
+        ]
         for option in options:
-            unsafe_option = canonical_unsafe_options.get(cls._canonicalize_option_name(option))
-            if unsafe_option is not None:
-                raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
+            option_token = cls._option_token(option)
+            if not bare_options_are_long and not option_token.startswith("-"):
+                continue
+            canonical_option = cls._canonicalize_option_name(option)
+            if not canonical_option:
+                continue
+            option_is_long = cls._is_long_option(option, bare_options_are_long=bare_options_are_long)
+            for (
+                canonical_unsafe_option,
+                unsafe_option,
+                unsafe_option_is_long,
+            ) in canonical_unsafe_options:
+                if (
+                    canonical_option == canonical_unsafe_option
+                    or (
+                        option_is_long
+                        and unsafe_option_is_long
+                        and canonical_unsafe_option.startswith(canonical_option)
+                    )
+                    or cls._matches_unsafe_short_option(option, canonical_unsafe_option, unsafe_option_is_long)
+                ):
+                    raise UnsafeOptionError(
+                        f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
+                    )
 
     AutoInterrupt: TypeAlias = _AutoInterrupt
 

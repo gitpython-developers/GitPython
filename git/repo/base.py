@@ -1410,7 +1410,9 @@ class Repo:
         if not allow_unsafe_options:
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=cls.unsafe_git_clone_options)
         if not allow_unsafe_options and multi:
-            Git.check_unsafe_options(options=multi, unsafe_options=cls.unsafe_git_clone_options)
+            Git.check_unsafe_options(
+                options=multi, unsafe_options=cls.unsafe_git_clone_options, bare_options_are_long=False
+            )
 
         proc = git.clone(
             multi,
