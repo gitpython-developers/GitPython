@@ -162,6 +162,8 @@ class TestGit(TestBase):
             (["exec"], ["--exec"]),
             (["u"], ["-u"]),
             (["c"], ["-c"]),
+            (["-u/tmp/helper"], ["-u"]),
+            (["-cprotocol.ext.allow=always"], ["-c"]),
             (["--upload-pack=/tmp/helper"], ["--upload-pack"]),
             (["--config core.filemode=false"], ["--config"]),
         ]

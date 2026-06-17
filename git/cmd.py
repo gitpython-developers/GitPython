@@ -957,7 +957,10 @@ class Git(metaclass=_GitMeta):
         option_tokens = option_name.split(None, 1)
         if not option_tokens:
             return ""
-        return dashify(option_tokens[0])
+        option_token = option_tokens[0]
+        if option.startswith("-") and not option.startswith("--") and len(option_token) > 1:
+            option_token = option_token[:1]
+        return dashify(option_token)
 
     @classmethod
     def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:

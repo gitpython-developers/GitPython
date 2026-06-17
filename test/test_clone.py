@@ -118,8 +118,10 @@ class TestClone(TestBase):
             unsafe_options = [
                 f"--upload-pack='touch {tmp_file}'",
                 f"-u 'touch {tmp_file}'",
+                f"-u{tmp_file}",
                 "--config=protocol.ext.allow=always",
                 "-c protocol.ext.allow=always",
+                "-cprotocol.ext.allow=always",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -207,8 +209,10 @@ class TestClone(TestBase):
             unsafe_options = [
                 f"--upload-pack='touch {tmp_file}'",
                 f"-u 'touch {tmp_file}'",
+                f"-u{tmp_file}",
                 "--config=protocol.ext.allow=always",
                 "-c protocol.ext.allow=always",
+                "-cprotocol.ext.allow=always",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
