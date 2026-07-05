@@ -368,11 +368,37 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         kwargs["skip"] = skip
 
         return self.iter_items(self.repo, self, paths, **kwargs)
+    @property
+    def is_shallow(self) -> bool:
+        """Check whether this commit is a shallow boundary (graft) commit.
 
+        A commit at the boundary of a shallow clone appears to have no
+        parents from Git's perspective, even though the underlying commit
+        object still references a parent SHA that was never fetched. Calling
+        :attr:`stats` (or anything else that diffs against the parent) on
+        such a commit will raise :exc:`~git.exc.GitCommandError` because the
+        parent object does not exist locally.
+
+        :return:
+            True if this commit's hexsha appears in the repository's
+            ``shallow`` file, False otherwise (including for non-shallow
+            repositories).
+        """
+        shallow_file = os.path.join(self.repo.git_dir, "shallow")
+        if not os.path.isfile(shallow_file):
+            return False
+        with open(shallow_file, "r") as f:
+            return self.hexsha in f.read().split()
+    
     @property
     def stats(self) -> Stats:
         """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
+
+        :note:
+            If this commit is at the boundary of a shallow clone (see
+            :attr:`is_shallow`), this will raise :exc:`~git.exc.GitCommandError`
+            because the parent object was never fetched.
 
         :return:
             :class:`Stats`

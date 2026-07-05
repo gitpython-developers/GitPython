@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 from gitdb import IStream
 
-from git import Actor, Commit, Repo
+from git import Actor, Commit, GitCommandError, Repo
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
@@ -163,6 +163,25 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.author_tz_offset, 14400, commit.author_tz_offset)
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
+    
+    @with_rw_directory
+    def test_is_shallow(self, rw_dir):
+        """A commit at the shallow boundary should report is_shallow, and
+        accessing its stats should raise GitCommandError."""
+        full_repo = self.rorepo
+        shallow_path = osp.join(rw_dir, "shallow_clone")
+        shallow_repo = Repo.clone_from(full_repo.git_dir, shallow_path, depth=2, no_local=True)
+
+        commits = list(shallow_repo.iter_commits())
+        boundary_commit = commits[-1]
+
+        self.assertTrue(boundary_commit.is_shallow)
+        with self.assertRaises(GitCommandError):
+            boundary_commit.stats
+
+        if len(commits) > 1:
+            non_boundary_commit = commits[0]
+            self.assertFalse(non_boundary_commit.is_shallow)
 
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
