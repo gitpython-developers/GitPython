@@ -163,7 +163,7 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.author_tz_offset, 14400, commit.author_tz_offset)
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
-    
+
     @with_rw_directory
     def test_is_shallow(self, rw_dir):
         """A commit at the shallow boundary should report is_shallow, and

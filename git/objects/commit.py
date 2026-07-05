@@ -368,6 +368,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         kwargs["skip"] = skip
 
         return self.iter_items(self.repo, self, paths, **kwargs)
+
     @property
     def is_shallow(self) -> bool:
         """Check whether this commit is a shallow boundary (graft) commit.
@@ -389,7 +390,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             return False
         with open(shallow_file, "r") as f:
             return self.hexsha in f.read().split()
-    
+
     @property
     def stats(self) -> Stats:
         """Create a git stat from changes between this commit and its first parent
