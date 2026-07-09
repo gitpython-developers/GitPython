@@ -967,11 +967,20 @@ class Git(metaclass=_GitMeta):
         arbitrary commands. These are blocked by default.
         """
         # Options can be of the form `foo`, `--foo`, `--foo bar`, or `--foo=bar`.
+        # Git accepts any unambiguous prefix of a long option, so an abbreviated
+        # spelling such as `--upl` for `--upload-pack` must be rejected too. An
+        # option is unsafe if its canonical name is a prefix of any blocked
+        # option's canonical name.
         canonical_unsafe_options = {cls._canonicalize_option_name(option): option for option in unsafe_options}
         for option in options:
-            unsafe_option = canonical_unsafe_options.get(cls._canonicalize_option_name(option))
-            if unsafe_option is not None:
-                raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
+            candidate = cls._canonicalize_option_name(option)
+            if not candidate:
+                continue
+            for canonical, unsafe_option in canonical_unsafe_options.items():
+                if canonical.startswith(candidate):
+                    raise UnsafeOptionError(
+                        f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
+                    )
 
     AutoInterrupt: TypeAlias = _AutoInterrupt
 

@@ -139,6 +139,21 @@ class TestClone(TestBase):
                 assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
+    def test_clone_unsafe_options_abbreviated(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upl='touch {tmp_file}'",
+                f"--upload-pac='touch {tmp_file}'",
+                "--conf=protocol.ext.allow=always",
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
+                assert not tmp_file.exists()
+
+    @with_rw_repo("HEAD")
     def test_clone_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
