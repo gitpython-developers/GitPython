@@ -170,6 +170,16 @@ class TestGit(TestBase):
             with self.assertRaises(UnsafeOptionError):
                 Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
 
+    def test_check_unsafe_options_does_not_treat_short_options_as_abbreviations(self):
+        unsafe_options = ["--upload-pack"]
+
+        Git.check_unsafe_options(options=["-u", "u", "-upl"], unsafe_options=unsafe_options)
+        with self.assertRaises(UnsafeOptionError):
+            Git.check_unsafe_options(options=["--u"], unsafe_options=unsafe_options)
+
+    def test_check_unsafe_options_does_not_treat_option_values_as_abbreviations(self):
+        Git.check_unsafe_options(options=["--branch", "conf"], unsafe_options=["--config"])
+
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg
         (None, False, False),

@@ -970,11 +970,19 @@ class Git(metaclass=_GitMeta):
         # Git accepts any unambiguous prefix of a long option, so an abbreviated
         # spelling such as `--upl` for `--upload-pack` must be rejected too. An
         # option is unsafe if its canonical name is a prefix of any blocked
-        # option's canonical name.
+        # option's canonical name. Only long options and multi-character kwargs
+        # can be abbreviations; single-character short options remain exact-match
+        # only.
         canonical_unsafe_options = {cls._canonicalize_option_name(option): option for option in unsafe_options}
+        options_are_kwargs = all(not option.startswith("-") for option in options)
         for option in options:
             candidate = cls._canonicalize_option_name(option)
             if not candidate:
+                continue
+            unsafe_option = canonical_unsafe_options.get(candidate)
+            if unsafe_option is not None:
+                raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
+            if not (option.startswith("--") or (options_are_kwargs and len(candidate) > 1)):
                 continue
             for canonical, unsafe_option in canonical_unsafe_options.items():
                 if canonical.startswith(candidate):
