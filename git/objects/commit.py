@@ -374,6 +374,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
 
+        :note:
+            If this commit is at the boundary of a shallow clone, this will
+            raise :exc:`~git.exc.GitCommandError`, since the parent object
+            was never fetched and only exists as a reference on this commit.
+
         :return:
             :class:`Stats`
         """
