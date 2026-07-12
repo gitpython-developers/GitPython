@@ -9,7 +9,7 @@ from pathlib import Path
 import random
 import sys
 import tempfile
-from unittest import skipIf
+from unittest import mock, skipIf
 
 import pytest
 
@@ -1016,6 +1016,47 @@ class TestRemote(TestBase):
                     remote.push(**unsafe_option, allow_unsafe_options=True)
                 assert tmp_file.exists()
                 tmp_file.unlink()
+
+    @with_rw_repo("HEAD")
+    def test_ls_remote_unsafe_options(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                {"upload-pack": f"touch {tmp_file}"},
+                {"upload_pack": f"touch {tmp_file}"},
+                {"upl": f"touch {tmp_file}"},
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.git.ls_remote(".", **unsafe_option)
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote([f"--upload-pack={tmp_file}"], ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote([f"--upl={tmp_file}"], ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote(f"--upload-pack={tmp_file}", ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote(f"--upl={tmp_file}", ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote("--upload-pack", "touch", ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote("--refs", ".", upl=f"touch {tmp_file}")
+
+    def test_ls_remote_allows_operand_named_like_unsafe_option(self):
+        with mock.patch.object(Git, "_call_process") as git:
+            Git().ls_remote("upload-pack")
+        git.assert_called_once()
+
+    @with_rw_repo("HEAD")
+    def test_ls_remote_unsafe_options_allowed(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(GitCommandError):
+                    rw_repo.git.ls_remote(".", **unsafe_option, allow_unsafe_options=True)
 
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_fetch_unsafe_branch_name(self, rw_repo, remote_repo):

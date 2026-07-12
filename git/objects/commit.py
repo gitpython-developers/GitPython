@@ -86,6 +86,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     # INVARIANTS
     default_encoding = "UTF-8"
 
+    # Options to :manpage:`git-rev-list(1)` that can overwrite files.
+    unsafe_git_rev_options = [
+        "--output",
+        "-o",
+    ]
+
     type: Literal["commit"] = "commit"
 
     __slots__ = (
@@ -302,6 +308,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         repo: "Repo",
         rev: Union[str, "Commit", "SymbolicReference"],
         paths: Union[PathLike, Sequence[PathLike]] = "",
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> Iterator["Commit"]:
         R"""Find all commits matching the given criteria.
@@ -329,6 +336,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         if "pretty" in kwargs:
             raise ValueError("--pretty cannot be used as parsing expects single sha's only")
         # END handle pretty
+
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([rev], kwargs), unsafe_options=cls.unsafe_git_rev_options
+            )
 
         # Use -- in all cases, to prevent possibility of ambiguous arguments.
         # See https://github.com/gitpython-developers/GitPython/issues/264.

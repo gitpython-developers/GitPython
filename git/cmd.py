@@ -649,6 +649,11 @@ class Git(metaclass=_GitMeta):
 
     re_unsafe_protocol = re.compile(r"(.+)::.+")
 
+    unsafe_git_ls_remote_options = [
+        # This option allows arbitrary command execution in git-ls-remote.
+        "--upload-pack",
+    ]
+
     def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
@@ -1022,6 +1027,20 @@ class Git(metaclass=_GitMeta):
                         f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
                     )
 
+    @classmethod
+    def _option_candidates(cls, args: Sequence[Any] = (), kwargs: Optional[Mapping[str, Any]] = None) -> List[str]:
+        """Collect possible option spellings before command-line transformation."""
+        options = [
+            option for option in cls._unpack_args([arg for arg in args if arg is not None]) if option.startswith("-")
+        ]
+        if kwargs:
+            for key, value in kwargs.items():
+                values = value if isinstance(value, (list, tuple)) else (value,)
+                if any(value is True or (value is not False and value is not None) for value in values):
+                    key = str(key)
+                    options.append(f"-{key}" if len(key) == 1 else f"--{dashify(key)}")
+        return options
+
     AutoInterrupt: TypeAlias = _AutoInterrupt
 
     CatFileContentStream: TypeAlias = _CatFileContentStream
@@ -1078,6 +1097,22 @@ class Git(metaclass=_GitMeta):
         """
 
         self._persistent_git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
+
+    def ls_remote(
+        self,
+        *args: Any,
+        allow_unsafe_options: bool = False,
+        **kwargs: Any,
+    ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]:
+        """List references in a remote repository.
+
+        :param allow_unsafe_options:
+            Allow unsafe options, like ``--upload-pack``.
+        """
+        if not allow_unsafe_options:
+            candidate_options = self._option_candidates(args, kwargs)
+            Git.check_unsafe_options(options=candidate_options, unsafe_options=self.unsafe_git_ls_remote_options)
+        return self._call_process("ls_remote", *args, **kwargs)
 
     @property
     def working_dir(self) -> Union[None, PathLike]:
@@ -1585,7 +1620,7 @@ class Git(metaclass=_GitMeta):
         return args
 
     @classmethod
-    def _unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
+    def _unpack_args(cls, arg_list: Sequence[Any]) -> List[str]:
         outlist = []
         if isinstance(arg_list, (list, tuple)):
             for arg in arg_list:
