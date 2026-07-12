@@ -2,6 +2,23 @@
 Changelog
 =========
 
+3.1.51
+======
+
+This is primarily a security release. It prevents additional argument-injection
+paths that could allow execution of arbitrary commands or writing to arbitrary
+files through unsafe Git options (GHSA-956x-8gvw-wg5v), and closes bypasses of
+the existing protections using abbreviated long options or joined short options
+(GHSA-2f96-g7mh-g2hx).
+
+The release also improves support for relative worktree paths and diffs against
+the empty tree, preserves stderr from failed diff processes, supports relative
+configuration include paths, and includes assorted documentation, typing, test,
+and CI improvements.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.51
+
 3.1.50
 ======
 
