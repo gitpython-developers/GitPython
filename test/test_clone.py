@@ -118,8 +118,13 @@ class TestClone(TestBase):
             unsafe_options = [
                 f"--upload-pack='touch {tmp_file}'",
                 f"-u 'touch {tmp_file}'",
+                f"-utouch {tmp_file}; false",
+                f"-futouch${{IFS}}{tmp_file}; false",
+                f"-qutouch${{IFS}}{tmp_file}; false",
                 "--config=protocol.ext.allow=always",
                 "-c protocol.ext.allow=always",
+                "-cprotocol.ext.allow=always",
+                "-vcprotocol.ext.allow=always",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -134,6 +139,31 @@ class TestClone(TestBase):
                 {"c": "protocol.ext.allow=always"},
             ]
             for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.clone(tmp_dir, **unsafe_option)
+                assert not tmp_file.exists()
+
+    @with_rw_repo("HEAD")
+    def test_clone_unsafe_options_abbreviated(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upl='touch {tmp_file}'",
+                f"--upload-pac='touch {tmp_file}'",
+                "--conf=protocol.ext.allow=always",
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
+                assert not tmp_file.exists()
+
+            unsafe_kwargs = [
+                {"upl": f"touch {tmp_file}"},
+                {"upload_pac": f"touch {tmp_file}"},
+                {"conf": "protocol.ext.allow=always"},
+            ]
+            for unsafe_option in unsafe_kwargs:
                 with self.assertRaises(UnsafeOptionError):
                     rw_repo.clone(tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
@@ -191,7 +221,9 @@ class TestClone(TestBase):
             options = [
                 "--depth=1",
                 "--single-branch",
+                "--origin upload",
                 "-q",
+                "-oupstream",
             ]
             for option in options:
                 destination = tmp_dir / option
@@ -207,8 +239,13 @@ class TestClone(TestBase):
             unsafe_options = [
                 f"--upload-pack='touch {tmp_file}'",
                 f"-u 'touch {tmp_file}'",
+                f"-utouch {tmp_file}; false",
+                f"-futouch${{IFS}}{tmp_file}; false",
+                f"-qutouch${{IFS}}{tmp_file}; false",
                 "--config=protocol.ext.allow=always",
                 "-c protocol.ext.allow=always",
+                "-cprotocol.ext.allow=always",
+                "-vcprotocol.ext.allow=always",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):

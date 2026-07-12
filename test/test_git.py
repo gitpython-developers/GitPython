@@ -170,6 +170,34 @@ class TestGit(TestBase):
             with self.assertRaises(UnsafeOptionError):
                 Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
 
+    def test_check_unsafe_options_does_not_treat_short_options_as_abbreviations(self):
+        unsafe_options = ["--upload-pack"]
+
+        Git.check_unsafe_options(options=["-u", "u", "-upl"], unsafe_options=unsafe_options)
+        with self.assertRaises(UnsafeOptionError):
+            Git.check_unsafe_options(options=["--u"], unsafe_options=unsafe_options)
+
+    def test_check_unsafe_options_does_not_treat_option_values_as_abbreviations(self):
+        Git.check_unsafe_options(options=["--branch", "conf"], unsafe_options=["--config"])
+
+    def test_check_unsafe_options_rejects_joined_unsafe_short_options(self):
+        cases = [
+            (["-utouch /tmp/pwn"], ["-u"]),
+            (["-futouch /tmp/pwn"], ["-u"]),
+            (["-qutouch${IFS}/tmp/pwn"], ["-u"]),
+            (["-cprotocol.ext.allow=always"], ["-c"]),
+            (["-vcprotocol.ext.allow=always"], ["-c"]),
+        ]
+
+        for options, unsafe_options in cases:
+            with self.assertRaises(UnsafeOptionError):
+                Git.check_unsafe_options(options=options, unsafe_options=unsafe_options)
+
+    def test_check_unsafe_options_allows_attached_safe_short_option_values(self):
+        unsafe_options = ["--upload-pack", "-u", "--config", "-c"]
+
+        Git.check_unsafe_options(options=["-oupstream", "-bcurrent"], unsafe_options=unsafe_options)
+
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg
         (None, False, False),

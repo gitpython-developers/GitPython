@@ -832,7 +832,11 @@ class TestRemote(TestBase):
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
-            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}, {"upload_pack": f"touch {tmp_file}"}]
+            unsafe_options = [
+                {"upload-pack": f"touch {tmp_file}"},
+                {"upload_pack": f"touch {tmp_file}"},
+                {"upload_p": f"touch {tmp_file}"},
+            ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
                     remote.fetch(**unsafe_option)
@@ -900,7 +904,11 @@ class TestRemote(TestBase):
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
-            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}, {"upload_pack": f"touch {tmp_file}"}]
+            unsafe_options = [
+                {"upload-pack": f"touch {tmp_file}"},
+                {"upload_pack": f"touch {tmp_file}"},
+                {"upload_p": f"touch {tmp_file}"},
+            ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
                     remote.pull(**unsafe_option)
@@ -971,7 +979,9 @@ class TestRemote(TestBase):
             unsafe_options = [
                 {"receive-pack": f"touch {tmp_file}"},
                 {"receive_pack": f"touch {tmp_file}"},
+                {"receive_p": f"touch {tmp_file}"},
                 {"exec": f"touch {tmp_file}"},
+                {"exe": f"touch {tmp_file}"},
             ]
             for unsafe_option in unsafe_options:
                 assert not tmp_file.exists()
