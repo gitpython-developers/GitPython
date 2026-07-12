@@ -320,6 +320,9 @@ class TestBase(TestCase):
         with GitConfigParser(config_path, read_only=False) as cw:
             cw.set_value("include", "path", "included")
 
+        if osp.splitdrive(config_path)[0] != osp.splitdrive(os.getcwd())[0]:
+            pytest.skip("The temporary directory and checkout are on different drives")
+
         relative_config_path = osp.relpath(config_path)
         with GitConfigParser(relative_config_path, read_only=True) as cr:
             assert cr.get_value("included", "value") == "included"
