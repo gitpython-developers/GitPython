@@ -161,6 +161,20 @@ class Repo:
     https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---configltkeygtltvaluegt
     """
 
+    unsafe_git_archive_options = [
+        # Allows arbitrary command execution through the remote git-upload-archive command.
+        "--exec",
+        # Writes output to a caller-controlled filesystem path.
+        "--output",
+        "-o",
+    ]
+
+    unsafe_git_revision_options = [
+        # This option allows output to be written to arbitrary files before revision parsing.
+        "--output",
+        "-o",
+    ]
+
     # Invariants
     config_level: ConfigLevels_Tup = ("system", "user", "global", "repository")
     """Represents the configuration level of a configuration file."""
@@ -775,6 +789,7 @@ class Repo:
         self,
         rev: Union[str, Commit, "SymbolicReference", None] = None,
         paths: Union[PathLike, Sequence[PathLike]] = "",
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> Iterator[Commit]:
         """An iterator of :class:`~git.objects.commit.Commit` objects representing the
@@ -792,6 +807,9 @@ class Repo:
             Arguments to be passed to :manpage:`git-rev-list(1)`.
             Common ones are ``max_count`` and ``skip``.
 
+        :param allow_unsafe_options:
+            Allow unsafe options in the revision argument, like ``--output``.
+
         :note:
             To receive only commits between two named revisions, use the
             ``"revA...revB"`` revision specifier.
@@ -802,7 +820,18 @@ class Repo:
         if rev is None:
             rev = self.head.commit
 
-        return Commit.iter_items(self, rev, paths, **kwargs)
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([rev], kwargs), unsafe_options=self.unsafe_git_revision_options
+            )
+
+        return Commit.iter_items(
+            self,
+            rev,
+            paths,
+            allow_unsafe_options=allow_unsafe_options,
+            **kwargs,
+        )
 
     def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Commit]:
         R"""Find the closest common ancestor for the given revision
@@ -1079,7 +1108,9 @@ class Repo:
             )
         return active_branch
 
-    def blame_incremental(self, rev: str | HEAD | None, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
+    def blame_incremental(
+        self, rev: str | HEAD | None, file: str, allow_unsafe_options: bool = False, **kwargs: Any
+    ) -> Iterator["BlameEntry"]:
         """Iterator for blame information for the given file at the given revision.
 
         Unlike :meth:`blame`, this does not return the actual file's contents, only a
@@ -1090,6 +1121,9 @@ class Repo:
             uncommitted changes. Otherwise, anything successfully parsed by
             :manpage:`git-rev-parse(1)` is a valid option.
 
+        :param allow_unsafe_options:
+            Allow unsafe options in revision argument, like ``--output``.
+
         :return:
             Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates the
             commit to blame for the line, and range indicates a span of line numbers in
@@ -1098,6 +1132,10 @@ class Repo:
         If you combine all line number ranges outputted by this command, you should get
         a continuous range spanning all line numbers in the file.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([rev], kwargs), unsafe_options=self.unsafe_git_revision_options
+            )
 
         data: bytes = self.git.blame(rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs)
         commits: Dict[bytes, Commit] = {}
@@ -1176,7 +1214,8 @@ class Repo:
         rev: Union[str, HEAD, None],
         file: str,
         incremental: bool = False,
-        rev_opts: Optional[List[str]] = None,
+        rev_opts: Optional[Sequence[str]] = None,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
@@ -1185,6 +1224,9 @@ class Repo:
             Revision specifier. If ``None``, the blame will include all the latest
             uncommitted changes. Otherwise, anything successfully parsed by
             :manpage:`git-rev-parse(1)` is a valid option.
+
+        :param allow_unsafe_options:
+            Allow unsafe options in revision argument, like ``--output``.
 
         :return:
             list: [git.Commit, list: [<line>]]
@@ -1195,9 +1237,14 @@ class Repo:
             appearance.
         """
         if incremental:
-            return self.blame_incremental(rev, file, **kwargs)
-        rev_opts = rev_opts or []
-        data: bytes = self.git.blame(rev, *rev_opts, "--", file, p=True, stdout_as_string=False, **kwargs)
+            return self.blame_incremental(rev, file, allow_unsafe_options=allow_unsafe_options, **kwargs)
+        rev_opts_list = list(rev_opts or [])
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([rev, rev_opts_list], kwargs),
+                unsafe_options=self.unsafe_git_revision_options,
+            )
+        data: bytes = self.git.blame(rev, *rev_opts_list, "--", file, p=True, stdout_as_string=False, **kwargs)
         commits: Dict[str, Commit] = {}
         blames: List[List[Commit | List[str | bytes] | None]] = []
 
@@ -1408,7 +1455,10 @@ class Repo:
         if not allow_unsafe_protocols:
             Git.check_unsafe_protocols(url)
         if not allow_unsafe_options:
-            Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=cls.unsafe_git_clone_options)
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=cls.unsafe_git_clone_options,
+            )
         if not allow_unsafe_options and multi:
             Git.check_unsafe_options(options=multi, unsafe_options=cls.unsafe_git_clone_options)
 
@@ -1583,6 +1633,8 @@ class Repo:
         ostream: Union[TextIO, BinaryIO],
         treeish: Optional[str] = None,
         prefix: Optional[str] = None,
+        allow_unsafe_options: bool = False,
+        allow_unsafe_protocols: bool = False,
         **kwargs: Any,
     ) -> Repo:
         """Archive the tree at the given revision.
@@ -1605,6 +1657,12 @@ class Repo:
               repository-relative path to a directory or file to place into the archive,
               or a list or tuple of multiple paths.
 
+        :param allow_unsafe_options:
+            Allow unsafe options, like ``--exec`` or ``--output``.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used in ``remote``, like ``ext``.
+
         :raise git.exc.GitCommandError:
             If something went wrong.
 
@@ -1615,6 +1673,14 @@ class Repo:
             treeish = self.head.commit
         if prefix and "prefix" not in kwargs:
             kwargs["prefix"] = prefix
+        remote = kwargs.get("remote")
+        if not allow_unsafe_protocols and remote is not None:
+            Git.check_unsafe_protocols(str(remote))
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=self.unsafe_git_archive_options,
+            )
         kwargs["output_stream"] = ostream
         path = kwargs.pop("path", [])
         path = cast(Union[PathLike, List[PathLike], Tuple[PathLike, ...]], path)

@@ -37,6 +37,8 @@ from git import (
     Submodule,
     Tree,
 )
+from git.exc import UnsafeOptionError
+from git.exc import UnsafeProtocolError
 from git.exc import BadObject
 from git.repo.fun import touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
@@ -422,6 +424,54 @@ class TestRepo(TestBase):
             assert stream.tell()
         os.remove(stream.name)  # Do it this way so we can inspect the file on failure.
 
+    def test_archive_rejects_unsafe_options(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            output_marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.archive(io.BytesIO(), "0.1.6", exec=f"touch {output_marker}")
+            assert not osp.exists(output_marker)
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.archive(io.BytesIO(), "0.1.6", output=output_marker)
+            assert not osp.exists(output_marker)
+
+    def test_archive_rejects_unsafe_remote_protocol(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            output_marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeProtocolError):
+                self.rorepo.archive(io.BytesIO(), "HEAD", remote=f"ext::sh -c touch% {output_marker}")
+            assert not osp.exists(output_marker)
+
+    def test_archive_preserves_positional_allow_unsafe_options(self):
+        with mock.patch.object(Git, "_call_process") as git:
+            self.rorepo.archive(io.BytesIO(), "HEAD", None, True, exec="git-upload-archive")
+        git.assert_called_once()
+
+    def test_archive_accepts_stringifiable_remote(self):
+        class StringifiableRemote:
+            def __str__(self):
+                return "origin"
+
+        with mock.patch.object(Git, "_call_process") as git:
+            self.rorepo.archive(io.BytesIO(), "HEAD", remote=StringifiableRemote())
+        git.assert_called_once()
+
+    def test_archive_rejects_unsafe_falsey_remote_protocol(self):
+        class FalseyRemote:
+            def __bool__(self):
+                return False
+
+            def __str__(self):
+                return "ext::sh -c true"
+
+        with self.assertRaises(UnsafeProtocolError):
+            self.rorepo.archive(io.BytesIO(), "HEAD", remote=FalseyRemote())
+
+    def test_iter_commits_rejects_unsafe_revision(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            target = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                list(self.rorepo.iter_commits(f"--output={target}", max_count=1))
+
     @mock.patch.object(Git, "_call_process")
     def test_should_display_blame_information(self, git):
         git.return_value = fixture("blame")
@@ -470,6 +520,27 @@ class TestRepo(TestBase):
         # END for each item to traverse
         assert c, "Should have executed at least one blame command"
         assert nml, "There should at least be one blame commit that contains multiple lines"
+
+    def test_blame_rejects_unsafe_revision(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            output_marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.blame(f"--output={output_marker}", "README.md")
+            assert not osp.exists(output_marker)
+
+    def test_blame_rejects_unsafe_options(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            output_marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.blame("HEAD", "README.md", output=output_marker)
+            assert not osp.exists(output_marker)
+
+    def test_blame_rejects_unsafe_rev_opts(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            output_marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.blame("HEAD", "README.md", rev_opts=(f"--output={output_marker}",))
+            assert not osp.exists(output_marker)
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_incremental(self, git):

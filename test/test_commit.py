@@ -6,6 +6,7 @@
 import copy
 from datetime import datetime
 from io import BytesIO
+import tempfile
 import os.path as osp
 import re
 import sys
@@ -15,6 +16,7 @@ from unittest.mock import Mock
 from gitdb import IStream
 
 from git import Actor, Commit, Repo
+from git.exc import UnsafeOptionError
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
@@ -287,6 +289,17 @@ class TestCommit(TestCommitSerialization):
     def test_iter_items(self):
         # pretty not allowed.
         self.assertRaises(ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw")
+
+    def test_iter_items_rejects_unsafe_revision(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            marker = osp.join(tdir, "pwn")
+            self.assertRaises(UnsafeOptionError, Commit.iter_items, self.rorepo, f"--output={marker}")
+
+    def test_iter_items_rejects_unsafe_options(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            marker = osp.join(tdir, "pwn")
+            with self.assertRaises(UnsafeOptionError):
+                list(Commit.iter_items(self.rorepo, "HEAD", output=marker))
 
     def test_rev_list_bisect_all(self):
         """

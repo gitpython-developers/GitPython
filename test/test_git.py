@@ -164,6 +164,9 @@ class TestGit(TestBase):
             (["c"], ["-c"]),
             (["--upload-pack=/tmp/helper"], ["--upload-pack"]),
             (["--config core.filemode=false"], ["--config"]),
+            (["--upl=/tmp/helper"], ["--upload-pack"]),
+            (["conf"], ["--config"]),
+            (["--out=/tmp/output"], ["--output"]),
         ]
 
         for options, unsafe_options in cases:
@@ -197,6 +200,19 @@ class TestGit(TestBase):
         unsafe_options = ["--upload-pack", "-u", "--config", "-c"]
 
         Git.check_unsafe_options(options=["-oupstream", "-bcurrent"], unsafe_options=unsafe_options)
+
+    def test_option_candidates_ignore_untransformed_kwargs(self):
+        options = Git._option_candidates(
+            kwargs={
+                "output": None,
+                "upload_pack": False,
+                "exec": [],
+                "config": [None, False],
+                "max_count": 1,
+            }
+        )
+
+        self.assertEqual(options, ["--max-count"])
 
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg
