@@ -961,10 +961,23 @@ class Git(metaclass=_GitMeta):
 
     @classmethod
     def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
-        """Check for unsafe options.
+        """Raise :class:`~git.exc.UnsafeOptionError` for blocked option spellings.
 
-        Some options that are passed to ``git <command>`` can be used to execute
-        arbitrary commands. These are blocked by default.
+        In addition to exact matches, this rejects abbreviated long options accepted
+        by Git (for example, ``--upl`` for ``--upload-pack``) and unsafe short options
+        whose values are joined to the same token, including after clusterable flags
+        (for example, ``-uVALUE`` and ``-fuVALUE``).
+
+        A list containing only bare names is treated as normalized keyword arguments,
+        so multi-character names such as ``upload_p`` are checked as long-option
+        abbreviations. If any item starts with ``-``, the list is treated as tokenized
+        command-line input: bare items can be option values and are not checked as
+        abbreviations. Thus ``["--origin", "upload"]`` is allowed. Single-dash options
+        use short-option parsing rather than broad prefix matching, preserving safe
+        attached values such as ``-oupstream`` and ``-bcurrent``.
+
+        Some options passed to ``git <command>`` can execute arbitrary commands and
+        are therefore blocked by default unless the caller explicitly allows them.
         """
         # Options can be of the form `foo`, `--foo`, `--foo bar`, or `--foo=bar`.
         # Git accepts any unambiguous prefix of a long option, so an abbreviated
@@ -974,6 +987,15 @@ class Git(metaclass=_GitMeta):
         # can be abbreviations; single-character short options remain exact-match
         # only.
         canonical_unsafe_options = {cls._canonicalize_option_name(option): option for option in unsafe_options}
+        unsafe_short_options = {
+            canonical: option
+            for canonical, option in canonical_unsafe_options.items()
+            if option.startswith("-") and not option.startswith("--") and len(canonical) == 1
+        }
+        # These value-less Git flags can be clustered before another short option
+        # (for example, ``-fuVALUE``). Stop at any other character because it may
+        # begin an attached value, as ``o`` does in the safe option ``-oupstream``.
+        clusterable_short_options = frozenset("46flnqsv")
         options_are_kwargs = all(not option.startswith("-") for option in options)
         for option in options:
             candidate = cls._canonicalize_option_name(option)
@@ -982,6 +1004,16 @@ class Git(metaclass=_GitMeta):
             unsafe_option = canonical_unsafe_options.get(candidate)
             if unsafe_option is not None:
                 raise UnsafeOptionError(f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it.")
+            option_token = option.split("=", 1)[0].split(None, 1)[0]
+            if option_token.startswith("-") and not option_token.startswith("--"):
+                for option_char in option_token[1:]:
+                    unsafe_option = unsafe_short_options.get(option_char)
+                    if unsafe_option is not None:
+                        raise UnsafeOptionError(
+                            f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
+                        )
+                    if option_char not in clusterable_short_options:
+                        break
             if not (option.startswith("--") or (options_are_kwargs and len(candidate) > 1)):
                 continue
             for canonical, unsafe_option in canonical_unsafe_options.items():
