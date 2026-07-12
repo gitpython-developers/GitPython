@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 from gitdb import IStream
 
-from git import Actor, Commit, GitCommandError, Repo
+from git import Actor, Commit, Repo
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
