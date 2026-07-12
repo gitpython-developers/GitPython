@@ -634,6 +634,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             files_to_read = list(self._file_or_files)
         # END ensure we have a copy of the paths to handle
 
+        files_to_read = [osp.abspath(path) if isinstance(path, (str, os.PathLike)) else path for path in files_to_read]
+
         seen = set(files_to_read)
         num_read_include_files = 0
         while files_to_read:
