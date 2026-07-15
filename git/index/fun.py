@@ -81,8 +81,21 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         Arguments passed to hook file.
 
     :raise git.exc.HookExecutionError:
+
+    :note:
+        Respects the ``core.hooksPath`` git configuration option. When set, hooks are
+        resolved relative to that path instead of the default ``.git/hooks`` directory.
     """
-    hp = hook_path(name, index.repo.git_dir)
+    hooks_path = index.repo.config_reader().get(
+        "core", "hooksPath", fallback=None
+    )
+    if hooks_path is not None:
+        hp = osp.join(hooks_path, name)
+        if not osp.isabs(hooks_path):
+            # Relative hooksPath is resolved against the working tree root.
+            hp = osp.join(index.repo.working_dir, hp)
+    else:
+        hp = hook_path(name, index.repo.git_dir)
     if not os.access(hp, os.X_OK):
         return
 
