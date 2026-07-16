@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.52
+======
+
+A security fix for
+https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-rwj8-pgh3-r573.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.52
+
 3.1.51
 ======
 
