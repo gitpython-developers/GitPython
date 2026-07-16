@@ -1242,6 +1242,91 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
+    # ---- core.hooksPath tests ----
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook_respects_absolute_hooks_path(self, rw_repo):
+        """Hooks in a custom absolute core.hooksPath are found and executed."""
+        index = rw_repo.index
+        custom_hooks_dir = osp.join(rw_repo.working_dir, "custom-hooks")
+        os.makedirs(custom_hooks_dir, exist_ok=True)
+        hp = osp.join(custom_hooks_dir, "fake-hook")
+        with open(hp, "w", encoding="utf-8") as f:
+            f.write("#!/bin/sh\necho 'ran custom hook' >output.txt\n")
+        os.chmod(hp, 0o755)
+
+        rw_repo.config_writer().set_value("core", "hooksPath", custom_hooks_dir).release()
+        run_commit_hook("fake-hook", index)
+        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran custom hook\n")
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook_respects_relative_hooks_path(self, rw_repo):
+        """A relative core.hooksPath is resolved against the working tree root."""
+        index = rw_repo.index
+        custom_hooks_dir = osp.join(rw_repo.working_dir, "hooks-relative")
+        os.makedirs(custom_hooks_dir, exist_ok=True)
+        hp = osp.join(custom_hooks_dir, "fake-hook")
+        with open(hp, "w", encoding="utf-8") as f:
+            f.write("#!/bin/sh\necho 'ran relative hook' >output.txt\n")
+        os.chmod(hp, 0o755)
+
+        rw_repo.config_writer().set_value("core", "hooksPath", "hooks-relative").release()
+        run_commit_hook("fake-hook", index)
+        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran relative hook\n")
+
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook_falls_back_to_default_without_hooks_path(self, rw_repo):
+        """When core.hooksPath is not set, the default .git/hooks path is used."""
+        index = rw_repo.index
+        _make_hook(index.repo.git_dir, "fake-hook", "echo 'ran default hook' >output.txt")
+        run_commit_hook("fake-hook", index)
+        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran default hook\n")
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook_hooks_path_skips_missing_hook(self, rw_repo):
+        """If a hook does not exist in core.hooksPath, no error is raised."""
+        index = rw_repo.index
+        custom_hooks_dir = osp.join(rw_repo.working_dir, "empty-hooks")
+        os.makedirs(custom_hooks_dir, exist_ok=True)
+        rw_repo.config_writer().set_value("core", "hooksPath", custom_hooks_dir).release()
+        # Should not raise -- the hook doesn't exist, so run_commit_hook returns silently
+        run_commit_hook("nonexistent-hook", index)
+
+    # ---- end core.hooksPath tests ----
+
     @with_rw_repo("HEAD")
     def test_index_add_pathlib(self, rw_repo):
         git_dir = Path(rw_repo.git_dir)
