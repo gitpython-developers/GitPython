@@ -728,6 +728,151 @@ class TestSubmodule(TestBase):
 
             git_submodule.assert_called_once_with("deinit", "--force", "--", submodule.path)
 
+    @with_rw_directory
+    def test_update_after_deinit(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        touch(osp.join(source_path, "file"))
+        source_repo.index.add(["file"])
+        source_repo.index.commit("initial commit")
+
+        parent_path = osp.join(rwdir, "parent")
+        parent_repo = git.Repo.init(parent_path)
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+
+        submodule.deinit()
+        assert not submodule.module_exists()
+        assert osp.isdir(osp.join(parent_repo.git_dir, "modules", submodule.name))
+
+        submodule.update()
+
+        assert submodule.module_exists()
+        assert submodule.module().head.commit == source_repo.head.commit
+        assert osp.isfile(osp.join(submodule.abspath, "file"))
+
+    @with_rw_directory
+    def test_update_to_latest_revision_after_deinit_fetches_remote(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        source_repo.git.commit(m="initial commit", allow_empty=True)
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+        submodule.deinit()
+
+        touch(osp.join(source_path, "new-file"))
+        source_repo.index.add(["new-file"])
+        source_repo.index.commit("advance remote")
+
+        submodule.update(to_latest_revision=True)
+
+        assert submodule.module().head.commit == source_repo.head.commit
+        assert osp.isfile(osp.join(submodule.abspath, "new-file"))
+
+    @with_rw_directory
+    def test_update_after_deinit_fetches_new_gitlink_commit(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        source_repo.git.commit(m="initial commit", allow_empty=True)
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+        submodule.deinit()
+
+        touch(osp.join(source_path, "new-file"))
+        source_repo.index.add(["new-file"])
+        source_repo.index.commit("advance remote")
+        parent_repo.git.update_index(
+            "--cacheinfo",
+            f"160000,{source_repo.head.commit.hexsha},{submodule.path}",
+        )
+        parent_repo.index.commit("advance submodule")
+
+        submodule = parent_repo.submodule(submodule.name)
+        submodule.update()
+
+        assert submodule.module().head.commit == source_repo.head.commit
+        assert osp.isfile(osp.join(submodule.abspath, "new-file"))
+
+    @with_rw_directory
+    def test_update_after_deinit_refuses_non_empty_checkout(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        tracked_file = osp.join(source_path, "file")
+        with open(tracked_file, "w") as fp:
+            fp.write("submodule content")
+        source_repo.index.add(["file"])
+        source_repo.index.commit("initial commit")
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+        submodule.deinit()
+
+        checkout_file = osp.join(submodule.abspath, "file")
+        with open(checkout_file, "w") as fp:
+            fp.write("user content")
+
+        with pytest.raises(OSError, match="does already exist and is non-empty"):
+            submodule.update()
+
+        with open(checkout_file) as fp:
+            assert fp.read() == "user content"
+        assert not osp.exists(osp.join(submodule.abspath, ".git"))
+
+    @with_rw_directory
+    def test_update_after_deinit_without_init_does_not_restore_checkout(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        source_repo.git.commit(m="initial commit", allow_empty=True)
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+        submodule.deinit()
+
+        assert submodule.update(init=False) is submodule
+        assert not submodule.module_exists()
+        assert not osp.exists(osp.join(submodule.abspath, ".git"))
+
+    @with_rw_directory
+    def test_dry_run_update_after_deinit_does_not_restore_checkout(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        source_repo.git.commit(m="initial commit", allow_empty=True)
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("module", "module", source_path)
+        parent_repo.index.commit("add submodule")
+        submodule.deinit()
+
+        assert submodule.update(dry_run=True) is submodule
+        assert not submodule.module_exists()
+        assert not osp.exists(osp.join(submodule.abspath, ".git"))
+
+    @with_rw_directory
+    def test_update_after_deinit_restores_nested_checkout(self, rwdir):
+        source_path = osp.join(rwdir, "source")
+        source_repo = git.Repo.init(source_path)
+        touch(osp.join(source_path, "file"))
+        source_repo.index.add(["file"])
+        source_repo.index.commit("initial commit")
+
+        parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = parent_repo.create_submodule("nested/module", "deps/module", source_path)
+        parent_repo.index.commit("add nested submodule")
+        submodule.deinit()
+
+        submodule.update()
+
+        module_repo = submodule.module()
+        assert module_repo.head.commit == source_repo.head.commit
+        assert osp.isfile(osp.join(submodule.abspath, "file"))
+        assert osp.samefile(module_repo.git_dir, osp.join(parent_repo.git_dir, "modules", submodule.name))
+
     @with_rw_repo(k_no_subm_tag, bare=False)
     def test_first_submodule(self, rwrepo):
         assert len(list(rwrepo.iter_submodules())) == 0

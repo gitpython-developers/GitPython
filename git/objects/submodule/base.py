@@ -739,122 +739,132 @@ class Submodule(IndexObject, TraversableIterableObj):
             mrepo = None
         # END init mrepo
 
+        def fetch_remotes(module_repo: "Repo") -> None:
+            rmts = module_repo.remotes
+            len_rmts = len(rmts)
+            for i, remote in enumerate(rmts):
+                op = FETCH
+                if i == 0:
+                    op |= BEGIN
+                # END handle start
+
+                progress.update(
+                    op,
+                    i,
+                    len_rmts,
+                    prefix + "Fetching remote %s of submodule %r" % (remote, self.name),
+                )
+                # ===============================
+                if not dry_run:
+                    remote.fetch(progress=progress)
+                # END handle dry-run
+                # ===============================
+                if i == len_rmts - 1:
+                    op |= END
+                # END handle end
+                progress.update(
+                    op,
+                    i,
+                    len_rmts,
+                    prefix + "Done fetching remote of submodule %r" % self.name,
+                )
+            # END fetch new data
+
         try:
             # ENSURE REPO IS PRESENT AND UP-TO-DATE
             #######################################
             try:
                 mrepo = self.module()
-                rmts = mrepo.remotes
-                len_rmts = len(rmts)
-                for i, remote in enumerate(rmts):
-                    op = FETCH
-                    if i == 0:
-                        op |= BEGIN
-                    # END handle start
-
-                    progress.update(
-                        op,
-                        i,
-                        len_rmts,
-                        prefix + "Fetching remote %s of submodule %r" % (remote, self.name),
-                    )
-                    # ===============================
-                    if not dry_run:
-                        remote.fetch(progress=progress)
-                    # END handle dry-run
-                    # ===============================
-                    if i == len_rmts - 1:
-                        op |= END
-                    # END handle end
-                    progress.update(
-                        op,
-                        i,
-                        len_rmts,
-                        prefix + "Done fetching remote of submodule %r" % self.name,
-                    )
-                # END fetch new data
+                fetch_remotes(mrepo)
             except InvalidGitRepositoryError:
                 mrepo = None
                 if not init:
                     return self
                 # END early abort if init is not allowed
 
-                # There is no git-repository yet - but delete empty paths.
                 checkout_module_abspath = self.abspath
-                if not dry_run and osp.isdir(checkout_module_abspath):
-                    try:
-                        os.rmdir(checkout_module_abspath)
-                    except OSError as e:
-                        raise OSError(
-                            "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
-                        ) from e
-                    # END handle OSError
-                # END handle directory removal
+                module_abspath = self._module_abspath(self.repo, self.path, self.name)
 
-                # Don't check it out at first - nonetheless it will create a local
-                # branch according to the remote-HEAD if possible.
-                progress.update(
-                    BEGIN | CLONE,
-                    0,
-                    1,
-                    prefix
-                    + "Cloning url '%s' to '%s' in submodule %r" % (self.url, checkout_module_abspath, self.name),
-                )
-                if not dry_run:
-                    if self.url.startswith("."):
-                        url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
+                # ``git submodule deinit`` leaves the repository in
+                # ``.git/modules`` and empties the checkout. Reconnect that retained
+                # repository instead of trying to clone over it.
+                if not dry_run and osp.isdir(module_abspath):
+                    try:
+                        git.Repo(module_abspath)
+                    except InvalidGitRepositoryError:
+                        pass
                     else:
-                        url = self.url
-                    mrepo = self._clone_repo(
-                        self.repo,
-                        url,
-                        self.path,
-                        self.name,
-                        n=True,
-                        env=env,
-                        multi_options=clone_multi_options,
-                        allow_unsafe_options=allow_unsafe_options,
-                        allow_unsafe_protocols=allow_unsafe_protocols,
+                        if osp.lexists(checkout_module_abspath) and (
+                            osp.islink(checkout_module_abspath)
+                            or not osp.isdir(checkout_module_abspath)
+                            or os.listdir(checkout_module_abspath)
+                        ):
+                            raise OSError(
+                                "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
+                            )
+                        os.makedirs(checkout_module_abspath, exist_ok=True)
+                        self._write_git_file_and_module_config(checkout_module_abspath, module_abspath)
+                        mrepo = git.Repo(checkout_module_abspath)
+                        mrepo.head.reset(mrepo.head.commit, index=True, working_tree=True)
+                        fetch_remotes(mrepo)
+                        with self.repo.config_writer() as writer:
+                            writer.set_value(sm_section(self.name), "url", self.url)
+
+                if mrepo is None:
+                    # There is no git-repository yet - but delete empty paths.
+                    if not dry_run and osp.isdir(checkout_module_abspath):
+                        try:
+                            os.rmdir(checkout_module_abspath)
+                        except OSError as e:
+                            raise OSError(
+                                "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
+                            ) from e
+                    # END handle directory removal
+
+                    # Don't check it out at first - nonetheless it will create a local
+                    # branch according to the remote-HEAD if possible.
+                    progress.update(
+                        BEGIN | CLONE,
+                        0,
+                        1,
+                        prefix
+                        + "Cloning url '%s' to '%s' in submodule %r" % (self.url, checkout_module_abspath, self.name),
                     )
-                # END handle dry-run
-                progress.update(
-                    END | CLONE,
-                    0,
-                    1,
-                    prefix + "Done cloning to %s" % checkout_module_abspath,
-                )
-
-                if not dry_run:
-                    # See whether we have a valid branch to check out.
-                    try:
-                        mrepo = cast("Repo", mrepo)
-                        # Find a remote which has our branch - we try to be flexible.
-                        remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
-                        local_branch = mkhead(mrepo, self.branch_path)
-
-                        # Have a valid branch, but no checkout - make sure we can figure
-                        # that out by marking the commit with a null_sha.
-                        local_branch.set_object(Object(mrepo, self.NULL_BIN_SHA))
-                        # END initial checkout + branch creation
-
-                        # Make sure HEAD is not detached.
-                        mrepo.head.set_reference(
-                            local_branch,
-                            logmsg="submodule: attaching head to %s" % local_branch,
+                    if not dry_run:
+                        if self.url.startswith("."):
+                            url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
+                        else:
+                            url = self.url
+                        mrepo = self._clone_repo(
+                            self.repo,
+                            url,
+                            self.path,
+                            self.name,
+                            n=True,
+                            env=env,
+                            multi_options=clone_multi_options,
+                            allow_unsafe_options=allow_unsafe_options,
+                            allow_unsafe_protocols=allow_unsafe_protocols,
                         )
-                        mrepo.head.reference.set_tracking_branch(remote_branch)
-                    except (IndexError, InvalidGitRepositoryError):
-                        _logger.warning("Failed to checkout tracking branch %s", self.branch_path)
-                    # END handle tracking branch
+                    progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
-                    # NOTE: Have to write the repo config file as well, otherwise the
-                    # default implementation will be offended and not update the
-                    # repository. Maybe this is a good way to ensure it doesn't get into
-                    # our way, but we want to stay backwards compatible too... It's so
-                    # redundant!
-                    with self.repo.config_writer() as writer:
-                        writer.set_value(sm_section(self.name), "url", self.url)
-                # END handle dry_run
+                    if not dry_run:
+                        # See whether we have a valid branch to check out.
+                        try:
+                            mrepo = cast("Repo", mrepo)
+                            remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
+                            local_branch = mkhead(mrepo, self.branch_path)
+                            local_branch.set_object(Object(mrepo, self.NULL_BIN_SHA))
+                            mrepo.head.set_reference(
+                                local_branch,
+                                logmsg="submodule: attaching head to %s" % local_branch,
+                            )
+                            mrepo.head.reference.set_tracking_branch(remote_branch)
+                        except (IndexError, InvalidGitRepositoryError):
+                            _logger.warning("Failed to checkout tracking branch %s", self.branch_path)
+
+                        with self.repo.config_writer() as writer:
+                            writer.set_value(sm_section(self.name), "url", self.url)
             # END handle initialization
 
             # DETERMINE SHAS TO CHECK OUT
