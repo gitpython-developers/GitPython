@@ -903,29 +903,34 @@ class Git(metaclass=_GitMeta):
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str: ...
+    def polish_url(cls, url: str, is_cygwin: Literal[False] = ..., expand_vars: bool = ...) -> str: ...
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str: ...
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None, expand_vars: bool = True) -> str: ...
 
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None, expand_vars: bool = True) -> PathLike:
         """Remove any backslashes from URLs to be written in config files.
 
         Windows might create config files containing paths with backslashes, but git
         stops liking them as it will escape the backslashes. Hence we undo the escaping
         just to be sure.
+
+        :param expand_vars:
+            Expand environment variables and an initial ``~``. Disable this for values
+            obtained from an untrusted source, such as remote URLs.
         """
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
         if is_cygwin:
-            url = cygpath(url)
+            url = cygpath(url, expand_vars=expand_vars)
         else:
-            url = os.path.expandvars(url)
-            if url.startswith("~"):
-                url = os.path.expanduser(url)
+            if expand_vars:
+                url = os.path.expandvars(url)
+                if url.startswith("~"):
+                    url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
         return url
 

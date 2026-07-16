@@ -1452,8 +1452,9 @@ class Repo:
         if multi_options:
             multi = shlex.split(" ".join(multi_options))
 
+        clone_url = Git.polish_url(url, expand_vars=False)
         if not allow_unsafe_protocols:
-            Git.check_unsafe_protocols(url)
+            Git.check_unsafe_protocols(clone_url)
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([], kwargs),
@@ -1465,7 +1466,7 @@ class Repo:
         proc = git.clone(
             multi,
             "--",
-            Git.polish_url(url),
+            clone_url,
             clone_path,
             with_extended_output=True,
             as_process=True,
@@ -1505,7 +1506,7 @@ class Repo:
         # escape the backslashes. Hence we undo the escaping just to be sure.
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
-                writer.set_value("url", Git.polish_url(repo.remotes[0].url))
+                writer.set_value("url", Git.polish_url(repo.remotes[0].url, expand_vars=False))
         # END handle remote repo
         return repo
 

@@ -382,13 +382,13 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     return progs
 
 
-def _cygexpath(drive: Optional[str], path: str) -> str:
+def _cygexpath(drive: Optional[str], path: str, expand_vars: bool = True) -> str:
     if osp.isabs(path) and not drive:
         # Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
         p = path  # convert to str if AnyPath given
     else:
-        p = path and osp.normpath(osp.expandvars(osp.expanduser(path)))
+        p = path and osp.normpath(osp.expandvars(osp.expanduser(path)) if expand_vars else path)
         if osp.isabs(p):
             if drive:
                 # Confusing, maybe a remote system should expand vars.
@@ -416,7 +416,7 @@ _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
 )
 
 
-def cygpath(path: str) -> str:
+def cygpath(path: str, expand_vars: bool = True) -> str:
     """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
     path = os.fspath(path)  # Ensure is str and not AnyPath.
     # Fix to use Paths when 3.5 dropped. Or to be just str if only for URLs?
@@ -424,12 +424,15 @@ def cygpath(path: str) -> str:
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
             if match:
-                path = parser(*match.groups())
+                if parser is _cygexpath:
+                    path = parser(*match.groups(), expand_vars=expand_vars)
+                else:
+                    path = parser(*match.groups())
                 if recurse:
-                    path = cygpath(path)
+                    path = cygpath(path, expand_vars=expand_vars)
                 break
         else:
-            path = _cygexpath(None, path)
+            path = _cygexpath(None, path, expand_vars=expand_vars)
 
     return path
 

@@ -7,8 +7,9 @@ import pathlib
 import sys
 import tempfile
 from unittest import skip
+from unittest import mock
 
-from git import GitCommandError, Repo
+from git import Git, GitCommandError, Repo
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
@@ -345,6 +346,44 @@ class TestClone(TestBase):
                 with self.assertRaises(UnsafeProtocolError):
                     Repo.clone_from(url, tmp_dir / "repo")
                 assert not tmp_file.exists()
+
+    def test_clone_from_does_not_expand_environment_variables_in_url(self):
+        urls = [
+            "https://example.com/$GITPYTHON_TEST_SECRET/repo.git",
+            "https://example.com/${GITPYTHON_TEST_SECRET}/repo.git",
+            "https://example.com/%GITPYTHON_TEST_SECRET%/repo.git",
+        ]
+        with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
+            for url in urls:
+                with mock.patch.object(Git, "_call_process", side_effect=RuntimeError) as call_process:
+                    with self.assertRaises(RuntimeError):
+                        Repo.clone_from(url, "unused")
+
+                assert call_process.call_args[0][3] == url
+
+    @with_rw_directory
+    def test_clone_from_does_not_expand_environment_variables_in_stored_url(self, rw_dir):
+        url = pathlib.Path(rw_dir) / "$GITPYTHON_TEST_SECRET" / "source"
+        Git().init(url)
+
+        with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
+            cloned = Repo.clone_from(url, pathlib.Path(rw_dir) / "clone")
+
+        assert cloned.remotes.origin.url == Git.polish_url(str(url), expand_vars=False)
+
+    def test_clone_from_checks_polished_url_for_unsafe_protocol(self):
+        with mock.patch.object(Git, "polish_url", return_value="ext::command"):
+            with mock.patch.object(Git, "_call_process") as call_process:
+                with self.assertRaises(UnsafeProtocolError):
+                    Repo.clone_from("$GITPYTHON_TEST_URL", "unused")
+
+        call_process.assert_not_called()
+
+    def test_polish_url_does_not_expand_environment_variables_for_cygwin(self):
+        urls = ["$GITPYTHON_TEST_SECRET/repo", "user@example.com:$GITPYTHON_TEST_SECRET/repo"]
+        with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
+            for url in urls:
+                assert Git.polish_url(url, is_cygwin=True, expand_vars=False) == url
 
     def test_clone_from_unsafe_protocol_allowed(self):
         with tempfile.TemporaryDirectory() as tdir:
