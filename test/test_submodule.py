@@ -713,6 +713,21 @@ class TestSubmodule(TestBase):
             next(it)
         self.assertIsNone(ctx.exception.value)
 
+    @with_rw_directory
+    def test_deinit_calls_git_submodule(self, rwdir):
+        repo = git.Repo.init(rwdir)
+        submodule = Submodule(repo, b"\0" * 20, name="module", path="module")
+
+        with mock.patch.object(Git, "submodule", create=True) as git_submodule:
+            submodule.deinit()
+
+            git_submodule.assert_called_once_with("deinit", "--", submodule.path)
+            git_submodule.reset_mock()
+
+            submodule.deinit(force=True)
+
+            git_submodule.assert_called_once_with("deinit", "--force", "--", submodule.path)
+
     @with_rw_repo(k_no_subm_tag, bare=False)
     def test_first_submodule(self, rwrepo):
         assert len(list(rwrepo.iter_submodules())) == 0
