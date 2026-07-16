@@ -1272,13 +1272,13 @@ class Submodule(IndexObject, TraversableIterableObj):
     def deinit(self, force: bool = False) -> "Submodule":
         """Run ``git submodule deinit`` on this submodule.
 
-        This is a thin wrapper around ``git submodule deinit <path>``, paralleling
-        :meth:`add`, :meth:`update`, and :meth:`remove`. It unregisters the
-        submodule (removes its entry from ``.git/config`` and empties the
-        working-tree directory) without deleting the submodule from
-        ``.gitmodules`` or its checked-out repository under ``.git/modules/``.
-        A subsequent :meth:`update` will re-initialize the submodule from the
-        retained contents.
+        This is a thin wrapper around ``git submodule deinit <path>``,
+        which unregisters the submodule (removes its entry from
+        ``.git/config`` and empties the working-tree directory)
+        without deleting the submodule from ``.gitmodules``
+        or its checked-out repository under ``.git/modules/``.
+        A subsequent :meth:`update` will re-initialize the
+        submodule from the retained contents.
 
         :param force:
             If ``True``, pass ``--force`` to ``git submodule deinit``. This
