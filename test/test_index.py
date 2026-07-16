@@ -1261,13 +1261,15 @@ class TestIndex(TestBase):
         custom_hooks_dir = osp.join(rw_repo.working_dir, "custom-hooks")
         os.makedirs(custom_hooks_dir, exist_ok=True)
         hp = osp.join(custom_hooks_dir, "fake-hook")
+        # Use a Python script so it works on all platforms (no bash required)
+        hook_script = "#!" + sys.executable + "\nimport sys; open('output.txt', 'w').write('ran custom hook\\n')\n"
         with open(hp, "w", encoding="utf-8") as f:
-            f.write("#!/bin/sh\necho 'ran custom hook' >output.txt\n")
+            f.write(hook_script)
         os.chmod(hp, 0o755)
 
         rw_repo.config_writer().set_value("core", "hooksPath", custom_hooks_dir).release()
         run_commit_hook("fake-hook", index)
-        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        output = Path(rw_repo.working_dir, "output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran custom hook\n")
 
     @pytest.mark.xfail(
@@ -1287,13 +1289,15 @@ class TestIndex(TestBase):
         custom_hooks_dir = osp.join(rw_repo.working_dir, "hooks-relative")
         os.makedirs(custom_hooks_dir, exist_ok=True)
         hp = osp.join(custom_hooks_dir, "fake-hook")
+        # Use a Python script so it works on all platforms (no bash required)
+        hook_script = "#!" + sys.executable + "\nimport sys; open('output.txt', 'w').write('ran relative hook\\n')\n"
         with open(hp, "w", encoding="utf-8") as f:
-            f.write("#!/bin/sh\necho 'ran relative hook' >output.txt\n")
+            f.write(hook_script)
         os.chmod(hp, 0o755)
 
         rw_repo.config_writer().set_value("core", "hooksPath", "hooks-relative").release()
         run_commit_hook("fake-hook", index)
-        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        output = Path(rw_repo.working_dir, "output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran relative hook\n")
 
     @with_rw_repo("HEAD", bare=True)
