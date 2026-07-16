@@ -33,6 +33,17 @@ exclude = ["^git/ext/gitdb"]
 module = "gitdb.*"
 ignore_missing_imports = true
 
+[tool.basedpyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.7"
+extraPaths = [
+    "git/ext/gitdb",
+    "git/ext/gitdb/gitdb/ext/smmap",
+]
+exclude = [
+    "git/ext/gitdb",
+]
+
 [tool.coverage.run]
 source = ["git"]
 
