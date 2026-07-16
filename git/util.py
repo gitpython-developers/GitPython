@@ -217,7 +217,7 @@ def rmtree(path: PathLike) -> None:
         couldn't be deleted are read-only. Windows will not remove them in that case.
     """
 
-    def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
+    def handler(function: Callable[[str], Any], path: str, _excinfo: Any) -> None:
         """Callback for :func:`shutil.rmtree`.
 
         This works as either a ``onexc`` or ``onerror`` style callback.
@@ -401,7 +401,7 @@ def _cygexpath(drive: Optional[str], path: str, expand_vars: bool = True) -> str
     return p_str.replace("\\", "/")
 
 
-_cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
+_cygpath_parsers: Tuple[Tuple[Pattern[str], Callable[..., str], bool], ...] = (
     # See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
     # and: https://www.cygwin.com/cygwin-ug-net/using.html#unc-paths
     (
@@ -508,7 +508,7 @@ def get_user_id() -> str:
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc: Union[subprocess.Popen, "Git.AutoInterrupt"], **kwargs: Any) -> None:
+def finalize_process(proc: Union["subprocess.Popen[Any]", "Git.AutoInterrupt"], **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors
     accordingly."""
     # TODO: No close proc-streams??
@@ -520,19 +520,21 @@ def expand_path(p: None, expand_vars: bool = ...) -> None: ...
 
 
 @overload
-def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
+def expand_path(p: PathLike, expand_vars: bool = ...) -> Optional[PathLike]:
     # TODO: Support for Python 3.5 has been dropped, so these overloads can be improved.
     ...
 
 
 def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[PathLike]:
-    if isinstance(p, Path):
-        return p.resolve()
+    if p is None:
+        return None
     try:
-        p = osp.expanduser(p)  # type: ignore[arg-type]
+        if isinstance(p, Path):
+            return p.resolve()
+        expanded_path = osp.expanduser(os.fspath(p))
         if expand_vars:
-            p = osp.expandvars(p)
-        return osp.normpath(osp.abspath(p))
+            expanded_path = osp.expandvars(expanded_path)
+        return osp.normpath(osp.abspath(expanded_path))
     except Exception:
         return None
 
@@ -767,7 +769,7 @@ class CallableRemoteProgress(RemoteProgress):
 
     __slots__ = ("_callable",)
 
-    def __init__(self, fn: Callable) -> None:
+    def __init__(self, fn: Callable[..., Any]) -> None:
         self._callable = fn
         super().__init__()
 
@@ -846,7 +848,7 @@ class Actor:
         cls,
         env_name: str,
         env_email: str,
-        config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None,
+        config_reader: Union[None, "GitConfigParser", "SectionConstraint[GitConfigParser]"] = None,
     ) -> "Actor":
         actor = Actor("", "")
         user_id = None  # We use this to avoid multiple calls to getpass.getuser().
@@ -882,7 +884,9 @@ class Actor:
         return actor
 
     @classmethod
-    def committer(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
+    def committer(
+        cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint[GitConfigParser]"] = None
+    ) -> "Actor":
         """
         :return:
             :class:`Actor` instance corresponding to the configured committer. It
@@ -897,7 +901,9 @@ class Actor:
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
-    def author(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
+    def author(
+        cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint[GitConfigParser]"] = None
+    ) -> "Actor":
         """Same as :meth:`committer`, but defines the main author. It may be specified
         in the environment, but defaults to the committer."""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
@@ -980,11 +986,11 @@ class IndexFileSHA1Writer:
 
     __slots__ = ("f", "sha1")
 
-    def __init__(self, f: IO) -> None:
+    def __init__(self, f: IO[bytes]) -> None:
         self.f = f
         self.sha1 = make_sha(b"")
 
-    def write(self, data: AnyStr) -> int:
+    def write(self, data: bytes) -> int:
         self.sha1.update(data)
         return self.f.write(data)
 
@@ -1181,6 +1187,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
         return super().__new__(cls)
 
     def __init__(self, id_attr: str, prefix: str = "") -> None:
+        super().__init__()
         self._id_attr = id_attr
         self._prefix = prefix
 
@@ -1210,7 +1217,9 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore[override]
+    def __getitem__(  # type: ignore[override]  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, index: Union[SupportsIndex, int, slice, str]
+    ) -> T_IterableObj:
         if isinstance(index, int):
             return list.__getitem__(self, index)
         elif isinstance(index, slice):
@@ -1288,7 +1297,7 @@ class IterableObj(Protocol):
         :return:
             list(Item,...) list of item instances
         """
-        out_list: IterableList = IterableList(cls._id_attribute_)
+        out_list: IterableList[T_IterableObj] = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 
@@ -1297,7 +1306,8 @@ class IterableClassWatcher(type):
     """Metaclass that issues :exc:`DeprecationWarning` when :class:`git.util.Iterable`
     is subclassed."""
 
-    def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
+    def __init__(cls, name: str, bases: Tuple[type, ...], clsdict: Dict[str, Any]) -> None:
+        super().__init__(name, bases, clsdict)
         for base in bases:
             if type(base) is IterableClassWatcher:
                 warnings.warn(
