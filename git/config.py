@@ -897,6 +897,22 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     def _assure_config_name_safe(self, name: "cp._SectionName", label: str) -> None:
         if isinstance(name, str) and UNSAFE_CONFIG_CHARS_RE.search(name):
             raise ValueError("Git config %s names must not contain CR, LF, or NUL" % label)
+        if label == "section" and isinstance(name, str):
+            in_quotes = False
+            escaped = False
+            for index, char in enumerate(name):
+                if escaped:
+                    escaped = False
+                elif in_quotes and char == "\\":
+                    escaped = True
+                elif char == '"':
+                    if not in_quotes and (index == 0 or name[index - 1] not in " \t"):
+                        raise ValueError("Git config quoted subsection names must begin after whitespace")
+                    in_quotes = not in_quotes
+                elif char == "]" and not in_quotes:
+                    raise ValueError("Git config section names must not contain an unquoted closing bracket")
+            if in_quotes:
+                raise ValueError("Git config section names must not contain an unterminated quote")
 
     @needs_values
     @set_dirty_and_flush_changes

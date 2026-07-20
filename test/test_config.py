@@ -195,6 +195,53 @@ class TestBase(TestCase):
             self.assertFalse(git_config.has_section("core"))
 
     @with_rw_directory
+    def test_writer_rejects_unquoted_section_terminators(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        bad_sections = (
+            "user] [other",
+            'user"] [other"',
+            'submodule "docs"] [other',
+            'submodule "docs] [other',
+            'submodule "docs] [other\\',
+        )
+        safe_section = 'submodule "docs]archive"'
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.add_section("user")
+            for bad_section in bad_sections:
+                with pytest.raises(ValueError, match="section name"):
+                    git_config.add_section(bad_section)
+                with pytest.raises(ValueError, match="section name"):
+                    git_config.set(bad_section, "name", "value")
+                with pytest.raises(ValueError, match="section name"):
+                    git_config.set_value(bad_section, "name", "value")
+                with pytest.raises(ValueError, match="section name"):
+                    git_config.add_value(bad_section, "name", "value")
+                with pytest.raises(ValueError, match="section name"):
+                    git_config.rename_section("user", bad_section)
+
+            git_config.set_value("user", "name", "safe")
+            git_config.set_value(safe_section, "name", "safe")
+            self.assertEqual(git_config.get_value(safe_section, "name"), "safe")
+
+        # A closing bracket inside a quoted subsection name is data, not a section terminator.
+        with open(config_path, "rb") as config_file:
+            self.assertIn(
+                b'[submodule "docs]archive"]\n',
+                config_file.read(),
+                "a closing bracket within a quoted subsection name should be preserved",
+            )
+
+        # Reparse the file to verify that rejected names did not inject an [other] section.
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(
+                git_config.get_value("user", "name"),
+                "safe",
+                "rejected section names corrupted the existing section",
+            )
+            self.assertFalse(git_config.has_section("other"), "an unsafe section name injected an [other] section")
+
+    @with_rw_directory
     def test_set_and_add_value_reject_unsafe_value_characters(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
         bad_values = ("foo\rbar", "foo\nbar", "foo\x00bar", b"foo\nbar")
