@@ -253,17 +253,20 @@ class Diffable:
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        diff_cmd = self.repo.git.diff
+        # Patch parsing relies on Git's standard "a/" and "b/" path prefixes.
+        # Override diff.mnemonicPrefix so a user's configuration cannot change them.
+        git = self.repo.git(c="diff.mnemonicPrefix=false")
+        diff_cmd = git.diff
         if other is INDEX:
             args.insert(0, "--cached")
         elif other is NULL_TREE:
             args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, "--root")
-            diff_cmd = self.repo.git.diff_tree
+            diff_cmd = git.diff_tree
         elif other is not None:
             args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, other)
-            diff_cmd = self.repo.git.diff_tree
+            diff_cmd = git.diff_tree
 
         args.insert(0, self)
 

@@ -1539,7 +1539,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 args.extend(paths)
 
             kwargs["as_process"] = True
-            proc = self.repo.git.diff(*args, **kwargs)
+            # Patch parsing relies on Git's standard "a/" and "b/" path prefixes.
+            # Override diff.mnemonicPrefix so a user's configuration cannot change them.
+            proc = self.repo.git(c="diff.mnemonicPrefix=false").diff(*args, **kwargs)
 
             diff_method = (
                 git_diff.Diff._index_from_patch_format if create_patch else git_diff.Diff._index_from_raw_format

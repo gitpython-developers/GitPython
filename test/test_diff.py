@@ -309,6 +309,35 @@ class TestDiff(TestBase):
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
+    @with_rw_directory
+    def test_diff_ignores_mnemonic_prefix_config(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        file_path = osp.join(rw_dir, "file.txt")
+        with open(file_path, "w", encoding="utf-8") as stream:
+            stream.write("first\n")
+        repo.index.add([file_path])
+
+        with repo.config_writer() as writer:
+            writer.set_value("diff", "mnemonicPrefix", True)
+
+        # IndexFile has a separate implementation for diffs against the empty tree.
+        staged = repo.index.diff(NULL_TREE, create_patch=True)
+        self.assertEqual(len(staged), 1)
+        self.assertEqual(staged[0].b_path, "file.txt")
+
+        repo.index.commit("first")
+        with open(file_path, "w", encoding="utf-8") as stream:
+            stream.write("second\n")
+
+        # Both commit and index diffs use Diffable.diff for the working tree.
+        for diff_index in (
+            repo.head.commit.diff(None, create_patch=True),
+            repo.index.diff(None, create_patch=True),
+        ):
+            self.assertEqual(len(diff_index), 1)
+            self.assertEqual(diff_index[0].a_path, "file.txt")
+            self.assertEqual(diff_index[0].b_path, "file.txt")
+
     @pytest.mark.xfail(
         sys.platform == "win32",
         reason='"Access is denied" when tearDown calls shutil.rmtree',
