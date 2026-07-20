@@ -1099,9 +1099,35 @@ class TestIndex(TestBase):
     def test_run_commit_hook(self, rw_repo):
         index = rw_repo.index
         _make_hook(index.repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
-        run_commit_hook("fake-hook", index)
-        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
-        self.assertEqual(output, "ran fake hook\n")
+        output = Path(rw_repo.git_dir, "output.txt")
+        with mock.patch.object(Repo, "config_level", ("repository",)):
+            with mock.patch.object(Git, "execute", side_effect=AssertionError("hook lookup must not run git")):
+                run_commit_hook("fake-hook", index)
+                self.assertEqual(output.read_text(encoding="utf-8"), "ran fake hook\n")
+
+                output.unlink()
+                with index.repo.config_writer() as writer:
+                    writer.set_value("core", "hooksPath", "")
+                run_commit_hook("fake-hook", index)
+
+        self.assertEqual(output.read_text(encoding="utf-8"), "ran fake hook\n")
+
+    @with_rw_directory
+    def test_run_commit_hook_outside_worktree_on_windows(self, rw_dir):
+        root = Path(rw_dir).resolve()
+        repo = Repo.init(root / "repo")
+        hooks_dir = root / "hooks"
+        _make_hook(root, "fake-hook", "exit 0")
+        with repo.config_writer() as writer:
+            writer.set_value("core", "hooksPath", str(hooks_dir))
+
+        with mock.patch("git.index.fun.sys.platform", "win32"):
+            with mock.patch("git.index.fun.safer_popen") as popen, mock.patch("git.index.fun.handle_process_output"):
+                popen.return_value.returncode = 0
+                run_commit_hook("fake-hook", repo.index)
+
+        command = popen.call_args[0][0]
+        self.assertEqual(command, ["bash.exe", "../hooks/fake-hook"])
 
     @ddt.data((False,), (True,))
     @with_rw_directory
@@ -1159,6 +1185,32 @@ class TestIndex(TestBase):
         index = rw_repo.index
         _make_hook(index.repo.git_dir, "pre-commit", "exit 0")
         index.commit("This should not fail")
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD")
+    def test_pre_commit_hook_respects_core_hooks_path(self, rw_repo):
+        index = rw_repo.index
+        hooks_dir = Path(index.repo.working_dir, "custom-hooks")
+        hooks_dir.mkdir()
+        hp = hooks_dir / "pre-commit"
+        hp.write_text(HOOKS_SHEBANG + "echo 'ran custom hook' >custom-hook-output.txt", encoding="utf-8")
+        os.chmod(hp, 0o744)
+
+        with index.repo.config_writer() as writer:
+            writer.set_value("core", "hooksPath", "custom-hooks")
+
+        index.commit("This should run the custom hook")
+        output = Path(rw_repo.working_dir, "custom-hook-output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran custom hook\n")
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,

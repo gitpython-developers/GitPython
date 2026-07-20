@@ -64,6 +64,17 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, "hooks", name)
 
 
+def _commit_hook_path(name: str, index: "IndexFile") -> str:
+    """:return: path to the named commit hook, respecting Git's core.hooksPath."""
+    with index.repo.config_reader() as config:
+        hooks_dir = config.get("core", "hooksPath", fallback="")
+
+    if not hooks_dir:
+        return hook_path(name, index.repo.git_dir)
+
+    return osp.abspath(osp.join(index.repo.working_dir, osp.expanduser(hooks_dir), name))
+
+
 def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
@@ -82,7 +93,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
 
     :raise git.exc.HookExecutionError:
     """
-    hp = hook_path(name, index.repo.git_dir)
+    hp = _commit_hook_path(name, index)
     if not os.access(hp, os.X_OK):
         return
 
@@ -94,8 +105,14 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         if sys.platform == "win32" and not _has_file_extension(hp):
             # Windows only uses extensions to determine how to open files
             # (doesn't understand shebangs). Try using bash to run the hook.
-            relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
-            cmd = ["bash.exe", relative_hp]
+            try:
+                bash_hp = osp.relpath(hp, index.repo.working_dir)
+            except ValueError:
+                # Different drives have no relative path on Windows. Git Bash accepts
+                # an absolute path in this form, although a relative path is preferable
+                # because it also works with the Windows Subsystem for Linux wrapper.
+                bash_hp = hp
+            cmd = ["bash.exe", Path(bash_hp).as_posix()]
 
         process = safer_popen(
             cmd + list(args),
