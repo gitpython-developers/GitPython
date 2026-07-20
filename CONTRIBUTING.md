@@ -20,25 +20,16 @@ A contribution that works only narrowly but lowers the quality of the
 codebase may be declined. The maintainers may not always be able to provide
 detailed feedback.
 
-## AI-assisted contributions
+## Prevent agent impersonation
 
-If AI edits files for you, disclose it in the pull request description and commit
-metadata. Prefer making the agent identity part of the commit, for example by using
-an AI author such as `$agent $version <ai-agent@example.invalid>` or a co-author via
-a `Co-authored-by: <agent-identity>` trailer.
+AI agents communicating through a person's account must identify themselves, for
+example in issue or PR descriptions and comments. AI assistance that does not replace
+the person as the speaker, such as proofreading or wording polish, does not require
+identification.
 
-Agents operating through a person's GitHub account must identify themselves. For
-example, comments posted by an agent should say so directly with phrases like
-`AI agent on behalf of <person>: ...`.
-
-Fully AI-generated comments on pull requests or issues must also be disclosed.
-Undisclosed AI-generated comments may lead to the pull request or issue being closed.
-
-AI-assisted proofreading or wording polish does not need disclosure, but it is still
-courteous to mention it when the AI materially influenced the final text.
-
-Automated or "full-auto" AI contributions without a human responsible for reviewing
-and standing behind the work may be closed.
+Attributing AI assistance in commit metadata, for example with a `Co-authored-by`
+trailer, is welcome but not required. Code is reviewed the same way regardless of its
+origin.
 
 ## Fuzzing Test Specific Documentation
 
