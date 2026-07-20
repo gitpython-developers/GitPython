@@ -110,7 +110,7 @@ class SubmoduleConfigParser(GitConfigParser):
     # } END interface
 
     # { Overridden Methods
-    def write(self) -> None:  # type: ignore[override]
+    def write(self) -> None:
         rval: None = super().write()
         self.flush_to_index()
         return rval

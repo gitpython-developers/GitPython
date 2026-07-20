@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import glob
+import configparser as cp
 import io
 import os
 import os.path as osp
@@ -12,8 +13,8 @@ from unittest import mock
 
 import pytest
 
-from git import GitConfigParser
-from git.config import _OMD, cp
+from git import Git, GitConfigParser
+from git.config import _escape_config_value, _escape_section_subsection
 from git.util import rmfile
 
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
@@ -66,7 +67,7 @@ class TestBase(TestCase):
                 assert w_config._lock._has_lock()
 
                 # Changes should be written right away.
-                sname = "my_section"
+                sname = "my-section"
                 oname = "mykey"
                 val = "myvalue"
                 w_config.add_section(sname)
@@ -75,8 +76,8 @@ class TestBase(TestCase):
                 assert w_config.has_option(sname, oname)
                 assert w_config.get(sname, oname) == val
 
-                sname_new = "new_section"
-                oname_new = "new_key"
+                sname_new = "new-section"
+                oname_new = "new-key"
                 ival = 10
                 w_config.set_value(sname_new, oname_new, ival)
                 assert w_config.get_value(sname_new, oname_new) == ival
@@ -107,10 +108,10 @@ class TestBase(TestCase):
         fpl = osp.join(rw_dir, "l")
         gcp = GitConfigParser(fpl, read_only=False)
         with gcp as cw:
-            cw.set_value("include", "some_value", "a")
+            cw.set_value("include", "some-value", "a")
         # Entering again locks the file again...
         with gcp as cw:
-            cw.set_value("include", "some_other_value", "b")
+            cw.set_value("include", "some-other-value", "b")
             # ...so creating an additional config writer must fail due to exclusive
             # access.
             with self.assertRaises(IOError):
@@ -142,25 +143,160 @@ class TestBase(TestCase):
             )
             self.assertEqual(len(config.sections()), 23)
 
-    def test_config_value_with_trailing_new_line(self):
+    def test_config_rejects_colon_delimiter_and_unterminated_quote(self):
         config_content = b'[section-header]\nkey:"value\n"'
         config_file = io.BytesIO(config_content)
         config_file.name = "multiline_value.config"
 
         git_config = GitConfigParser(config_file)
-        git_config.read()  # This should not throw an exception
+        with pytest.raises(cp.ParsingError):
+            git_config.read()
+
+    def test_git_parser_handles_stream_syntax_comments_and_continuations(self):
+        config_file = io.BytesIO(
+            b"\xef\xbb\xbf; comment\r\n[Core] [other]\r\nenabled\r\npath = one\\\r\n two # trailing comment\r\n"
+        )
+        config_file.name = "git-syntax.config"
+
+        git_config = GitConfigParser(config_file)
+        self.assertEqual(git_config.sections(), ["Core", "other"])
+        self.assertTrue(git_config.has_section("CORE"))
+        self.assertIs(git_config.get_value("other", "enabled"), True)
+        self.assertEqual(git_config.get_value("other", "path"), "one two")
 
     @with_rw_directory
-    def test_set_value_rejects_config_injection(self, rw_dir):
+    def test_section_and_option_case_match_git(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(b'[CoRe]\n\tMixedOption = "one"\n[Remote "Origin"]\n\tFetchURL = "example"\n')
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.set_value("CORE", "MIXEDOPTION", "two")
+            git_config.set_value("core", "NewOption", "new")
+
+            self.assertEqual(git_config.sections(), ["CoRe", 'Remote "Origin"'])
+            self.assertEqual(git_config.get_value("cOrE", "mixedOPTION"), "two")
+            self.assertEqual(git_config.get_values("CORE", "MixedOption"), ["two"])
+            self.assertEqual(git_config.options("CORE"), ["MixedOption", "NewOption"])
+            self.assertEqual(git_config.items("CORE"), [("MixedOption", "two"), ("NewOption", "new")])
+            self.assertEqual(git_config.items_all("CORE"), [("MixedOption", ["two"]), ("NewOption", ["new"])])
+            core = git_config["CORE"]
+            self.assertEqual(core.name, "CoRe")
+            self.assertEqual(list(core), ["MixedOption", "NewOption"])
+            self.assertEqual(list(core.items()), [("MixedOption", "two"), ("NewOption", "new")])
+            self.assertEqual(core["MixedOption"], "two")
+            self.assertEqual(list(git_config), ["CoRe", 'Remote "Origin"'])
+            self.assertTrue(git_config.has_option("CORE", "MixedOption"))
+            self.assertTrue(git_config.has_section('REMOTE "Origin"'))
+            self.assertFalse(git_config.has_section('remote "origin"'))
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(
+                config_file.read(),
+                b'[CoRe]\n\tMixedOption = "two"\n\tNewOption = "new"\n[Remote "Origin"]\n\tFetchURL = "example"\n',
+            )
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.rename_section('REMOTE "Origin"', 'Branch "Origin"')
+            self.assertEqual(git_config.get_value('BRANCH "Origin"', "fetchurl"), "example")
+            self.assertEqual(git_config.sections(), ["CoRe", 'Branch "Origin"'])
+            self.assertEqual(git_config.options('branch "Origin"'), ["FetchURL"])
+            self.assertEqual(git_config['branch "Origin"'].name, 'Branch "Origin"')
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(
+                config_file.read(),
+                b'[CoRe]\n\tMixedOption = "two"\n\tNewOption = "new"\n[Branch "Origin"]\n\tFetchURL = "example"\n',
+            )
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value("CORE", "MIXEDOPTION"), "two")
+            self.assertEqual(git_config.get_value('branch "Origin"', "FETCHURL"), "example")
+
+    def test_git_parser_rejects_syntax_rejected_by_git(self):
+        invalid_configs = (
+            b"[  gui]\nkey = value\n",
+            b"[core]\nbad_key = value\n",
+            b"[core]\nkey: value\n",
+            b'[core]\nkey = "unterminated\n',
+            b'[core]\nkey = "bad\\q"\n',
+            b'[core]\nkey = "bad\x00value"\n',
+        )
+        for config_content in invalid_configs:
+            with self.subTest(config_content=config_content):
+                config_file = io.BytesIO(config_content)
+                config_file.name = "invalid-git-syntax.config"
+
+                with pytest.raises(cp.ParsingError):
+                    GitConfigParser(config_file).read()
+
+    @with_rw_directory
+    def test_git_parser_and_canonical_writer_round_trip(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        section = 'submodule "docs]archive"'
+        value = ' leading #; "quoted" \\ tail\nsecond\tcolumn\b'
+        with open(config_path, "wb") as config_file:
+            config_file.write(
+                b'[submodule "docs]archive"]\npayload = " leading #; \\"quoted\\" \\\\ tail\\nsecond\\tcolumn\\b"\n'
+            )
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            self.assertEqual(git_config.get_value(section, "payload"), value)
+            git_config.set_value(section, "other", "x#;y")
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value(section, "payload"), value)
+            self.assertEqual(git_config.get_value(section, "other"), "x#;y")
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(
+                config_file.read(),
+                b'[submodule "docs]archive"]\n'
+                b'\tpayload = " leading #; \\"quoted\\" \\\\ tail\\nsecond\\tcolumn\\b"\n'
+                b'\tother = "x#;y"\n',
+            )
+
+        self.assertEqual(Git().config("--file", config_path, "--get", "submodule.docs]archive.payload"), value)
+
+    @with_rw_directory
+    def test_writer_rejects_names_outside_git_grammar(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.add_section("core")
+            for option in ("bad_option", "-bad", "bad.option"):
+                with self.subTest(option=option), pytest.raises(ValueError, match="option names"):
+                    git_config.set_value("core", option, "value")
+
+            for section in (" gui", "user trailing", "user] [other"):
+                with self.subTest(section=section), pytest.raises(ValueError, match="section name"):
+                    git_config.add_section(section)
+
+    @with_rw_directory
+    def test_writer_escapes_quoted_subsection_names(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        section = 'submodule "docs\\"archive\\\\part]"'
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.set_value(section, "path", "docs")
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(config_file.read(), b'[submodule "docs\\"archive\\\\part]"]\n\tpath = "docs"\n')
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.sections(), [section])
+            self.assertEqual(git_config.get_value(section, "path"), "docs")
+
+        self.assertEqual(Git().config("--file", config_path, "--get", 'submodule.docs"archive\\part].path'), "docs")
+
+    @with_rw_directory
+    def test_set_value_escapes_config_injection(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
         payload = "foo\n[core]\nhooksPath=/tmp/hooks"
 
         with GitConfigParser(config_path, read_only=False) as git_config:
-            with pytest.raises(ValueError, match="CR, LF, or NUL"):
-                git_config.set_value("user", "name", payload)
+            git_config.set_value("user", "name", payload)
 
         with GitConfigParser(config_path, read_only=True) as git_config:
-            self.assertFalse(git_config.has_section("user"))
+            self.assertEqual(git_config.get_value("user", "name"), payload)
             self.assertFalse(git_config.has_section("core"))
 
     @with_rw_directory
@@ -197,13 +333,7 @@ class TestBase(TestCase):
     @with_rw_directory
     def test_writer_rejects_unquoted_section_terminators(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
-        bad_sections = (
-            "user] [other",
-            'user"] [other"',
-            'submodule "docs"] [other',
-            'submodule "docs] [other',
-            'submodule "docs] [other\\',
-        )
+        bad_sections = ("user] [other", 'submodule "docs"] [other')
         safe_section = 'submodule "docs]archive"'
 
         with GitConfigParser(config_path, read_only=False) as git_config:
@@ -242,24 +372,26 @@ class TestBase(TestCase):
             self.assertFalse(git_config.has_section("other"), "an unsafe section name injected an [other] section")
 
     @with_rw_directory
-    def test_set_and_add_value_reject_unsafe_value_characters(self, rw_dir):
+    def test_set_and_add_value_match_git_control_character_handling(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
-        bad_values = ("foo\rbar", "foo\nbar", "foo\x00bar", b"foo\nbar")
 
         with GitConfigParser(config_path, read_only=False) as git_config:
             git_config.add_section("user")
-            for bad_value in bad_values:
-                with pytest.raises(ValueError, match="CR, LF, or NUL"):
-                    git_config.set("user", "name", bad_value)
-                with pytest.raises(ValueError, match="CR, LF, or NUL"):
-                    git_config.set_value("user", "name", bad_value)
-                with pytest.raises(ValueError, match="CR, LF, or NUL"):
-                    git_config.add_value("user", "name", bad_value)
+            git_config.set("user", "carriage-return", "foo\rbar")
+            git_config.set_value("user", "line-feed", "foo\nbar")
+            git_config.add_value("user", "bytes-line-feed", b"foo\nbar")
 
-            git_config.set_value("user", "name", "safe")
+            for setter in (git_config.set, git_config.set_value, git_config.add_value):
+                with pytest.raises(ValueError, match="must not contain NUL"):
+                    setter("user", "name", "foo\x00bar")
 
         with GitConfigParser(config_path, read_only=True) as git_config:
-            self.assertEqual(git_config.get_value("user", "name"), "safe")
+            self.assertEqual(git_config.get_value("user", "carriage-return"), "foo\rbar")
+            self.assertEqual(git_config.get_value("user", "line-feed"), "foo\nbar")
+            self.assertEqual(git_config.get_value("user", "bytes-line-feed"), "foo\nbar")
+
+        self.assertEqual(Git().config("--file", config_path, "--get", "user.carriage-return"), "foo\rbar")
+        self.assertEqual(Git().config("--file", config_path, "--get", "user.line-feed"), "foo\nbar")
 
     def test_base(self):
         path_repo = fixture_path("git_config")
@@ -317,19 +449,19 @@ class TestBase(TestCase):
 
             fpb = osp.join(rw_dir, "b")
             fpc = osp.join(rw_dir, "c")
-            cw.set_value("include", "relative_path_b", "b")
+            cw.set_value("include", "relative-path-b", "b")
             cw.set_value("include", "doesntexist", "foobar")
-            cw.set_value("include", "relative_cycle_a_a", "a")
-            cw.set_value("include", "absolute_cycle_a_a", fpa)
+            cw.set_value("include", "relative-cycle-a-a", "a")
+            cw.set_value("include", "absolute-cycle-a-a", fpa)
         assert osp.exists(fpa)
 
         # PREPARE CONFIG FILE B
         with GitConfigParser(fpb, read_only=False) as cw:
             write_test_value(cw, "b")
-            cw.set_value("include", "relative_cycle_b_a", "a")
-            cw.set_value("include", "absolute_cycle_b_a", fpa)
-            cw.set_value("include", "relative_path_c", "c")
-            cw.set_value("include", "absolute_path_c", fpc)
+            cw.set_value("include", "relative-cycle-b-a", "a")
+            cw.set_value("include", "absolute-cycle-b-a", fpa)
+            cw.set_value("include", "relative-path-c", "c")
+            cw.set_value("include", "absolute-path-c", fpc)
 
         # PREPARE CONFIG FILE C
         with GitConfigParser(fpc, read_only=False) as cw:
@@ -385,8 +517,8 @@ class TestBase(TestCase):
                 path = file1
                 path = file2
 
-        Previously only one of these was included because _OMD.items() returns
-        only the last value for each key.
+        Previously only one of these was included because the old INI-backed storage
+        exposed only the last value for each key.
         """
         # Create two config files to be included.
         fp_inc1 = osp.join(rw_dir, "inc1.cfg")
@@ -403,8 +535,8 @@ class TestBase(TestCase):
         # We write it manually because set_value would overwrite the key.
         with open(fp_main, "w") as f:
             f.write("[include]\n")
-            f.write(f"\tpath = {fp_inc1}\n")
-            f.write(f"\tpath = {fp_inc2}\n")
+            f.write(f"\tpath = {_escape_config_value(fp_inc1)}\n")
+            f.write(f"\tpath = {_escape_config_value(fp_inc2)}\n")
 
         with GitConfigParser(fp_main, read_only=True) as cr:
             # Both included files should be loaded.
@@ -430,8 +562,15 @@ class TestBase(TestCase):
         path2 = osp.join(rw_dir, "config2")
         template = '[includeIf "{}:{}"]\n    path={}\n'
 
+        def include_config(condition, pattern):
+            return template.format(
+                condition,
+                _escape_section_subsection(pattern),
+                _escape_config_value(path2),
+            )
+
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", git_dir, path2))
+            stream.write(include_config("gitdir", git_dir))
 
         # Ensure that config is ignored if no repo is set.
         with GitConfigParser(path1) as config:
@@ -445,7 +584,7 @@ class TestBase(TestCase):
 
         # Ensure that config is ignored if case is incorrect.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", git_dir.upper(), path2))
+            stream.write(include_config("gitdir", git_dir.upper()))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -453,7 +592,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included if case is ignored.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir/i", git_dir.upper(), path2))
+            stream.write(include_config("gitdir/i", git_dir.upper()))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -461,7 +600,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included with path using glob pattern.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", "**/repo1", path2))
+            stream.write(include_config("gitdir", "**/repo1"))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -469,7 +608,7 @@ class TestBase(TestCase):
 
         # Ensure that config is ignored if path is not matching git_dir.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", "incorrect", path2))
+            stream.write(include_config("gitdir", "incorrect"))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -477,7 +616,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included if path in hierarchy.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", "target1/", path2))
+            stream.write(include_config("gitdir", "target1/"))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -499,7 +638,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included is branch is correct.
         with open(path1, "w") as stream:
-            stream.write(template.format("/foo/branch", path2))
+            stream.write(template.format("/foo/branch", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -507,7 +646,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included is branch is incorrect.
         with open(path1, "w") as stream:
-            stream.write(template.format("incorrect", path2))
+            stream.write(template.format("incorrect", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -515,7 +654,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included with branch using glob pattern.
         with open(path1, "w") as stream:
-            stream.write(template.format("/foo/**", path2))
+            stream.write(template.format("/foo/**", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -551,7 +690,7 @@ class TestBase(TestCase):
 
         # Ensure that config with hasconfig and full url is correct.
         with open(path1, "w") as stream:
-            stream.write(template.format("https://github.com/foo/repo", path2))
+            stream.write(template.format("https://github.com/foo/repo", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -559,7 +698,7 @@ class TestBase(TestCase):
 
         # Ensure that config with hasconfig and incorrect url is incorrect.
         with open(path1, "w") as stream:
-            stream.write(template.format("incorrect", path2))
+            stream.write(template.format("incorrect", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -567,7 +706,7 @@ class TestBase(TestCase):
 
         # Ensure that config with hasconfig and url using glob pattern is correct.
         with open(path1, "w") as stream:
-            stream.write(template.format("**/**github.com*/**", path2))
+            stream.write(template.format("**/**github.com*/**", _escape_config_value(path2)))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -607,8 +746,7 @@ class TestBase(TestCase):
 
         assert cr.get_value("core", "filemode"), "Should read keys with values"
 
-        with self.assertRaises(cp.NoOptionError):
-            cr.get_value("color", "ui")
+        self.assertIs(cr.get_value("color", "ui"), True, "a valueless Git config entry means boolean true")
 
     def test_config_with_quotes(self):
         cr = GitConfigParser(fixture_path("git_config_with_quotes"), read_only=True)
@@ -629,18 +767,13 @@ class TestBase(TestCase):
         self.assertEqual(cr.get("init", "defaultBranch"), "trunk")
 
     def test_config_with_quotes_containing_escapes(self):
-        """For now just suppress quote removal. But it would be good to interpret most of these."""
+        """Interpret the quoted-value escapes supported by Git."""
         cr = GitConfigParser(fixture_path("git_config_with_quotes_escapes"), read_only=True)
 
-        # These can eventually be supported by substituting the represented character.
-        self.assertEqual(cr.get("custom", "hasnewline"), R'"first\nsecond"')
-        self.assertEqual(cr.get("custom", "hasbackslash"), R'"foo\\bar"')
-        self.assertEqual(cr.get("custom", "hasquote"), R'"ab\"cd"')
-        self.assertEqual(cr.get("custom", "hastrailingbackslash"), R'"word\\"')
-        self.assertEqual(cr.get("custom", "hasunrecognized"), R'"p\qrs"')
-
-        # It is less obvious whether and what to eventually do with this.
-        self.assertEqual(cr.get("custom", "hasunescapedquotes"), '"ab"cd"e"')
+        self.assertEqual(cr.get("custom", "hasnewline"), "first\nsecond")
+        self.assertEqual(cr.get("custom", "hasbackslash"), R"foo\bar")
+        self.assertEqual(cr.get("custom", "hasquote"), 'ab"cd')
+        self.assertEqual(cr.get("custom", "hastrailingbackslash"), "word\\")
 
         # Cases where quote removal is clearly safe should happen even after those.
         self.assertEqual(cr.get("custom", "ordinary"), "hello world")
@@ -657,7 +790,7 @@ class TestBase(TestCase):
         self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b"])
         file_obj.seek(0)
         cr = GitConfigParser(file_obj, read_only=True)
-        self.assertEqual(cr.get_values("section1", "other_option1"), ["other_value1"])
+        self.assertEqual(cr.get_values("section1", "other-option1"), ["other_value1"])
 
     def test_multiple_values(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
@@ -671,13 +804,13 @@ class TestBase(TestCase):
             self.assertEqual(cw.get_values("section1", "option1"), ["value1a", "value1b"])
             self.assertEqual(
                 cw.items("section1"),
-                [("option1", "value1b"), ("other_option1", "other_value1")],
+                [("option1", "value1b"), ("other-option1", "other_value1")],
             )
             self.assertEqual(
                 cw.items_all("section1"),
                 [
                     ("option1", ["value1a", "value1b"]),
-                    ("other_option1", ["other_value1"]),
+                    ("other-option1", ["other_value1"]),
                 ],
             )
             with self.assertRaises(KeyError):
@@ -697,13 +830,13 @@ class TestBase(TestCase):
             self.assertEqual(cr.get_values("section2", "option1"), ["value1a", "value1b"])
             self.assertEqual(
                 cr.items("section2"),
-                [("option1", "value1b"), ("other_option1", "other_value1")],
+                [("option1", "value1b"), ("other-option1", "other_value1")],
             )
             self.assertEqual(
                 cr.items_all("section2"),
                 [
                     ("option1", ["value1a", "value1b"]),
-                    ("other_option1", ["other_value1"]),
+                    ("other-option1", ["other_value1"]),
                 ],
             )
 
@@ -719,37 +852,37 @@ class TestBase(TestCase):
             self.assertEqual(cr.get_values("section1", "option1"), ["value1c"])
             self.assertEqual(
                 cr.items("section1"),
-                [("option1", "value1c"), ("other_option1", "other_value1")],
+                [("option1", "value1c"), ("other-option1", "other_value1")],
             )
             self.assertEqual(
                 cr.items_all("section1"),
-                [("option1", ["value1c"]), ("other_option1", ["other_value1"])],
+                [("option1", ["value1c"]), ("other-option1", ["other_value1"])],
             )
 
     def test_single_to_multiple(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            cw.add_value("section1", "other_option1", "other_value1a")
+            cw.add_value("section1", "other-option1", "other_value1a")
 
             cw.write()
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
             self.assertEqual(cr.get_value("section1", "option1"), "value1b")
             self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b"])
-            self.assertEqual(cr.get_value("section1", "other_option1"), "other_value1a")
+            self.assertEqual(cr.get_value("section1", "other-option1"), "other_value1a")
             self.assertEqual(
-                cr.get_values("section1", "other_option1"),
+                cr.get_values("section1", "other-option1"),
                 ["other_value1", "other_value1a"],
             )
             self.assertEqual(
                 cr.items("section1"),
-                [("option1", "value1b"), ("other_option1", "other_value1a")],
+                [("option1", "value1b"), ("other-option1", "other_value1a")],
             )
             self.assertEqual(
                 cr.items_all("section1"),
                 [
                     ("option1", ["value1a", "value1b"]),
-                    ("other_option1", ["other_value1", "other_value1a"]),
+                    ("other-option1", ["other_value1", "other_value1a"]),
                 ],
             )
 
@@ -764,22 +897,43 @@ class TestBase(TestCase):
             self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b", "value1c"])
             self.assertEqual(
                 cr.items("section1"),
-                [("option1", "value1c"), ("other_option1", "other_value1")],
+                [("option1", "value1c"), ("other-option1", "other_value1")],
             )
             self.assertEqual(
                 cr.items_all("section1"),
                 [
                     ("option1", ["value1a", "value1b", "value1c"]),
-                    ("other_option1", ["other_value1"]),
+                    ("other-option1", ["other_value1"]),
                 ],
             )
 
-    def test_setlast(self):
-        # Test directly, not covered by higher-level tests.
-        omd = _OMD()
-        omd.setlast("key", "value1")
-        self.assertEqual(omd["key"], "value1")
-        self.assertEqual(omd.getall("key"), ["value1"])
-        omd.setlast("key", "value2")
-        self.assertEqual(omd["key"], "value2")
-        self.assertEqual(omd.getall("key"), ["value2"])
+    def test_parser_uses_git_native_storage(self):
+        self.assertFalse(issubclass(GitConfigParser, cp.RawConfigParser))
+
+    @with_rw_directory
+    def test_valueless_entries_remain_distinct_from_literal_true(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(b'[Feature]\n\tImplicit\n\tExplicit = "true"\n')
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            self.assertIs(git_config.get_value("feature", "implicit"), True)
+            self.assertIs(git_config.get_value("FEATURE", "EXPLICIT"), True)
+            git_config.set_value("feature", "Other", "value")
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(
+                config_file.read(),
+                b'[Feature]\n\tImplicit\n\tExplicit = "true"\n\tOther = "value"\n',
+            )
+
+    def test_git_typed_accessors(self):
+        config_file = io.BytesIO(b"[values]\nsize = 2k\nratio = 1.5m\nyes = on\nno = 0\nimplicit\n")
+        config_file.name = "typed-values.config"
+        git_config = GitConfigParser(config_file)
+
+        self.assertEqual(git_config.getint("VALUES", "SIZE"), 2048)
+        self.assertEqual(git_config.getfloat("values", "ratio"), 1.5 * 1024**2)
+        self.assertIs(git_config.getboolean("values", "yes"), True)
+        self.assertIs(git_config.getboolean("values", "no"), False)
+        self.assertIs(git_config.getboolean("values", "implicit"), True)

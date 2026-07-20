@@ -2,6 +2,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import configparser as cp
 import gc
 import os
 import os.path as osp
@@ -15,7 +16,7 @@ import pytest
 
 import git
 from git.cmd import Git
-from git.config import GitConfigParser, cp
+from git.config import GitConfigParser
 from git.exc import (
     GitCommandError,
     InvalidGitRepositoryError,
@@ -987,10 +988,10 @@ class TestSubmodule(TestBase):
 
         parent.index.commit("moved submodules")
 
-        with sm.config_writer() as writer:
-            writer.set_value("user.email", "example@example.com")
-            writer.set_value("user.name", "me")
         smm = sm.module()
+        with smm.config_writer() as writer:
+            writer.set_value("user", "email", "example@example.com")
+            writer.set_value("user", "name", "me")
         fp = osp.join(smm.working_tree_dir, "empty-file")
         with open(fp, "w"):
             pass

@@ -7,11 +7,18 @@
 
 __all__ = ["GitConfigParser", "SectionConstraint"]
 
-import abc
-import configparser as cp
+from collections import OrderedDict
+from collections.abc import MutableMapping
+from configparser import (
+    DuplicateSectionError,
+    Error as ConfigError,
+    MissingSectionHeaderError,
+    NoOptionError,
+    NoSectionError,
+    ParsingError,
+)
 import fnmatch
 from functools import wraps
-import inspect
 from io import BufferedReader, IOBase
 import logging
 import os
@@ -29,8 +36,10 @@ from typing import (
     Callable,
     Generic,
     IO,
+    Iterator,
     List,
     Dict,
+    NoReturn,
     Sequence,
     TYPE_CHECKING,
     Tuple,
@@ -47,17 +56,6 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
 
 T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
-T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool)
-
-if sys.version_info[:3] < (3, 7, 2):
-    # typing.Ordereddict not added until Python 3.7.2.
-    from collections import OrderedDict
-
-    OrderedDict_OMD = OrderedDict
-else:
-    from typing import OrderedDict
-
-    OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]  # type: ignore[assignment, misc]
 
 # -------------------------------------------------------------
 
@@ -66,45 +64,225 @@ _logger = logging.getLogger(__name__)
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 """The configuration level of a configuration file."""
 
-CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)\"")
+CONDITIONAL_INCLUDE_REGEXP = re.compile(
+    r'(?<=includeif )"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)"',
+    re.IGNORECASE,
+)
 """Section pattern to detect conditional includes.
 
 See: https://git-scm.com/docs/git-config#_conditional_includes
 """
 
 UNSAFE_CONFIG_CHARS_RE = re.compile(r"[\r\n\x00]")
-"""Characters that cannot be safely written in config names or values."""
+"""Characters that cannot be safely written in config names."""
+
+UNSAFE_CONFIG_VALUE_CHARS_RE = re.compile(r"\x00")
+"""Characters that cannot be represented in Git config values."""
+
+_MISSING = object()
 
 
-class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
-    """Utility class wrapping base-class methods into decorators that assure read-only
-    properties."""
+def _escape_section_subsection(value: str) -> str:
+    """Return *value* escaped for Git's double-quoted subsection syntax."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
 
-    def __new__(cls, name: str, bases: Tuple, clsdict: Dict[str, Any]) -> "MetaParserBuilder":
-        """Equip all base-class methods with a needs_values decorator, and all non-const
-        methods with a :func:`set_dirty_and_flush_changes` decorator in addition to
-        that.
-        """
-        kmm = "_mutating_methods_"
-        if kmm in clsdict:
-            mutating_methods = clsdict[kmm]
-            for base in bases:
-                methods = (t for t in inspect.getmembers(base, inspect.isroutine) if not t[0].startswith("_"))
-                for method_name, method in methods:
-                    if method_name in clsdict:
-                        continue
-                    method_with_values = needs_values(method)
-                    if method_name in mutating_methods:
-                        method_with_values = set_dirty_and_flush_changes(method_with_values)
-                    # END mutating methods handling
 
-                    clsdict[method_name] = method_with_values
-                # END for each name/method pair
-            # END for each base
-        # END if mutating methods configuration is set
+def _escape_config_value(value: str) -> str:
+    """Return *value* in a canonical representation accepted by Git."""
+    escaped = value.replace("\\", "\\\\")
+    escaped = escaped.replace('"', '\\"')
+    escaped = escaped.replace("\n", "\\n").replace("\t", "\\t").replace("\b", "\\b")
+    return '"%s"' % escaped
 
-        new_type = super().__new__(cls, name, bases, clsdict)
-        return new_type
+
+class _GitConfigFileParser:
+    """Parse Git config syntax using the grammar in Git's ``config.c``.
+
+    The state machine mirrors Git's ``git_parse_source()``, ``get_base_var()``,
+    ``get_value()``, and ``parse_value()``. It intentionally deals only with syntax;
+    includes are resolved by :class:`GitConfigParser` after each file is parsed.
+    """
+
+    def __init__(self, data: str, source: str) -> None:
+        self._data = data[1:] if data.startswith("\ufeff") else data
+        self._source = source
+        self._position = 0
+        self._line_number = 1
+        self._current_section: Union[str, None] = None
+
+    @staticmethod
+    def _is_key_char(char: str) -> bool:
+        return char.isascii() and (char.isalnum() or char == "-")
+
+    @staticmethod
+    def _is_space(char: str) -> bool:
+        return char in " \t\n\v\f\r"
+
+    def _get_char(self) -> Union[str, None]:
+        if self._position == len(self._data):
+            return None
+
+        char = self._data[self._position]
+        self._position += 1
+        if char == "\r" and self._position < len(self._data) and self._data[self._position] == "\n":
+            self._position += 1
+            char = "\n"
+        if char == "\n":
+            self._line_number += 1
+        return char
+
+    def _error(self, line_number: Union[int, None] = None) -> NoReturn:
+        number = self._line_number if line_number is None else line_number
+        lines = self._data.splitlines()
+        line = lines[number - 1] if 0 < number <= len(lines) else ""
+        error = ParsingError(self._source)
+        error.append(number, repr(line))
+        raise error
+
+    def _parse_section(self, line_number: int) -> str:
+        base: List[str] = []
+        while True:
+            char = self._get_char()
+            if char is None or char == "\n":
+                self._error(line_number)
+            if char == "]":
+                if not base:
+                    self._error(line_number)
+                return "".join(base)
+            if self._is_space(char):
+                break
+            if not self._is_key_char(char) and char != ".":
+                self._error(line_number)
+            base.append(char)
+
+        while char is not None and self._is_space(char) and char != "\n":
+            char = self._get_char()
+        if char != '"' or not base:
+            self._error(line_number)
+
+        subsection: List[str] = []
+        while True:
+            char = self._get_char()
+            if char is None or char == "\n":
+                self._error(line_number)
+            if char == '"':
+                break
+            if char == "\\":
+                char = self._get_char()
+                if char is None or char == "\n":
+                    self._error(line_number)
+            subsection.append(char)
+
+        if self._get_char() != "]":
+            self._error(line_number)
+        return '%s "%s"' % ("".join(base), _escape_section_subsection("".join(subsection)))
+
+    def _parse_value(self, line_number: int) -> str:
+        value: List[str] = []
+        pending_whitespace: List[str] = []
+        quoted = False
+        comment = False
+
+        while True:
+            char = self._get_char()
+            if char is None or char == "\n":
+                if quoted:
+                    self._error(line_number)
+                return "".join(value)
+            if char == "\x00":
+                self._error(line_number)
+            if comment:
+                continue
+            if self._is_space(char) and not quoted:
+                if value:
+                    pending_whitespace.append(char)
+                continue
+            if not quoted and char in ";#":
+                comment = True
+                continue
+
+            if pending_whitespace:
+                value.extend(pending_whitespace)
+                pending_whitespace = []
+            if char == "\\":
+                char = self._get_char()
+                if char is None:
+                    self._error(line_number)
+                if char == "\n":
+                    continue
+                escapes = {"t": "\t", "b": "\b", "n": "\n", "\\": "\\", '"': '"'}
+                if char not in escapes:
+                    self._error(line_number)
+                value.append(escapes[char])
+            elif char == '"':
+                quoted = not quoted
+            else:
+                value.append(char)
+
+    def _parse_entry(self, first_char: str, line_number: int) -> Tuple[str, Union[str, None]]:
+        option = [first_char]
+        char = self._get_char()
+        while char is not None and self._is_key_char(char):
+            option.append(char)
+            char = self._get_char()
+        while char in (" ", "\t"):
+            char = self._get_char()
+
+        # Git distinguishes a valueless key from a key whose value is "true".
+        if char is None or char == "\n":
+            return "".join(option), None
+        if char != "=":
+            self._error(line_number)
+        return "".join(option), self._parse_value(line_number)
+
+    def parse(self) -> List[Tuple[str, Union[str, None], Union[str, None]]]:
+        events: List[Tuple[str, Union[str, None], Union[str, None]]] = []
+        comment = False
+
+        while True:
+            line_number = self._line_number
+            char = self._get_char()
+            if char is None:
+                return events
+            if char == "\n":
+                comment = False
+                continue
+            if comment:
+                continue
+            if self._is_space(char):
+                continue
+            if char in "#;":
+                comment = True
+                continue
+            if char == "[":
+                self._current_section = self._parse_section(line_number)
+                events.append((self._current_section, None, None))
+                continue
+            if not (char.isascii() and char.isalpha()):
+                self._error(line_number)
+            if self._current_section is None:
+                line = self._data.splitlines()[line_number - 1]
+                raise MissingSectionHeaderError(self._source, line_number, line)
+            option, value = self._parse_entry(char, line_number)
+            events.append((self._current_section, option, value))
+
+
+def _canonical_section_name(name: str) -> str:
+    """Validate and canonicalize one section name using Git's own grammar."""
+    events = _GitConfigFileParser("[%s]" % name, "<section name>").parse()
+    sections = [section for section, option, _ in events if option is None]
+    if len(sections) != 1:
+        raise ValueError("Git config section name does not identify exactly one section")
+    return sections[0]
+
+
+def _section_name_key(name: str) -> str:
+    """Return Git's case-insensitive lookup key for a canonical section name."""
+    canonical_name = _canonical_section_name(name)
+    subsection_start = canonical_name.find(' "')
+    if subsection_start == -1:
+        return canonical_name.lower()
+    return canonical_name[:subsection_start].lower() + canonical_name[subsection_start:]
 
 
 def needs_values(func: Callable[..., _T]) -> Callable[..., _T]:
@@ -139,13 +317,12 @@ def set_dirty_and_flush_changes(non_const_func: Callable[..., _T]) -> Callable[.
 
 
 class SectionConstraint(Generic[T_ConfigParser]):
-    """Constrains a ConfigParser to only option commands which are constrained to
-    always use the section we have been initialized with.
+    """Constrain a configuration parser to commands for one section.
 
-    It supports all ConfigParser methods that operate on an option.
+    It supports all :class:`GitConfigParser` methods that operate on an option.
 
     :note:
-        If used as a context manager, will release the wrapped ConfigParser.
+        If used as a context manager, this releases the wrapped parser.
     """
 
     __slots__ = ("_config", "_section_name")
@@ -186,7 +363,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
 
     @property
     def config(self) -> T_ConfigParser:
-        """return: ConfigParser instance we constrain"""
+        """Return the :class:`GitConfigParser` instance being constrained."""
         return self._config
 
     def release(self) -> None:
@@ -202,49 +379,94 @@ class SectionConstraint(Generic[T_ConfigParser]):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
-class _OMD(OrderedDict_OMD):
-    """Ordered multi-dict."""
+class _GitConfigSectionData:
+    """Ordered, multi-valued storage for one Git configuration section."""
 
-    def __setitem__(self, key: str, value: _T) -> None:
-        super().__setitem__(key, [value])
+    def __init__(self) -> None:
+        self._values: "OrderedDict[str, List[Union[str, None]]]" = OrderedDict()
 
-    def add(self, key: str, value: Any) -> None:
-        if key not in self:
-            super().__setitem__(key, [value])
-            return
+    def __contains__(self, option: str) -> bool:
+        return option in self._values
 
-        super().__getitem__(key).append(value)
+    def __len__(self) -> int:
+        return len(self._values)
 
-    def setall(self, key: str, values: List[_T]) -> None:
-        super().__setitem__(key, values)
+    def add(self, option: str, value: Union[str, None]) -> None:
+        self._values.setdefault(option, []).append(value)
 
-    def __getitem__(self, key: str) -> Any:
-        return super().__getitem__(key)[-1]
+    def set(self, option: str, value: Union[str, None]) -> None:
+        self._values[option] = [value]
 
-    def getlast(self, key: str) -> Any:
-        return super().__getitem__(key)[-1]
+    def setall(self, option: str, values: List[Union[str, None]]) -> None:
+        self._values[option] = list(values)
 
-    def setlast(self, key: str, value: Any) -> None:
-        if key not in self:
-            super().__setitem__(key, [value])
-            return
+    def getlast(self, option: str) -> Union[str, None]:
+        return self._values[option][-1]
 
-        prior = super().__getitem__(key)
-        prior[-1] = value
+    def getall(self, option: str) -> List[Union[str, None]]:
+        return list(self._values[option])
 
-    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:
-        return super().get(key, [default])[-1]
+    def remove(self, option: str) -> bool:
+        if option not in self._values:
+            return False
+        del self._values[option]
+        return True
 
-    def getall(self, key: str) -> List[_T]:
-        return super().__getitem__(key)
+    def options(self) -> List[str]:
+        return list(self._values)
 
-    def items(self) -> List[Tuple[str, _T]]:  # type: ignore[override]
-        """List of (key, last value for key)."""
-        return [(k, self[k]) for k in self]
+    def items_all(self) -> List[Tuple[str, List[Union[str, None]]]]:
+        return [(option, list(values)) for option, values in self._values.items()]
 
-    def items_all(self) -> List[Tuple[str, List[_T]]]:
-        """List of (key, list of values for key)."""
-        return [(k, self.getall(k)) for k in self]
+
+class _GitConfigSection(MutableMapping):
+    """Mapping-style view of one section in a :class:`GitConfigParser`."""
+
+    def __init__(self, parser: "GitConfigParser", name: str) -> None:
+        self._parser = parser
+        self._name = name
+
+    def __repr__(self) -> str:
+        return "<Git config section: %s>" % self._name
+
+    def __getitem__(self, option: str) -> str:
+        return self._parser.get(self._name, option)
+
+    def __setitem__(self, option: str, value: Any) -> None:
+        self._parser.set(self._name, option, value)
+
+    def __delitem__(self, option: str) -> None:
+        if not self._parser.remove_option(self._name, option):
+            raise KeyError(option)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._parser.options(self._name))
+
+    def __len__(self) -> int:
+        return len(self._parser.options(self._name))
+
+    def __contains__(self, option: object) -> bool:
+        return isinstance(option, str) and self._parser.has_option(self._name, option)
+
+    def get(self, option: str, fallback: Any = None, **kwargs: Any) -> Any:  # type: ignore[override]
+        return self._parser.get(self._name, option, fallback=fallback, **kwargs)
+
+    def getint(self, option: str, fallback: Any = None, **kwargs: Any) -> Any:
+        return self._parser.getint(self._name, option, fallback=fallback, **kwargs)
+
+    def getfloat(self, option: str, fallback: Any = None, **kwargs: Any) -> Any:
+        return self._parser.getfloat(self._name, option, fallback=fallback, **kwargs)
+
+    def getboolean(self, option: str, fallback: Any = None, **kwargs: Any) -> Any:
+        return self._parser.getboolean(self._name, option, fallback=fallback, **kwargs)
+
+    @property
+    def parser(self) -> "GitConfigParser":
+        return self._parser
+
+    @property
+    def name(self) -> str:
+        return self._name
 
 
 def get_config_path(config_level: Lit_config_levels) -> str:
@@ -271,7 +493,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         )
 
 
-class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
+class GitConfigParser:
     """Implements specifics required to read git style configuration files.
 
     This variation behaves much like the :manpage:`git-config(1)` command, such that the
@@ -285,8 +507,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     other instances to write concurrently.
 
     :note:
-        The config is case-sensitive even when queried, hence section and option names
-        must match perfectly.
+        Section and option names are case-insensitive, while subsection names are
+        case-sensitive, matching Git.
 
     :note:
         If used as a context manager, this will release the locked file.
@@ -299,21 +521,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     They must be compatible to the :class:`~git.util.LockFile` interface.
     A suitable alternative would be the :class:`~git.util.BlockingLockFile`.
     """
-
-    re_comment = re.compile(r"^\s*[#;]")
-    # } END configuration
-
-    optvalueonly_source = r"\s*(?P<option>[^:=\s][^:=]*)"
-
-    OPTVALUEONLY = re.compile(optvalueonly_source)
-
-    OPTCRE = re.compile(optvalueonly_source + r"\s*(?P<vi>[:=])\s*" + r"(?P<value>.*)$")
-
-    del optvalueonly_source
-
-    _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
-    """Names of :class:`~configparser.RawConfigParser` methods able to change the
-    instance."""
 
     def __init__(
         self,
@@ -330,9 +537,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             A file path or file object, or a sequence of possibly more than one of them.
 
         :param read_only:
-            If ``True``, the ConfigParser may only read the data, but not change it.
+            If ``True``, the parser may only read the data, but not change it.
             If ``False``, only a single file path or file object may be given. We will
-            write back the changes when they happen, or when the ConfigParser is
+            write back the changes when they happen, or when the parser is
             released. This will not happen if other configuration files have been
             included.
 
@@ -347,15 +554,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             Reference to repository to use if ``[includeIf]`` sections are found in
             configuration files.
         """
-        cp.RawConfigParser.__init__(self, dict_type=_OMD)
-        self._dict: Callable[..., _OMD]
-        self._defaults: _OMD
-        self._sections: _OMD
-
-        # Used in Python 3. Needs to stay in sync with sections for underlying
-        # implementation to work.
-        if not hasattr(self, "_proxies"):
-            self._proxies = self._dict()
+        self._sections: "OrderedDict[str, _GitConfigSectionData]" = OrderedDict()
+        # Lookups use case-normalized keys, while canonical rewrites retain the
+        # first spelling seen in the file or supplied through the API.
+        self._section_name_map: Dict[str, str] = {}
+        self._option_name_map: Dict[Tuple[str, str], str] = {}
 
         if file_or_files is not None:
             self._file_or_files: Union[PathLike, "BytesIO", Sequence[Union[PathLike, "BytesIO"]]] = file_or_files
@@ -385,7 +588,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     file_or_files = self._file_or_files
                 elif isinstance(self._file_or_files, (tuple, list, Sequence)):
                     raise ValueError(
-                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed"
+                        "Writable config parsers can operate on a single file only; multiple files were passed"
                     )
                 else:
                     file_or_files = self._file_or_files.name
@@ -436,112 +639,131 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 self._lock._release_lock()
 
     def optionxform(self, optionstr: str) -> str:
-        """Do not transform options in any way when writing."""
-        return optionstr
+        """Normalize option names as Git does; their spelling is case-insensitive."""
+        return optionstr.lower()
+
+    @needs_values
+    def sections(self) -> List[str]:
+        """Return section names with the spelling used in the configuration."""
+        return [self._section_name_map.get(section, section) for section in self._sections]
+
+    def __iter__(self) -> Iterator[str]:
+        """Iterate over section names with their original spelling."""
+        return iter(self.sections())
+
+    def __len__(self) -> int:
+        self.read()
+        return len(self._sections)
+
+    def __contains__(self, section: object) -> bool:
+        return isinstance(section, str) and self.has_section(section)
+
+    @needs_values
+    def __getitem__(self, section: str) -> _GitConfigSection:
+        """Return a section proxy using Git's section case rules."""
+        section_key = self._normalize_section_name(section)
+        if section_key not in self._sections:
+            raise KeyError(section)
+        return _GitConfigSection(self, self._section_name_map.get(section_key, section_key))
+
+    def keys(self) -> List[str]:
+        return self.sections()
+
+    def values(self) -> List[_GitConfigSection]:
+        return [self[section] for section in self.sections()]
+
+    @staticmethod
+    def _normalize_section_name(section: str) -> str:
+        return _section_name_key(section)
+
+    @needs_values
+    def get(
+        self,
+        section: str,
+        option: str,
+        raw: bool = False,
+        vars: Union[Dict[str, Any], None] = None,
+        fallback: Any = _MISSING,
+    ) -> Any:
+        """Get an option using Git's section and option case rules."""
+        del raw  # Git config values are never interpolated.
+        section_key = self._normalize_section_name(section)
+        if section_key not in self._sections:
+            if fallback is not _MISSING:
+                return fallback
+            raise NoSectionError(section)
+
+        option_key = self.optionxform(option)
+        if vars is not None:
+            for var_name, var_value in vars.items():
+                if self.optionxform(var_name) == option_key:
+                    return var_value
+        section_data = self._sections[section_key]
+        if option_key not in section_data:
+            if fallback is not _MISSING:
+                return fallback
+            raise NoOptionError(option, self._section_name_map.get(section_key, section))
+        value = section_data.getlast(option_key)
+        return "true" if value is None else value
+
+    @needs_values
+    def has_section(self, section: str) -> bool:
+        """Return whether *section* exists, ignoring case in its base name."""
+        section = self._normalize_section_name(section)
+        return section in self._sections
+
+    @needs_values
+    def has_option(self, section: str, option: str) -> bool:
+        """Return whether *option* exists using Git's case rules."""
+        section = self._normalize_section_name(section)
+        return section in self._sections and self.optionxform(option) in self._sections[section]
+
+    @needs_values
+    def options(self, section: str) -> List[str]:
+        """Return option names with their original spelling."""
+        section = self._normalize_section_name(section)
+        if section not in self._sections:
+            raise NoSectionError(section)
+        return [self._option_name_map.get((section, option), option) for option in self._sections[section].options()]
+
+    @needs_values
+    @set_dirty_and_flush_changes
+    def remove_option(self, section: str, option: str) -> bool:
+        """Remove an option using Git's section and option case rules."""
+        section = self._normalize_section_name(section)
+        option_key = self.optionxform(option)
+        if section not in self._sections:
+            raise NoSectionError(section)
+        removed = self._sections[section].remove(option_key)
+        if removed:
+            self._option_name_map.pop((section, option_key), None)
+        return removed
+
+    @needs_values
+    @set_dirty_and_flush_changes
+    def remove_section(self, section: str) -> bool:
+        """Remove a section while ignoring case in its base name."""
+        section = self._normalize_section_name(section)
+        removed = section in self._sections
+        if removed:
+            del self._sections[section]
+            self._section_name_map.pop(section, None)
+            for name_key in [name_key for name_key in self._option_name_map if name_key[0] == section]:
+                del self._option_name_map[name_key]
+        return removed
 
     def _read(self, fp: Union[BufferedReader, IO[bytes]], fpname: str) -> None:
-        """Originally a direct copy of the Python 2.4 version of
-        :meth:`RawConfigParser._read <configparser.RawConfigParser._read>`, to ensure it
-        uses ordered dicts.
-
-        The ordering bug was fixed in Python 2.4, and dict itself keeps ordering since
-        Python 3.7. This has some other changes, especially that it ignores initial
-        whitespace, since git uses tabs. (Big comments are removed to be more compact.)
-        """
-        cursect = None  # None, or a dictionary.
-        optname = None
-        lineno = 0
-        is_multi_line = False
-        e = None  # None, or an exception.
-
-        def string_decode(v: str) -> str:
-            if v and v.endswith("\\"):
-                v = v[:-1]
-            # END cut trailing escapes to prevent decode error
-
-            return v.encode(defenc).decode("unicode_escape")
-
-        # END string_decode
-
-        while True:
-            # We assume to read binary!
-            line = fp.readline().decode(defenc)
-            if not line:
-                break
-            lineno = lineno + 1
-            # Comment or blank line?
-            if line.strip() == "" or self.re_comment.match(line):
-                continue
-            if line.split(None, 1)[0].lower() == "rem" and line[0] in "rR":
-                # No leading whitespace.
-                continue
-
-            # Is it a section header?
-            mo = self.SECTCRE.match(line.strip())
-            if not is_multi_line and mo:
-                sectname: str = mo.group("header").strip()
-                if sectname in self._sections:
-                    cursect = self._sections[sectname]
-                elif sectname == cp.DEFAULTSECT:
-                    cursect = self._defaults
-                else:
-                    cursect = self._dict((("__name__", sectname),))
-                    self._sections[sectname] = cursect
-                    self._proxies[sectname] = None
-                # So sections can't start with a continuation line.
-                optname = None
-            # No section header in the file?
-            elif cursect is None:
-                raise cp.MissingSectionHeaderError(fpname, lineno, line)
-            # An option line?
-            elif not is_multi_line:
-                mo = self.OPTCRE.match(line)
-                if mo:
-                    # We might just have handled the last line, which could contain a quotation we want to remove.
-                    optname, vi, optval = mo.group("option", "vi", "value")
-                    optname = self.optionxform(optname.rstrip())
-
-                    if vi in ("=", ":") and ";" in optval and not optval.strip().startswith('"'):
-                        pos = optval.find(";")
-                        if pos != -1 and optval[pos - 1].isspace():
-                            optval = optval[:pos]
-                    optval = optval.strip()
-
-                    if len(optval) < 2 or optval[0] != '"':
-                        # Does not open quoting.
-                        pass
-                    elif optval[-1] != '"':
-                        # Opens quoting and does not close: appears to start multi-line quoting.
-                        is_multi_line = True
-                        optval = string_decode(optval[1:])
-                    elif optval.find("\\", 1, -1) == -1 and optval.find('"', 1, -1) == -1:
-                        # Opens and closes quoting. Single line, and all we need is quote removal.
-                        optval = optval[1:-1]
-                    # TODO: Handle other quoted content, especially well-formed backslash escapes.
-
-                    # Preserves multiple values for duplicate optnames.
-                    cursect.add(optname, optval)
-                else:
-                    # Check if it's an option with no value - it's just ignored by git.
-                    if not self.OPTVALUEONLY.match(line):
-                        if not e:
-                            e = cp.ParsingError(fpname)
-                        e.append(lineno, repr(line))
-                    continue
-            else:
-                line = line.rstrip()
-                if line.endswith('"'):
-                    is_multi_line = False
-                    line = line[:-1]
-                # END handle quotations
-                optval = cursect.getlast(optname)
-                cursect.setlast(optname, optval + string_decode(line))
-            # END parse section or option
-        # END while reading
-
-        # If any parsing errors occurred, raise an exception.
-        if e:
-            raise e
+        """Parse one file according to the grammar implemented by Git itself."""
+        parser = _GitConfigFileParser(fp.read().decode(defenc), fpname)
+        for section, option, value in parser.parse():
+            section_key = _section_name_key(section)
+            if section_key not in self._sections:
+                self._sections[section_key] = _GitConfigSectionData()
+                self._section_name_map[section_key] = section
+            if option is not None:
+                option_key = self.optionxform(option)
+                self._sections[section_key].add(option_key, value)
+                self._option_name_map.setdefault((section_key, option_key), option)
 
     def _has_includes(self) -> Union[bool, int]:
         return self._merge_includes and len(self._included_paths())
@@ -555,17 +777,17 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         def _all_items(section: str) -> List[Tuple[str, str]]:
             """Return all (key, value) pairs for a section, including duplicate keys."""
+            section = _section_name_key(section)
             return [
-                (key, value)
+                (key, "true" if value is None else value)
                 for key, values in self._sections[section].items_all()
-                if key != "__name__"
                 for value in values
             ]
 
         paths = []
 
         for section in self.sections():
-            if section == "include":
+            if _section_name_key(section) == "include":
                 paths += _all_items(section)
 
             match = CONDITIONAL_INCLUDE_REGEXP.search(section)
@@ -610,7 +832,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         break
         return paths
 
-    def read(self) -> None:  # type: ignore[override]
+    def read(self) -> None:
         """Read the data stored in the files we have been initialized with.
 
         This will ignore files that cannot be read, possibly leaving an empty
@@ -686,50 +908,50 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             self._merge_includes = False
 
     def _write(self, fp: IO) -> None:
-        """Write an .ini-format representation of the configuration state in
-        git compatible format."""
+        """Write a canonical Git-config representation of the configuration state."""
 
-        def write_section(name: str, section_dict: _OMD) -> None:
-            fp.write(("[%s]\n" % name).encode(defenc))
+        def write_section(name: str, section_data: _GitConfigSectionData) -> None:
+            section_name = self._section_name_map.get(name, name)
+            fp.write(("[%s]\n" % _canonical_section_name(section_name)).encode(defenc))
 
-            values: Sequence[str]  # Runtime only gets str in tests, but should be whatever _OMD stores.
-            v: str
-            for key, values in section_dict.items_all():
-                if key == "__name__":
-                    continue
-
-                for v in values:
-                    fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace("\n", "\n\t"))).encode(defenc))
-                # END if key is not __name__
+            for key, values in section_data.items_all():
+                for raw_value in values:
+                    option_name = self._option_name_map.get((name, key), key)
+                    if raw_value is None:
+                        fp.write(("\t%s\n" % option_name).encode(defenc))
+                        continue
+                    value = _escape_config_value(self._value_to_string(raw_value))
+                    fp.write(("\t%s = %s\n" % (option_name, value)).encode(defenc))
 
         # END section writing
 
-        if self._defaults:
-            write_section(cp.DEFAULTSECT, self._defaults)
-        value: _OMD
+        for name, section_data in self._sections.items():
+            write_section(name, section_data)
 
-        for name, value in self._sections.items():
-            write_section(name, value)
-
-    def items(self, section_name: str) -> List[Tuple[str, str]]:  # type: ignore[override]
+    @needs_values
+    def items(self, section_name: str) -> List[Tuple[str, str]]:
         """:return: list((option, value), ...) pairs of all items in the given section"""
-        return [(k, v) for k, v in super().items(section_name) if k != "__name__"]
+        section_name = self._normalize_section_name(section_name)
+        if section_name not in self._sections:
+            raise NoSectionError(section_name)
+        return [
+            (self._option_name_map.get((section_name, key), key), "true" if values[-1] is None else values[-1])
+            for key, values in self._sections[section_name].items_all()
+        ]
 
+    @needs_values
     def items_all(self, section_name: str) -> List[Tuple[str, List[str]]]:
         """:return: list((option, [values...]), ...) pairs of all items in the given section"""
-        rv = _OMD(self._defaults)
-
-        for k, vs in self._sections[section_name].items_all():
-            if k == "__name__":
-                continue
-
-            if k in rv and rv.getall(k) == vs:
-                continue
-
-            for v in vs:
-                rv.add(k, v)
-
-        return rv.items_all()
+        section_name = self._normalize_section_name(section_name)
+        if section_name not in self._sections:
+            raise NoSectionError(section_name)
+        return [
+            (
+                self._option_name_map.get((section_name, key), key),
+                ["true" if value is None else value for value in values],
+            )
+            for key, values in self._sections[section_name].items_all()
+        ]
 
     @needs_values
     def write(self) -> None:
@@ -781,10 +1003,20 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         if self.read_only:
             raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
 
-    def add_section(self, section: "cp._SectionName") -> None:
+    def _add_section(self, section: str) -> None:
+        section_name = _canonical_section_name(section)
+        section_key = _section_name_key(section_name)
+        if section_key in self._sections:
+            raise DuplicateSectionError(section_name)
+        self._sections[section_key] = _GitConfigSectionData()
+        self._section_name_map[section_key] = section_name
+
+    @needs_values
+    @set_dirty_and_flush_changes
+    def add_section(self, section: str) -> None:
         """Assures added options will stay in order."""
         self._assure_config_name_safe(section, "section")
-        return super().add_section(section)
+        self._add_section(section)
 
     @property
     def read_only(self) -> bool:
@@ -812,7 +1044,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         :raise TypeError:
             In case the value could not be understood.
-            Otherwise the exceptions known to the ConfigParser will be raised.
+            Otherwise the parser's lookup exceptions will be raised.
         """
         try:
             valuestr = self.get(section, option)
@@ -843,17 +1075,75 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         :raise TypeError:
             In case the value could not be understood.
-            Otherwise the exceptions known to the ConfigParser will be raised.
+            Otherwise the parser's lookup exceptions will be raised.
         """
         try:
             self.sections()
-            lst = self._sections[section].getall(option)
+            section = self._normalize_section_name(section)
+            lst = self._sections[section].getall(self.optionxform(option))
         except Exception:
             if default is not None:
                 return [default]
             raise
 
-        return [self._string_to_value(valuestr) for valuestr in lst]
+        return [True if valuestr is None else self._string_to_value(valuestr) for valuestr in lst]
+
+    def _get_with_fallback(self, section: str, option: str, fallback: Any) -> Any:
+        if fallback is _MISSING:
+            return self.get(section, option)
+        return self.get(section, option, fallback=fallback)
+
+    def getint(self, section: str, option: str, fallback: Any = _MISSING, **kwargs: Any) -> Any:
+        """Return an integer parsed with Git's base prefixes and binary suffixes."""
+        del kwargs
+        value = self._get_with_fallback(section, option, fallback)
+        if value is fallback and fallback is not _MISSING:
+            return fallback
+        match = re.fullmatch(r"([+-]?)(0[xX][0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)([kKmMgG]?)", value)
+        if match is None:
+            raise ValueError("Not a valid Git integer: %r" % value)
+        sign, number, suffix = match.groups()
+        if number.lower().startswith("0x"):
+            base = 16
+        elif len(number) > 1 and number.startswith("0"):
+            base = 8
+        else:
+            base = 10
+        factor = {"": 1, "k": 1024, "m": 1024**2, "g": 1024**3}[suffix.lower()]
+        parsed = int(number, base) * factor
+        return -parsed if sign == "-" else parsed
+
+    def getfloat(self, section: str, option: str, fallback: Any = _MISSING, **kwargs: Any) -> Any:
+        """Return a floating-point value parsed with Git's binary suffixes."""
+        del kwargs
+        value = self._get_with_fallback(section, option, fallback)
+        if value is fallback and fallback is not _MISSING:
+            return fallback
+        match = re.fullmatch(
+            r"([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)([kKmMgG]?)",
+            value,
+        )
+        if match is None:
+            raise ValueError("Not a valid Git floating-point value: %r" % value)
+        number, suffix = match.groups()
+        factor = {"": 1, "k": 1024, "m": 1024**2, "g": 1024**3}[suffix.lower()]
+        return float(number) * factor
+
+    def getboolean(self, section: str, option: str, fallback: Any = _MISSING, **kwargs: Any) -> Any:
+        """Return a boolean using Git's spelling and numeric rules."""
+        del kwargs
+        value = self._get_with_fallback(section, option, fallback)
+        if value is fallback and fallback is not _MISSING:
+            return fallback
+        normalized = value.lower()
+        if normalized in ("true", "yes", "on"):
+            return True
+        if normalized in ("", "false", "no", "off"):
+            return False
+        try:
+            return self.getint(section, option) != 0
+        except ValueError as error:
+            raise ValueError("Not a boolean: %r" % value) from error
 
     def _string_to_value(self, valuestr: str) -> Union[int, float, str, bool]:
         types = (int, float)
@@ -890,29 +1180,25 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def _value_to_string_safe(self, value: Union[str, bytes, int, float, bool]) -> str:
         value_str = self._value_to_string(value)
-        if UNSAFE_CONFIG_CHARS_RE.search(value_str):
-            raise ValueError("Git config values must not contain CR, LF, or NUL")
+        if UNSAFE_CONFIG_VALUE_CHARS_RE.search(value_str):
+            raise ValueError("Git config values must not contain NUL")
         return value_str
 
-    def _assure_config_name_safe(self, name: "cp._SectionName", label: str) -> None:
-        if isinstance(name, str) and UNSAFE_CONFIG_CHARS_RE.search(name):
+    def _assure_config_name_safe(self, name: str, label: str) -> None:
+        if not isinstance(name, str):
+            raise TypeError("Git config %s names must be strings" % label)
+        if UNSAFE_CONFIG_CHARS_RE.search(name):
             raise ValueError("Git config %s names must not contain CR, LF, or NUL" % label)
-        if label == "section" and isinstance(name, str):
-            in_quotes = False
-            escaped = False
-            for index, char in enumerate(name):
-                if escaped:
-                    escaped = False
-                elif in_quotes and char == "\\":
-                    escaped = True
-                elif char == '"':
-                    if not in_quotes and (index == 0 or name[index - 1] not in " \t"):
-                        raise ValueError("Git config quoted subsection names must begin after whitespace")
-                    in_quotes = not in_quotes
-                elif char == "]" and not in_quotes:
-                    raise ValueError("Git config section names must not contain an unquoted closing bracket")
-            if in_quotes:
-                raise ValueError("Git config section names must not contain an unterminated quote")
+        if label == "section":
+            try:
+                _canonical_section_name(name)
+            except ConfigError as error:
+                raise ValueError("Invalid Git config section name: %s" % name) from error
+        elif label == "option":
+            if not name or not (name[0].isascii() and name[0].isalpha()):
+                raise ValueError("Git config option names must start with an ASCII letter")
+            if not all(_GitConfigFileParser._is_key_char(char) for char in name):
+                raise ValueError("Git config option names may contain only ASCII letters, digits, and hyphens")
 
     @needs_values
     @set_dirty_and_flush_changes
@@ -924,9 +1210,14 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     ) -> None:
         self._assure_config_name_safe(section, "section")
         self._assure_config_name_safe(option, "option")
+        section = self._normalize_section_name(section)
+        option_key = self.optionxform(option)
         if value is not None:
             value = self._value_to_string_safe(value)
-        return super().set(section, option, value)
+        if section not in self._sections:
+            raise NoSectionError(section)
+        self._sections[section].set(option_key, value)
+        self._option_name_map.setdefault((section, option_key), option)
 
     @needs_values
     @set_dirty_and_flush_changes
@@ -934,7 +1225,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """Set the given option in section to the given value.
 
         This will create the section if required, and will not throw as opposed to the
-        default ConfigParser ``set`` method.
+        lower-level :meth:`set` method.
 
         :param section:
             Name of the section in which the option resides or should reside.
@@ -950,10 +1241,14 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """
         self._assure_config_name_safe(section, "section")
         self._assure_config_name_safe(option, "option")
+        section_name = _canonical_section_name(section)
+        section = self._normalize_section_name(section)
+        option_key = self.optionxform(option)
         value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
-            self.add_section(section)
-        super().set(section, option, value_str)
+            self._add_section(section_name)
+        self._sections[section].set(option_key, value_str)
+        self._option_name_map.setdefault((section, option_key), option)
         return self
 
     @needs_values
@@ -962,7 +1257,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """Add a value for the given option in section.
 
         This will create the section if required, and will not throw as opposed to the
-        default ConfigParser ``set`` method. The value becomes the new value of the
+        lower-level :meth:`set` method. The value becomes the new value of the
         option as returned by :meth:`get_value`, and appends to the list of values
         returned by :meth:`get_values`.
 
@@ -980,10 +1275,15 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """
         self._assure_config_name_safe(section, "section")
         self._assure_config_name_safe(option, "option")
+        section_name = _canonical_section_name(section)
+        section = self._normalize_section_name(section)
+        option_name = option
+        option = self.optionxform(option_name)
         value_str = self._value_to_string_safe(value)
         if not self.has_section(section):
-            self.add_section(section)
+            self.add_section(section_name)
         self._sections[section].add(option, value_str)
+        self._option_name_map.setdefault((section, option), option_name)
         return self
 
     def rename_section(self, section: str, new_name: str) -> "GitConfigParser":
@@ -998,16 +1298,21 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :return:
             This instance
         """
+        section = self._normalize_section_name(section)
+        self._assure_config_name_safe(new_name, "section")
+        new_section_name = _canonical_section_name(new_name)
+        new_name = self._normalize_section_name(new_section_name)
         if not self.has_section(section):
             raise ValueError("Source section '%s' doesn't exist" % section)
-        self._assure_config_name_safe(new_name, "section")
         if self.has_section(new_name):
             raise ValueError("Destination section '%s' already exists" % new_name)
 
-        super().add_section(new_name)
+        self._sections[new_name] = _GitConfigSectionData()
+        self._section_name_map[new_name] = new_section_name
         new_section = self._sections[new_name]
-        for k, vs in self.items_all(section):
-            new_section.setall(k, vs)
+        for option_key, values in self._sections[section].items_all():
+            new_section.setall(option_key, values)
+            self._option_name_map[(new_name, option_key)] = self._option_name_map.get((section, option_key), option_key)
         # END for each value to copy
 
         # This call writes back the changes, which is why we don't have the respective

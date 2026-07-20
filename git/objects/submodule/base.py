@@ -4,6 +4,7 @@
 __all__ = ["Submodule", "UpdateProgress"]
 
 import gc
+from configparser import NoSectionError
 from io import BytesIO
 import logging
 import os
@@ -16,7 +17,7 @@ import urllib
 import git
 from git.cmd import Git
 from git.compat import defenc
-from git.config import GitConfigParser, SectionConstraint, cp
+from git.config import GitConfigParser, SectionConstraint
 from git.exc import (
     BadName,
     InvalidGitRepositoryError,
@@ -172,7 +173,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # Default submodule values.
             try:
                 self.path = reader.get("path")
-            except cp.NoSectionError as e:
+            except NoSectionError as e:
                 if self.repo.working_tree_dir is not None:
                     raise ValueError(
                         "This submodule instance does not exist anymore in '%s' file"
@@ -1503,7 +1504,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if hasattr(self, attr):
                     loc[attr] = getattr(self, attr)
                 # END if we have the attribute cache
-            except (cp.NoSectionError, ValueError):
+            except (NoSectionError, ValueError):
                 # On PY3, this can happen apparently... don't know why this doesn't
                 # happen on PY2.
                 pass
