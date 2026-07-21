@@ -382,7 +382,13 @@ class TestBase(TestCase):
         """:return: A path to a small, clonable repository"""
         from git.cmd import Git
 
-        return Git.polish_url(osp.join(self.rorepo.working_tree_dir, "git/ext/gitdb/gitdb/ext/smmap"))
+        return Git.polish_url(self._dependency_repo_dirs["smmap"])
+
+    def _gitdb_repo_url(self):
+        """:return: A local gitdb repository reconstructed from merged history"""
+        from git.cmd import Git
+
+        return Git.polish_url(self._dependency_repo_dirs["gitdb"])
 
     @classmethod
     def setUpClass(cls):
@@ -394,11 +400,25 @@ class TestBase(TestCase):
 
         gc.collect()
         cls.rorepo = Repo(GIT_REPO)
+        cls._dependency_repo_root = tempfile.mkdtemp(prefix="gitpython-dependency-repos-")
+        cls._dependency_repo_dirs = {}
+        for name, rev in {
+            "gitdb": "2da3232f9d58e7761e384ac6d32f7b1ed77a74a2",
+            "smmap": "8ce61ad5cc4016bffaf25080bc0d69b3acbe8555",
+        }.items():
+            path = osp.join(cls._dependency_repo_root, name)
+            repo = cls.rorepo.clone(path, shared=True, no_checkout=True)
+            repo.create_head("master", repo.commit(rev)).checkout()
+            if name == "smmap":
+                repo.create_tag("v0.8.1", ref="master~10", message="Test fixture tag")
+            repo.close()
+            cls._dependency_repo_dirs[name] = path
 
     @classmethod
     def tearDownClass(cls):
         cls.rorepo.git.clear_cache()
         cls.rorepo.git = None
+        rmtree(cls._dependency_repo_root)
 
     def _make_file(self, rela_path, data, repo=None):
         """

@@ -71,7 +71,7 @@ setup(
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     license="BSD-3-Clause",
     url="https://github.com/gitpython-developers/GitPython",
-    packages=find_packages(exclude=["test", "test.*"]),
+    packages=find_packages(include=["git", "git.*"]),
     include_package_data=True,
     package_dir={"git": "git"},
     python_requires=">=3.7",

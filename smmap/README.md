@@ -13,7 +13,7 @@ Although memory maps have many advantages, they represent a very limited system 
 
 ## Overview
 
-![Python package](https://github.com/gitpython-developers/smmap/workflows/Python%20package/badge.svg)
+![Dependency packages](https://github.com/gitpython-developers/GitPython/actions/workflows/dependencies.yml/badge.svg)
 
 Smmap wraps an interface around mmap and tracks the mapped files as well as the amount of clients who use it. If the system runs out of resources, or if a memory limit is reached, it will automatically unload unused maps to allow continued operation.
 
@@ -56,11 +56,11 @@ It is advised to have a look at the **Usage Guide** for a brief introduction on 
 
 ## Homepage and Links
 
-The project is home on github at https://github.com/gitpython-developers/smmap .
+The project is maintained in the GitPython repository at https://github.com/gitpython-developers/GitPython/tree/main/smmap .
 
 The latest source can be cloned from github as well:
 
-* git://github.com/gitpython-developers/smmap.git
+* https://github.com/gitpython-developers/GitPython.git
 
 
 For support, please use the git-python mailing list:
@@ -70,7 +70,7 @@ For support, please use the git-python mailing list:
 
 Issues can be filed on github:
 
-* https://github.com/gitpython-developers/smmap/issues
+* https://github.com/gitpython-developers/GitPython/issues
 
 A link to the pypi page related to this repository:
 
@@ -80,4 +80,3 @@ A link to the pypi page related to this repository:
 ## License Information
 
 *smmap* is licensed under the New BSD License.
-

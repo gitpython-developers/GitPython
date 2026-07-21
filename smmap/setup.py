@@ -11,9 +11,10 @@ except ImportError:
 import smmap
 
 if os.path.exists("README.md"):
-    long_description = open('README.md', encoding="utf-8").read().replace('\r\n', '\n')
+    with open("README.md", encoding="utf-8") as readme:
+        long_description = readme.read().replace("\r\n", "\n")
 else:
-    long_description = "See https://github.com/gitpython-developers/smmap"
+    long_description = "See https://github.com/gitpython-developers/GitPython/tree/main/smmap"
 
 setup(
     name="smmap",
@@ -31,7 +32,6 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Operating System :: POSIX",
         "Operating System :: Microsoft :: Windows",

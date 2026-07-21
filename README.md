@@ -101,15 +101,13 @@ In the less common case that you do not want to install test dependencies, `pip 
 
 #### With editable *dependencies* (not preferred, and rarely needed)
 
-In rare cases, you may want to work on GitPython and one or both of its [gitdb](https://github.com/gitpython-developers/gitdb) and [smmap](https://github.com/gitpython-developers/smmap) dependencies at the same time, with changes in your local working copy of gitdb or smmap immediately reflected in the behavior of your local working copy of GitPython. This can be done by making editable installations of those dependencies in the same virtual environment where you install GitPython.
-
-If you want to do that *and* you want the versions in GitPython's git submodules to be used, then pass `-e git/ext/gitdb` and/or `-e git/ext/gitdb/gitdb/ext/smmap` to `pip install`. This can be done in any order, and in separate `pip install` commands or the same one, so long as `-e` appears before *each* path. For example, you can install GitPython, gitdb, and smmap editably in the currently active virtual environment this way:
+GitPython, [gitdb](gitdb), and [smmap](smmap) live in this repository as independently packaged projects. To work on all three at once, install each one editably in the same virtual environment:
 
 ```sh
-pip install -e ".[test]" -e git/ext/gitdb -e git/ext/gitdb/gitdb/ext/smmap
+pip install -e smmap -e gitdb -e ".[test]"
 ```
 
-The submodules must have been cloned for that to work, but that will already be the case if you have run `./init-tests-after-clone.sh`. You can use `pip list` to check which packages are installed editably and which are installed normally.
+You can use `pip list` to check which packages are installed editably and which are installed normally.
 
 To reiterate, this approach should only rarely be used. For most development it is preferable to allow the gitdb and smmap dependencices to be retrieved automatically from PyPI in their latest stable packaged versions.
 

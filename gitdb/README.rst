@@ -38,14 +38,9 @@ REQUIREMENTS
 SOURCE
 ======
 
-The source is available in a git repository on GitHub:
+The source is available in the GitPython repository on GitHub:
 
-https://github.com/gitpython-developers/gitdb
-
-Once the clone is complete, please be sure to initialize the submodule using::
-
- cd gitdb
- git submodule update --init
+https://github.com/gitpython-developers/GitPython/tree/main/gitdb
 
 Run the tests with::
 
@@ -54,8 +49,8 @@ Run the tests with::
 DEVELOPMENT
 ===========
 
-.. image:: https://github.com/gitpython-developers/gitdb/workflows/Python%20package/badge.svg
-    :target: https://github.com/gitpython-developers/gitdb/actions
+.. image:: https://github.com/gitpython-developers/GitPython/actions/workflows/dependencies.yml/badge.svg
+    :target: https://github.com/gitpython-developers/GitPython/actions/workflows/dependencies.yml
 
 The library is considered mature, and not under active development. Its primary (known) use is in GitPython.
 
@@ -66,7 +61,7 @@ INFRASTRUCTURE
     * https://github.com/gitpython-developers/GitPython/discussions
 
 * Issue Tracker
-    * https://github.com/gitpython-developers/gitdb/issues
+    * https://github.com/gitpython-developers/GitPython/issues
 
 LICENSE
 =======

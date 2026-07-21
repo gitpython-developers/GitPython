@@ -6,7 +6,7 @@ from setuptools import setup
 
 __author__ = "Sebastian Thiel"
 __contact__ = "byronimo@gmail.com"
-__homepage__ = "https://github.com/gitpython-developers/gitdb"
+__homepage__ = "https://github.com/gitpython-developers/GitPython/tree/main/gitdb"
 version_info = (4, 0, 12)
 __version__ = '.'.join(str(i) for i in version_info)
 
@@ -28,7 +28,6 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Environment :: Console",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
         "Operating System :: POSIX",
         "Operating System :: Microsoft :: Windows",

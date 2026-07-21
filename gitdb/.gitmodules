@@ -1,3 +1,0 @@
-[submodule "smmap"]
-	path = gitdb/ext/smmap
-	url = https://github.com/gitpython-developers/smmap.git
