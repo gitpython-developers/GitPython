@@ -87,6 +87,7 @@ class TestClone(TestBase):
                 Repo.clone_from(
                     url=self._small_repo_url(),
                     to_path=path_with_unicode,
+                    no_hardlinks=True,
                 )
             except UnicodeEncodeError:
                 self.fail("Raised UnicodeEncodeError")
