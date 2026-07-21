@@ -408,7 +408,7 @@ class TestBase(TestCase):
         }.items():
             path = osp.join(cls._dependency_repo_root, name)
             repo = cls.rorepo.clone(path, shared=True, no_checkout=True)
-            repo.create_head("master", repo.commit(rev)).checkout()
+            repo.create_head("master", repo.commit(rev), force=True).checkout()
             if name == "smmap":
                 repo.create_tag("v0.8.1", ref="master~10", message="Test fixture tag")
             repo.close()
