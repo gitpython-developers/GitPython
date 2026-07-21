@@ -6,11 +6,6 @@ updates:
   schedule:
     interval: weekly
 
-- package-ecosystem: gitsubmodule
-  directory: "/"
-  schedule:
-    interval: weekly
-
 - package-ecosystem: pre-commit
   directory: "/"
   schedule:

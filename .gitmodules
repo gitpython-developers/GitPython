@@ -1,3 +1,0 @@
-[submodule "gitdb"]
-	url = https://github.com/gitpython-developers/gitdb.git
-	path = git/ext/gitdb

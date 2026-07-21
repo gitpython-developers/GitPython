@@ -57,8 +57,6 @@ jobs:
       run: |
         git config --global --add safe.directory "$(pwd)"
         git config --global --add safe.directory "$(pwd)/.git"
-        git config --global --add safe.directory "$(pwd)/git/ext/gitdb"
-        git config --global --add safe.directory "$(pwd)/git/ext/gitdb/gitdb/ext/smmap"
         git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
@@ -84,7 +82,7 @@ jobs:
 
     - name: Install project and test dependencies
       run: |
-        pip install '.[test]'
+        pip install ./smmap ./gitdb '.[test]'
 
     - name: Show POSIX file ownership
       # Cygwin's `ls -ld` reports the NTFS Owner SID via Cygwin's SID-to-uid
@@ -96,12 +94,6 @@ jobs:
         ls -ld -- \
           "$(pwd)" \
           "$(pwd)/.git" \
-          "$(pwd)/git/ext/gitdb" \
-          "$(pwd)/git/ext/gitdb/.git" \
-          "$(pwd)/.git/modules/gitdb" \
-          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
-          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
-          "$(pwd)/.git/modules/gitdb/modules/smmap" \
           "${HOME:?HOME is not set}/.gitconfig" \
           2>&1 || true
 
@@ -114,12 +106,6 @@ jobs:
         $paths = @(
           "$pwd",
           "$pwd\.git",
-          "$pwd\git\ext\gitdb",
-          "$pwd\git\ext\gitdb\.git",
-          "$pwd\.git\modules\gitdb",
-          "$pwd\git\ext\gitdb\gitdb\ext\smmap",
-          "$pwd\git\ext\gitdb\gitdb\ext\smmap\.git",
-          "$pwd\.git\modules\gitdb\modules\smmap",
           "$env:USERPROFILE\.gitconfig"
         )
         foreach ($p in $paths) {

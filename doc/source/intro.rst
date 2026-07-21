@@ -97,11 +97,6 @@ and cloned using::
 
 	$ git clone https://github.com/gitpython-developers/GitPython git-python
 
-Initialize all submodules to obtain the required dependencies with::
-
-    $ cd git-python
-    $ git submodule update --init --recursive
-
 Finally verify the installation by running unit tests::
 
     $ python -m unittest

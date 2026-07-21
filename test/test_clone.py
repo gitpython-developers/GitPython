@@ -87,6 +87,9 @@ class TestClone(TestBase):
                 Repo.clone_from(
                     url=self._small_repo_url(),
                     to_path=path_with_unicode,
+                    # Local clones hardlink the reconstructed smmap repository's
+                    # read-only metadata, which Windows cannot remove at cleanup.
+                    no_hardlinks=True,
                 )
             except UnicodeEncodeError:
                 self.fail("Raised UnicodeEncodeError")
