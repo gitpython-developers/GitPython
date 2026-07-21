@@ -1,0 +1,7 @@
+[run]
+source = gitdb
+
+; to make nosetests happy
+[report]
+include = */gitdb/*
+omit = */gitdb/ext/*

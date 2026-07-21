@@ -1,0 +1,10 @@
+MANIFEST
+.coverage
+build/
+dist/
+*.pyc
+*.o
+*.so
+.noseids
+*.sublime-workspace
+*.egg-info
