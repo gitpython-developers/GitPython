@@ -411,6 +411,7 @@ class TestBase(TestCase):
             repo.create_head("master", repo.commit(rev), force=True).checkout()
             if name == "smmap":
                 repo.create_tag("v0.8.1", ref="master~10", message="Test fixture tag", force=True)
+            repo.git.gc()
             repo.close()
             cls._dependency_repo_dirs[name] = path
 
