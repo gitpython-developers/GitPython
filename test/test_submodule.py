@@ -508,8 +508,6 @@ class TestSubmodule(TestBase):
         with rm.config_writer():
             pass
 
-        rsmsp = ["git/ext/gitdb", "gitdb/ext/smmap"]
-
         # Cannot set the parent commit as root module's path didn't exist.
         self.assertRaises(ValueError, rm.set_parent_commit, "HEAD")
 
