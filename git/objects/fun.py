@@ -115,11 +115,11 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
         # Default encoding for strings in git is UTF-8.
         # Only use the respective unicode object if the byte stream was encoded.
         name_bytes = data[ns:i]
-        name = safe_decode(name_bytes)
+        name = safe_decode(bytes(name_bytes))
 
         # Byte is NULL, get next 20.
         i += 1
-        sha = data[i : i + 20]
+        sha = bytes(data[i : i + 20])
         i = i + 20
         out.append((sha, mode, name))
     # END for each byte in data stream
