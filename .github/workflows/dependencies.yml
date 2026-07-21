@@ -36,7 +36,7 @@ jobs:
     - name: Test
       run: |
         if test "${{ matrix.project }}" = gitdb; then
-          GITDB_TEST_GIT_REPO_BASE="$(git rev-parse --git-common-dir)" pytest -v gitdb/gitdb/test
+          GITDB_TEST_GIT_REPO_BASE="$(git rev-parse --git-common-dir)" pytest -o addopts= -v gitdb/gitdb/test
         else
-          pytest -v smmap/smmap/test
+          pytest -o addopts= -v smmap/smmap/test
         fi
