@@ -1,0 +1,10 @@
+[run]
+source = smmap
+
+; to make nosetests happy
+[report]
+omit = 
+	*/yaml*
+	*/tests/*
+    */python?.?/*
+    */site-packages/nose/*
