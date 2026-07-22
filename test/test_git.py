@@ -214,6 +214,23 @@ class TestGit(TestBase):
 
         self.assertEqual(options, ["--max-count"])
 
+    def test_option_candidates_include_split_single_char_option_values(self):
+        cases = [
+            ({"n": "--upload-pack=helper"}, ["-n", "--upload-pack=helper"], ["--upload-pack"]),
+            ({"g": ("safe", "--out=target")}, ["-g", "--out=target"], ["--output"]),
+        ]
+
+        for kwargs, candidates, unsafe_options in cases:
+            self.assertEqual(Git._option_candidates(kwargs=kwargs), candidates)
+            with self.assertRaises(UnsafeOptionError):
+                Git.check_unsafe_options(options=candidates, unsafe_options=unsafe_options)
+
+        self.assertEqual(self.git.transform_kwargs(n="--upload-pack=helper"), ["-n", "--upload-pack=helper"])
+
+        unsplit_kwargs = {"n": "--upload-pack=helper", "split_single_char_options": False}
+        self.assertEqual(self.git.transform_kwargs(**unsplit_kwargs), ["-n--upload-pack=helper"])
+        self.assertEqual(Git._option_candidates(kwargs=unsplit_kwargs), ["-n"])
+
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg
         (None, False, False),
