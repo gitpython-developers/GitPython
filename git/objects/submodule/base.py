@@ -608,7 +608,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END verify url
 
         ## See #525 for ensuring git URLs in config-files are valid under Windows.
-        url = Git.polish_url(url)
+        url = Git.polish_url(url, expand_vars=False)
 
         # It's important to add the URL to the parent config, to let `git submodule` know.
         # Otherwise there is a '-' character in front of the submodule listing:
