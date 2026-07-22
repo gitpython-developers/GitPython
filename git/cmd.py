@@ -1039,11 +1039,18 @@ class Git(metaclass=_GitMeta):
             option for option in cls._unpack_args([arg for arg in args if arg is not None]) if option.startswith("-")
         ]
         if kwargs:
+            split_single_char_options = kwargs.get("split_single_char_options", True)
             for key, value in kwargs.items():
                 values = value if isinstance(value, (list, tuple)) else (value,)
                 if any(value is True or (value is not False and value is not None) for value in values):
                     key = str(key)
                     options.append(f"-{key}" if len(key) == 1 else f"--{dashify(key)}")
+                    if len(key) == 1 and split_single_char_options:
+                        options.extend(
+                            str(value)
+                            for value in values
+                            if value is not True and value not in (False, None) and str(value).startswith("-")
+                        )
         return options
 
     AutoInterrupt: TypeAlias = _AutoInterrupt

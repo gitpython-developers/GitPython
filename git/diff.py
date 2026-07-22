@@ -9,7 +9,7 @@ import enum
 import re
 import warnings
 
-from git.cmd import handle_process_output
+from git.cmd import Git, handle_process_output
 from git.compat import defenc
 from git.objects.blob import Blob
 from git.objects.util import mode_str_to_int
@@ -35,7 +35,6 @@ from git.types import PathLike, Literal
 if TYPE_CHECKING:
     from subprocess import Popen
 
-    from git.cmd import Git
     from git.objects.base import IndexObject
     from git.objects.commit import Commit
     from git.objects.tree import Tree
@@ -190,6 +189,7 @@ class Diffable:
         other: Union[DiffConstants, "Tree", "Commit", str, None] = INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "DiffIndex[Diff]":
         """Create diffs between two items being trees, trees and index or an index and
@@ -219,6 +219,10 @@ class Diffable:
             applied makes the self to other. Patches are somewhat costly as blobs have
             to be read and diffed.
 
+        :param allow_unsafe_options:
+            If ``True``, allow options such as ``--output`` that can write to arbitrary
+            filesystem paths.
+
         :param kwargs:
             Additional arguments passed to :manpage:`git-diff(1)`, such as ``R=True`` to
             swap both sides of the diff.
@@ -231,6 +235,12 @@ class Diffable:
             an instance of :class:`~git.objects.tree.Tree` or
             :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([other], kwargs),
+                unsafe_options=self.repo.unsafe_git_revision_options,
+            )
+
         args: List[Union[PathLike, Diffable]] = []
         args.append("--abbrev=40")  # We need full shas.
         args.append("--full-index")  # Get full index paths, not only filenames.

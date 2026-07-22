@@ -14,6 +14,7 @@ import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
+from git.exc import UnsafeOptionError
 
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
@@ -351,6 +352,25 @@ class TestDiff(TestBase):
         # indicates success.
         self.assertIsInstance(diff.a_blob.size, int)
         self.assertIsInstance(diff.b_blob.size, int)
+
+    def test_diff_rejects_unsafe_output_options(self):
+        commit = self.rorepo.head.commit
+
+        calls = (
+            lambda target: commit.diff(output=target),
+            lambda target: commit.diff(other=f"--output={target}"),
+            lambda target: self.rorepo.index.diff(NULL_TREE, output=target),
+            lambda target: self.rorepo.index.diff(f"--output={target}"),
+        )
+        for index, call in enumerate(calls):
+            target = osp.join(self.repo_dir, f"diff-output-{index}")
+            with self.assertRaises(UnsafeOptionError):
+                call(target)
+            self.assertFalse(osp.exists(target))
+
+        allowed_target = osp.join(self.repo_dir, "allowed-diff-output")
+        commit.diff(output=allowed_target, allow_unsafe_options=True)
+        self.assertTrue(osp.isfile(allowed_target))
 
     def test_diff_interface(self):
         """Test a few variations of the main diff routine."""

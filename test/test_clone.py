@@ -128,6 +128,7 @@ class TestClone(TestBase):
                 "-c protocol.ext.allow=always",
                 "-cprotocol.ext.allow=always",
                 "-vcprotocol.ext.allow=always",
+                f"--template={tmp_dir}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -142,6 +143,7 @@ class TestClone(TestBase):
                 {"config": "protocol.ext.allow=always"},
                 {"conf": "protocol.ext.allow=always"},
                 {"c": "protocol.ext.allow=always"},
+                {"template": tmp_dir},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
