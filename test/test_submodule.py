@@ -1355,6 +1355,20 @@ class TestSubmodule(TestBase):
         with self.assertRaises(cp.NoOptionError):
             sm_config.get_value("core", "eol")
 
+    @with_rw_directory
+    def test_add_does_not_expand_environment_variables_in_url(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        url = osp.join(rwdir, "${GITPYTHON_TEST_SECRET}")
+        source = git.Repo.init(url)
+        Path(source.working_tree_dir, "file").write_text("content")
+        source.index.add(["file"])
+        source.index.commit("initial")
+
+        with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
+            sm = Submodule.add(parent, "new", "new", url)
+
+        assert sm.url == Git.polish_url(url, expand_vars=False)
+
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:

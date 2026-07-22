@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
+import os
 import os.path as osp
 from pathlib import Path
 import random
@@ -684,6 +685,14 @@ class TestRemote(TestBase):
         self.assertEqual(list(remote.urls), [test3])
         # Will raise fatal: Will not delete all non-push URLs.
         self.assertRaises(GitCommandError, remote.delete_url, test3)
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_create_does_not_expand_environment_variables_in_url(self, rw_repo):
+        url = "https://example.com/${GITPYTHON_TEST_SECRET}/repo.git"
+        with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
+            remote = rw_repo.create_remote("untrusted", url)
+
+        assert remote.url == url
 
     def test_fetch_error(self):
         rem = self.rorepo.remote("origin")

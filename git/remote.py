@@ -808,7 +808,7 @@ class Remote(LazyMixin, IterableObj):
         """
         scmd = "add"
         kwargs["insert_kwargs_after"] = scmd
-        url = Git.polish_url(url)
+        url = Git.polish_url(url, expand_vars=False)
         if not allow_unsafe_protocols:
             Git.check_unsafe_protocols(url)
         repo.git.remote(scmd, "--", name, url, **kwargs)
