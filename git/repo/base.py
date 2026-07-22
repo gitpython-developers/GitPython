@@ -149,6 +149,8 @@ class Repo:
         # Can override configuration variables that execute arbitrary commands:
         "--config",
         "-c",
+        # Can install hooks that execute during clone:
+        "--template",
     ]
     """Options to :manpage:`git-clone(1)` that allow arbitrary commands to be executed.
 
@@ -159,6 +161,9 @@ class Repo:
     The ``--config``/``-c`` option allows users to override configuration variables like
     ``protocol.allow`` and ``core.gitProxy`` to execute arbitrary commands:
     https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---configltkeygtltvaluegt
+
+    The ``--template`` option can install hooks that execute during clone:
+    https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---templatetemplate-directory
     """
 
     unsafe_git_archive_options = [
