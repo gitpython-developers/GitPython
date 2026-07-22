@@ -23,6 +23,7 @@ from gitdb.base import IStream
 from gitdb.db import MemoryDB
 
 from git.compat import defenc, force_bytes
+from git.cmd import Git
 import git.diff as git_diff
 from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError
 from git.objects import Blob, Commit, Object, Submodule, Tree
@@ -1492,6 +1493,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         ] = git_diff.INDEX,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> git_diff.DiffIndex[git_diff.Diff]:
         """Diff this index against the working copy or a :class:`~git.objects.tree.Tree`
@@ -1504,6 +1506,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             Will only work with indices that represent the default git index as they
             have not been initialized with a stream.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([other], kwargs),
+                unsafe_options=self.repo.unsafe_git_revision_options,
+            )
+
         # Only run if we are the default repository index.
         if self._file_path != self._index_path():
             raise AssertionError("Cannot call %r on indices that do not represent the default git index" % self.diff())
@@ -1560,7 +1568,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # Invert the existing R flag.
             cur_val = kwargs.get("R", False)
             kwargs["R"] = not cur_val
-            return other.diff(self.INDEX, paths, create_patch, **kwargs)
+            return other.diff(
+                self.INDEX,
+                paths,
+                create_patch,
+                allow_unsafe_options=allow_unsafe_options,
+                **kwargs,
+            )
         # END diff against other item handling
 
         # If other is not None here, something is wrong.
@@ -1568,4 +1582,4 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             raise ValueError("other must be None, Diffable.INDEX, a Tree or Commit, was %r" % other)
 
         # Diff against working copy - can be handled by superclass natively.
-        return super().diff(other, paths, create_patch, **kwargs)
+        return super().diff(other, paths, create_patch, allow_unsafe_options=allow_unsafe_options, **kwargs)
