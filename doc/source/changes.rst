@@ -2,6 +2,19 @@
 Changelog
 =========
 
+3.1.55
+======
+
+A security fix for
+
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-94p4-4cq8-9g67
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55
+
 3.1.54
 ======
 
@@ -9,7 +22,7 @@ A security fix for
 
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-r9mr-m37c-5fr3
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-6p8h-3wgx-97gf
-* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fjr4-x663-mwxc#event-857190
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fjr4-x663-mwxc
 
 If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
