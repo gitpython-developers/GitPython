@@ -10,6 +10,7 @@ __all__ = ["RemoteProgress", "PushInfo", "FetchInfo", "Remote"]
 import contextlib
 import logging
 import re
+from urllib.parse import urlsplit, urlunsplit
 
 from git.cmd import Git, handle_process_output
 from git.compat import defenc, force_text
@@ -1000,6 +1001,48 @@ class Remote(LazyMixin, IterableObj):
         finally:
             config.release()
 
+    def _resolve_transport_target(
+        self,
+        url: Optional[str],
+        token: Optional[str],
+        allow_unsafe_protocols: bool,
+    ) -> Union[str, "Remote"]:
+        """Determine the one-off target to fetch/push/pull against for this call.
+
+        Used by :meth:`fetch`, :meth:`push`, and :meth:`pull` so all three resolve
+        ``url``/``token`` the same way:
+
+        - ``url`` given: use it verbatim (with ``token`` embedded into it, if given).
+        - ``url`` is ``None`` but ``token`` is given: read (never write) this
+          remote's own *currently configured* URL and embed the token into that,
+          so a caller can pass just ``token=`` on a normal named remote without
+          repeating a URL they already have configured -- still never touching
+          ``.git/config``.
+        - Neither given: return ``self`` unchanged, i.e. today's existing
+          behaviour (fetch/push/pull by remote name, using its configured URL as
+          git itself resolves it).
+
+        :raises ValueError:
+            If ``token`` is given but the resolved URL is not ``http://``/``https://``.
+        """
+        effective_url = url if url is not None else (self.url if token is not None else None)
+        if effective_url is None:
+            return self
+
+        if not allow_unsafe_protocols:
+            Git.check_unsafe_protocols(effective_url)
+
+        if token is None:
+            return effective_url
+
+        parsed = urlsplit(effective_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("token= is only supported with http:// or https:// urls")
+        netloc = f"{token}@{parsed.hostname}"
+        if parsed.port:
+            netloc += f":{parsed.port}"
+        return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
+
     def fetch(
         self,
         refspec: Union[str, List[str], None] = None,
@@ -1008,6 +1051,9 @@ class Remote(LazyMixin, IterableObj):
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
+        url: Optional[str] = None,
+        token: Optional[str] = None,
+        dest_ref: Union[bool, str, None] = None,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote.
@@ -1028,6 +1074,16 @@ class Remote(LazyMixin, IterableObj):
             does) - supplying a list rather than a string for 'refspec' will make use of
             this facility.
 
+            :note:
+                A *bare* source name with no ``:<dst>`` (e.g. ``"main"``) only updates
+                ``FETCH_HEAD`` when fetching from a remote by name, because git can
+                complete the destination from that remote's configured fetch refspec.
+                When fetching from an explicit ``url`` instead (no such config exists
+                for an anonymous URL), a bare name updates ``FETCH_HEAD`` only and
+                creates or updates no local ref at all. Use ``dest_ref`` below, or
+                spell out ``"<branch>:refs/remotes/<name>/<branch>"`` yourself, to get
+                a normal tracking ref out of a ``url=`` fetch.
+
         :param progress:
             See the :meth:`push` method.
 
@@ -1044,6 +1100,33 @@ class Remote(LazyMixin, IterableObj):
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
 
+        :param url:
+            Fetch from this URL instead of the remote's configured URL, for this
+            call only. The remote's stored config (``.git/config``) is never
+            written to or read for the transport target when this is given.
+            Takes precedence over the remote's name/configured url.
+
+        :param token:
+            Optional credential to embed in ``url`` for this call only (e.g. a
+            personal access token). Only used together with ``url``, and only
+            for ``http://``/``https://`` URLs. Never written to config, never
+            logged; kept out of :class:`FetchInfo`/exception text on failure.
+
+        :param dest_ref:
+            Only meaningful together with ``url``. Expands any *bare* (no ``:dst``)
+            entry in ``refspec`` into a full ``<branch>:<dst>`` mapping before
+            fetching, so the fetch updates a real local ref instead of only
+            ``FETCH_HEAD``. Entries that already contain a ``:`` are left untouched.
+
+            - ``True``: derive ``dst`` as ``refs/remotes/<this-remote's-name>/<branch>``
+              for each bare entry -- i.e. behave like a normal named-remote fetch would.
+            - A string containing ``{branch}``: used as a template for ``dst``, e.g.
+              ``"refs/remotes/upstream/{branch}"``.
+            - A plain string with no ``{branch}``: used verbatim as ``dst``. Only valid
+              when ``refspec`` is a single bare name, not a list.
+            - ``None`` (default): no expansion; bare names behave as plain git would
+              (``FETCH_HEAD`` only).
+
         :param kwargs:
             Additional arguments to be passed to :manpage:`git-fetch(1)`.
 
@@ -1055,15 +1138,40 @@ class Remote(LazyMixin, IterableObj):
             As fetch does not provide progress information to non-ttys, we cannot make
             it available here unfortunately as in the :meth:`push` method.
         """
-        if refspec is None:
+        if url is None and token is None and refspec is None:
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
+
+        if dest_ref is not None and url is None and token is None:
+            raise ValueError("dest_ref is only meaningful together with url= or token=")
 
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
             args: Sequence[Optional[str]] = refspec
         else:
             args = [refspec]
+
+        if dest_ref is not None:
+
+            def _expand(ref: Optional[str]) -> Optional[str]:
+                if not ref or ":" in ref:
+                    return ref
+                if dest_ref is True:
+                    dst = f"refs/remotes/{self.name}/{ref}"
+                elif isinstance(dest_ref, str) and "{branch}" in dest_ref:
+                    dst = dest_ref.format(branch=ref)
+                elif isinstance(dest_ref, str):
+                    if isinstance(refspec, list) and len(refspec) > 1:
+                        raise ValueError(
+                            "dest_ref as a plain string only supports a single bare refspec entry; "
+                            "use '{branch}' as a template, or pass True, for multiple entries"
+                        )
+                    dst = dest_ref
+                else:
+                    raise TypeError("dest_ref must be True, a string, or None")
+                return f"{ref}:{dst}"
+
+            args = [_expand(ref) for ref in args]
 
         if not allow_unsafe_protocols:
             for ref in args:
@@ -1076,10 +1184,28 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_fetch_options,
             )
 
-        proc = self.repo.git.fetch(
-            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
-        )
-        res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
+        # Determine the fetch target: an explicit `url=`, or a `token=` embedded into
+        # this remote's own configured url (read, never written), takes precedence
+        # over plain named-remote fetching. Nothing is ever written to .git/config.
+        fetch_target = self._resolve_transport_target(url, token, allow_unsafe_protocols)
+
+        try:
+            proc = self.repo.git.fetch(
+                "--",
+                fetch_target,
+                *args,
+                as_process=True,
+                with_stdout=False,
+                universal_newlines=True,
+                v=verbose,
+                **kwargs,
+            )
+            res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
+        except GitCommandError as err:
+            # Never let a token embedded in the URL leak into an exception message.
+            if token is not None and token in str(err):
+                err.args = tuple(a.replace(token, "***") if isinstance(a, str) else a for a in err.args)
+            raise
         if hasattr(self.repo.odb, "update_cache"):
             self.repo.odb.update_cache()
         return res
@@ -1091,6 +1217,8 @@ class Remote(LazyMixin, IterableObj):
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
+        url: Optional[str] = None,
+        token: Optional[str] = None,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed by a
@@ -1111,13 +1239,28 @@ class Remote(LazyMixin, IterableObj):
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
 
+        :param url:
+            Pull from this URL instead of the remote's configured URL, for this
+            call only. The remote's stored config (``.git/config``) is never
+            written to or read for the transport target when this is given.
+            Takes precedence over the remote's name/configured url. As with plain
+            ``git pull``, the fetched commit is merged into your currently checked
+            out branch regardless of the source, so use with the same care you
+            would use interactively.
+
+        :param token:
+            Optional credential to embed in ``url`` for this call only (e.g. a
+            personal access token). Only used together with ``url``, and only
+            for ``http://``/``https://`` URLs. Never written to config, never
+            logged; kept out of exception text on failure.
+
         :param kwargs:
             Additional arguments to be passed to :manpage:`git-pull(1)`.
 
         :return:
             Please see :meth:`fetch` method.
         """
-        if refspec is None:
+        if url is None and token is None and refspec is None:
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
@@ -1133,10 +1276,30 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_pull_options,
             )
 
-        proc = self.repo.git.pull(
-            "--", self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
-        )
-        res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
+        # Same one-off-target mechanism as fetch(): an explicit `url` (optionally
+        # with an embedded `token`) takes precedence over the remote's configured
+        # name/url, and neither is ever written to .git/config.
+        # Same one-off-target resolution as fetch(): an explicit `url=`, or a
+        # `token=` embedded into this remote's own configured url (read, never
+        # written), takes precedence over plain named-remote pulling.
+        pull_target = self._resolve_transport_target(url, token, allow_unsafe_protocols)
+
+        try:
+            proc = self.repo.git.pull(
+                "--",
+                pull_target,
+                refspec,
+                with_stdout=False,
+                as_process=True,
+                universal_newlines=True,
+                v=True,
+                **kwargs,
+            )
+            res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
+        except GitCommandError as err:
+            if token is not None and token in str(err):
+                err.args = tuple(a.replace(token, "***") if isinstance(a, str) else a for a in err.args)
+            raise
         if hasattr(self.repo.odb, "update_cache"):
             self.repo.odb.update_cache()
         return res
@@ -1148,6 +1311,8 @@ class Remote(LazyMixin, IterableObj):
         kill_after_timeout: Union[None, float] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
+        url: Optional[str] = None,
+        token: Optional[str] = None,
         **kwargs: Any,
     ) -> PushInfoList:
         """Push changes from source branch in refspec to target branch in refspec.
@@ -1180,6 +1345,18 @@ class Remote(LazyMixin, IterableObj):
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--receive-pack``.
 
+        :param url:
+            Push to this URL instead of the remote's configured URL, for this call
+            only. The remote's stored config (``.git/config``) is never written to
+            or read for the transport target when this is given. Takes precedence
+            over the remote's name/configured url.
+
+        :param token:
+            Optional credential to embed in ``url`` for this call only (e.g. a
+            personal access token). Only used together with ``url``, and only for
+            ``http://``/``https://`` URLs. Never written to config, never logged;
+            kept out of exception text on failure.
+
         :param kwargs:
             Additional arguments to be passed to :manpage:`git-push(1)`.
 
@@ -1209,16 +1386,29 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_push_options,
             )
 
-        proc = self.repo.git.push(
-            "--",
-            self,
-            refspec,
-            porcelain=True,
-            as_process=True,
-            universal_newlines=True,
-            kill_after_timeout=kill_after_timeout,
-            **kwargs,
-        )
+        # Same one-off-target mechanism as fetch(): an explicit `url` (optionally
+        # with an embedded `token`) takes precedence over the remote's configured
+        # name/url, and neither is ever written to .git/config.
+        # Same one-off-target resolution as fetch(): an explicit `url=`, or a
+        # `token=` embedded into this remote's own configured url (read, never
+        # written), takes precedence over plain named-remote pushing.
+        push_target = self._resolve_transport_target(url, token, allow_unsafe_protocols)
+
+        try:
+            proc = self.repo.git.push(
+                "--",
+                push_target,
+                refspec,
+                porcelain=True,
+                as_process=True,
+                universal_newlines=True,
+                kill_after_timeout=kill_after_timeout,
+                **kwargs,
+            )
+        except GitCommandError as err:
+            if token is not None and token in str(err):
+                err.args = tuple(a.replace(token, "***") if isinstance(a, str) else a for a in err.args)
+            raise
         return self._get_push_info(proc, progress, kill_after_timeout=kill_after_timeout)
 
     @property

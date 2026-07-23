@@ -15,6 +15,7 @@ from unittest import mock, skipIf
 import pytest
 
 from git import (
+    Actor,
     Commit,
     FetchInfo,
     GitCommandError,
@@ -24,6 +25,7 @@ from git import (
     Remote,
     RemoteProgress,
     RemoteReference,
+    Repo,
     SymbolicReference,
     TagReference,
 )
@@ -35,6 +37,7 @@ from test.lib import (
     TestBase,
     fixture,
     with_rw_and_rw_remote_repo,
+    with_rw_directory,
     with_rw_repo,
 )
 
@@ -1082,6 +1085,367 @@ class TestRemote(TestBase):
 
         # Cleanup branch
         Head.delete(remote_repo, bad_branch_name)
+
+    @with_rw_directory
+    def test_fetch_with_explicit_url(self, rw_dir):
+        # A fetch with url= should be able to pull from a completely different
+        # location than the remote's configured url, and must not mutate the
+        # remote's stored config in doing so.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("initial commit", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+        original_url = remote.url
+
+        other_dir = osp.join(rw_dir, "other")
+        other = source.clone(other_dir)
+        other.index.commit("other-only commit", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        res = remote.fetch(url=other_dir, refspec="master")
+        assert res
+
+        # The configured remote url must be untouched.
+        assert remote.url == original_url
+        with remote.config_reader as cr:
+            assert cr.get("url") == original_url
+
+    @with_rw_directory
+    def test_fetch_url_requires_refspec_assertion_skipped(self, rw_dir):
+        # Passing url= should not trigger the "remote has no refspec configured"
+        # assertion that a bare fetch() with no configured refspec would hit,
+        # since url= implies a one-off, out-of-band fetch.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("initial commit", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+        with remote.config_writer as cw:
+            cw.remove_option("fetch")
+
+        # Should not raise AssertionError even though 'fetch' refspec config is gone.
+        res = remote.fetch(url=source_dir, refspec="master")
+        assert res
+
+    @with_rw_directory
+    def test_fetch_token_requires_http(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        with pytest.raises(ValueError, match="http"):
+            remote.fetch(url="git@example.invalid:repo.git", token="abc123", refspec="main")
+
+    @with_rw_directory
+    def test_fetch_token_redacted_on_failure(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        token = "ghp_should_never_appear_in_errors"
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.fetch(
+                url="https://example.invalid/nonexistent-repo.git",
+                token=token,
+                refspec="main",
+                kill_after_timeout=5,
+            )
+        assert token not in str(excinfo.value)
+        assert "***" in str(excinfo.value)
+
+    @with_rw_directory
+    def test_fetch_dest_ref_true(self, rw_dir):
+        # dest_ref=True should map a bare refspec name to a normal
+        # refs/remotes/<name>/<branch> tracking ref, instead of FETCH_HEAD only.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        # Create devbranch only after cloning, so origin/devbranch does not yet
+        # exist in the clone -- proving the fetch below is what creates it.
+        dev = source.create_head("devbranch")
+        dev.checkout()
+        source.index.commit("dev commit", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.heads.master.checkout()
+        assert "origin/devbranch" not in [r.name for r in clone.refs]
+
+        res = remote.fetch(url=source_dir, refspec="devbranch", dest_ref=True)
+        assert len(res) == 1
+        assert res[0].ref.name == "origin/devbranch"
+        assert "origin/devbranch" in [r.name for r in clone.refs]
+        assert clone.commit("origin/devbranch").hexsha == dev.commit.hexsha
+
+    @with_rw_directory
+    def test_fetch_dest_ref_template_with_list(self, rw_dir):
+        # A '{branch}' template in dest_ref applies per-entry to a list of refspecs.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        for name in ("one", "two"):
+            source.create_head(name).checkout()
+            source.index.commit(name, author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+            source.heads.master.checkout()
+
+        res = remote.fetch(
+            url=source_dir,
+            refspec=["one", "two"],
+            dest_ref="refs/remotes/mirror/{branch}",
+        )
+        assert {i.ref.name for i in res} == {"mirror/one", "mirror/two"}
+        assert clone.commit("mirror/one").hexsha == source.commit("one").hexsha
+        assert clone.commit("mirror/two").hexsha == source.commit("two").hexsha
+
+    @with_rw_directory
+    def test_fetch_dest_ref_plain_string(self, rw_dir):
+        # A plain dest_ref string is used verbatim as the destination, only
+        # valid for a single bare refspec entry.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.create_head("devbranch").checkout()
+        source.index.commit("dev", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.heads.master.checkout()
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        remote.fetch(url=source_dir, refspec="devbranch", dest_ref="refs/heads/local-copy")
+        assert "local-copy" in [h.name for h in clone.heads]
+        assert clone.commit("local-copy").hexsha == source.commit("devbranch").hexsha
+
+    @with_rw_directory
+    def test_fetch_dest_ref_leaves_explicit_colon_refspec_untouched(self, rw_dir):
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        # Create devbranch only *after* cloning, so the clone has no pre-existing
+        # origin/devbranch ref from the initial clone -- otherwise the assertion
+        # below can't tell whether dest_ref created it or it was already there.
+        source.create_head("devbranch").checkout()
+        source.index.commit("dev", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.heads.master.checkout()
+
+        # dest_ref must not touch a refspec that already has an explicit destination.
+        remote.fetch(
+            url=source_dir,
+            refspec="devbranch:refs/remotes/origin/explicit-devbranch",
+            dest_ref=True,
+        )
+        assert "origin/explicit-devbranch" in [r.name for r in clone.refs]
+        # dest_ref's own naming ("origin/devbranch") must NOT have been created.
+        assert "origin/devbranch" not in [r.name for r in clone.refs]
+
+    @with_rw_directory
+    def test_fetch_dest_ref_requires_url(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        remote = repo.remote("origin")
+        with pytest.raises(ValueError, match="url="):
+            remote.fetch(refspec="devbranch", dest_ref=True)
+
+    @with_rw_directory
+    def test_fetch_dest_ref_plain_string_rejects_multi_refspec_list(self, rw_dir):
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        with pytest.raises(ValueError, match="single bare refspec"):
+            remote.fetch(url=source_dir, refspec=["one", "two"], dest_ref="refs/heads/x")
+
+    @with_rw_directory
+    def test_fetch_dest_ref_rejects_bad_type(self, rw_dir):
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+
+        with pytest.raises(TypeError):
+            remote.fetch(url=source_dir, refspec="master", dest_ref=123)
+
+    @with_rw_directory
+    def test_push_with_explicit_url(self, rw_dir):
+        # A push with url= should be able to push to a completely different
+        # location than the remote's configured url, and must not mutate the
+        # remote's stored config in doing so.
+        bare_dir = osp.join(rw_dir, "bare.git")
+        Repo.init(bare_dir, bare=True)
+
+        work_dir = osp.join(rw_dir, "work")
+        work = Repo.init(work_dir)
+        work.index.commit("seed", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        remote = Remote.create(work, "origin", "https://example.invalid/should-not-be-used.git")
+        original_url = remote.url
+
+        res = remote.push(url=bare_dir, refspec="master:refs/heads/master")
+        res.raise_if_error()
+
+        assert remote.url == original_url
+        with remote.config_reader as cr:
+            assert cr.get("url") == original_url
+
+        bare = Repo(bare_dir)
+        assert bare.commit("master").hexsha == work.commit("master").hexsha
+
+    @with_rw_directory
+    def test_push_token_requires_http(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        with pytest.raises(ValueError, match="http"):
+            remote.push(url="git@example.invalid:repo.git", token="abc123", refspec="master")
+
+    @with_rw_directory
+    def test_push_token_redacted_on_failure(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        repo.index.commit("seed", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        token = "ghp_should_never_appear_in_push_errors"
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.push(
+                url="https://example.invalid/nonexistent-repo.git",
+                token=token,
+                refspec="master:refs/heads/master",
+                kill_after_timeout=5,
+            )
+        assert token not in str(excinfo.value)
+        assert "***" in str(excinfo.value)
+
+    @with_rw_directory
+    def test_pull_with_explicit_url(self, rw_dir):
+        # A pull with url= should be able to pull+merge from a completely
+        # different location than the remote's configured url, and must not
+        # mutate the remote's stored config in doing so.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("c1", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.create_head("feature").checkout()
+        tip = source.index.commit("c2", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        source.heads.master.checkout()
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")
+        original_url = remote.url
+        before = clone.head.commit.hexsha
+
+        res = remote.pull(url=source_dir, refspec="feature")
+        assert res
+        assert clone.head.commit.hexsha != before
+        assert clone.head.commit.hexsha == tip.hexsha
+
+        assert remote.url == original_url
+        with remote.config_reader as cr:
+            assert cr.get("url") == original_url
+
+    @with_rw_directory
+    def test_pull_token_requires_http(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        with pytest.raises(ValueError, match="http"):
+            remote.pull(url="git@example.invalid:repo.git", token="abc123", refspec="main")
+
+    @with_rw_directory
+    def test_pull_token_redacted_on_failure(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/repo.git")
+        token = "ghp_should_never_appear_in_pull_errors"
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.pull(
+                url="https://example.invalid/nonexistent-repo.git",
+                token=token,
+                refspec="main",
+                kill_after_timeout=5,
+            )
+        assert token not in str(excinfo.value)
+        assert "***" in str(excinfo.value)
+
+    @with_rw_directory
+    def test_fetch_token_only_derives_configured_url(self, rw_dir):
+        # token= with no url= should embed the token into THIS remote's own
+        # currently configured url (read only, never written), rather than being
+        # silently ignored or requiring the caller to repeat the url they
+        # already have configured.
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/org/repo.git")
+        original_url = remote.url
+        token = "ghp_should_be_embedded_not_ignored"
+
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.fetch(refspec="master", token=token, kill_after_timeout=5)
+        cmdline = str(excinfo.value)
+        assert "example.invalid/org/repo.git" in cmdline
+        assert token not in cmdline
+        assert "***@example.invalid" in cmdline
+        # Never written to config.
+        assert remote.url == original_url
+
+    @with_rw_directory
+    def test_push_token_only_derives_configured_url(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        repo.index.commit("seed", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+        remote = Remote.create(repo, "origin", "https://example.invalid/org/repo.git")
+        original_url = remote.url
+        token = "ghp_should_be_embedded_not_ignored"
+
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.push("master", token=token, kill_after_timeout=5)
+        cmdline = str(excinfo.value)
+        assert "example.invalid/org/repo.git" in cmdline
+        assert token not in cmdline
+        assert "***@example.invalid" in cmdline
+        assert remote.url == original_url
+
+    @with_rw_directory
+    def test_pull_token_only_derives_configured_url(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        remote = Remote.create(repo, "origin", "https://example.invalid/org/repo.git")
+        original_url = remote.url
+        token = "ghp_should_be_embedded_not_ignored"
+
+        with pytest.raises(GitCommandError) as excinfo:
+            remote.pull(refspec="master", token=token, kill_after_timeout=5)
+        cmdline = str(excinfo.value)
+        assert "example.invalid/org/repo.git" in cmdline
+        assert token not in cmdline
+        assert "***@example.invalid" in cmdline
+        assert remote.url == original_url
+
+    @with_rw_directory
+    def test_fetch_token_only_non_http_configured_url_rejected(self, rw_dir):
+        # If the remote's own configured url isn't http(s) (e.g. an ssh or local
+        # path url), token= with no url= must raise rather than silently
+        # embedding a token into a non-http(s) url.
+        source_dir = osp.join(rw_dir, "source")
+        source = Repo.init(source_dir)
+        source.index.commit("init", author=Actor("t", "t@t.com"), committer=Actor("t", "t@t.com"))
+
+        clone_dir = osp.join(rw_dir, "clone")
+        clone = source.clone(clone_dir)
+        remote = clone.remote("origin")  # configured url is a plain local path
+
+        with pytest.raises(ValueError, match="http"):
+            remote.fetch(refspec="master", token="abc123")
 
 
 class TestTimeouts(TestBase):
