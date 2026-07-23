@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.13t", "3.14", "3.14t"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.13t", "3.14", "3.14t", "3.15", "3.15t"]
         exclude:
         - os-type: macos
           python-version: "3.7"  # Not available for the ARM-based macOS runners.
@@ -25,14 +25,20 @@ jobs:
           python-version: "3.13t"
         - os-type: macos
           python-version: "3.14t"
+        - os-type: macos
+          python-version: "3.15t"
         - os-type: windows
-          python-version: "3.13"  # FIXME: Fix and enable Python 3.13 and 3.14 on Windows (#1955).
+          python-version: "3.13"  # FIXME: Fix and enable Python 3.13-3.15 on Windows (#1955).
         - os-type: windows
           python-version: "3.13t"
         - os-type: windows
           python-version: "3.14"
         - os-type: windows
           python-version: "3.14t"
+        - os-type: windows
+          python-version: "3.15"
+        - os-type: windows
+          python-version: "3.15t"
         include:
         - os-ver: latest
         - os-type: ubuntu
@@ -44,6 +50,10 @@ jobs:
         - python-version: "3.8"
           build-docs: false
         - experimental: false
+        - python-version: "3.15"
+          experimental: true
+        - python-version: "3.15t"
+          experimental: true
 
       fail-fast: false
 
