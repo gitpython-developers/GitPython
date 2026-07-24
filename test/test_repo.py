@@ -948,12 +948,11 @@ class TestRepo(TestBase):
         target_type = GitCmdObjectDB
         self.assertIsInstance(self.rorepo.odb, target_type)
 
-    def test_submodules(self):
-        self.assertEqual(len(self.rorepo.submodules), 1)  # non-recursive
-        self.assertGreaterEqual(len(list(self.rorepo.iter_submodules())), 2)
-
-        self.assertIsInstance(self.rorepo.submodule("gitdb"), Submodule)
-        self.assertRaises(ValueError, self.rorepo.submodule, "doesn't exist")
+    @with_rw_repo("c15a6e1923a14bc760851913858a3942a4193cdb", bare=True)
+    def test_submodules(self, rwrepo):
+        self.assertEqual(len(rwrepo.submodules), 1)
+        self.assertIsInstance(rwrepo.submodule("gitdb"), Submodule)
+        self.assertRaises(ValueError, rwrepo.submodule, "doesn't exist")
 
     @with_rw_repo("HEAD", bare=False)
     def test_submodule_update(self, rwrepo):
@@ -963,11 +962,10 @@ class TestRepo(TestBase):
         rwrepo._bare = False
 
         # Test submodule creation.
-        sm = rwrepo.submodules[0]
         sm = rwrepo.create_submodule(
             "my_new_sub",
             "some_path",
-            join_path_native(self.rorepo.working_tree_dir, sm.path),
+            self._small_repo_url(),
         )
         self.assertIsInstance(sm, Submodule)
 

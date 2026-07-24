@@ -63,17 +63,13 @@ jobs:
     - name: Install project and test dependencies
       run: |
         . .venv/bin/activate
-        pip install '.[test]'
+        pip install ./smmap ./gitdb '.[test]'
 
     - name: Show POSIX file ownership
       run: |
         ls -ld -- \
           "$(pwd)" \
           "$(pwd)/.git" \
-          "$(pwd)/git/ext/gitdb" \
-          "$(pwd)/git/ext/gitdb/.git" \
-          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap" \
-          "$(pwd)/git/ext/gitdb/gitdb/ext/smmap/.git" \
           "${HOME:?HOME is not set}/.gitconfig" \
           2>&1 || true
 
