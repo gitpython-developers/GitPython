@@ -8,12 +8,13 @@
 __all__ = ["RemoteProgress", "PushInfo", "FetchInfo", "Remote"]
 
 import contextlib
+from configparser import NoOptionError, NoSectionError
 import logging
 import re
 
 from git.cmd import Git, handle_process_output
 from git.compat import defenc, force_text
-from git.config import GitConfigParser, SectionConstraint, cp
+from git.config import GitConfigParser, SectionConstraint
 from git.exc import GitCommandError
 from git.refs import Head, Reference, RemoteReference, SymbolicReference, TagReference
 from git.util import (
@@ -577,7 +578,7 @@ class Remote(LazyMixin, IterableObj):
         # though a slot of the same name exists.
         try:
             return self._config_reader.get(attr)
-        except cp.NoOptionError:
+        except NoOptionError:
             return super().__getattr__(attr)
         # END handle exception
 
@@ -619,10 +620,10 @@ class Remote(LazyMixin, IterableObj):
         try:
             self.config_reader.get("url")
             return True
-        except cp.NoOptionError:
+        except NoOptionError:
             # We have the section at least...
             return True
-        except cp.NoSectionError:
+        except NoSectionError:
             return False
 
     @classmethod

@@ -22,8 +22,7 @@
 	url = git://gitorious.org/~martin.marcher/git-python/serverhorror.git
 	fetch = +refs/heads/*:refs/remotes/MartinMarcher/*
     # can handle comments - the section name is supposed to be stripped
-# causes stock git-config puke
-[  gui ]
+[gui]
 	geometry = 1316x820+219+243 207 192
 [branch "mainline_performance"]
 	remote = mainline
@@ -43,4 +42,3 @@
 # inclusions should be processed immediately
 [sec]
     var1 = value1_main
-

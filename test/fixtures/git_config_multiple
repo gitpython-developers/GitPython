@@ -4,4 +4,4 @@
 [section1]
     option1 = value1a
     option1 = value1b
-    other_option1 = other_value1
+    other-option1 = other_value1
