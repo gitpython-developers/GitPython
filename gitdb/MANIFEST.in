@@ -1,0 +1,18 @@
+include VERSION
+include LICENSE
+include CHANGES
+include AUTHORS
+include README
+include MANIFEST.in
+
+include gitdb/_fun.c
+include gitdb/_delta_apply.c
+include gitdb/_delta_apply.h
+
+graft gitdb/test
+
+global-exclude .git*
+global-exclude *.pyc
+global-exclude *.so
+global-exclude *.dll
+global-exclude *.o

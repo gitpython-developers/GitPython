@@ -1,0 +1,12 @@
+*.pyc
+build/
+.coverage
+coverage
+cover/
+dist/
+MANIFEST
+.tox
+*.egg-info
+.noseids
+*.sublime-workspace
+/env/

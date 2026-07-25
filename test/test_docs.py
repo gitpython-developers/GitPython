@@ -8,7 +8,7 @@ import os
 import os.path
 
 from test.lib import TestBase
-from test.lib.helper import with_rw_directory
+from test.lib.helper import with_rw_directory, with_rw_repo
 
 
 class Tutorials(TestBase):
@@ -475,13 +475,20 @@ class Tutorials(TestBase):
 
         repo.git.clear_cache()
 
-    def test_submodules(self):
+    @with_rw_repo("c15a6e1923a14bc760851913858a3942a4193cdb")
+    def test_submodules(self, repo):
         # [1-test_submodules]
-        repo = self.rorepo
         sms = repo.submodules
 
         assert len(sms) == 1
         sm = sms[0]
+        with sm.config_writer() as writer:
+            writer.set_value("url", self._gitdb_repo_url())
+        sm.update(recursive=False)
+        child = sm.children()[0]
+        with child.config_writer() as writer:
+            writer.set_value("url", self._small_repo_url())
+        child.update()
         self.assertEqual(sm.name, "gitdb")  # GitPython has gitdb as its one and only (direct) submodule...
         self.assertEqual(sm.children()[0].name, "smmap")  # ...which has smmap as its one and only submodule.
 

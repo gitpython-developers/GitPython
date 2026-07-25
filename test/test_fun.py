@@ -306,3 +306,7 @@ class TestFun(TestBase):
     def test_tree_entries_from_data_with_failing_name_decode_py3(self):
         r = tree_entries_from_data(b"100644 \x9f\0aaa")
         assert r == [(b"aaa", 33188, "\udc9f")], r
+
+    def test_tree_entries_from_bytearray(self):
+        r = tree_entries_from_data(bytearray(b"100644 name\0abcdefghijklmnopqrst"))
+        assert r == [(b"abcdefghijklmnopqrst", 33188, "name")], r

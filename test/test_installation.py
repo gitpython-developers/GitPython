@@ -14,8 +14,9 @@ class TestInstallation(TestBase):
     def test_installation(self, rw_dir):
         venv, run = self._set_up_venv(rw_dir)
 
-        result = run([venv.pip, "install", "."])
-        self._check_result(result, "Can't install project")
+        for project in ("./smmap", "./gitdb", "."):
+            result = run([venv.pip, "install", project])
+            self._check_result(result, f"Can't install {project}")
 
         result = run([venv.python, "-c", "import git"])
         self._check_result(result, "Self-test failed")

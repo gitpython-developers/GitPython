@@ -28,20 +28,22 @@ warn_unreachable = true
 implicit_reexport = true
 # strict = true
 # TODO: Remove when 'gitdb' is fully annotated.
-exclude = ["^git/ext/gitdb"]
+exclude = ["^(gitdb|smmap)/"]
 [[tool.mypy.overrides]]
-module = "gitdb.*"
+module = ["gitdb", "gitdb.*"]
+follow_imports = "skip"
 ignore_missing_imports = true
 
 [tool.basedpyright]
 typeCheckingMode = "standard"
 pythonVersion = "3.7"
 extraPaths = [
-    "git/ext/gitdb",
-    "git/ext/gitdb/gitdb/ext/smmap",
+    "gitdb",
+    "smmap",
 ]
 exclude = [
-    "git/ext/gitdb",
+    "gitdb",
+    "smmap",
 ]
 
 [tool.coverage.run]
@@ -57,6 +59,8 @@ line-length = 120
 # Exclude a variety of commonly ignored directories.
 exclude = [
     "git/ext/",
+    "gitdb/",
+    "smmap/",
     "build",
     "dist",
 ]

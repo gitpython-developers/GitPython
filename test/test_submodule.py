@@ -124,7 +124,7 @@ class TestSubmodule(TestBase):
         else:
             with sm.config_writer() as writer:
                 # For faster checkout, set the url to the local path.
-                new_smclone_path = Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path))
+                new_smclone_path = self._gitdb_repo_url()
                 writer.set_value("url", new_smclone_path)
                 writer.release()
                 assert sm.config_reader().get_value("url") == new_smclone_path
@@ -239,7 +239,7 @@ class TestSubmodule(TestBase):
 
             # Adjust the path of the submodules module to point to the local
             # destination.
-            new_csmclone_path = Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path, csm.path))
+            new_csmclone_path = self._small_repo_url()
             with csm.config_writer() as writer:
                 writer.set_value("url", new_csmclone_path)
             assert csm.url == new_csmclone_path
@@ -491,15 +491,15 @@ class TestSubmodule(TestBase):
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems.
-        rm = RootModule(self.rorepo)
-        assert rm.module() is self.rorepo
+        rm = RootModule(rwrepo)
+        assert rm.module() is rwrepo
 
         # Try attributes.
         rm.binsha
         rm.mode
         rm.path
         assert rm.name == rm.k_root_name
-        assert rm.parent_commit == self.rorepo.head.commit
+        assert rm.parent_commit == rwrepo.head.commit
         rm.url
         rm.branch
 
@@ -507,10 +507,6 @@ class TestSubmodule(TestBase):
         rm.config_reader()
         with rm.config_writer():
             pass
-
-        # Deep traversal yields gitdb and its nested smmap.
-        rsmsp = [sm.path for sm in rm.traverse()]
-        assert rsmsp == ["git/ext/gitdb", "gitdb/ext/smmap"]
 
         # Cannot set the parent commit as root module's path didn't exist.
         self.assertRaises(ValueError, rm.set_parent_commit, "HEAD")
@@ -533,7 +529,7 @@ class TestSubmodule(TestBase):
 
         # Ensure we clone from a local source.
         with sm.config_writer() as writer:
-            writer.set_value("url", Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path)))
+            writer.set_value("url", self._gitdb_repo_url())
 
         # Dry-run does nothing.
         sm.update(recursive=False, dry_run=True, progress=prog)
@@ -568,7 +564,7 @@ class TestSubmodule(TestBase):
         # ==============
         nsmn = "newsubmodule"
         nsmp = "submrepo"
-        subrepo_url = Git.polish_url(osp.join(self.rorepo.working_tree_dir, rsmsp[0], rsmsp[1]))
+        subrepo_url = self._small_repo_url()
         nsm = Submodule.add(rwrepo, nsmn, nsmp, url=subrepo_url)
         csmadded = rwrepo.index.commit("Added submodule").hexsha  # Make sure we don't keep the repo reference.
         nsm.set_parent_commit(csmadded)
@@ -633,7 +629,7 @@ class TestSubmodule(TestBase):
         # ...to the first repository. This way we have a fast checkout, and a completely
         # different repository at the different url.
         nsm.set_parent_commit(csmremoved)
-        nsmurl = Git.polish_url(osp.join(self.rorepo.working_tree_dir, rsmsp[0]))
+        nsmurl = self._gitdb_repo_url()
         with nsm.config_writer() as writer:
             writer.set_value("url", nsmurl)
         csmpathchange = rwrepo.index.commit("changed url")
