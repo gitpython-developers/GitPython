@@ -2,6 +2,19 @@
 Changelog
 =========
 
+3.1.56
+======
+
+A security fix for
+
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-p538-c434-8v24
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55
+
 3.1.55
 ======
 
