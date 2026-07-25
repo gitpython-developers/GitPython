@@ -269,12 +269,20 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         else:
             return self.message.split(b"\n", 1)[0]
 
-    def count(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> int:
+    def count(
+        self,
+        paths: Union[PathLike, Sequence[PathLike]] = "",
+        allow_unsafe_options: bool = False,
+        **kwargs: Any,
+    ) -> int:
         """Count the number of commits reachable from this commit.
 
         :param paths:
             An optional path or a list of paths restricting the return value to commits
             actually containing the paths.
+
+        :param allow_unsafe_options:
+            Allow unsafe options, like ``--output``.
 
         :param kwargs:
             Additional options to be passed to :manpage:`git-rev-list(1)`. They must not
@@ -284,6 +292,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             An int defining the number of reachable commits
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs), unsafe_options=self.unsafe_git_rev_options
+            )
+
         # Yes, it makes a difference whether empty paths are given or not in our case as
         # the empty paths version will ignore merge commits for some reason.
         if paths:

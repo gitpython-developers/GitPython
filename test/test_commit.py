@@ -301,6 +301,11 @@ class TestCommit(TestCommitSerialization):
             with self.assertRaises(UnsafeOptionError):
                 list(Commit.iter_items(self.rorepo, "HEAD", output=marker))
 
+    def test_count_rejects_unsafe_options(self):
+        with tempfile.NamedTemporaryFile() as marker:
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.head.commit.count(output=marker.name)
+
     def test_rev_list_bisect_all(self):
         """
         'git rev-list --bisect-all' returns additional information
