@@ -92,6 +92,26 @@ class TestDiff(TestBase):
             "This should work, but doesn't right now ... it's OK",
         )
 
+    @with_rw_directory
+    def test_patch_diff_ignores_mnemonic_prefix(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        filepath = osp.join(rw_dir, "file.txt")
+        with open(filepath, "w") as stream:
+            stream.write("initial\n")
+        repo.index.add([filepath])
+        repo.index.commit("initial")
+
+        with open(filepath, "w") as stream:
+            stream.write("changed\n")
+        repo.git.config("diff.mnemonicPrefix", "true")
+
+        self.assertEqual(len(repo.head.commit.diff(None, create_patch=True)), 1)
+        self.assertEqual(len(repo.index.diff(None, create_patch=True)), 1)
+
+        repo.index.add([filepath])
+        self.assertEqual(len(repo.index.diff(NULL_TREE, create_patch=True)), 1)
+        self.assertEqual(repo.git.config("--get", "diff.mnemonicPrefix"), "true")
+
     def test_list_from_string_new_mode(self):
         output = StringProcessAdapter(fixture("diff_new_mode"))
         diffs = Diff._index_from_patch_format(self.rorepo, output)

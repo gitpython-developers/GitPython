@@ -1547,6 +1547,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 args.extend(paths)
 
             kwargs["as_process"] = True
+            if create_patch:
+                self.repo.git(c="diff.mnemonicPrefix=false")
             proc = self.repo.git.diff(*args, **kwargs)
 
             diff_method = (
