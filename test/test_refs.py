@@ -77,6 +77,19 @@ class TestRefs(TestBase):
         # Check remoteness
         assert Reference(self.rorepo, PathLikeMock("refs/remotes/origin")).is_remote()
 
+    def test_iter_packed_refs_with_non_utf8_name(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            with self._repo_with_initial_commit(Path(tdir)) as repo:
+                packed_refs_path = Path(Reference._get_packed_refs_path(repo))
+                hexsha = repo.head.commit.hexsha
+                packed_refs_path.write_bytes(
+                    b"# pack-refs with: peeled\n" + hexsha.encode("ascii") + b" refs/tags/non-utf8-\xe9\n"
+                )
+
+                tag_data = [(tag.commit.hexsha, tag.path) for tag in repo.tags]
+
+        self.assertEqual(tag_data, [(hexsha, "refs/tags/non-utf8-\udce9")])
+
     def test_tag_base(self):
         tag_object_refs = []
         for tag in self.rorepo.tags:
