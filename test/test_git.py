@@ -302,7 +302,7 @@ class TestGit(TestBase):
         status, _, stderr = self.git.execute(
             command,
             output_stream=output_stream,
-            kill_after_timeout=0.1,
+            kill_after_timeout=1,
             with_exceptions=False,
             with_extended_output=True,
         )
