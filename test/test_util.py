@@ -671,6 +671,7 @@ class TestUtils(TestBase):
     def test_remove_password_from_command_line(self):
         username = "fakeuser"
         password = "fakepassword1234"
+        authorization = "Bearer fake-token-1234"
         url_with_user_and_pass = "https://{}:{}@fakerepo.example.com/testrepo".format(username, password)
         url_with_user = "https://{}@fakerepo.example.com/testrepo".format(username)
         url_with_pass = "https://:{}@fakerepo.example.com/testrepo".format(password)
@@ -681,6 +682,7 @@ class TestUtils(TestBase):
         cmd_3 = ["git", "clone", "-v", url_with_pass]
         cmd_4 = ["git", "clone", "-v", url_without_user_or_pass]
         cmd_5 = ["no", "url", "in", "this", "one"]
+        cmd_6 = ["git", "-c", "http.extraHeader=Authorization: %s" % authorization, "fetch"]
 
         redacted_cmd_1 = remove_password_if_present(cmd_1)
         assert username not in " ".join(redacted_cmd_1)
@@ -700,3 +702,7 @@ class TestUtils(TestBase):
 
         assert cmd_4 == remove_password_if_present(cmd_4)
         assert cmd_5 == remove_password_if_present(cmd_5)
+
+        redacted_cmd_6 = remove_password_if_present(cmd_6)
+        assert authorization not in " ".join(redacted_cmd_6)
+        assert "http.extraHeader=Authorization: *****" in redacted_cmd_6

@@ -419,6 +419,24 @@ class TestGit(TestBase):
             with self.assertRaises(GitCommandError):
                 self.git.checkout("non-existent-branch", output_stream=tmp_file)
 
+    def test_it_redacts_authorization_extra_header_from_error(self):
+        token = "fake-token-1234"
+        command = [
+            "git",
+            "-c",
+            "http.extraHeader=Authorization: Bearer %s" % token,
+            "rev-parse",
+            "--verify",
+            "refs/does-not-exist",
+        ]
+
+        with self.assertRaises(GitCommandError) as context:
+            self.git.execute(command)
+
+        message = str(context.exception)
+        self.assertNotIn(token, message)
+        self.assertIn("http.extraHeader=Authorization: *****", message)
+
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
         with open(filename, "r") as fh:

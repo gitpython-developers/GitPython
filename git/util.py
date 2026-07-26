@@ -540,8 +540,7 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
 
 
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
-    """Parse any command line argument and if one of the elements is an URL with a
-    username and/or password, replace them by stars (in-place).
+    """Redact credentials in URLs and HTTP Authorization extra headers in a command line.
 
     If nothing is found, this just returns the command line as-is.
 
@@ -551,6 +550,16 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     new_cmdline = []
     for index, to_parse in enumerate(cmdline):
         new_cmdline.append(to_parse)
+        config_key, separator, header = to_parse.partition("=")
+        header_name, colon, _ = header.partition(":")
+        if (
+            separator
+            and colon
+            and config_key.lower().endswith(".extraheader")
+            and header_name.strip().lower() == "authorization"
+        ):
+            new_cmdline[index] = "%s%s%s%s *****" % (config_key, separator, header_name, colon)
+            continue
         try:
             url = urlsplit(to_parse)
             # Remove password from the URL if present.
