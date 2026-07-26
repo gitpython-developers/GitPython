@@ -23,6 +23,7 @@ from git import (
     SymbolicReference,
     TagReference,
 )
+from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
 import git.refs as refs
 from git.util import Actor
@@ -59,6 +60,18 @@ class TestRefs(TestBase):
         TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
         # Check remoteness
         assert Reference(self.rorepo, "refs/remotes/origin").is_remote()
+
+    @with_rw_repo("HEAD")
+    def test_tag_create_rejects_unsafe_file_options(self, rw_repo):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8") as message:
+            message.write("private tag message")
+            message.flush()
+            for index, option in enumerate(({"F": message.name}, {"file": message.name})):
+                with self.assertRaises(UnsafeOptionError):
+                    TagReference.create(rw_repo, f"unsafe-{index}", **option)
+
+            tag = TagReference.create(rw_repo, "allowed-file", F=message.name, allow_unsafe_options=True)
+            self.assertEqual(tag.tag.message, "private tag message")
 
     def test_from_pathlike(self):
         # Should be able to create any reference directly.

@@ -31,6 +31,7 @@ from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError,
     UnmergedEntriesError,
+    UnsafeOptionError,
 )
 from git.index.fun import hook_path, run_commit_hook
 from git.index.typ import BaseIndexEntry, IndexEntry
@@ -202,6 +203,15 @@ def _make_hook(git_dir, name, content, make_exec=True):
 
 @ddt.ddt
 class TestIndex(TestBase):
+    @with_rw_repo("HEAD")
+    def test_checkout_rejects_unsafe_prefix(self, rw_repo):
+        with tempfile.TemporaryDirectory() as target:
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.index.checkout(prefix=f"{target}/")
+
+            rw_repo.index.checkout(prefix=f"{target}/", allow_unsafe_options=True)
+            self.assertTrue(osp.isfile(osp.join(target, "CHANGES")))
+
     def __init__(self, *args):
         super().__init__(*args)
         self._reset_progress()
