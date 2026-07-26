@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from unittest import skipUnless
 
 if sys.version_info >= (3, 8):
@@ -287,6 +288,29 @@ class TestGit(TestBase):
             with_stdout=False,
         )
         self.assertEqual(temp_stream.tell(), 0)
+
+    @skipUnless(sys.platform != "win32", "kill_after_timeout is not supported on Windows")
+    def test_it_honors_kill_after_timeout_with_output_stream(self):
+        output_stream = io.BytesIO()
+        command = [
+            sys.executable,
+            "-c",
+            "import sys, time; sys.stdout.write('started\\n'); sys.stdout.flush(); sys.stdout.close(); time.sleep(60)",
+        ]
+
+        started = time.monotonic()
+        status, _, stderr = self.git.execute(
+            command,
+            output_stream=output_stream,
+            kill_after_timeout=0.1,
+            with_exceptions=False,
+            with_extended_output=True,
+        )
+
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertNotEqual(status, 0)
+        self.assertEqual(output_stream.getvalue(), b"started\n")
+        self.assertIn("Timeout: the command", stderr)
 
     def test_it_executes_git_without_stdout_redirect(self):
         returncode, stdout, stderr = self.git.execute(

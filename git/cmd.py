@@ -1435,6 +1435,10 @@ class Git(metaclass=_GitMeta):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
+        watchdog: Optional[threading.Timer] = None
+        kill_check: Optional[threading.Event] = None
+        timeout_error: Optional[Callable[[], Union[str, bytes]]] = None
+
         if sys.platform != "win32" and kill_after_timeout is not None:
             # Help mypy figure out this is not None even when used inside communicate().
             timeout = kill_after_timeout
@@ -1460,6 +1464,7 @@ class Git(metaclass=_GitMeta):
                         except OSError:
                             pass
                     # Tell the main routine that the process was killed.
+                    assert kill_check is not None
                     kill_check.set()
                 except OSError:
                     # It is possible that the process gets completed in the duration
@@ -1467,23 +1472,25 @@ class Git(metaclass=_GitMeta):
                     pass
                 return
 
+            def make_timeout_error() -> Union[str, bytes]:
+                err = f'Timeout: the command "{" ".join(redacted_command)}" did not complete in {timeout:g} secs.'
+                return err if universal_newlines else err.encode(defenc)
+
             def communicate() -> Tuple[AnyStr, AnyStr]:
+                assert watchdog is not None
+                assert kill_check is not None
                 watchdog.start()
                 out, err = proc.communicate()
                 watchdog.cancel()
                 if kill_check.is_set():
-                    err = 'Timeout: the command "%s" did not complete in %d secs.' % (
-                        " ".join(redacted_command),
-                        timeout,
-                    )
-                    if not universal_newlines:
-                        err = err.encode(defenc)
+                    err = make_timeout_error()
                 return out, err
 
             # END helpers
 
             kill_check = threading.Event()
             watchdog = threading.Timer(timeout, kill_process, args=(proc.pid,))
+            timeout_error = make_timeout_error
         else:
             communicate = proc.communicate
 
@@ -1504,15 +1511,24 @@ class Git(metaclass=_GitMeta):
                 status = proc.returncode
             else:
                 max_chunk_size = max_chunk_size if max_chunk_size and max_chunk_size > 0 else io.DEFAULT_BUFFER_SIZE
-                if proc.stdout is not None:
-                    stream_copy(proc.stdout, output_stream, max_chunk_size)
-                    stdout_value = proc.stdout.read()
-                if proc.stderr is not None:
-                    stderr_value = proc.stderr.read()
+                if watchdog is not None:
+                    watchdog.start()
+                try:
+                    if proc.stdout is not None:
+                        stream_copy(proc.stdout, output_stream, max_chunk_size)
+                        stdout_value = proc.stdout.read()
+                    if proc.stderr is not None:
+                        stderr_value = proc.stderr.read()
+                    status = proc.wait()
+                finally:
+                    if watchdog is not None:
+                        watchdog.cancel()
                 # Strip trailing "\n".
                 if stderr_value is not None and stderr_value.endswith(newline):  # type: ignore[arg-type]
                     stderr_value = stderr_value[:-1]
-                status = proc.wait()
+                if kill_check is not None and kill_check.is_set():
+                    assert timeout_error is not None
+                    stderr_value = timeout_error()
             # END stdout handling
         finally:
             if proc.stdout is not None:
