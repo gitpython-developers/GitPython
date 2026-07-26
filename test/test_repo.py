@@ -433,6 +433,10 @@ class TestRepo(TestBase):
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.archive(io.BytesIO(), "0.1.6", output=output_marker)
             assert not osp.exists(output_marker)
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.archive(io.BytesIO(), "0.1.6", add_file=output_marker)
+            with self.assertRaises(UnsafeOptionError):
+                self.rorepo.archive(io.BytesIO(), "0.1.6", add_virtual_file="file:content")
 
     def test_archive_rejects_unsafe_remote_protocol(self):
         with tempfile.TemporaryDirectory() as tdir:

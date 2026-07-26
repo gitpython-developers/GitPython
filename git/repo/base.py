@@ -151,6 +151,8 @@ class Repo:
         "-c",
         # Can install hooks that execute during clone:
         "--template",
+        # Fetches from a caller-controlled URL:
+        "--bundle-uri",
     ]
     """Options to :manpage:`git-clone(1)` that allow arbitrary commands to be executed.
 
@@ -172,6 +174,10 @@ class Repo:
         # Writes output to a caller-controlled filesystem path.
         "--output",
         "-o",
+        # Reads from a caller-controlled filesystem path:
+        "--add-file",
+        # Injects a caller-controlled path and contents:
+        "--add-virtual-file",
     ]
 
     unsafe_git_revision_options = [

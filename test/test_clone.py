@@ -132,6 +132,7 @@ class TestClone(TestBase):
                 "-cprotocol.ext.allow=always",
                 "-vcprotocol.ext.allow=always",
                 f"--template={tmp_dir}",
+                f"--bundle-uri=file://{tmp_dir}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -147,6 +148,7 @@ class TestClone(TestBase):
                 {"conf": "protocol.ext.allow=always"},
                 {"c": "protocol.ext.allow=always"},
                 {"template": tmp_dir},
+                {"bundle_uri": f"file://{tmp_dir}"},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
