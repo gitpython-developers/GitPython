@@ -16,6 +16,7 @@ from .reference import Reference
 
 from typing import Any, TYPE_CHECKING, Type, Union
 
+from git.cmd import Git
 from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
@@ -41,6 +42,8 @@ class TagReference(Reference):
     """
 
     __slots__ = ()
+
+    unsafe_git_tag_options = ["--file", "-F"]
 
     _common_default = "tags"
     _common_path_default = Reference._common_path_default + "/" + _common_default
@@ -92,6 +95,7 @@ class TagReference(Reference):
         reference: Union[str, "SymbolicReference"] = "HEAD",
         logmsg: Union[str, None] = None,
         force: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "TagReference":
         """Create a new tag reference.
@@ -121,12 +125,21 @@ class TagReference(Reference):
         :param force:
             If ``True``, force creation of a tag even though that tag already exists.
 
+        :param allow_unsafe_options:
+            Allow unsafe options, such as ``--file``.
+
         :param kwargs:
             Additional keyword arguments to be passed to :manpage:`git-tag(1)`.
 
         :return:
             A new :class:`TagReference`.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=cls.unsafe_git_tag_options,
+            )
+
         if "ref" in kwargs and kwargs["ref"]:
             reference = kwargs["ref"]
 

@@ -130,6 +130,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     index directly before operating on it using the git command.
     """
 
+    unsafe_git_checkout_index_options = ["--prefix"]
+
     __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
 
     _VERSION = 2
@@ -1212,6 +1214,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         paths: Union[None, Iterable[PathLike]] = None,
         force: bool = False,
         fprogress: Callable = lambda *args: None,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> Union[None, Iterator[PathLike], Sequence[PathLike]]:
         """Check out the given paths or all files from the version known to the index
@@ -1238,6 +1241,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             no explicit paths are given. Otherwise progress information will be send
             prior and after a file has been checked out.
 
+        :param allow_unsafe_options:
+            Allow unsafe options, such as ``--prefix``.
+
         :param kwargs:
             Additional arguments to be passed to :manpage:`git-checkout-index(1)`.
 
@@ -1261,6 +1267,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             i.e. if you want :manpage:`git-checkout(1)`-like behaviour, use
             ``head.checkout`` instead of ``index.checkout``.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=self.unsafe_git_checkout_index_options,
+            )
+
         args = ["--index"]
         if force:
             args.append("--force")
