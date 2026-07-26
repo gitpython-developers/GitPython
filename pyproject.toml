@@ -37,6 +37,10 @@ ignore_missing_imports = true
 [tool.basedpyright]
 typeCheckingMode = "standard"
 pythonVersion = "3.7"
+include = [
+    "git",
+    "test/deprecation",
+]
 extraPaths = [
     "gitdb",
     "smmap",

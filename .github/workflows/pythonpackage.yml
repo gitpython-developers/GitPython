@@ -170,6 +170,11 @@ jobs:
         TERM: "xterm-256color"  # For color: https://github.com/python/mypy/issues/13817
         PYTHON_VERSION: ${{ matrix.python-version }}
 
+    - name: Check types with basedpyright
+      if: matrix.os-type == 'ubuntu' && matrix.python-version == '3.12'
+      run: |
+        basedpyright --warnings
+
     - name: Test with pytest
       run: |
         pytest --color=yes -p no:sugar --instafail -vv
