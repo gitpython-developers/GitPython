@@ -284,7 +284,10 @@ class Diffable:
         # END paths handling
 
         kwargs["as_process"] = True
-        proc = diff_cmd(*self._process_diff_args(args), **kwargs)
+        args = self._process_diff_args(args)
+        if create_patch:
+            self.repo.git(c="diff.mnemonicPrefix=false")
+        proc = diff_cmd(*args, **kwargs)
 
         diff_method = Diff._index_from_patch_format if create_patch else Diff._index_from_raw_format
         index = diff_method(self.repo, proc)
