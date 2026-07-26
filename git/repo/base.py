@@ -151,10 +151,10 @@ class Repo:
         "-c",
         # Can install hooks that execute during clone:
         "--template",
-        # Fetches from a caller-controlled URL:
+        # Fetches from an additional caller-controlled URI:
         "--bundle-uri",
     ]
-    """Options to :manpage:`git-clone(1)` that allow arbitrary commands to be executed.
+    """Options to :manpage:`git-clone(1)` that permit unsafe command execution or I/O.
 
     The ``--upload-pack``/``-u`` option allows users to execute arbitrary commands
     directly:
@@ -166,6 +166,11 @@ class Repo:
 
     The ``--template`` option can install hooks that execute during clone:
     https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---templatetemplate-directory
+
+    The ``--bundle-uri`` option fetches from an additional URI before fetching from the
+    clone URL. An untrusted value can therefore make Git access local files or
+    unintended network resources:
+    https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---bundle-uriuri
     """
 
     unsafe_git_archive_options = [
