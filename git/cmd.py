@@ -1473,10 +1473,7 @@ class Git(metaclass=_GitMeta):
                 return
 
             def make_timeout_error() -> Union[str, bytes]:
-                err = 'Timeout: the command "%s" did not complete in %d secs.' % (
-                    " ".join(redacted_command),
-                    timeout,
-                )
+                err = f'Timeout: the command "{" ".join(redacted_command)}" did not complete in {timeout:g} secs.'
                 return err if universal_newlines else err.encode(defenc)
 
             def communicate() -> Tuple[AnyStr, AnyStr]:
