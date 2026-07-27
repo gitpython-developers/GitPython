@@ -961,8 +961,7 @@ class Repo:
         :return:
             List of strings being pathnames of alternates
         """
-        if self.git_dir:
-            alternates_path = osp.join(self.git_dir, "objects", "info", "alternates")
+        alternates_path = osp.join(self.common_dir, "objects", "info", "alternates")
 
         if osp.exists(alternates_path):
             with open(alternates_path, "rb") as f:

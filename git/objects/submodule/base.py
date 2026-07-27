@@ -29,6 +29,7 @@ from git.objects.util import TraversableIterableObj
 from git.util import (
     IterableList,
     RemoteProgress,
+    _to_relative_path,
     join_path_native,
     rmtree,
     to_native_path_linux,
@@ -391,23 +392,14 @@ class Submodule(IndexObject, TraversableIterableObj):
         :raise ValueError:
             If path is not contained in the parent repository's working tree.
         """
-        path = to_native_path_linux(path)
+        if parent_repo.working_tree_dir:
+            path = _to_relative_path(parent_repo.working_tree_dir, path)
+        else:
+            path = to_native_path_linux(path)
         if path.endswith("/"):
             path = path[:-1]
-        # END handle trailing slash
-
-        if osp.isabs(path) and parent_repo.working_tree_dir:
-            working_tree_linux = to_native_path_linux(parent_repo.working_tree_dir)
-            if not path.startswith(working_tree_linux):
-                raise ValueError(
-                    "Submodule checkout path '%s' needs to be within the parents repository at '%s'"
-                    % (working_tree_linux, path)
-                )
-            path = path[len(working_tree_linux.rstrip("/")) + 1 :]
-            if not path:
-                raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
-            # END verify converted relative path makes sense
-        # END convert to a relative path
+        if not path or path == ".":
+            raise ValueError("Submodule checkout path must not be the repository root")
 
         return path
 

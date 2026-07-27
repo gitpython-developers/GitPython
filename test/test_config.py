@@ -7,14 +7,13 @@ import glob
 import io
 import os
 import os.path as osp
-import sys
 from unittest import mock
 
 import pytest
 
 from git import GitConfigParser
 from git.config import _OMD, cp
-from git.util import rmfile
+from git.util import cwd, rmfile
 
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
@@ -374,6 +373,22 @@ class TestBase(TestCase):
         with GitConfigParser(relative_config_path, read_only=True) as cr:
             assert cr.get_value("included", "value") == "included"
 
+    @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
+    @with_rw_directory
+    def test_config_drive_rooted_path_include(self, rw_dir):
+        with cwd(rw_dir):
+            included_path = osp.join(rw_dir, "included")
+            with GitConfigParser(included_path, read_only=False) as cw:
+                cw.set_value("included", "value", "included")
+
+            _drive, rooted_included_path = osp.splitdrive(included_path)
+            config_path = osp.join(rw_dir, "config")
+            with GitConfigParser(config_path, read_only=False) as cw:
+                cw.set_value("include", "path", rooted_included_path)
+
+            with GitConfigParser(config_path, read_only=True) as cr:
+                assert cr.get_value("included", "value") == "included"
+
     @with_rw_directory
     def test_multiple_include_paths_with_same_key(self, rw_dir):
         """Test that multiple 'path' entries under [include] are all respected.
@@ -411,11 +426,6 @@ class TestBase(TestCase):
             assert cr.get_value("user", "name") == "from-inc1"
             assert cr.get_value("core", "bar") == "from-inc2"
 
-    @pytest.mark.xfail(
-        sys.platform == "win32",
-        reason='Second config._has_includes() assertion fails (for "config is included if path is matching git_dir")',
-        raises=AssertionError,
-    )
     @with_rw_directory
     def test_conditional_includes_from_git_dir(self, rw_dir):
         # Initiate repository path.
@@ -439,6 +449,14 @@ class TestBase(TestCase):
             assert config._included_paths() == []
 
         # Ensure that config is included if path is matching git_dir.
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that Git's forward-slash syntax matches native Windows paths.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", git_dir.replace("\\", "/"), path2))
+
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
             assert config._included_paths() == [("path", path2)]

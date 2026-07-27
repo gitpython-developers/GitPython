@@ -576,9 +576,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             value = match.group(2).strip()
 
             if keyword in ["gitdir", "gitdir/i"]:
-                value = osp.expanduser(value)
+                value = osp.expanduser(value).replace("\\", "/")
+                git_dir = os.fspath(self._repo.git_dir).replace("\\", "/") if self._repo.git_dir else None
 
-                if not any(value.startswith(s) for s in ["./", "/"]):
+                drive, _tail = osp.splitdrive(value)
+                if not drive and not any(value.startswith(s) for s in ["./", "/"]):
                     value = "**/" + value
                 if value.endswith("/"):
                     value += "**"
@@ -590,9 +592,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         lambda m: f"[{m.group().lower()!r}{m.group().upper()!r}]",
                         value,
                     )
-                if self._repo.git_dir:
-                    if fnmatch.fnmatchcase(os.fspath(self._repo.git_dir), value):
-                        paths += _all_items(section)
+                if git_dir and fnmatch.fnmatchcase(git_dir, value):
+                    paths += _all_items(section)
 
             elif keyword == "onbranch":
                 try:

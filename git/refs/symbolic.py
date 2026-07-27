@@ -119,7 +119,7 @@ class SymbolicReference:
             common_path = os.path.commonpath([base_path, abs_path])
         except ValueError as e:
             raise ValueError("Reference path %r escapes the repository" % path) from e
-        if os.path.normcase(common_path) != os.path.normcase(base_path):
+        if common_path != base_path:
             raise ValueError("Reference path %r escapes the repository" % path)
         return abs_path
 

@@ -72,21 +72,20 @@ class Tutorials(TestBase):
         # heads, tags and references
         # heads are branches in git-speak
         # [8-test_init_repo_object]
-        self.assertEqual(
-            repo.head.ref,
-            repo.heads.master,  # head is a sym-ref pointing to master.
-            "It's ok if TC not running from `master`.",
-        )
+        active_branch = repo.active_branch
+        self.assertEqual(repo.head.ref, active_branch)  # HEAD is a sym-ref pointing to the active branch.
         self.assertEqual(repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5"))  # You can access tags in various ways too.
-        self.assertEqual(repo.refs.master, repo.heads["master"])  # .refs provides all refs, i.e. heads...
+        self.assertEqual(repo.refs[active_branch.name], repo.heads[active_branch.name])  # .refs provides all refs...
 
         if "TRAVIS" not in os.environ:
-            self.assertEqual(repo.refs["origin/master"], repo.remotes.origin.refs.master)  # ... remotes ...
+            remote_branch = next(ref for ref in repo.remotes.origin.refs if ref.remote_head != "HEAD")
+            self.assertEqual(repo.refs[remote_branch.name], remote_branch)  # ...remotes...
         self.assertEqual(repo.refs["0.3.5"], repo.tags["0.3.5"])  # ... and tags.
         # ![8-test_init_repo_object]
 
         # Create a new head/branch.
         # [9-test_init_repo_object]
+        original_branch = cloned_repo.active_branch
         new_branch = cloned_repo.create_head("feature")  # Create a new branch ...
         assert cloned_repo.active_branch != new_branch  # which wasn't checked out yet ...
         self.assertEqual(new_branch.commit, cloned_repo.active_branch.commit)  # pointing to the checked-out commit.
@@ -146,10 +145,10 @@ class Tutorials(TestBase):
         assert origin.exists()
         for fetch_info in origin.fetch(progress=MyProgressPrinter()):
             print("Updated %s to %s" % (fetch_info.ref, fetch_info.commit))
-        # Create a local branch at the latest fetched master. We specify the name
-        # statically, but you have all information to do it programmatically as well.
-        bare_master = bare_repo.create_head("master", origin.refs.master)
-        bare_repo.head.set_reference(bare_master)
+        # Create a local branch at one of the remote's branches.
+        remote_branch = next(ref for ref in origin.refs if ref.remote_head != "HEAD")
+        bare_branch = bare_repo.create_head(remote_branch.remote_head, remote_branch)
+        bare_repo.head.set_reference(bare_branch)
         assert not bare_repo.delete_remote(origin).exists()
         # push and pull behave very similarly.
         # ![12-test_init_repo_object]
@@ -162,35 +161,39 @@ class Tutorials(TestBase):
         new_file_path = os.path.join(cloned_repo.working_tree_dir, "my-new-file")
         open(new_file_path, "wb").close()  # Create new file in working tree.
         cloned_repo.index.add([new_file_path])  # Add it to the index.
-        # Commit the changes to deviate masters history.
+        # Commit the changes to deviate from the original branch's history.
         cloned_repo.index.commit("Added a new file in the past - for later merge")
 
         # Prepare a merge.
-        master = cloned_repo.heads.master  # Right-hand side is ahead of us, in the future.
-        merge_base = cloned_repo.merge_base(new_branch, master)  # Allows for a three-way merge.
-        cloned_repo.index.merge_tree(master, base=merge_base)  # Write the merge result into index.
+        merge_base = cloned_repo.merge_base(new_branch, original_branch)  # Allows for a three-way merge.
+        cloned_repo.index.merge_tree(original_branch, base=merge_base)  # Write the merge result into index.
         cloned_repo.index.commit(
             "Merged past and now into future ;)",
-            parent_commits=(new_branch.commit, master.commit),
+            parent_commits=(new_branch.commit, original_branch.commit),
         )
 
-        # Now new_branch is ahead of master, which probably should be checked out and reset softly.
+        # Now new_branch is ahead of the original branch, which probably should be checked out and reset softly.
         # Note that all these operations didn't touch the working tree, as we managed it ourselves.
         # This definitely requires you to know what you are doing! :)
         assert os.path.basename(new_file_path) in new_branch.commit.tree  # New file is now in tree.
-        master.commit = new_branch.commit  # Let master point to most recent commit.
-        cloned_repo.head.reference = master  # We adjusted just the reference, not the working tree or index.
+        original_branch.commit = new_branch.commit  # Let the original branch point to the most recent commit.
+        cloned_repo.head.reference = original_branch  # We adjusted just the reference, not the working tree or index.
         # ![13-test_init_repo_object]
 
         # submodules
 
         # [14-test_init_repo_object]
-        # Create a new submodule and check it out on the spot, setup to track master
-        # branch of `bare_repo`. As our GitPython repository has submodules already that
-        # point to GitHub, make sure we don't interact with them.
+        # Create a new submodule and check it out on the spot, set up to track the
+        # default branch of `bare_repo`. As our GitPython repository has submodules
+        # already that point to GitHub, make sure we don't interact with them.
         for sm in cloned_repo.submodules:
             assert not sm.remove().exists()  # after removal, the sm doesn't exist anymore
-        sm = cloned_repo.create_submodule("mysubrepo", "path/to/subrepo", url=bare_repo.git_dir, branch="master")
+        sm = cloned_repo.create_submodule(
+            "mysubrepo",
+            "path/to/subrepo",
+            url=bare_repo.git_dir,
+            branch=bare_branch.name,
+        )
 
         # .gitmodules was written and added to the index, which is now being committed.
         cloned_repo.index.commit("Added submodule")

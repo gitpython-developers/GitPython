@@ -276,14 +276,14 @@ class TestCommit(TestCommitSerialization):
         assert ltd_commits and len(ltd_commits) < len(all_commits)
 
         # Show commits of multiple paths, resulting in a union of commits.
-        less_ltd_commits = list(Commit.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
+        less_ltd_commits = list(Commit.iter_items(self.rorepo, "HEAD", paths=("CHANGES", "AUTHORS")))
         assert len(ltd_commits) < len(less_ltd_commits)
 
         class Child(Commit):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-        child_commits = list(Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
+        child_commits = list(Child.iter_items(self.rorepo, "HEAD", paths=("CHANGES", "AUTHORS")))
         assert type(child_commits[0]) is Child
 
     def test_iter_items(self):
@@ -536,7 +536,7 @@ JzJMZDRLQLFvnzqZuCjE
             ),
         ]
         for msg in msgs:
-            commit = copy.copy(self.rorepo.commit("master"))
+            commit = copy.copy(self.rorepo.commit("HEAD"))
             commit.message = msg
             assert commit.trailers_list == [
                 (KEY_1, VALUE_1_1),
@@ -559,13 +559,13 @@ JzJMZDRLQLFvnzqZuCjE
         ]
 
         for msg in msgs:
-            commit = copy.copy(self.rorepo.commit("master"))
+            commit = copy.copy(self.rorepo.commit("HEAD"))
             commit.message = msg
             assert commit.trailers_list == []
             assert commit.trailers_dict == {}
 
         # Check that only the last key value paragraph is evaluated.
-        commit = copy.copy(self.rorepo.commit("master"))
+        commit = copy.copy(self.rorepo.commit("HEAD"))
         commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1_1}\n\n{KEY_2}: {VALUE_2}\n"
         assert commit.trailers_list == [(KEY_2, VALUE_2)]
         assert commit.trailers_dict == {KEY_2: [VALUE_2]}

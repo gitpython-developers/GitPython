@@ -258,7 +258,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("0.1.6")
     def test_head_checkout_detached_head(self, rw_repo):
-        res = rw_repo.remotes.origin.refs.master.checkout()
+        res = rw_repo.remotes.origin.refs.HEAD.reference.checkout()
         assert isinstance(res, SymbolicReference)
         assert res.name == "HEAD"
 
@@ -661,7 +661,7 @@ class TestRefs(TestBase):
         assert SymbolicReference.dereference_recursive(self.rorepo, "HEAD")
 
     def test_reflog(self):
-        assert isinstance(self.rorepo.heads.master.log(), RefLog)
+        assert isinstance(self.rorepo.active_branch.log(), RefLog)
 
     def test_refs_outside_repo(self):
         # Create a file containing a valid reference outside the repository. Attempting
