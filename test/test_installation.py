@@ -6,10 +6,11 @@ import functools
 import os
 import subprocess
 
-from test.lib import TestBase, VirtualEnvironment, with_rw_directory
+from test.lib import TestBase, VirtualEnvironment, requires_symlinks, with_rw_directory
 
 
 class TestInstallation(TestBase):
+    @requires_symlinks
     @with_rw_directory
     def test_installation(self, rw_dir):
         venv, run = self._set_up_venv(rw_dir)
