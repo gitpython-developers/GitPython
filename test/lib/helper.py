@@ -19,6 +19,8 @@ __all__ = [
     "GIT_REPO",
     "GIT_DAEMON_PORT",
     "xfail_if_raises",
+    "symlinks_supported",
+    "requires_symlinks",
 ]
 
 import contextlib
@@ -29,6 +31,7 @@ import io
 import logging
 import os
 import os.path as osp
+from stat import S_ISLNK, ST_MODE
 import subprocess
 import sys
 import tempfile
@@ -489,6 +492,28 @@ class VirtualEnvironment:
         if osp.isfile(path) or osp.islink(path):
             return path
         raise RuntimeError(f"no regular file or symlink {path!r}")
+
+
+def symlinks_supported() -> bool:
+    """Check whether this process can actually create a symlink.
+
+    On Windows the platform alone doesn't decide it: creating a symlink needs either
+    Developer Mode or SeCreateSymbolicLinkPrivilege, and an unprivileged process gets
+    OSError (WinError 1314) instead.
+    """
+    with tempfile.TemporaryDirectory(prefix="gitpython-symlink-check-") as temp_dir:
+        link_path = osp.join(temp_dir, "link")
+        try:
+            os.symlink("missing-target", link_path)
+        except (NotImplementedError, OSError):
+            return False
+        return S_ISLNK(os.lstat(link_path)[ST_MODE])
+
+
+requires_symlinks = pytest.mark.skipif(
+    not symlinks_supported(),
+    reason="symlinks are unavailable, or need privileges this process doesn't have",
+)
 
 
 @contextlib.contextmanager
