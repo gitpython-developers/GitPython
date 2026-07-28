@@ -7,6 +7,7 @@ import glob
 import io
 import os
 import os.path as osp
+import sys
 from unittest import mock
 
 import pytest
@@ -430,6 +431,7 @@ class TestBase(TestCase):
     def test_conditional_includes_from_git_dir(self, rw_dir):
         # Initiate repository path.
         git_dir = osp.join(rw_dir, "target1", "repo1")
+        git_dir_pattern = git_dir.replace("\\", "/")
         os.makedirs(git_dir)
 
         # Initiate mocked repository.
@@ -441,6 +443,7 @@ class TestBase(TestCase):
         template = '[includeIf "{}:{}"]\n    path={}\n'
 
         with open(path1, "w") as stream:
+            # on Windows, this writes a backslash pattern.
             stream.write(template.format("gitdir", git_dir, path2))
 
         # Ensure that config is ignored if no repo is set.
@@ -448,14 +451,18 @@ class TestBase(TestCase):
             assert not config._has_includes()
             assert config._included_paths() == []
 
-        # Ensure that config is included if path is matching git_dir.
-        with GitConfigParser(path1, repo=repo) as config:
-            assert config._has_includes()
-            assert config._included_paths() == [("path", path2)]
+        # Git uses forward slashes in gitdir patterns on every platform:
+        # backslashes escape the next pattern character rather than separate
+        # path components. On Windows, GitPython therefore normalizes git_dir
+        # to forward slashes but leaves this backslash pattern unchanged, so
+        # the two do not match and no path is included.
+        with GitConfigParser(path1, repo=repo, merge_includes=False) as config:
+            expected_paths = [] if sys.platform == "win32" else [("path", path2)]
+            assert config._included_paths() == expected_paths
 
         # Ensure that Git's forward-slash syntax matches native Windows paths.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", git_dir.replace("\\", "/"), path2))
+            stream.write(template.format("gitdir", git_dir_pattern, path2))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -463,7 +470,7 @@ class TestBase(TestCase):
 
         # Ensure that config is ignored if case is incorrect.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", git_dir.upper(), path2))
+            stream.write(template.format("gitdir", git_dir_pattern.upper(), path2))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -471,7 +478,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included if case is ignored.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir/i", git_dir.upper(), path2))
+            stream.write(template.format("gitdir/i", git_dir_pattern.upper(), path2))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -500,6 +507,20 @@ class TestBase(TestCase):
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
             assert config._included_paths() == [("path", path2)]
+
+    @with_rw_directory
+    def test_conditional_includes_do_not_treat_backslashes_as_separators(self, rw_dir):
+        git_dir = osp.join(rw_dir, "target", "repo")
+        repo = mock.Mock(git_dir=git_dir)
+        config_path = osp.join(rw_dir, "config")
+        included_path = osp.join(rw_dir, "included")
+        pattern = git_dir.replace("\\", "/").replace("/target/repo", R"/target\repo")
+
+        with open(config_path, "w") as stream:
+            stream.write(f'[includeIf "gitdir:{pattern}"]\n    path={included_path}\n')
+
+        with GitConfigParser(config_path, repo=repo, merge_includes=False) as config:
+            assert config._included_paths() == []
 
     @with_rw_directory
     def test_conditional_includes_from_branch_name(self, rw_dir):

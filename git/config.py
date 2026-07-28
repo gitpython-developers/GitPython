@@ -576,8 +576,10 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             value = match.group(2).strip()
 
             if keyword in ["gitdir", "gitdir/i"]:
-                value = osp.expanduser(value).replace("\\", "/")
-                git_dir = os.fspath(self._repo.git_dir).replace("\\", "/") if self._repo.git_dir else None
+                value = osp.expanduser(value)
+                git_dir = os.fspath(self._repo.git_dir) if self._repo.git_dir else None
+                if sys.platform == "win32":
+                    git_dir = git_dir.replace("\\", "/") if git_dir else None
 
                 drive, _tail = osp.splitdrive(value)
                 if not drive and not any(value.startswith(s) for s in ["./", "/"]):

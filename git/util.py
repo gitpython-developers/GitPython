@@ -316,17 +316,20 @@ def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
 
 
 def _is_path_rooted(path: PathLike) -> bool:
-    r"""Whether ``path`` has a root component after any drive.
+    r"""Whether ``path`` has a root, including one encoded in a UNC drive.
 
     On Windows, ``\directory`` is rooted on the current drive without being
     absolute, while ``C:\directory`` has both a drive and a root. In contrast,
     ``directory`` and the drive-relative ``C:directory`` have no root.
+    UNC paths are rooted: ``\\server\share`` stores the share in the drive
+    returned by :func:`os.path.splitdrive`, while ``\\server\share\directory``
+    additionally has a rooted tail.
     On POSIX, which has no drive concept, this simply distinguishes absolute
     paths such as ``/directory`` from relative paths such as ``directory``.
     """
-    _drive, tail = osp.splitdrive(os.fspath(path))
+    drive, tail = osp.splitdrive(os.fspath(path))
     separators = (os.sep,) if os.altsep is None else (os.sep, os.altsep)
-    return tail.startswith(separators)
+    return tail.startswith(separators) or drive.startswith(separators)
 
 
 def _to_relative_path(root: PathLike, path: PathLike) -> str:

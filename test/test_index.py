@@ -1091,6 +1091,15 @@ class TestIndex(TestBase):
         self.assertEqual(expected_path, actual_path)
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Specifically for Windows.")
+    def test__to_relative_path_windows_unc_share_root(self):
+        for repo_root in [R"\\server\share", R"\\?\UNC\server\share"]:
+            with self.subTest(repo_root=repo_root):
+                repo = mock.Mock(bare=False, git_dir=repo_root, working_tree_dir=repo_root)
+                index = IndexFile(repo)
+
+                self.assertEqual(index._to_relative_path(repo_root), ".")
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Specifically for Windows.")
     @with_rw_directory
     def test__to_relative_path_windows_path_kinds(self, rw_dir):
         repo_root = osp.join(rw_dir, "repo")
