@@ -1128,20 +1128,16 @@ class TestIndex(TestBase):
         repo = Repo.init(root / "repo")
         hooks_dir = root / "hooks"
         _make_hook(root, "fake-hook", "exit 0")
-        bash = root / "git" / "bin" / "bash.exe"
         with repo.config_writer() as writer:
             writer.set_value("core", "hooksPath", str(hooks_dir))
 
-        with mock.patch("git.index.fun.sys.platform", "win32"), mock.patch(
-            "git.index.fun._which_from_path", return_value=str(bash)
-        ) as which:
+        with mock.patch("git.index.fun.sys.platform", "win32"):
             with mock.patch("git.index.fun.safer_popen") as popen, mock.patch("git.index.fun.handle_process_output"):
                 popen.return_value.returncode = 0
                 run_commit_hook("fake-hook", repo.index)
 
-        which.assert_called_once_with("bash.exe")
         command = popen.call_args[0][0]
-        self.assertEqual(command, [str(bash), "../hooks/fake-hook"])
+        self.assertEqual(command, ["bash.exe", "../hooks/fake-hook"])
 
     @ddt.data((False,), (True,))
     @with_rw_directory
