@@ -79,6 +79,21 @@ def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
 
+def _which_from_path(command: str) -> Union[str, None]:
+    """Resolve an executable 'command' from PATH without considering the current directory."""
+    cwd = osp.normcase(osp.abspath(os.curdir))
+    for directory in os.get_exec_path():
+        if not directory:
+            continue
+        directory = osp.abspath(directory)
+        if osp.normcase(directory) == cwd:
+            continue
+        candidate = osp.join(directory, command)
+        if osp.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
 def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     """Run the commit hook of the given name. Silently ignore hooks that do not exist.
 
@@ -112,7 +127,11 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
                 # an absolute path in this form, although a relative path is preferable
                 # because it also works with the Windows Subsystem for Linux wrapper.
                 bash_hp = hp
-            cmd = ["bash.exe", Path(bash_hp).as_posix()]
+            # Resolve through PATH before spawning. On Windows, CreateProcess searches
+            # the current and system directories before PATH for a bare executable name,
+            # which can otherwise select an impostor or the WSL launcher instead of Git
+            # for Windows' Bash.
+            cmd = [_which_from_path("bash.exe") or "bash.exe", Path(bash_hp).as_posix()]
 
         process = safer_popen(
             cmd + list(args),
