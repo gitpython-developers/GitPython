@@ -33,7 +33,7 @@ from git.exc import (
     UnmergedEntriesError,
     UnsafeOptionError,
 )
-from git.index.fun import hook_path, run_commit_hook
+from git.index.fun import _git_for_windows_bash, _which_from_path, hook_path, run_commit_hook
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.index.util import TemporaryFileSwap
 from git.objects import Blob
@@ -1128,16 +1128,80 @@ class TestIndex(TestBase):
         repo = Repo.init(root / "repo")
         hooks_dir = root / "hooks"
         _make_hook(root, "fake-hook", "exit 0")
+        system_root = root / "Windows"
+        system_bash = system_root / "System32" / "bash.exe"
+        git_executable = root / "Git" / "cmd" / "git.exe"
+        git_bash = root / "Git" / "bin" / "bash.exe"
+        for executable in (system_bash, git_executable, git_bash):
+            executable.parent.mkdir(parents=True)
+            executable.touch()
+            executable.chmod(0o755)
         with repo.config_writer() as writer:
             writer.set_value("core", "hooksPath", str(hooks_dir))
 
-        with mock.patch("git.index.fun.sys.platform", "win32"):
+        # Model a normal Windows PATH: System32 (containing the WSL launcher) comes
+        # before Git's cmd directory, while Git's Bash is not itself on PATH. This
+        # exercises both Git-installation discovery and shell selection without
+        # mocking either resolver's answer.
+        with mock.patch("git.index.fun.sys.platform", "win32"), mock.patch.object(
+            Git, "GIT_PYTHON_GIT_EXECUTABLE", "git"
+        ), mock.patch.dict(os.environ, {"SystemRoot": str(system_root)}), mock.patch(
+            "git.index.fun.os.get_exec_path", return_value=["", str(system_bash.parent), str(git_executable.parent)]
+        ):
             with mock.patch("git.index.fun.safer_popen") as popen, mock.patch("git.index.fun.handle_process_output"):
                 popen.return_value.returncode = 0
                 run_commit_hook("fake-hook", repo.index)
 
         command = popen.call_args[0][0]
-        self.assertEqual(command, ["bash.exe", "../hooks/fake-hook"])
+        self.assertEqual(command, [str(git_bash), "../hooks/fake-hook"])
+
+    @with_rw_directory
+    def test_windows_bash_lookup_respects_explicit_current_directory_in_path(self, rw_dir):
+        root = Path(rw_dir).resolve()
+        bash = root / "bash.exe"
+        bash.touch()
+        bash.chmod(0o755)
+
+        # An explicitly listed directory is trusted PATH configuration, even when
+        # it happens to be the current directory. This differs from an empty entry,
+        # which Windows requires PATH lookup to ignore.
+        with cwd(root), mock.patch("git.index.fun.os.get_exec_path", return_value=[str(root)]):
+            self.assertEqual(_which_from_path("bash.exe"), str(bash))
+
+    @with_rw_directory
+    def test_windows_bash_lookup_from_explicit_git_bin(self, rw_dir):
+        git_root = Path(rw_dir).resolve() / "Git"
+        git_executable = git_root / "bin" / "git.exe"
+        bash = git_root / "bin" / "bash.exe"
+        git_executable.parent.mkdir(parents=True)
+        for executable in (git_executable, bash):
+            executable.touch()
+            executable.chmod(0o755)
+
+        # A relative executable containing a directory is resolved by CreateProcess
+        # from the parent process cwd, not the separately supplied child cwd. Enter the
+        # temporary root first because Windows cannot express a relative path between
+        # drives, and CI may keep the checkout and its temporary directory on different
+        # drives.
+        with cwd(Path(rw_dir).resolve()):
+            relative_git = osp.relpath(git_executable, os.curdir)
+            with mock.patch.object(Git, "GIT_PYTHON_GIT_EXECUTABLE", relative_git):
+                self.assertEqual(_git_for_windows_bash(), str(bash))
+
+    @with_rw_directory
+    def test_windows_bash_lookup_ignores_custom_git_executable(self, rw_dir):
+        root = Path(rw_dir).resolve()
+        for directory_name in ("cmd", "bin"):
+            executable = root / directory_name / "mygit.exe"
+            bash = root / "bin" / "bash.exe"
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            bash.parent.mkdir(parents=True, exist_ok=True)
+            executable.touch()
+            bash.touch()
+            executable.chmod(0o755)
+            bash.chmod(0o755)
+            with mock.patch.object(Git, "GIT_PYTHON_GIT_EXECUTABLE", str(executable)):
+                self.assertIsNone(_git_for_windows_bash())
 
     @ddt.data((False,), (True,))
     @with_rw_directory

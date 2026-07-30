@@ -26,7 +26,7 @@ import sys
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
-from git.cmd import handle_process_output, safer_popen
+from git.cmd import Git, handle_process_output, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
 from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
@@ -79,6 +79,99 @@ def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
 
+def _is_in_windows_system_root(path: str) -> bool:
+    """Return whether ``path`` is inside the Windows installation directory."""
+    system_root = os.environ.get("SystemRoot")
+    if not system_root:
+        return False
+
+    system_root = osp.normcase(osp.realpath(system_root))
+    path = osp.normcase(osp.realpath(path))
+    try:
+        return osp.commonpath((system_root, path)) == system_root
+    except ValueError:
+        # Paths on different drives have no common path on Windows.
+        return False
+
+
+def _which_from_path(command: str) -> Union[str, None]:
+    """Resolve ``command`` from PATH, excluding the Windows installation."""
+    for directory in os.get_exec_path():
+        # Unlike POSIX, Windows does not define an empty PATH entry as the current
+        # directory. Skip it rather than letting abspath() turn it into one.
+        if not directory:
+            continue
+        directory = osp.abspath(directory)
+        candidate = osp.join(directory, command)
+        # SystemRoot contains the WSL launcher stubs. They are valid executables but
+        # not suitable for running a Windows Git hook: the hook path and environment
+        # were prepared for Git for Windows, and WSL may have no distribution at all.
+        if _is_in_windows_system_root(candidate):
+            continue
+        if osp.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+_GIT_FOR_WINDOWS_PREFIXES = ("mingw64", "mingw32", "clangarm64", "clang64", "clang32", "ucrt64")
+
+
+def _git_for_windows_root() -> Union[str, None]:
+    """Infer a standard Git for Windows root from GitPython's selected executable."""
+    git_executable = os.fspath(Git.GIT_PYTHON_GIT_EXECUTABLE or Git.git_exec_name)
+    if osp.dirname(git_executable):
+        # CreateProcess resolves a relative executable path containing a directory
+        # from the parent process cwd, even when Popen supplies a different child cwd.
+        git_executable = osp.abspath(git_executable)
+    else:
+        # GitPython deliberately retains a bare executable name so later PATH changes
+        # affect Git commands. Resolve it with the same PATH snapshot used for Bash.
+        names = (git_executable,) if _has_file_extension(git_executable) else (git_executable, f"{git_executable}.exe")
+        for name in names:
+            resolved = _which_from_path(name)
+            if resolved is not None:
+                git_executable = resolved
+                break
+        else:
+            git_executable = ""
+    if not git_executable:
+        return None
+    if osp.basename(git_executable).lower() not in ("git", "git.exe"):
+        return None
+
+    executable_dir = osp.dirname(git_executable)
+    directory_name = osp.basename(executable_dir).lower()
+    if directory_name == "cmd":
+        # The normal system-wide PATH entry is <git-root>/cmd.
+        return osp.dirname(executable_dir)
+    if directory_name == "bin":
+        prefix = osp.dirname(executable_dir)
+        if osp.basename(prefix).lower() in _GIT_FOR_WINDOWS_PREFIXES:
+            # Git Bash commonly exposes <git-root>/<platform>/bin/git.exe.
+            return osp.dirname(prefix)
+        if osp.basename(prefix).lower() != "usr":
+            # An explicitly configured Git may be the root-level bin/git.exe. Do
+            # not make the same inference from usr/bin: unlike the recognized
+            # platform prefixes, "usr" has no reliably bounded parent layout.
+            return prefix
+    return None
+
+
+def _git_for_windows_bash() -> Union[str, None]:
+    """Return Bash from the Git for Windows installation selected by GitPython."""
+    git_root = _git_for_windows_root()
+    if git_root is None:
+        return None
+
+    # Match gix-path's precedence: prefer the lightweight bin shim, then the
+    # underlying usr/bin executable. Both belong to the same installation as Git.
+    for relative_path in ("bin/bash.exe", "usr/bin/bash.exe"):
+        candidate = osp.join(git_root, *relative_path.split("/"))
+        if osp.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
 def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     """Run the commit hook of the given name. Silently ignore hooks that do not exist.
 
@@ -112,7 +205,12 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
                 # an absolute path in this form, although a relative path is preferable
                 # because it also works with the Windows Subsystem for Linux wrapper.
                 bash_hp = hp
-            cmd = ["bash.exe", Path(bash_hp).as_posix()]
+            # Prefer Bash associated with GitPython's selected Git installation. If
+            # that layout is not recognized, use an explicitly configured non-system
+            # PATH entry. Preserve the bare fallback for installations that previously
+            # relied on WSL or another CreateProcess-resolved Bash.
+            bash_executable = _git_for_windows_bash() or _which_from_path("bash.exe") or "bash.exe"
+            cmd = [bash_executable, Path(bash_hp).as_posix()]
 
         process = safer_popen(
             cmd + list(args),
