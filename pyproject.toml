@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-addopts = "--cov=git --cov-report=term -rfE"
+addopts = "--cov=git --cov-report=term -rfEX"
 filterwarnings = "ignore::DeprecationWarning"
 python_files = "test_*.py"
 tmp_path_retention_policy = "failed"
@@ -13,7 +13,7 @@ testpaths = "test"  # Space separated list of paths from root e.g test tests doc
 # --cov-report term-missing # to terminal with line numbers
 # --cov-report html:path  # html file at path
 # --maxfail  # number of errors before giving up
-# -rfE  # test summary: list failures and errors, omitting expected failures
+# -rfEX  # test summary: list failures, errors, and unexpected passes; omit expected failures
 # -ra   # test summary: list all non-passing (fail, error, skip, xfail, xpass)
 # --ignore-glob=**/gitdb/*  # ignore glob paths
 # filterwarnings ignore::WarningType  # ignores those warnings
