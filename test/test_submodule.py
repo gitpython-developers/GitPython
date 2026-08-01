@@ -927,6 +927,75 @@ class TestSubmodule(TestBase):
 
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
+    def test_update_rejects_parent_component_in_name(self, rwdir):
+        source = git.Repo.init(osp.join(rwdir, "source"))
+        source.git.commit(m="initial commit", allow_empty=True)
+
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        parent.git.submodule("add", source.working_tree_dir, "module")
+        parent.index.commit("add submodule")
+        modules_file = Path(parent.working_tree_dir) / ".gitmodules"
+        modules_file.write_text(
+            modules_file.read_text().replace('submodule "module"', 'submodule "../../../escaped/module"')
+        )
+        parent.index.add([".gitmodules"])
+        parent.index.commit("change submodule name")
+
+        clone = git.Repo.clone_from(parent.working_tree_dir, osp.join(rwdir, "clone"))
+        with pytest.raises(ValueError, match="submodule name"):
+            clone.submodules[0].update(init=True)
+        assert not osp.exists(osp.join(rwdir, "escaped"))
+
+        Path(rwdir, "escaped").mkdir()
+        git.Repo.clone_from(
+            source.working_tree_dir,
+            osp.join(clone.working_tree_dir, "module"),
+            separate_git_dir=osp.join(rwdir, "escaped", "module"),
+        )
+        with pytest.raises(ValueError, match="submodule name"):
+            clone.submodules[0].update(init=True)
+
+        invalid_names = (
+            "",
+            "..",
+            "../module",
+            R"..\module",
+            "nested/../module",
+            R"nested\..\module",
+            "/module",
+            R"\module",
+            "C:module",
+            R"C:\module",
+        )
+        for name in invalid_names:
+            with pytest.raises(ValueError, match="submodule name"):
+                Submodule._module_abspath(clone, "module", name)
+
+    @with_rw_directory
+    @_patch_git_config("protocol.file.allow", "always")
+    def test_root_update_keeps_going_after_invalid_submodule_name(self, rwdir):
+        source = git.Repo.init(osp.join(rwdir, "source"))
+        source.git.commit(m="initial commit", allow_empty=True)
+
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        parent.git.submodule("add", source.working_tree_dir, "invalid")
+        parent.git.submodule("add", source.working_tree_dir, "valid")
+        modules_file = Path(parent.working_tree_dir) / ".gitmodules"
+        modules_file.write_text(modules_file.read_text().replace('submodule "invalid"', 'submodule "../invalid"'))
+        parent.index.add([".gitmodules"])
+        parent.index.commit("add submodules")
+
+        clone = git.Repo.clone_from(parent.working_tree_dir, osp.join(rwdir, "clone"))
+        assert [sm.name for sm in clone.submodules] == ["../invalid", "valid"]
+
+        clone.submodule_update(keep_going=True)
+
+        assert os.listdir(osp.join(clone.working_tree_dir, "invalid")) == []
+        assert not clone.submodule("../invalid").module_exists()
+        assert clone.submodule("valid").module_exists()
+
+    @with_rw_directory
+    @_patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
