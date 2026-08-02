@@ -328,6 +328,22 @@ class TestIndex(TestBase):
             assert "index.lock' could not be obtained" not in str(ex)
 
     @with_rw_repo("0.1.6")
+    def test_read_tree_methods_reject_index_output(self, rw_repo):
+        output_path = (Path(rw_repo.working_tree_dir) / "alternate-index").as_posix()
+        unsafe_option = f"--index-output={output_path}"
+
+        with pytest.raises(UnsafeOptionError):
+            IndexFile.from_tree(rw_repo, unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            IndexFile.from_tree(rw_repo, "HEAD", index_output=output_path)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.reset(unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.merge_tree(unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.merge_tree("HEAD", base=unsafe_option)
+
+    @with_rw_repo("0.1.6")
     def test_index_file_from_tree(self, rw_repo):
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
         cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
