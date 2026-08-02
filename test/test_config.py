@@ -195,6 +195,43 @@ class TestBase(TestCase):
             self.assertFalse(git_config.has_section("core"))
 
     @with_rw_directory
+    def test_writer_rejects_invalid_option_names(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        bad_options = (
+            "name=value",
+            "name#comment",
+            "name;comment",
+            "name with space",
+            "name\twith-tab",
+            "name[section",
+            "name]section",
+            "name:colon",
+            'name"quote',
+            "name\\escape",
+        )
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            git_config.add_section("user")
+            for bad_option in bad_options:
+                with pytest.raises(ValueError, match="option name"):
+                    git_config.set("user", bad_option, "unsafe")
+                with pytest.raises(ValueError, match="option name"):
+                    git_config.set_value("user", bad_option, "unsafe")
+                with pytest.raises(ValueError, match="option name"):
+                    git_config.add_value("user", bad_option, "unsafe")
+
+            git_config.set_value("user", "safe-option1", "safe")
+            git_config.set_value("user", "safe_option2", "safe")
+            git_config.set_value("user", "3safe_option", "safe")
+            git_config.set_value("user", "safe.option3", "safe")
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value("user", "safe-option1"), "safe")
+            self.assertEqual(git_config.get_value("user", "safe_option2"), "safe")
+            self.assertEqual(git_config.get_value("user", "3safe_option"), "safe")
+            self.assertEqual(git_config.get_value("user", "safe.option3"), "safe")
+
+    @with_rw_directory
     def test_writer_rejects_unquoted_section_terminators(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
         bad_sections = (
