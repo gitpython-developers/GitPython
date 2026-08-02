@@ -230,7 +230,15 @@ class TestGit(TestBase):
 
         unsplit_kwargs = {"n": "--upload-pack=helper", "split_single_char_options": False}
         self.assertEqual(self.git.transform_kwargs(**unsplit_kwargs), ["-n--upload-pack=helper"])
-        self.assertEqual(Git._option_candidates(kwargs=unsplit_kwargs), ["-n"])
+        self.assertEqual(Git._option_candidates(kwargs=unsplit_kwargs), ["-n--upload-pack=helper"])
+
+    def test_option_candidates_include_joined_single_char_option_values(self):
+        kwargs = {"n": "uhelper", "split_single_char_options": False}
+        candidates = Git._option_candidates(kwargs=kwargs)
+
+        self.assertEqual(candidates, ["-nuhelper"])
+        with self.assertRaises(UnsafeOptionError):
+            Git.check_unsafe_options(options=candidates, unsafe_options=["-u"])
 
     _shell_cases = (
         # value_in_call, value_from_class, expected_popen_arg

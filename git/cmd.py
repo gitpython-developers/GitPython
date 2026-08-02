@@ -1044,12 +1044,20 @@ class Git(metaclass=_GitMeta):
                 values = value if isinstance(value, (list, tuple)) else (value,)
                 if any(value is True or (value is not False and value is not None) for value in values):
                     key = str(key)
-                    options.append(f"-{key}" if len(key) == 1 else f"--{dashify(key)}")
-                    if len(key) == 1 and split_single_char_options:
+                    if len(key) != 1:
+                        options.append(f"--{dashify(key)}")
+                    elif split_single_char_options:
+                        options.append(f"-{key}")
                         options.extend(
                             str(value)
                             for value in values
                             if value is not True and value not in (False, None) and str(value).startswith("-")
+                        )
+                    else:
+                        options.extend(
+                            f"-{key}" if value is True else f"-{key}{value}"
+                            for value in values
+                            if value is True or (value is not False and value is not None)
                         )
         return options
 
