@@ -730,14 +730,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     ) -> List[BaseIndexEntry]:
         entries_added: List[BaseIndexEntry] = []
         if path_rewriter:
+            working_tree_dir = self.repo.working_tree_dir
+            if working_tree_dir is None:
+                raise InvalidGitRepositoryError("Cannot rewrite paths without a working tree")
+            working_tree_dir = str(working_tree_dir)
             for path in paths:
                 if osp.isabs(path):
                     abspath = path
-                    gitrelative_path = path[len(str(self.repo.working_tree_dir)) + 1 :]
+                    gitrelative_path = path[len(working_tree_dir) + 1 :]
                 else:
                     gitrelative_path = path
-                    if self.repo.working_tree_dir:
-                        abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
+                    abspath = osp.join(working_tree_dir, gitrelative_path)
                 # END obtain relative and absolute paths
 
                 blob = Blob(
@@ -1467,8 +1470,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             nie = new_inst.entries
             for path in paths:
                 path = self._to_relative_path(path)
+                key = entry_key(path, 0)
                 try:
-                    key = entry_key(path, 0)
                     self.entries[key] = nie[key]
                 except KeyError:
                     # If key is not in theirs, it mustn't be in ours.

@@ -877,6 +877,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             #############################
             binsha = self.binsha
             hexsha = self.hexsha
+            is_detached = False
             if mrepo is not None:
                 # mrepo is only set if we are not in dry-run mode or if the module
                 # existed.
@@ -1221,6 +1222,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 for remote in mod.remotes:
                     num_branches_with_new_commits = 0
                     rrefs = remote.refs
+                    rref = None
                     for rref in rrefs:
                         num_branches_with_new_commits += len(mod.git.cherry(rref)) != 0
                     # END for each remote ref
