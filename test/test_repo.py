@@ -43,7 +43,7 @@ from git.exc import BadObject
 from git.repo.fun import touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
 
-from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo, PathLikeMock
+from test.lib import TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo, PathLikeMock
 
 
 def iter_flatten(lol):
@@ -1433,6 +1433,7 @@ class TestRepo(TestBase):
                 ["included_file.txt", "ignored_file.txt", "included_dir/file.txt", "ignored_dir/file.txt"]
             ) == ["ignored_file.txt", "ignored_dir/file.txt"]
 
+    @requires_symlinks
     def test_ignored_raises_error_w_symlink(self):
         with tempfile.TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)

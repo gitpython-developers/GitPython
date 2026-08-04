@@ -28,7 +28,7 @@ from git.objects.tag import TagObject
 import git.refs as refs
 from git.util import Actor
 
-from test.lib import TestBase, with_rw_repo, PathLikeMock
+from test.lib import TestBase, requires_symlinks, with_rw_repo, PathLikeMock
 
 
 class TestRefs(TestBase):
@@ -780,6 +780,7 @@ class TestRefs(TestBase):
                 )
                 assert not outside_path.exists()
 
+    @requires_symlinks
     def test_symbolic_reference_set_reference_rejects_symlink_escape(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
@@ -791,10 +792,7 @@ class TestRefs(TestBase):
                 refs_heads_dir = Path(repo.common_dir) / "refs" / "heads"
                 refs_heads_dir.mkdir(parents=True, exist_ok=True)
                 symlink_path = refs_heads_dir / "link_out"
-                try:
-                    symlink_path.symlink_to(outside_dir, target_is_directory=True)
-                except (OSError, NotImplementedError) as ex:
-                    self.skipTest("symlinks unavailable on this platform: %s" % ex)
+                symlink_path.symlink_to(outside_dir, target_is_directory=True)
                 if osp.realpath(symlink_path / "escaped") == osp.abspath(symlink_path / "escaped"):
                     self.skipTest("realpath does not resolve directory symlinks on this platform")
 

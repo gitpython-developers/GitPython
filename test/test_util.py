@@ -40,7 +40,7 @@ from git.util import (
     rmtree,
 )
 
-from test.lib import TestBase, with_rw_repo
+from test.lib import TestBase, requires_symlinks, with_rw_repo
 
 
 @pytest.fixture
@@ -113,6 +113,7 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
+    @requires_symlinks
     def test_avoids_changing_permissions_outside_tree(self, tmp_path, request):
         # Automatically works on Windows, but on Unix requires either special handling
         # or refraining from attempting to fix PermissionError by making chmod calls.
