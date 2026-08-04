@@ -316,8 +316,9 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _module_abspath(cls, parent_repo: "Repo", path: PathLike, name: str) -> PathLike:
+        name = cls._validated_name(name)
         if cls._need_gitfile_submodules(parent_repo.git):
-            return osp.join(parent_repo.git_dir, "modules", cls._validated_name(name))
+            return osp.join(parent_repo.git_dir, "modules", name)
         if parent_repo.working_tree_dir:
             return osp.join(parent_repo.working_tree_dir, path)
         raise NotADirectoryError()
@@ -747,9 +748,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             prefix = "DRY-RUN: "
         # END handle prefix
 
-        # To keep things plausible in dry-run mode.
-        if dry_run:
-            mrepo = None
+        mrepo = None
         # END init mrepo
 
         def fetch_remotes(module_repo: "Repo") -> None:

@@ -971,6 +971,10 @@ class TestSubmodule(TestBase):
             with pytest.raises(ValueError, match="submodule name"):
                 Submodule._module_abspath(clone, "module", name)
 
+        with mock.patch.object(Submodule, "_need_gitfile_submodules", return_value=False):
+            with pytest.raises(ValueError, match="submodule name"):
+                Submodule._module_abspath(clone, "module", "../module")
+
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
     def test_root_update_keeps_going_after_invalid_submodule_name(self, rwdir):
@@ -993,6 +997,8 @@ class TestSubmodule(TestBase):
         assert os.listdir(osp.join(clone.working_tree_dir, "invalid")) == []
         assert not clone.submodule("../invalid").module_exists()
         assert clone.submodule("valid").module_exists()
+
+        clone.submodule("../invalid").update(recursive=True, keep_going=True)
 
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
