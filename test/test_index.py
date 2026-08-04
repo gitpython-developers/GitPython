@@ -1086,14 +1086,52 @@ class TestIndex(TestBase):
         path = os.path.join(repo_root, f"directory2{os.sep}")
         index = IndexFile(repo)
 
-        expected_path = f"directory2{os.sep}"
+        expected_path = "directory2/"
         actual_path = index._to_relative_path(path)
         self.assertEqual(expected_path, actual_path)
 
-        with mock.patch("git.index.base.os.path") as ospath_mock:
-            ospath_mock.relpath.return_value = f"directory2{os.sep}"
-            actual_path = index._to_relative_path(path)
-            self.assertEqual(expected_path, actual_path)
+    @pytest.mark.skipif(sys.platform != "win32", reason="Specifically for Windows.")
+    def test__to_relative_path_windows_unc_share_root(self):
+        for repo_root in [R"\\server\share", R"\\?\UNC\server\share"]:
+            with self.subTest(repo_root=repo_root):
+                repo = mock.Mock(bare=False, git_dir=repo_root, working_tree_dir=repo_root)
+                index = IndexFile(repo)
+
+                self.assertEqual(index._to_relative_path(repo_root), ".")
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Specifically for Windows.")
+    @with_rw_directory
+    def test__to_relative_path_windows_path_kinds(self, rw_dir):
+        repo_root = osp.join(rw_dir, "repo")
+        os.makedirs(osp.join(repo_root, "nested"))
+
+        class Mocked:
+            bare = False
+            git_dir = osp.join(repo_root, ".git")
+            working_tree_dir = repo_root
+
+        index = IndexFile(Mocked())
+        inside_path = osp.join(repo_root, "nested", "file")
+        _drive, rooted_inside_path = osp.splitdrive(inside_path)
+
+        self.assertEqual(index._to_relative_path(inside_path), "nested/file")
+        self.assertEqual(index._to_relative_path(rooted_inside_path), "nested/file")
+        self.assertEqual(index._to_relative_path(rooted_inside_path.replace("\\", "/")), "nested/file")
+        self.assertEqual(index._to_relative_path(PathLikeMock(inside_path)), "nested/file")
+        self.assertEqual(index._to_relative_path(inside_path.upper()), "NESTED/FILE")
+        self.assertRaises(ValueError, index._to_relative_path, osp.join(repo_root + "-other", "file"))
+        self.assertRaises(ValueError, index._to_relative_path, osp.join("..", "outside"))
+        self.assertRaises(ValueError, index._to_relative_path, f"{osp.splitdrive(repo_root)[0]}relative")
+        self.assertRaises(ValueError, index._to_relative_path, R"Z:\outside")
+        self.assertRaises(ValueError, index._to_relative_path, R"\\server\share\outside")
+        self.assertRaises(ValueError, index._to_relative_path, R"\\?\C:\outside")
+
+        Mocked.bare = True
+        bare_index = IndexFile(Mocked())
+        self.assertRaises(InvalidGitRepositoryError, bare_index._to_relative_path, rooted_inside_path)
+        self.assertRaises(
+            InvalidGitRepositoryError, bare_index._to_relative_path, f"{osp.splitdrive(repo_root)[0]}relative"
+        )
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,

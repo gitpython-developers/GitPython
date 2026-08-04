@@ -25,16 +25,6 @@ jobs:
           python-version: "3.14t"
         - os-type: macos
           python-version: "3.15t"
-        - os-type: windows
-          python-version: "3.13"  # FIXME: Fix and enable Python 3.13-3.15 on Windows (#1955).
-        - os-type: windows
-          python-version: "3.14"
-        - os-type: windows
-          python-version: "3.14t"
-        - os-type: windows
-          python-version: "3.15"
-        - os-type: windows
-          python-version: "3.15t"
         include:
         - os-ver: latest
         - os-type: ubuntu

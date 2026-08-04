@@ -14,7 +14,7 @@ import pytest
 
 from git import GitConfigParser
 from git.config import _OMD, cp
-from git.util import rmfile
+from git.util import cwd, rmfile
 
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
@@ -374,6 +374,22 @@ class TestBase(TestCase):
         with GitConfigParser(relative_config_path, read_only=True) as cr:
             assert cr.get_value("included", "value") == "included"
 
+    @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
+    @with_rw_directory
+    def test_config_drive_rooted_path_include(self, rw_dir):
+        with cwd(rw_dir):
+            included_path = osp.join(rw_dir, "included")
+            with GitConfigParser(included_path, read_only=False) as cw:
+                cw.set_value("included", "value", "included")
+
+            _drive, rooted_included_path = osp.splitdrive(included_path)
+            config_path = osp.join(rw_dir, "config")
+            with GitConfigParser(config_path, read_only=False) as cw:
+                cw.set_value("include", "path", rooted_included_path)
+
+            with GitConfigParser(config_path, read_only=True) as cr:
+                assert cr.get_value("included", "value") == "included"
+
     @with_rw_directory
     def test_multiple_include_paths_with_same_key(self, rw_dir):
         """Test that multiple 'path' entries under [include] are all respected.
@@ -411,15 +427,11 @@ class TestBase(TestCase):
             assert cr.get_value("user", "name") == "from-inc1"
             assert cr.get_value("core", "bar") == "from-inc2"
 
-    @pytest.mark.xfail(
-        sys.platform == "win32",
-        reason='Second config._has_includes() assertion fails (for "config is included if path is matching git_dir")',
-        raises=AssertionError,
-    )
     @with_rw_directory
     def test_conditional_includes_from_git_dir(self, rw_dir):
         # Initiate repository path.
         git_dir = osp.join(rw_dir, "target1", "repo1")
+        git_dir_pattern = git_dir.replace("\\", "/")
         os.makedirs(git_dir)
 
         # Initiate mocked repository.
@@ -431,6 +443,7 @@ class TestBase(TestCase):
         template = '[includeIf "{}:{}"]\n    path={}\n'
 
         with open(path1, "w") as stream:
+            # on Windows, this writes a backslash pattern.
             stream.write(template.format("gitdir", git_dir, path2))
 
         # Ensure that config is ignored if no repo is set.
@@ -438,14 +451,26 @@ class TestBase(TestCase):
             assert not config._has_includes()
             assert config._included_paths() == []
 
-        # Ensure that config is included if path is matching git_dir.
+        # Git uses forward slashes in gitdir patterns on every platform:
+        # backslashes escape the next pattern character rather than separate
+        # path components. On Windows, GitPython therefore normalizes git_dir
+        # to forward slashes but leaves this backslash pattern unchanged, so
+        # the two do not match and no path is included.
+        with GitConfigParser(path1, repo=repo, merge_includes=False) as config:
+            expected_paths = [] if sys.platform == "win32" else [("path", path2)]
+            assert config._included_paths() == expected_paths
+
+        # Ensure that Git's forward-slash syntax matches native Windows paths.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", git_dir_pattern, path2))
+
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
             assert config._included_paths() == [("path", path2)]
 
         # Ensure that config is ignored if case is incorrect.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir", git_dir.upper(), path2))
+            stream.write(template.format("gitdir", git_dir_pattern.upper(), path2))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
@@ -453,7 +478,7 @@ class TestBase(TestCase):
 
         # Ensure that config is included if case is ignored.
         with open(path1, "w") as stream:
-            stream.write(template.format("gitdir/i", git_dir.upper(), path2))
+            stream.write(template.format("gitdir/i", git_dir_pattern.upper(), path2))
 
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
@@ -482,6 +507,20 @@ class TestBase(TestCase):
         with GitConfigParser(path1, repo=repo) as config:
             assert config._has_includes()
             assert config._included_paths() == [("path", path2)]
+
+    @with_rw_directory
+    def test_conditional_includes_do_not_treat_backslashes_as_separators(self, rw_dir):
+        git_dir = osp.join(rw_dir, "target", "repo")
+        repo = mock.Mock(git_dir=git_dir)
+        config_path = osp.join(rw_dir, "config")
+        included_path = osp.join(rw_dir, "included")
+        pattern = git_dir.replace("\\", "/").replace("/target/repo", R"/target\repo")
+
+        with open(config_path, "w") as stream:
+            stream.write(f'[includeIf "gitdir:{pattern}"]\n    path={included_path}\n')
+
+        with GitConfigParser(config_path, repo=repo, merge_includes=False) as config:
+            assert config._included_paths() == []
 
     @with_rw_directory
     def test_conditional_includes_from_branch_name(self, rw_dir):

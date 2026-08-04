@@ -34,6 +34,8 @@ from git.util import (
     LockedFD,
     join_path_native,
     file_contents_ro,
+    _is_path_rooted,
+    _to_relative_path,
     to_native_path_linux,
     unbare_repo,
     to_bin_sha,
@@ -58,6 +60,7 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
+    cast,
     Dict,
     Generator,
     IO,
@@ -655,16 +658,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :raise ValueError:
         """
-        if not osp.isabs(path):
-            return path
         if self.repo.bare:
-            raise InvalidGitRepositoryError("require non-bare repository")
-        if not osp.normpath(path).startswith(str(self.repo.working_tree_dir)):
-            raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
-        result = os.path.relpath(path, self.repo.working_tree_dir)
-        if os.fspath(path).endswith(os.sep) and not result.endswith(os.sep):
-            result += os.sep
-        return result
+            drive, _tail = osp.splitdrive(os.fspath(path))
+            if drive or _is_path_rooted(path):
+                raise InvalidGitRepositoryError("paths with a drive or root require a non-bare repository")
+            return path
+        return _to_relative_path(cast(PathLike, self.repo.working_tree_dir), path)
 
     def _preprocess_add_items(
         self, items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]]

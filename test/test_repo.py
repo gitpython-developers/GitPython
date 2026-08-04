@@ -128,8 +128,9 @@ class TestRepo(TestBase):
             self.assertIsInstance(head.commit, Commit)
         # END for each head
 
-        self.assertIsInstance(self.rorepo.heads.master, Head)
-        self.assertIsInstance(self.rorepo.heads["master"], Head)
+        active_branch = self.rorepo.active_branch
+        self.assertIsInstance(self.rorepo.heads[active_branch.name], Head)
+        self.assertEqual(self.rorepo.heads[active_branch.name], active_branch)
 
     def test_tree_from_revision(self):
         tree = self.rorepo.tree("0.1.6")
@@ -233,6 +234,18 @@ class TestRepo(TestBase):
 
         self.assertEqual(environment, cloned.git.environment())
 
+    @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
+    @with_rw_directory
+    def test_clone_from_drive_rooted_destination(self, rw_dir):
+        original_repo = Repo.init(osp.join(rw_dir, "repo"))
+        with cwd(rw_dir):
+            destination = osp.join(rw_dir, "clone")
+            _drive, rooted_destination = osp.splitdrive(destination)
+
+            cloned = Repo.clone_from(original_repo.git_dir, rooted_destination)
+
+            assert osp.samefile(cloned.working_tree_dir, destination)
+
     @with_rw_directory
     def test_date_format(self, rw_dir):
         repo = Repo.init(osp.join(rw_dir, "repo"))
@@ -326,13 +339,29 @@ class TestRepo(TestBase):
 
     def test_alternates(self):
         cur_alternates = self.rorepo.alternates
-        # empty alternates
-        self.rorepo.alternates = []
-        self.assertEqual(self.rorepo.alternates, [])
+        try:
+            # Empty alternates.
+            self.rorepo.alternates = []
+            self.assertEqual(self.rorepo.alternates, [])
+            alts = ["other/location", "this/location"]
+            self.rorepo.alternates = alts
+            self.assertEqual(alts, self.rorepo.alternates)
+        finally:
+            self.rorepo.alternates = cur_alternates
+
+    @with_rw_directory
+    def test_alternates_use_common_dir(self, rw_dir):
+        common_dir = osp.join(rw_dir, "common")
+        git_dir = osp.join(rw_dir, "worktrees", "linked")
+        os.makedirs(osp.join(common_dir, "objects", "info"))
+        os.makedirs(osp.join(git_dir, "objects", "info"))
+        repo = mock.Mock(common_dir=common_dir, git_dir=git_dir)
+
         alts = ["other/location", "this/location"]
-        self.rorepo.alternates = alts
-        self.assertEqual(alts, self.rorepo.alternates)
-        self.rorepo.alternates = cur_alternates
+        Repo._set_alternates(repo, alts)
+
+        self.assertEqual(Repo._get_alternates(repo), alts)
+        self.assertFalse(osp.exists(osp.join(git_dir, "objects", "info", "alternates")))
 
     def test_repr(self):
         assert repr(self.rorepo).startswith("<git.repo.base.Repo ")
@@ -1008,7 +1037,7 @@ class TestRepo(TestBase):
         for _ in range(64):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
-                last_commit(repo, "master", "test/test_base.py")
+                last_commit(repo, "HEAD", "test/test_base.py")
             # END for each repository type
         # END for each iteration
 
@@ -1125,11 +1154,11 @@ class TestRepo(TestBase):
         c1 = "f6aa8d1"
         c2 = "763ef75"
         self.assertTrue(repo.is_ancestor(c1, c1))
-        self.assertTrue(repo.is_ancestor("master", "master"))
+        self.assertTrue(repo.is_ancestor("HEAD", "HEAD"))
         self.assertTrue(repo.is_ancestor(c1, c2))
-        self.assertTrue(repo.is_ancestor(c1, "master"))
+        self.assertTrue(repo.is_ancestor(c1, "HEAD"))
         self.assertFalse(repo.is_ancestor(c2, c1))
-        self.assertFalse(repo.is_ancestor("master", c1))
+        self.assertFalse(repo.is_ancestor("HEAD", c1))
         for i, j in itertools.permutations([c1, "ffffff", ""], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
@@ -1204,6 +1233,26 @@ class TestRepo(TestBase):
         # this class inherits from TestCase so we can't use pytest.mark.parametrize on
         # test_git_work_tree_dotgit; delegate instead
         self.test_git_work_tree_dotgit(use_relative_paths=True)
+
+    @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
+    @with_rw_directory
+    def test_linked_worktree_drive_rooted_gitdir_file(self, rw_dir):
+        with cwd(rw_dir):
+            main_repo = self.rorepo.clone(join_path_native(rw_dir, "main_repo"))
+            branch = main_repo.create_head("drive-rooted-worktree")
+            worktree_path = join_path_native(rw_dir, "worktree_repo")
+            main_repo.git.worktree("add", worktree_path, branch.name)
+
+            linked_repo = Repo(worktree_path)
+            gitdir_file = osp.join(linked_repo.git_dir, "gitdir")
+            worktree_gitfile = osp.join(worktree_path, ".git")
+            _drive, rooted_worktree_gitfile = osp.splitdrive(worktree_gitfile)
+            with open(gitdir_file, "w") as stream:
+                stream.write(rooted_worktree_gitfile)
+
+            reopened_repo = Repo(linked_repo.git_dir)
+
+            assert osp.samefile(reopened_repo.working_tree_dir, worktree_path)
 
     @with_rw_directory
     def test_git_work_tree_env(self, rw_dir):

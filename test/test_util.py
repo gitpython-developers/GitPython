@@ -407,6 +407,10 @@ class _Member:
 class TestUtils(TestBase):
     """Tests for most utilities in :mod:`git.util`."""
 
+    @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
+    def test_cygpath_drive_rooted_path(self):
+        assert cygpath(R"\directory\file") == "/directory/file"
+
     def test_it_should_dashify(self):
         self.assertEqual("this-is-my-argument", dashify("this_is_my_argument"))
         self.assertEqual("foo", dashify("foo"))

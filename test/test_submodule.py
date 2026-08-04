@@ -26,7 +26,7 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, join_path_native, to_native_path_linux
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux
 
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
@@ -1330,6 +1330,61 @@ class TestSubmodule(TestBase):
         relative_path = Submodule._to_relative_path(super_repo, submodule_path)
         msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
         assert relative_path == "submodule_path", msg
+
+    @with_rw_directory
+    def test_to_relative_path_is_confined_to_parent(self, rwdir):
+        class Repo:
+            working_tree_dir = osp.join(rwdir, "parent")
+
+        os.makedirs(osp.join(Repo.working_tree_dir, "nested"))
+
+        assert Submodule._to_relative_path(Repo(), osp.join(Repo.working_tree_dir, "nested")) == "nested"
+        assert Submodule._to_relative_path(Repo(), osp.join("nested", "..", "module")) == "module"
+        self.assertRaises(ValueError, Submodule._to_relative_path, Repo(), Repo.working_tree_dir)
+        self.assertRaises(ValueError, Submodule._to_relative_path, Repo(), osp.join("..", "outside"))
+        self.assertRaises(
+            ValueError,
+            Submodule._to_relative_path,
+            Repo(),
+            osp.join(Repo.working_tree_dir + "-other", "module"),
+        )
+
+    @skipUnless(sys.platform == "win32", "Specifically for Windows.")
+    @with_rw_directory
+    def test_to_relative_path_windows_path_kinds(self, rwdir):
+        class Repo:
+            working_tree_dir = osp.join(rwdir, "parent")
+
+        inside_path = osp.join(Repo.working_tree_dir, "nested", "module")
+        _drive, rooted_inside_path = osp.splitdrive(inside_path)
+
+        assert Submodule._to_relative_path(Repo(), rooted_inside_path) == "nested/module"
+        assert Submodule._to_relative_path(Repo(), rooted_inside_path.replace("\\", "/")) == "nested/module"
+        assert Submodule._to_relative_path(Repo(), PathLikeMock(inside_path)) == "nested/module"
+        self.assertRaises(
+            ValueError,
+            Submodule._to_relative_path,
+            Repo(),
+            f"{osp.splitdrive(Repo.working_tree_dir)[0]}relative",
+        )
+        self.assertRaises(ValueError, Submodule._to_relative_path, Repo(), R"Z:\outside")
+        self.assertRaises(ValueError, Submodule._to_relative_path, Repo(), R"\\server\share\outside")
+        self.assertRaises(ValueError, Submodule._to_relative_path, Repo(), R"\\?\C:\outside")
+
+    @skipUnless(sys.platform == "win32", "Specifically for Windows.")
+    @with_rw_directory
+    def test_find_submodule_git_dir_with_drive_rooted_gitfile(self, rwdir):
+        with cwd(rwdir):
+            module = git.Repo.init(osp.join(rwdir, "module"))
+            _drive, rooted_git_dir = osp.splitdrive(module.git_dir)
+            gitfile = osp.join(rwdir, "gitfile")
+            with open(gitfile, "w") as stream:
+                stream.write(f"gitdir: {rooted_git_dir}")
+
+            resolved_git_dir = find_submodule_git_dir(gitfile)
+
+            assert resolved_git_dir is not None
+            assert osp.samefile(resolved_git_dir, module.git_dir)
 
     @pytest.mark.xfail(
         reason="for some unknown reason the assertion fails, even though it in fact is working in more common setup",

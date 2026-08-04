@@ -888,22 +888,6 @@
                 }
             },
             {
-                "code": "reportPossiblyUnboundVariable",
-                "range": {
-                    "startColumn": 22,
-                    "endColumn": 37,
-                    "lineCount": 1
-                }
-            },
-            {
-                "code": "reportPossiblyUnboundVariable",
-                "range": {
-                    "startColumn": 22,
-                    "endColumn": 37,
-                    "lineCount": 1
-                }
-            },
-            {
                 "code": "reportReturnType",
                 "range": {
                     "startColumn": 15,

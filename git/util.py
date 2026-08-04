@@ -315,6 +315,68 @@ def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
     return to_native_path(join_path(a, *p))
 
 
+def _is_path_rooted(path: PathLike) -> bool:
+    r"""Whether ``path`` has a root, including one encoded in a UNC drive.
+
+    On Windows, ``\directory`` is rooted on the current drive without being
+    absolute, while ``C:\directory`` has both a drive and a root. In contrast,
+    ``directory`` and the drive-relative ``C:directory`` have no root.
+    UNC paths are rooted: ``\\server\share`` stores the share in the drive
+    returned by :func:`os.path.splitdrive`, while ``\\server\share\directory``
+    additionally has a rooted tail.
+    On POSIX, which has no drive concept, this simply distinguishes absolute
+    paths such as ``/directory`` from relative paths such as ``directory``.
+    """
+    drive, tail = osp.splitdrive(os.fspath(path))
+    separators = (os.sep,) if os.altsep is None else (os.sep, os.altsep)
+    return tail.startswith(separators) or drive.startswith(separators)
+
+
+def _to_relative_path(root: PathLike, path: PathLike) -> str:
+    r"""Return a normalized Git-style path confined to ``root``.
+
+    A Windows path such as ``\directory`` is rooted but not absolute. Resolve it
+    against the drive of ``root`` rather than treating it as relative to ``root``.
+    Drive-relative paths such as ``C:directory`` are rejected because their meaning
+    depends on process-global per-drive state.
+
+    For example, with ``root`` set to ``C:\repo`` on Windows:
+
+    * ``directory\file`` -> ``directory/file``
+    * ``directory\`` -> ``directory/``
+    * ``C:\repo\directory\file`` -> ``directory/file``
+    * ``\repo\directory\file`` -> ``directory/file``
+    * ``C:directory\file`` -> :exc:`ValueError`
+    * ``C:\other\file`` -> :exc:`ValueError`
+
+    On POSIX, ``/repo/directory/file`` under ``/repo`` similarly becomes
+    ``directory/file``. A trailing separator is preserved as a Git-style ``/``.
+    """
+    path_str = os.fspath(path)
+    if not path_str:
+        return path_str
+
+    drive, _tail = osp.splitdrive(path_str)
+    rooted = _is_path_rooted(path_str)
+    if drive and not rooted:
+        raise ValueError("Drive-relative path %r is not supported" % path_str)
+
+    root_abs = osp.abspath(os.fspath(root))
+    path_abs = osp.abspath(osp.join(root_abs, path_str))
+    try:
+        common_path = osp.commonpath([root_abs, path_abs])
+    except ValueError as e:
+        raise ValueError("Path %r is not in repository at %r" % (path_str, root_abs)) from e
+    if common_path != root_abs:
+        raise ValueError("Path %r is not in repository at %r" % (path_str, root_abs))
+
+    relative_path = to_native_path_linux(osp.relpath(path_abs, root_abs))
+    separators = (os.sep,) if os.altsep is None else (os.sep, os.altsep)
+    if path_str.endswith(separators) and relative_path != "." and not relative_path.endswith("/"):
+        relative_path += "/"
+    return relative_path
+
+
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
     """Make sure that the directory pointed to by path exists.
 
