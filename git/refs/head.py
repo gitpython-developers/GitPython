@@ -19,6 +19,7 @@ from .symbolic import SymbolicReference
 
 from typing import Any, Sequence, TYPE_CHECKING, Union
 
+from git.cmd import Git
 from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
@@ -62,6 +63,7 @@ class HEAD(SymbolicReference):
         index: bool = True,
         working_tree: bool = False,
         paths: Union[PathLike, Sequence[PathLike], None] = None,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "HEAD":
         """Reset our HEAD to the given commit optionally synchronizing the index and
@@ -84,12 +86,21 @@ class HEAD(SymbolicReference):
             Single path or list of paths relative to the git root directory
             that are to be reset. This allows to partially reset individual files.
 
+        :param allow_unsafe_options:
+            Allow unsafe options such as ``--pathspec-from-file`` to be passed to
+            :manpage:`git-reset(1)`.
+
         :param kwargs:
             Additional arguments passed to :manpage:`git-reset(1)`.
 
         :return:
             self
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([commit], kwargs),
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+            )
         mode: Union[str, None]
         mode = "--soft"
         if index:
@@ -234,7 +245,12 @@ class Head(Reference):
         self.path = "%s/%s" % (self._common_path_default, new_path)
         return self
 
-    def checkout(self, force: bool = False, **kwargs: Any) -> Union["HEAD", "Head"]:
+    def checkout(
+        self,
+        force: bool = False,
+        allow_unsafe_options: bool = False,
+        **kwargs: Any,
+    ) -> Union["HEAD", "Head"]:
         """Check out this head by setting the HEAD to this reference, by updating the
         index to reflect the tree we point to and by updating the working tree to
         reflect the latest index.
@@ -245,6 +261,10 @@ class Head(Reference):
             If ``True``, changes to the index and the working tree will be discarded.
             If ``False``, :exc:`~git.exc.GitCommandError` will be raised in that
             situation.
+
+        :param allow_unsafe_options:
+            Allow unsafe options such as ``--pathspec-from-file`` to be passed to
+            :manpage:`git-checkout(1)`.
 
         :param kwargs:
             Additional keyword arguments to be passed to git checkout, e.g.
@@ -261,6 +281,11 @@ class Head(Reference):
             the HEAD detached which is allowed and possible, but remains a special state
             that some tools might not be able to handle.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+            )
         kwargs["f"] = force
         if kwargs["f"] is False:
             kwargs.pop("f")

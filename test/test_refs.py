@@ -262,6 +262,51 @@ class TestRefs(TestBase):
         assert isinstance(res, SymbolicReference)
         assert res.name == "HEAD"
 
+    @with_rw_repo("HEAD")
+    def test_head_checkout_rejects_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
+            for option_name in ("pathspec_from_file", "pathspec_from"):
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.active_branch.checkout(
+                        pathspec_file_nul=True,
+                        **{option_name: str(pathspecs)},
+                    )
+
+    @with_rw_repo("HEAD")
+    def test_head_reset_rejects_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
+            for option_name in ("pathspec_from_file", "pathspec_from"):
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.head.reset(
+                        pathspec_file_nul=True,
+                        **{option_name: str(pathspecs)},
+                    )
+            for option_name in ("--pathspec-from-file", "--pathspec-from"):
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.head.reset(
+                        f"{option_name}={pathspecs}",
+                        pathspec_file_nul=True,
+                    )
+
+    @with_rw_repo("HEAD")
+    def test_head_commands_allow_explicit_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"CHANGES\0")
+            options = {
+                "pathspec_from_file": str(pathspecs),
+                "pathspec_file_nul": True,
+                "allow_unsafe_options": True,
+            }
+            head = rw_repo.head
+            branch = rw_repo.active_branch
+            assert head.reset(**options) is head
+            assert branch.checkout(**options) == branch
+
     @with_rw_repo("0.1.6")
     def test_head_reset(self, rw_repo):
         cur_head = rw_repo.head

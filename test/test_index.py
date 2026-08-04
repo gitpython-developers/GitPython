@@ -212,6 +212,32 @@ class TestIndex(TestBase):
             rw_repo.index.checkout(prefix=f"{target}/", allow_unsafe_options=True)
             self.assertTrue(osp.isfile(osp.join(target, "CHANGES")))
 
+    @with_rw_repo("HEAD")
+    def test_remove_rejects_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
+            for option_name in ("pathspec_from_file", "pathspec_from"):
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.index.remove(
+                        [],
+                        pathspec_file_nul=True,
+                        **{option_name: str(pathspecs)},
+                    )
+
+    @with_rw_repo("HEAD")
+    def test_remove_allows_explicit_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"CHANGES\0")
+            removed = rw_repo.index.remove(
+                [],
+                pathspec_from_file=str(pathspecs),
+                pathspec_file_nul=True,
+                allow_unsafe_options=True,
+            )
+            assert "CHANGES" in removed
+
     def __init__(self, *args):
         super().__init__(*args)
         self._reset_progress()
@@ -326,6 +352,22 @@ class TestIndex(TestBase):
             add_bad_blob()
         except Exception as ex:
             assert "index.lock' could not be obtained" not in str(ex)
+
+    @with_rw_repo("0.1.6")
+    def test_read_tree_methods_reject_index_output(self, rw_repo):
+        output_path = (Path(rw_repo.working_tree_dir) / "alternate-index").as_posix()
+        unsafe_option = f"--index-output={output_path}"
+
+        with pytest.raises(UnsafeOptionError):
+            IndexFile.from_tree(rw_repo, unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            IndexFile.from_tree(rw_repo, "HEAD", index_output=output_path)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.reset(unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.merge_tree(unsafe_option)
+        with pytest.raises(UnsafeOptionError):
+            rw_repo.index.merge_tree("HEAD", base=unsafe_option)
 
     @with_rw_repo("0.1.6")
     def test_index_file_from_tree(self, rw_repo):
