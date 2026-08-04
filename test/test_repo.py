@@ -82,6 +82,33 @@ class TestRepo(TestBase):
         with tempfile.TemporaryDirectory() as tdir:
             self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
 
+    def test_init_rejects_unsafe_options(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            template_dir = osp.join(tdir, "template")
+            os.mkdir(template_dir)
+            unsafe_options = [
+                {"template": template_dir},
+                {"templa": template_dir},
+                {"separate_git_dir": osp.join(tdir, "git-dir")},
+                {"separate_git_di": osp.join(tdir, "git-dir")},
+            ]
+            for index, kwargs in enumerate(unsafe_options):
+                repo_dir = osp.join(tdir, f"repo-{index}")
+                with self.assertRaises(UnsafeOptionError):
+                    Repo.init(repo_dir, **kwargs)
+                assert not osp.exists(repo_dir)
+
+    def test_init_allows_explicitly_unsafe_options(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            template_dir = osp.join(tdir, "template")
+            os.mkdir(template_dir)
+            repo = Repo.init(
+                osp.join(tdir, "repo"),
+                template=template_dir,
+                allow_unsafe_options=True,
+            )
+            assert repo.git_dir
+
     @with_rw_directory
     def test_new_should_raise_on_invalid_repo_location_within_repo(self, rw_dir):
         repo_dir = osp.join(rw_dir, "repo")

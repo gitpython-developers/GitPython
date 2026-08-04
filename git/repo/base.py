@@ -142,6 +142,14 @@ class Repo:
     re_author_committer_start = re.compile(r"^(author|committer)")
     re_tab_full_line = re.compile(r"^\t(.*)$")
 
+    unsafe_git_init_options = [
+        # Can install hooks that execute during later Git commands:
+        "--template",
+        # Redirects the repository metadata to a caller-controlled path:
+        "--separate-git-dir",
+    ]
+    """Options to :manpage:`git-init(1)` that permit unsafe code execution or I/O."""
+
     unsafe_git_clone_options = [
         # Executes arbitrary commands:
         "--upload-pack",
@@ -1398,6 +1406,7 @@ class Repo:
         mkdir: bool = True,
         odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         expand_vars: bool = True,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         """Initialize a git repository at the given path if specified.
@@ -1422,6 +1431,10 @@ class Repo:
             information disclosure, allowing attackers to access the contents of
             environment variables.
 
+        :param allow_unsafe_options:
+            Allow unsafe options to be used, such as ``--template`` and
+            ``--separate-git-dir``.
+
         :param kwargs:
             Keyword arguments serving as additional options to the
             :manpage:`git-init(1)` command.
@@ -1429,6 +1442,11 @@ class Repo:
         :return:
             :class:`Repo` (the newly created repo)
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=cls.unsafe_git_init_options,
+            )
         if path:
             path = expand_path(path, expand_vars)
         if mkdir and path and not osp.exists(path):
