@@ -747,9 +747,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             prefix = "DRY-RUN: "
         # END handle prefix
 
-        # To keep things plausible in dry-run mode.
-        if dry_run:
-            mrepo = None
+        mrepo = None
         # END init mrepo
 
         def fetch_remotes(module_repo: "Repo") -> None:

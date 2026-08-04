@@ -994,6 +994,8 @@ class TestSubmodule(TestBase):
         assert not clone.submodule("../invalid").module_exists()
         assert clone.submodule("valid").module_exists()
 
+        clone.submodule("../invalid").update(recursive=True, keep_going=True)
+
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self, rwdir):
