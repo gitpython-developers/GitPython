@@ -971,6 +971,10 @@ class TestSubmodule(TestBase):
             with pytest.raises(ValueError, match="submodule name"):
                 Submodule._module_abspath(clone, "module", name)
 
+        with mock.patch.object(Submodule, "_need_gitfile_submodules", return_value=False):
+            with pytest.raises(ValueError, match="submodule name"):
+                Submodule._module_abspath(clone, "module", "../module")
+
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
     def test_root_update_keeps_going_after_invalid_submodule_name(self, rwdir):
