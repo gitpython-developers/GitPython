@@ -511,6 +511,9 @@ class TestSubmodule(TestBase):
         # Cannot set the parent commit as root module's path didn't exist.
         self.assertRaises(ValueError, rm.set_parent_commit, "HEAD")
 
+        with mock.patch.object(RootModule, "list_items", side_effect=ValueError("boom")):
+            rm.update(keep_going=True)
+
         # TEST UPDATE
         #############
         # Set up a commit that removes existing, adds new and modifies existing

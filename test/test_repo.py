@@ -337,6 +337,12 @@ class TestRepo(TestBase):
         self.rorepo.daemon_export = orig_val
         self.assertEqual(self.rorepo.daemon_export, orig_val)
 
+    def test_daemon_export_without_git_dir(self):
+        repo = Repo.__new__(Repo)
+        repo.git_dir = None
+        self.assertFalse(repo._get_daemon_export())
+        repo._set_daemon_export(True)
+
     def test_alternates(self):
         cur_alternates = self.rorepo.alternates
         try:

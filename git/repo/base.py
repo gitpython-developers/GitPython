@@ -933,13 +933,17 @@ class Repo:
             return False
 
     def _get_daemon_export(self) -> bool:
-        if self.git_dir:
-            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
+        git_dir = getattr(self, "git_dir", None)
+        if git_dir is None:
+            return False
+        filename = osp.join(git_dir, self.DAEMON_EXPORT_FILE)
         return osp.exists(filename)
 
     def _set_daemon_export(self, value: object) -> None:
-        if self.git_dir:
-            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
+        git_dir = getattr(self, "git_dir", None)
+        if git_dir is None:
+            return
+        filename = osp.join(git_dir, self.DAEMON_EXPORT_FILE)
         fileexists = osp.exists(filename)
         if value and not fileexists:
             touch(filename)
@@ -1279,6 +1283,7 @@ class Repo:
 
         keepends = True
         for line_bytes in data.splitlines(keepends):
+            line_str = ""
             try:
                 line_str = line_bytes.rstrip().decode(defenc)
             except UnicodeDecodeError:
@@ -1737,8 +1742,9 @@ class Repo:
 
             ``None`` if we are not currently rebasing.
         """
-        if self.git_dir:
-            rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
+        if not self.git_dir:
+            return None
+        rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
         if not osp.isfile(rebase_head_file):
             return None
         with open(rebase_head_file, "rt") as f:

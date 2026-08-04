@@ -327,6 +327,11 @@ class TestCommit(TestCommitSerialization):
         for sha1, commit in zip(expected_ids, commits):
             self.assertEqual(sha1, commit.hexsha)
 
+    def test_iter_from_invalid_process_or_stream(self):
+        for source, error in ((Mock(wait=Mock(), stdout=None), ValueError), (object(), TypeError)):
+            with self.assertRaises(error):
+                list(Commit._iter_from_process_or_stream(self.rorepo, source))
+
     @with_rw_directory
     def test_ambiguous_arg_iteration(self, rw_dir):
         rw_repo = Repo.init(osp.join(rw_dir, "test_ambiguous_arg"))

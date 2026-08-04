@@ -269,6 +269,7 @@ class RefLog(List[RefLogEntry], Serializable):
                 return RefLogEntry.from_line(fp.readlines()[index].strip())
             # Read until index is reached.
 
+            line = b""
             for i in range(index + 1):
                 line = fp.readline()
                 if not line:
