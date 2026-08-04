@@ -575,11 +575,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         if hasattr(proc_or_stream, "wait"):
             proc_or_stream = cast(Popen, proc_or_stream)
-            if proc_or_stream.stdout is not None:
-                stream = proc_or_stream.stdout
+            stream = proc_or_stream.stdout
+            if stream is None:
+                raise ValueError("Process has no stdout stream")
         elif hasattr(proc_or_stream, "readline"):
             proc_or_stream = cast(IO, proc_or_stream)  # type: ignore[redundant-cast]
             stream = proc_or_stream
+        else:
+            raise TypeError("Expected a process or stream")
 
         readline = stream.readline
         while True:

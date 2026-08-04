@@ -7,6 +7,7 @@ import logging
 
 import git
 from git.exc import InvalidGitRepositoryError
+from git.util import IterableList
 
 from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
@@ -19,7 +20,6 @@ from git.types import Commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.util import IterableList
 
 # ----------------------------------------------------------------------------
 
@@ -162,6 +162,7 @@ class RootModule(Submodule):
             prefix = "DRY-RUN: "
 
         repo = self.repo
+        sms: "IterableList[Submodule]" = IterableList("name")
 
         try:
             # SETUP BASE COMMIT
@@ -182,7 +183,7 @@ class RootModule(Submodule):
             # END handle previous commit
 
             psms: "IterableList[Submodule]" = self.list_items(repo, parent_commit=previous_commit)
-            sms: "IterableList[Submodule]" = self.list_items(repo)
+            sms = self.list_items(repo)
             spsms = set(psms)
             ssms = set(sms)
 
