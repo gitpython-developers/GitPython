@@ -2,6 +2,24 @@
 Changelog
 =========
 
+3.1.58
+======
+
+Security fixes for
+
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-hh9p-6wh2-4mfc
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-9rj7-rf2p-w77r
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-4gmw-gg2m-w46p
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-wvpp-8hx9-p66j
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-jm78-9fvv-mhgr
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-hmq2-w58f-27jc
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.58
+
 3.1.57
 ======
 
@@ -14,7 +32,7 @@ If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
 
 See the following for all changes.
-https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.57
 
 3.1.56
 ======
@@ -27,7 +45,7 @@ If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
 
 See the following for all changes.
-https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.56
 
 3.1.55
 ======
