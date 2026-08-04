@@ -212,6 +212,32 @@ class TestIndex(TestBase):
             rw_repo.index.checkout(prefix=f"{target}/", allow_unsafe_options=True)
             self.assertTrue(osp.isfile(osp.join(target, "CHANGES")))
 
+    @with_rw_repo("HEAD")
+    def test_remove_rejects_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
+            for option_name in ("pathspec_from_file", "pathspec_from"):
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.index.remove(
+                        [],
+                        pathspec_file_nul=True,
+                        **{option_name: str(pathspecs)},
+                    )
+
+    @with_rw_repo("HEAD")
+    def test_remove_allows_explicit_pathspec_from_file(self, rw_repo):
+        with tempfile.TemporaryDirectory() as tdir:
+            pathspecs = Path(tdir) / "pathspecs"
+            pathspecs.write_bytes(b"CHANGES\0")
+            removed = rw_repo.index.remove(
+                [],
+                pathspec_from_file=str(pathspecs),
+                pathspec_file_nul=True,
+                allow_unsafe_options=True,
+            )
+            assert "CHANGES" in removed
+
     def __init__(self, *args):
         super().__init__(*args)
         self._reset_progress()

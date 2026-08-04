@@ -215,6 +215,18 @@ class TestGit(TestBase):
 
         self.assertEqual(options, ["--max-count"])
 
+    def test_option_candidates_include_falsey_non_boolean_values(self):
+        kwargs = {"pathspec_from_file": 0}
+        candidates = Git._option_candidates(kwargs=kwargs)
+
+        self.assertEqual(candidates, ["--pathspec-from-file"])
+        self.assertEqual(self.git.transform_kwargs(**kwargs), ["--pathspec-from-file=0"])
+        with self.assertRaises(UnsafeOptionError):
+            Git.check_unsafe_options(
+                options=candidates,
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+            )
+
     def test_option_candidates_include_split_single_char_option_values(self):
         cases = [
             ({"n": "--upload-pack=helper"}, ["-n", "--upload-pack=helper"], ["--upload-pack"]),

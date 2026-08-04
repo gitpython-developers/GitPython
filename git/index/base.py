@@ -1024,6 +1024,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         self,
         items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]],
         working_tree: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> List[str]:
         R"""Remove the given items from the index and optionally from the working tree
@@ -1054,6 +1055,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             physically removing the respective file. This may fail if there are
             uncommitted changes in it.
 
+        :param allow_unsafe_options:
+            Allow unsafe options such as ``--pathspec-from-file`` to be passed to
+            :manpage:`git-rm(1)`.
+
         :param kwargs:
             Additional keyword arguments to be passed to :manpage:`git-rm(1)`, such as
             ``r`` to allow recursive removal.
@@ -1065,6 +1070,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             This is interesting to know in case you have provided a directory or globs.
             Paths are relative to the repository.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+            )
         args = []
         if not working_tree:
             args.append("--cached")

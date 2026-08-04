@@ -654,6 +654,12 @@ class Git(metaclass=_GitMeta):
         "--upload-pack",
     ]
 
+    unsafe_git_pathspec_from_file_options = [
+        # Reads pathspecs from a caller-controlled file. Some commands include an
+        # unmatched pathspec in their error output, which can disclose the file.
+        "--pathspec-from-file",
+    ]
+
     def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
