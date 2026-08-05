@@ -199,6 +199,19 @@ class Repo:
         "-o",
     ]
 
+    unsafe_git_blame_options = unsafe_git_revision_options + [
+        # These options read from arbitrary files and expose their contents through blame output.
+        "--contents",
+        "-S",
+        "--ignore-revs-file",
+    ]
+
+    unsafe_git_diff_options = unsafe_git_revision_options + [
+        # Reads caller-controlled order patterns from an arbitrary file.
+        "-O",
+        "--orderfile",
+    ]
+
     # Invariants
     config_level: ConfigLevels_Tup = ("system", "user", "global", "repository")
     """Represents the configuration level of a configuration file."""
@@ -1149,7 +1162,7 @@ class Repo:
             :manpage:`git-rev-parse(1)` is a valid option.
 
         :param allow_unsafe_options:
-            Allow unsafe options in revision argument, like ``--output``.
+            Allow unsafe options in revision argument, like ``--output`` or ``--contents``.
 
         :return:
             Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates the
@@ -1161,7 +1174,9 @@ class Repo:
         """
         if not allow_unsafe_options:
             Git.check_unsafe_options(
-                options=Git._option_candidates([rev], kwargs), unsafe_options=self.unsafe_git_revision_options
+                options=Git._option_candidates([rev], kwargs),
+                unsafe_options=self.unsafe_git_blame_options,
+                clusterable_short_options="46bceflnpqstvw",
             )
 
         data: bytes = self.git.blame(rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs)
@@ -1253,7 +1268,7 @@ class Repo:
             :manpage:`git-rev-parse(1)` is a valid option.
 
         :param allow_unsafe_options:
-            Allow unsafe options in revision argument, like ``--output``.
+            Allow unsafe options in revision argument, like ``--output`` or ``--contents``.
 
         :return:
             list: [git.Commit, list: [<line>]]
@@ -1269,7 +1284,8 @@ class Repo:
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([rev, rev_opts_list], kwargs),
-                unsafe_options=self.unsafe_git_revision_options,
+                unsafe_options=self.unsafe_git_blame_options,
+                clusterable_short_options="46bceflnpqstvw",
             )
         data: bytes = self.git.blame(rev, *rev_opts_list, "--", file, p=True, stdout_as_string=False, **kwargs)
         commits: Dict[str, Commit] = {}

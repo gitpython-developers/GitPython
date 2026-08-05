@@ -1567,7 +1567,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([other], kwargs),
-                unsafe_options=self.repo.unsafe_git_revision_options,
+                unsafe_options=self.repo.unsafe_git_diff_options,
+                clusterable_short_options="46abceflmnpqrstuvwzBCDMNRW",
             )
 
         # Only run if we are the default repository index.

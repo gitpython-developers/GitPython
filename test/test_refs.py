@@ -70,6 +70,21 @@ class TestRefs(TestBase):
                 with self.assertRaises(UnsafeOptionError):
                     TagReference.create(rw_repo, f"unsafe-{index}", **option)
 
+            for args in (
+                ("unsafe-reference", f"--file={message.name}"),
+                (f"--file={message.name}", "HEAD"),
+                (f"-eF{message.name}", "HEAD"),
+                (f"-iF{message.name}", "HEAD"),
+            ):
+                with self.assertRaises(UnsafeOptionError):
+                    TagReference.create(rw_repo, *args)
+
+            with self.assertRaises(UnsafeOptionError):
+                TagReference.create(rw_repo, "unsafe-ref-kwarg", ref=f"--file={message.name}")
+
+            tag = TagReference.create(rw_repo, "legacy-ref", ref="HEAD", allow_unsafe_options=True)
+            self.assertEqual(tag.commit, rw_repo.head.commit)
+
             tag = TagReference.create(rw_repo, "allowed-file", F=message.name, allow_unsafe_options=True)
             self.assertEqual(tag.tag.message, "private tag message")
 

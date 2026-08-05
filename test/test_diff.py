@@ -376,11 +376,25 @@ class TestDiff(TestBase):
     def test_diff_rejects_unsafe_output_options(self):
         commit = self.rorepo.head.commit
 
+        commit.diff(S="needle")
+
         calls = (
             lambda target: commit.diff(output=target),
             lambda target: commit.diff(other=f"--output={target}"),
+            lambda target: commit.diff(O=target),
+            lambda target: commit.diff(orderfile=target),
+            lambda target: commit.diff(other=f"--orderfile={target}"),
+            lambda target: commit.diff(other=f"-pO{target}"),
+            lambda target: commit.diff(other=f"-uO{target}"),
+            lambda target: commit.diff(other=f"-DO{target}"),
             lambda target: self.rorepo.index.diff(NULL_TREE, output=target),
             lambda target: self.rorepo.index.diff(f"--output={target}"),
+            lambda target: self.rorepo.index.diff(NULL_TREE, O=target),
+            lambda target: self.rorepo.index.diff(NULL_TREE, orderfile=target),
+            lambda target: self.rorepo.index.diff(f"--orderfile={target}"),
+            lambda target: self.rorepo.index.diff(f"-pO{target}"),
+            lambda target: self.rorepo.index.diff(f"-uO{target}"),
+            lambda target: self.rorepo.index.diff(f"-DO{target}"),
         )
         for index, call in enumerate(calls):
             target = osp.join(self.repo_dir, f"diff-output-{index}")
