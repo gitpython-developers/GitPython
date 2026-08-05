@@ -134,14 +134,16 @@ class TagReference(Reference):
         :return:
             A new :class:`TagReference`.
         """
+        legacy_ref = kwargs.pop("ref", None)
+        if legacy_ref:
+            reference = legacy_ref
+
         if not allow_unsafe_options:
             Git.check_unsafe_options(
-                options=Git._option_candidates([], kwargs),
+                options=Git._option_candidates([path, reference], kwargs),
                 unsafe_options=cls.unsafe_git_tag_options,
+                clusterable_short_options="46adefilnqsv",
             )
-
-        if "ref" in kwargs and kwargs["ref"]:
-            reference = kwargs["ref"]
 
         if "message" in kwargs and kwargs["message"]:
             kwargs["m"] = kwargs["message"]

@@ -1035,6 +1035,7 @@ class TestRemote(TestBase):
                 {"upload-pack": f"touch {tmp_file}"},
                 {"upload_pack": f"touch {tmp_file}"},
                 {"upl": f"touch {tmp_file}"},
+                {"exec": f"touch {tmp_file}"},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -1047,6 +1048,8 @@ class TestRemote(TestBase):
                 rw_repo.git.ls_remote(f"--upload-pack={tmp_file}", ".")
             with self.assertRaises(UnsafeOptionError):
                 rw_repo.git.ls_remote(f"--upl={tmp_file}", ".")
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.git.ls_remote(f"--exec={tmp_file}", ".")
             with self.assertRaises(UnsafeOptionError):
                 rw_repo.git.ls_remote("--upload-pack", "touch", ".")
             with self.assertRaises(UnsafeOptionError):

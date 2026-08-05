@@ -652,6 +652,7 @@ class Git(metaclass=_GitMeta):
     unsafe_git_ls_remote_options = [
         # This option allows arbitrary command execution in git-ls-remote.
         "--upload-pack",
+        "--exec",
     ]
 
     unsafe_git_pathspec_from_file_options = [
@@ -976,7 +977,9 @@ class Git(metaclass=_GitMeta):
         return dashify(option_tokens[0])
 
     @classmethod
-    def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
+    def check_unsafe_options(
+        cls, options: List[str], unsafe_options: List[str], clusterable_short_options: str = "46flnqsv"
+    ) -> None:
         """Raise :class:`~git.exc.UnsafeOptionError` for blocked option spellings.
 
         In addition to exact matches, this rejects abbreviated long options accepted
@@ -1011,7 +1014,7 @@ class Git(metaclass=_GitMeta):
         # These value-less Git flags can be clustered before another short option
         # (for example, ``-fuVALUE``). Stop at any other character because it may
         # begin an attached value, as ``o`` does in the safe option ``-oupstream``.
-        clusterable_short_options = frozenset("46flnqsv")
+        clusterable_short_options_set = frozenset(clusterable_short_options)
         options_are_kwargs = all(not option.startswith("-") for option in options)
         for option in options:
             candidate = cls._canonicalize_option_name(option)
@@ -1028,7 +1031,7 @@ class Git(metaclass=_GitMeta):
                         raise UnsafeOptionError(
                             f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
                         )
-                    if option_char not in clusterable_short_options:
+                    if option_char not in clusterable_short_options_set:
                         break
             if not (option.startswith("--") or (options_are_kwargs and len(candidate) > 1)):
                 continue
@@ -1133,7 +1136,7 @@ class Git(metaclass=_GitMeta):
         """List references in a remote repository.
 
         :param allow_unsafe_options:
-            Allow unsafe options, like ``--upload-pack``.
+            Allow unsafe options, like ``--upload-pack`` or ``--exec``.
         """
         if not allow_unsafe_options:
             candidate_options = self._option_candidates(args, kwargs)

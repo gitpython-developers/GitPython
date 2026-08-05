@@ -220,8 +220,8 @@ class Diffable:
             to be read and diffed.
 
         :param allow_unsafe_options:
-            If ``True``, allow options such as ``--output`` that can write to arbitrary
-            filesystem paths.
+            If ``True``, allow options such as ``--output`` and ``-O`` that can write to
+            or read from arbitrary filesystem paths.
 
         :param kwargs:
             Additional arguments passed to :manpage:`git-diff(1)`, such as ``R=True`` to
@@ -238,7 +238,8 @@ class Diffable:
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([other], kwargs),
-                unsafe_options=self.repo.unsafe_git_revision_options,
+                unsafe_options=self.repo.unsafe_git_diff_options,
+                clusterable_short_options="46abceflmnpqrstuvwzBCDMNRW",
             )
 
         args: List[Union[PathLike, Diffable]] = []

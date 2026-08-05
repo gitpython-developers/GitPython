@@ -590,8 +590,11 @@ class TestRepo(TestBase):
     def test_blame_rejects_unsafe_revision(self):
         with tempfile.TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
-            with self.assertRaises(UnsafeOptionError):
-                self.rorepo.blame(f"--output={output_marker}", "README.md")
+            for option in ("--output", "--contents", "-S", "-wS", "--ignore-revs-file"):
+                with self.assertRaises(UnsafeOptionError):
+                    self.rorepo.blame(f"{option}={output_marker}", "README.md")
+                with self.assertRaises(UnsafeOptionError):
+                    list(self.rorepo.blame_incremental(f"{option}={output_marker}", "README.md"))
             assert not osp.exists(output_marker)
 
     def test_blame_rejects_unsafe_options(self):
