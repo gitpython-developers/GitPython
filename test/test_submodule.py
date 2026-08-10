@@ -1208,6 +1208,22 @@ class TestSubmodule(TestBase):
         assert len(parent.submodules) == 0
 
     @with_rw_directory
+    def test_gitmodules_does_not_merge_includes(self, rwdir):
+        parent = git.Repo.init(rwdir)
+        secret_path = osp.join(rwdir, "secret")
+        with open(secret_path, "w", encoding="utf-8") as secret:
+            secret.write("not git config\n")
+        with open(osp.join(rwdir, ".gitmodules"), "w", encoding="utf-8") as modules:
+            modules.write('[submodule "module"]\n')
+            modules.write("\tpath = module\n")
+            modules.write("\turl = https://example.com/module.git\n")
+            modules.write("[include]\n")
+            modules.write("\tpath = %s\n" % secret_path)
+
+        parser = Submodule._config_parser(parent, None, read_only=True)
+        self.assertEqual(parser.get_value('submodule "module"', "path"), "module")
+
+    @with_rw_directory
     def test_remove_norefs(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         sm_name = "mymodules/myname"
