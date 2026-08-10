@@ -7,6 +7,7 @@ import glob
 import io
 import os
 import os.path as osp
+import subprocess
 import sys
 from unittest import mock
 
@@ -15,7 +16,6 @@ import pytest
 from git import GitConfigParser
 from git.config import _OMD, cp
 from git.util import cwd, rmfile
-
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
 _tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
@@ -149,6 +149,46 @@ class TestBase(TestCase):
 
         git_config = GitConfigParser(config_file)
         git_config.read()  # This should not throw an exception
+
+    @with_rw_directory
+    def test_rewriting_multiline_value_does_not_create_option(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(b'[core]\n\tzzz = "A\\nhooksPath = ../evil-hooks\\\n"\n')
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            self.assertEqual(git_config.get_value("core", "zzz"), "A\nhooksPath = ../evil-hooks")
+            git_config.set_value("user", "name", "Test User")
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            self.assertEqual(git_config.get_value("core", "zzz"), "A\nhooksPath = ../evil-hooks")
+            self.assertFalse(git_config.has_option("core", "hooksPath"))
+        self.assertEqual(
+            subprocess.run(["git", "config", "--file", config_path, "--get", "core.hooksPath"]).returncode, 1
+        )
+
+    @with_rw_directory
+    def test_writer_escapes_special_characters_without_newline(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        values = {"tab": "\tvalue\t", "backspace": "a\bb", "quote": 'a"b', "backslash": "a\\qb"}
+
+        with GitConfigParser(config_path, read_only=False) as git_config:
+            for key, value in values.items():
+                git_config.set_value("section", key, value)
+
+        with GitConfigParser(config_path, read_only=True) as git_config:
+            for key, value in values.items():
+                self.assertEqual(git_config.get_value("section", key), value)
+                self.assertEqual(
+                    subprocess.run(
+                        ["git", "config", "--file", config_path, "--get", "section.%s" % key],
+                        stdout=subprocess.PIPE,
+                        check=True,
+                    ).stdout,
+                    value.encode() + b"\n",
+                )
+        with open(config_path, "rb") as config_file:
+            self.assertNotIn(b"\x08", config_file.read())
 
     @with_rw_directory
     def test_set_value_rejects_config_injection(self, rw_dir):

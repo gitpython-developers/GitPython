@@ -705,7 +705,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     continue
 
                 for v in values:
-                    fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace("\n", "\n\t"))).encode(defenc))
+                    value = self._value_to_string(v)
+                    if any(char in value for char in '\n\t\b\\"'):
+                        value = value.replace("\\", "\\\\").replace('"', '\\"')
+                        value = '"%s\\\n"' % value.replace("\n", "\\n").replace("\t", "\\t").replace("\b", "\\b")
+                    fp.write(("\t%s = %s\n" % (key, value)).encode(defenc))
                 # END if key is not __name__
 
         # END section writing
