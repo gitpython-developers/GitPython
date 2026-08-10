@@ -271,7 +271,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             raise ValueError("Cannot write blobs of 'historical' submodule configurations")
         # END handle writes of historical submodules
 
-        return SubmoduleConfigParser(fp_module, read_only=read_only)
+        return SubmoduleConfigParser(fp_module, read_only=read_only, merge_includes=False)
 
     def _clear_cache(self) -> None:
         """Clear the possibly changed values."""
