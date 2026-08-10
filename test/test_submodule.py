@@ -954,6 +954,7 @@ class TestSubmodule(TestBase):
             source.working_tree_dir,
             osp.join(clone.working_tree_dir, "module"),
             separate_git_dir=osp.join(rwdir, "escaped", "module"),
+            allow_unsafe_options=True,
         )
         with pytest.raises(ValueError, match="submodule name"):
             clone.submodules[0].update(init=True)

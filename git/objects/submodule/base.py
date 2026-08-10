@@ -9,6 +9,7 @@ import logging
 import ntpath
 import os
 import os.path as osp
+import shlex
 import stat
 import sys
 import uuid
@@ -363,6 +364,15 @@ class Submodule(IndexObject, TraversableIterableObj):
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
         if cls._need_gitfile_submodules(repo.git):
+            if not allow_unsafe_options:
+                Git.check_unsafe_options(Git._option_candidates([], kwargs), repo.unsafe_git_clone_options)
+                multi_options = kwargs.get("multi_options")
+                if multi_options:
+                    Git.check_unsafe_options(
+                        shlex.split(" ".join(cast("Sequence[str]", multi_options))),
+                        repo.unsafe_git_clone_options,
+                    )
+            allow_unsafe_options = True
             kwargs["separate_git_dir"] = module_abspath
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):

@@ -159,6 +159,8 @@ class Repo:
         "-c",
         # Can install hooks that execute during clone:
         "--template",
+        # Redirects the repository metadata to a caller-controlled path:
+        "--separate-git-dir",
         # Fetches from an additional caller-controlled URI:
         "--bundle-uri",
     ]
