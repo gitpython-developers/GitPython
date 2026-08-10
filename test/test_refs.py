@@ -26,7 +26,7 @@ from git import (
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
 import git.refs as refs
-from git.util import Actor
+from git.util import Actor, rmtree
 
 from test.lib import TestBase, requires_symlinks, with_rw_repo, PathLikeMock
 
@@ -43,6 +43,7 @@ class TestRefs(TestBase):
             yield repo
         finally:
             repo.git.clear_cache()
+            rmtree(repo_dir)
 
     def test_from_path(self):
         # Should be able to create any reference directly.

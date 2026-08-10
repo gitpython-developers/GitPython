@@ -5,10 +5,14 @@
 
 __all__ = ["GitCmdObjectDB", "GitDB"]
 
-from gitdb.base import OInfo, OStream
+from subprocess import PIPE
+
+from gitdb.base import IStream, OInfo, OStream
 from gitdb.db import GitDB, LooseObjectDB
 from gitdb.exc import BadObject
+from gitdb.fun import stream_copy
 
+from git.compat import force_text
 from git.util import bin_to_hex, hex_to_bin
 from git.exc import GitCommandError
 
@@ -45,6 +49,25 @@ class GitCmdObjectDB(LooseObjectDB):
         """Get git object data as a stream supporting ``read()`` (using git itself)."""
         hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(binsha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
+
+    def store(self, istream: IStream) -> IStream:
+        """Store an object using git itself."""
+        if istream.binsha is not None or self.ostream() is not None:
+            return super().store(istream)
+
+        proc = self._git.hash_object(
+            "-t", force_text(istream.type), "-w", "--stdin", "--literally", as_process=True, istream=PIPE
+        )
+        assert proc.stdin is not None
+        try:
+            stream_copy(istream.read, proc.stdin.write, istream.size, self.stream_chunk_size)
+        finally:
+            proc.stdin.close()
+        assert proc.stdout is not None
+        hexsha = proc.stdout.read().strip()
+        proc.wait()
+        istream.binsha = hex_to_bin(hexsha)
+        return istream
 
     # { Interface
 
