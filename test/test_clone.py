@@ -133,6 +133,7 @@ class TestClone(TestBase):
                 "-vcprotocol.ext.allow=always",
                 f"--template={tmp_dir}",
                 f"--bundle-uri=file://{tmp_dir}",
+                f"--separate-git-dir={tmp_dir / 'git-dir'}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -149,6 +150,7 @@ class TestClone(TestBase):
                 {"c": "protocol.ext.allow=always"},
                 {"template": tmp_dir},
                 {"bundle_uri": f"file://{tmp_dir}"},
+                {"separate_git_dir": tmp_dir / "git-dir"},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -258,6 +260,7 @@ class TestClone(TestBase):
                 "-c protocol.ext.allow=always",
                 "-cprotocol.ext.allow=always",
                 "-vcprotocol.ext.allow=always",
+                f"--separate-git-dir={tmp_dir / 'git-dir'}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -270,6 +273,7 @@ class TestClone(TestBase):
                 {"u": f"touch {tmp_file}"},
                 {"config": "protocol.ext.allow=always"},
                 {"c": "protocol.ext.allow=always"},
+                {"separate_git_dir": tmp_dir / "git-dir"},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
