@@ -462,7 +462,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 v = v[:-1]
             # END cut trailing escapes to prevent decode error
 
-            return v.encode(defenc).decode("unicode_escape")
+            escapes = {"b": "\b", "n": "\n", "r": "\r", "t": "\t", '"': '"', "\\": "\\"}
+            return re.sub(r"\\(.)", lambda match: escapes.get(match.group(1), match.group(0)), v)
 
         # END string_decode
 
@@ -517,10 +518,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
                         optval = string_decode(optval[1:])
-                    elif optval.find("\\", 1, -1) == -1 and optval.find('"', 1, -1) == -1:
-                        # Opens and closes quoting. Single line, and all we need is quote removal.
-                        optval = optval[1:-1]
-                    # TODO: Handle other quoted content, especially well-formed backslash escapes.
+                    elif re.search(r'(?:^|[^\\])(?:\\\\)*"', optval[1:-1]):
+                        # Preserve malformed values containing unescaped quotes.
+                        pass
+                    else:
+                        # Opens and closes quoting.
+                        optval = string_decode(optval[1:-1])
 
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
@@ -706,7 +709,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
                 for v in values:
                     value = self._value_to_string(v)
-                    if any(char in value for char in '\n\t\b\\"'):
+                    if any(char in value for char in '\n\t\b\\"#;') or value[:1].isspace() or value[-1:].isspace():
                         value = value.replace("\\", "\\\\").replace('"', '\\"')
                         value = '"%s\\\n"' % value.replace("\n", "\\n").replace("\t", "\\t").replace("\b", "\\b")
                     fp.write(("\t%s = %s\n" % (key, value)).encode(defenc))
@@ -767,6 +770,20 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             )
             return
         # END stop if we have include files
+
+        sections: List[_OMD] = [self._defaults]
+        section: _OMD
+        stored_section: _OMD
+        values: List[Any]
+        raw_value: Any
+        for _, stored_section in self._sections.items():
+            sections.append(stored_section)
+        for section in sections:
+            for key, values in section.items_all():
+                if key != "__name__":
+                    for raw_value in values:
+                        if "\r" in self._value_to_string(raw_value) or "\x00" in self._value_to_string(raw_value):
+                            raise ValueError("Git config values must not contain CR or NUL")
 
         fp = self._file_or_files
 
