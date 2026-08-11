@@ -858,10 +858,6 @@ class Actor:
     committers and authors or anything with a name and an email as mentioned in the git
     log entries."""
 
-    # PRECOMPILED REGEX
-    name_only_regex = re.compile(r"<(.*)>")
-    name_email_regex = re.compile(r"(.*) <(.*?)>")
-
     # ENVIRONMENT VARIABLES
     # These are read when creating new commits.
     env_author_name = "GIT_AUTHOR_NAME"
@@ -906,18 +902,14 @@ class Actor:
         :return:
             :class:`Actor`
         """
-        m = cls.name_email_regex.search(string)
-        if m:
-            name, email = m.groups()
-            return Actor(name, email)
-        else:
-            m = cls.name_only_regex.search(string)
-            if m:
-                return Actor(m.group(1), None)
-            # Assume the best and use the whole string as name.
-            return Actor(string, None)
-            # END special case name
-        # END handle name/email matching
+        line = string.partition("\n")[0]
+        left_bracket = line.find("<")
+        right_bracket = line.find(">", left_bracket + 1)
+        if left_bracket >= 0 and right_bracket >= 0:
+            return Actor(line[:left_bracket].rstrip(), line[left_bracket + 1 : right_bracket])
+
+        # Assume the best and use the whole string as name.
+        return Actor(string, None)
 
     @classmethod
     def _main_actor(
