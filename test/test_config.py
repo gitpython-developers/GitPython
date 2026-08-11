@@ -14,6 +14,7 @@ from unittest import mock
 import pytest
 
 from git import GitConfigParser
+from git.compat import defenc
 from git.config import _OMD, cp
 from git.util import cwd, rmfile
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
@@ -170,7 +171,16 @@ class TestBase(TestCase):
     @with_rw_directory
     def test_writer_escapes_special_characters_without_newline(self, rw_dir):
         config_path = osp.join(rw_dir, "config")
-        values = {"tab": "\tvalue\t", "backspace": "a\bb", "quote": 'a"b', "backslash": "a\\qb"}
+        values = {
+            "tab": "\tvalue\t",
+            "backspace": "a\bb",
+            "quote": 'a"b',
+            "backslash": "a\\qb",
+            "hash": "value#fragment",
+            "semicolon": "value;fragment",
+            "leading": " value",
+            "trailing": "value ",
+        }
 
         with GitConfigParser(config_path, read_only=False) as git_config:
             for key, value in values.items():
@@ -185,10 +195,71 @@ class TestBase(TestCase):
                         stdout=subprocess.PIPE,
                         check=True,
                     ).stdout,
-                    value.encode() + b"\n",
+                    value.encode(defenc) + b"\n",
                 )
         with open(config_path, "rb") as config_file:
             self.assertNotIn(b"\x08", config_file.read())
+
+    @with_rw_directory
+    def test_writer_preserves_escaped_and_non_ascii_values_safely(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(
+                (
+                    '[section]\nnewline = "first\\nsecond"\nquote = "a\\"b"\nbackslash = "a\\\\b"\n'
+                    'unicode = "café\\\\path"\n'
+                ).encode(defenc)
+            )
+
+        with GitConfigParser(config_path, read_only=False) as config:
+            config.set_value("unrelated", "key", "value")
+
+        expected = {
+            "newline": "first\nsecond",
+            "quote": 'a"b',
+            "backslash": "a\\b",
+            "unicode": "café\\path",
+        }
+        with GitConfigParser(config_path, read_only=True) as config:
+            for key, value in expected.items():
+                self.assertEqual(
+                    config.get_value("section", key),
+                    value,
+                    "GitPython should preserve values when rewriting unrelated entries",
+                )
+                self.assertEqual(
+                    subprocess.run(
+                        ["git", "config", "--file", config_path, "--get", "section.%s" % key],
+                        stdout=subprocess.PIPE,
+                        check=True,
+                    ).stdout,
+                    value.encode(defenc) + b"\n",
+                    "git should read rewritten values with the same semantics",
+                )
+
+        with open(config_path, "rb") as config_file:
+            contents = config_file.read()
+        self.assertNotIn(b"\r", contents, "the writer should never emit carriage returns")
+        self.assertNotIn(b"\x00", contents, "the writer should never emit NUL bytes")
+
+        for name, value in (("return", b"first\\rsecond"), ("nul", b"first\x00second")):
+            unsafe_path = osp.join(rw_dir, "%s-config" % name)
+            unsafe_contents = b'[section]\nvalue = "' + value + b'"\n'
+            with open(unsafe_path, "wb") as config_file:
+                config_file.write(unsafe_contents)
+            with self.assertRaisesRegex(
+                ValueError,
+                "CR or NUL",
+                msg="unsafe existing values should abort rewrites",
+            ):
+                with GitConfigParser(unsafe_path, read_only=False) as config:
+                    config.set_value("unrelated", "key", "value")
+            with open(unsafe_path, "rb") as config_file:
+                self.assertEqual(
+                    config_file.read(),
+                    unsafe_contents,
+                    "rejected rewrites should leave the original file unchanged",
+                )
 
     @with_rw_directory
     def test_set_value_rejects_config_injection(self, rw_dir):
@@ -745,15 +816,14 @@ class TestBase(TestCase):
         self.assertEqual(cr.get("init", "defaultBranch"), "trunk")
 
     def test_config_with_quotes_containing_escapes(self):
-        """For now just suppress quote removal. But it would be good to interpret most of these."""
+        """Interpret Git's quoted escapes without changing malformed values."""
         cr = GitConfigParser(fixture_path("git_config_with_quotes_escapes"), read_only=True)
 
-        # These can eventually be supported by substituting the represented character.
-        self.assertEqual(cr.get("custom", "hasnewline"), R'"first\nsecond"')
-        self.assertEqual(cr.get("custom", "hasbackslash"), R'"foo\\bar"')
-        self.assertEqual(cr.get("custom", "hasquote"), R'"ab\"cd"')
-        self.assertEqual(cr.get("custom", "hastrailingbackslash"), R'"word\\"')
-        self.assertEqual(cr.get("custom", "hasunrecognized"), R'"p\qrs"')
+        self.assertEqual(cr.get("custom", "hasnewline"), "first\nsecond")
+        self.assertEqual(cr.get("custom", "hasbackslash"), R"foo\bar")
+        self.assertEqual(cr.get("custom", "hasquote"), 'ab"cd')
+        self.assertEqual(cr.get("custom", "hastrailingbackslash"), "word\\")
+        self.assertEqual(cr.get("custom", "hasunrecognized"), R"p\qrs")
 
         # It is less obvious whether and what to eventually do with this.
         self.assertEqual(cr.get("custom", "hasunescapedquotes"), '"ab"cd"e"')
