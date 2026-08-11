@@ -14,6 +14,7 @@ import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
+from git.diff import decode_path
 from git.exc import UnsafeOptionError
 
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
@@ -323,6 +324,11 @@ class TestDiff(TestBase):
             diff_proc = StringProcessAdapter(fixture(fixture_name))
             Diff._index_from_patch_format(self.rorepo, diff_proc)
         # END for each fixture
+
+    def test_decode_path_distinguishes_escaped_backslashes_from_octal_bytes(self):
+        self.assertEqual(decode_path(b'"foo\\\\899bar"', False), b"foo\\899bar")
+        self.assertEqual(decode_path(b'"foo\\\\123bar"', False), b"foo\\123bar")
+        self.assertEqual(decode_path(b'"foo\\123bar"', False), b"fooSbar")
 
     def test_diff_with_spaces(self):
         data = StringProcessAdapter(fixture("diff_file_with_spaces"))
