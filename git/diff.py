@@ -95,14 +95,35 @@ This is an alias of :const:`DiffConstants.INDEX`, which may also be accessed as
 :const:`git.INDEX` and :const:`Diffable.INDEX`, as well as :const:`Diffable.Index`.
 """
 
-_octal_byte_re = re.compile(rb"\\([0-9]{3})")
 
-
-def _octal_repl(matchobj: Match) -> bytes:
-    value = matchobj.group(1)
-    value = int(value, 8)
-    value = bytes(bytearray((value,)))
-    return value
+def _unquote_path(path: bytes) -> bytes:
+    result = bytearray()
+    escapes = {
+        ord("a"): 7,
+        ord("b"): 8,
+        ord("f"): 12,
+        ord("n"): 10,
+        ord("r"): 13,
+        ord("t"): 9,
+        ord("v"): 11,
+    }
+    i = 0
+    while i < len(path):
+        if path[i] != ord("\\") or i + 1 == len(path):
+            result.append(path[i])
+            i += 1
+            continue
+        if path[i + 1] in b"0123" and i + 3 < len(path) and all(c in b"01234567" for c in path[i + 2 : i + 4]):
+            result.append(int(path[i + 1 : i + 4], 8))
+            i += 4
+            continue
+        escaped = path[i + 1]
+        if escaped in escapes or escaped in b'\\"':
+            result.append(escapes.get(escaped, escaped))
+        else:
+            result.extend(path[i : i + 2])
+        i += 2
+    return bytes(result)
 
 
 def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
@@ -110,9 +131,7 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
         return None
 
     if path.startswith(b'"') and path.endswith(b'"'):
-        path = path[1:-1].replace(b"\\n", b"\n").replace(b"\\t", b"\t").replace(b'\\"', b'"').replace(b"\\\\", b"\\")
-
-    path = _octal_byte_re.sub(_octal_repl, path)
+        path = _unquote_path(path[1:-1])
 
     if has_ab_prefix:
         assert path.startswith(b"a/") or path.startswith(b"b/")
