@@ -893,3 +893,37 @@ class TestRefs(TestBase):
 
         # Valid reference name should not raise.
         check_ref("valid/ref/name")
+
+    def test_packed_refs_with_non_utf8_ref_name_does_not_raise(self):
+        # See: https://github.com/gitpython-developers/GitPython/issues/2064
+        #
+        # Tag (and other) ref names stored in .git/packed-refs are arbitrary byte
+        # strings as far as Git is concerned - they are not guaranteed to be valid
+        # UTF-8. Iterating packed refs must not raise UnicodeDecodeError just because
+        # one of the packed ref names happens to contain non-UTF-8 bytes.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            base_dir = Path(tmp_dir)
+            with self._repo_with_initial_commit(base_dir) as repo:
+                sha = repo.head.commit.hexsha
+
+                # A normal, valid-UTF-8 tag, packed alongside the problematic one.
+                good_tag_ref = b"refs/tags/good-tag"
+                # A tag name containing a byte sequence that is not valid UTF-8
+                # (0xE9 here is not a valid standalone/leading UTF-8 byte in this
+                # position), similar to what `git pack-refs` can legitimately
+                # produce for a non-UTF-8 ref name.
+                bad_tag_ref = b"refs/tags/release-\xe9tage"
+
+                packed_refs_path = Path(repo.common_dir) / "packed-refs"
+                with open(packed_refs_path, "wb") as f:
+                    f.write(b"# pack-refs with: peeled fully-peeled sorted\n")
+                    f.write(sha.encode("ascii") + b" " + good_tag_ref + b"\n")
+                    f.write(sha.encode("ascii") + b" " + bad_tag_ref + b"\n")
+
+                # Must not raise UnicodeDecodeError.
+                tags = repo.tags
+
+                tag_names = {t.name.encode("utf-8", "surrogateescape") for t in tags}
+                assert b"good-tag" in tag_names
+                assert b"release-\xe9tage" in tag_names
+                assert len(tags) == 2
