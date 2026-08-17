@@ -209,6 +209,8 @@ class Repo:
     ]
 
     unsafe_git_diff_options = unsafe_git_revision_options + [
+        # Treats path operands as arbitrary filesystem paths.
+        "--no-index",
         # Reads caller-controlled order patterns from an arbitrary file.
         "-O",
         "--orderfile",
