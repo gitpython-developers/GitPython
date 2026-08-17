@@ -239,8 +239,8 @@ class Diffable:
             to be read and diffed.
 
         :param allow_unsafe_options:
-            If ``True``, allow options such as ``--output`` and ``-O`` that can write to
-            or read from arbitrary filesystem paths.
+            If ``True``, allow options such as ``--output``, ``--no-index``, and ``-O``
+            that can write to or read from arbitrary filesystem paths.
 
         :param kwargs:
             Additional arguments passed to :manpage:`git-diff(1)`, such as ``R=True`` to

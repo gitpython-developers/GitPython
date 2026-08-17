@@ -412,6 +412,17 @@ class TestDiff(TestBase):
         commit.diff(output=allowed_target, allow_unsafe_options=True)
         self.assertTrue(osp.isfile(allowed_target))
 
+    def test_diff_rejects_no_index(self):
+        calls = (
+            lambda: self.rorepo.head.commit.diff(no_index=True),
+            lambda: self.rorepo.head.commit.diff(other="--no-index"),
+            lambda: self.rorepo.index.diff(None, no_index=True),
+            lambda: self.rorepo.index.diff("--no-index"),
+        )
+        for call in calls:
+            with self.assertRaises(UnsafeOptionError):
+                call()
+
     def test_diff_interface(self):
         """Test a few variations of the main diff routine."""
         assertion_map = {}
