@@ -149,9 +149,18 @@ class SymbolicReference:
             The packed refs file will be kept open as long as we iterate.
         """
         try:
-            with open(cls._get_packed_refs_path(repo), "rt", encoding="UTF-8") as fp:
-                for line in fp:
-                    line = line.strip()
+            # Read in binary mode and decode leniently: ref names packed by `git
+            # pack-refs` are arbitrary byte strings and are not guaranteed to be valid
+            # UTF-8 (see e.g. core.precomposeUnicode-unaffected filesystems, or refs
+            # created on a system with a different locale). Decoding strictly as UTF-8
+            # would raise UnicodeDecodeError and make the entire packed-refs file
+            # unreadable because of a single such ref. Use the same lenient
+            # byte<->str roundtrip ("surrogateescape") already used elsewhere in
+            # GitPython (see :func:`git.compat.safe_decode`) so that such refs are
+            # preserved rather than crashing iteration.
+            with open(cls._get_packed_refs_path(repo), "rb") as fp:
+                for line_bytes in fp:
+                    line = line_bytes.decode(defenc, "surrogateescape").strip()
                     if not line:
                         continue
                     if line.startswith("#"):
