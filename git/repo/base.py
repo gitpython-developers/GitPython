@@ -45,7 +45,6 @@ from git.util import (
 
 from .fun import (
     find_submodule_git_dir,
-    find_worktree_git_dir,
     is_git_dir,
     rev_parse,
     touch,
@@ -234,6 +233,10 @@ class Repo:
     ) -> None:
         R"""Create a new :class:`Repo` instance.
 
+        .. note::
+            Repositories using reftable may be opened, but GitPython's direct reference
+            access does not support reftable.
+
         :param path:
             The path to either the worktree directory or the .git directory itself::
 
@@ -268,7 +271,11 @@ class Repo:
             :class:`Repo`
         """
 
-        epath = path or os.getenv("GIT_DIR")
+        git_dir_env = os.getenv("GIT_DIR")
+        object_dir_env = os.getenv("GIT_OBJECT_DIRECTORY")
+        if object_dir_env is not None:
+            object_dir_env = osp.abspath(object_dir_env)
+        epath = path or git_dir_env
         if not epath:
             epath = os.getcwd()
         epath = os.fspath(epath)
@@ -290,37 +297,48 @@ class Repo:
                 raise NoSuchPathError(epath)
 
         # Walk up the path to find the `.git` dir.
-        curpath = epath
-        git_dir = None
+        curpath = os.fspath(epath) if epath is not None else ""
+        git_dir: Optional[str] = None
+        explicit_git_dir = not path and bool(git_dir_env)
         while curpath:
             # ABOUT osp.NORMPATH
             # It's important to normalize the paths, as submodules will otherwise
             # initialize their repo instances with paths that depend on path-portions
             # that will not exist after being removed. It's just cleaner.
-            if (
-                osp.isfile(osp.join(curpath, "gitdir"))
-                and osp.isfile(osp.join(curpath, "commondir"))
-                and osp.isfile(osp.join(curpath, "HEAD"))
-            ):
-                git_dir = curpath
+            if not explicit_git_dir:
+                dotgit = osp.join(curpath, ".git")
+                try:
+                    sm_gitpath = find_submodule_git_dir(dotgit)
+                except OSError:
+                    break
+                if sm_gitpath is not None:
+                    # Worktrees can use relative paths as of Git 2.48, so join to curpath.
+                    git_dir = osp.normpath(osp.join(curpath, os.fspath(sm_gitpath)))
+                    self._working_tree_dir = curpath
+                    break
 
-                if "GIT_WORK_TREE" in os.environ:
-                    self._working_tree_dir = os.getenv("GIT_WORK_TREE")
-                else:
-                    # Linked worktree administrative directories store the path to the
-                    # worktree's .git file in their gitdir file (without "gitdir: " prefix).
-                    with open(osp.join(git_dir, "gitdir")) as fp:
-                        worktree_gitfile = fp.read().strip()
-
-                    if not osp.isabs(worktree_gitfile):
-                        worktree_gitfile = osp.normpath(osp.join(git_dir, worktree_gitfile))
-
-                    self._working_tree_dir = osp.dirname(worktree_gitfile)
-
-                break
+                # Like Git, do not fall back to a bare repository or parent directory when
+                # a non-directory .git entry exists but is not a valid gitfile.
+                if osp.exists(dotgit) and not osp.isdir(dotgit):
+                    break
 
             if is_git_dir(curpath):
                 git_dir = curpath
+                if osp.isfile(osp.join(curpath, "gitdir")) and osp.isfile(osp.join(curpath, "commondir")):
+                    if "GIT_WORK_TREE" in os.environ:
+                        self._working_tree_dir = os.getenv("GIT_WORK_TREE")
+                    else:
+                        # Linked worktree administrative directories store the path to
+                        # the worktree's .git file in gitdir (without a "gitdir: " prefix).
+                        with open(osp.join(git_dir, "gitdir")) as fp:
+                            worktree_gitfile = fp.read().strip()
+
+                        if not osp.isabs(worktree_gitfile):
+                            worktree_gitfile = osp.normpath(osp.join(git_dir, worktree_gitfile))
+
+                        self._working_tree_dir = osp.dirname(worktree_gitfile)
+                    break
+
                 # from man git-config : core.worktree
                 # Set the path to the root of the working tree. If GIT_COMMON_DIR
                 # environment variable is set, core.worktree is ignored and not used for
@@ -340,22 +358,7 @@ class Repo:
                     self._working_tree_dir = os.getenv("GIT_WORK_TREE")
                 break
 
-            dotgit = osp.join(curpath, ".git")
-            sm_gitpath = find_submodule_git_dir(dotgit)
-            if sm_gitpath is not None:
-                git_dir = osp.normpath(sm_gitpath)
-
-            sm_gitpath = find_submodule_git_dir(dotgit)
-            if sm_gitpath is None:
-                sm_gitpath = find_worktree_git_dir(dotgit)
-
-            if sm_gitpath is not None:
-                # worktrees can use relative paths as of Git 2.48, so we join to curpath
-                git_dir = osp.normpath(osp.join(curpath, sm_gitpath))
-                self._working_tree_dir = curpath
-                break
-
-            if not search_parent_directories:
+            if explicit_git_dir or not search_parent_directories:
                 break
             curpath, tail = osp.split(curpath)
             if not tail:
@@ -366,18 +369,22 @@ class Repo:
             raise InvalidGitRepositoryError(epath)
         self.git_dir = git_dir
 
+        common_dir_env = os.getenv("GIT_COMMON_DIR")
+        if common_dir_env is not None:
+            self._common_dir = osp.abspath(common_dir_env)
+        else:
+            try:
+                common_dir = os.fsdecode((Path(self.git_dir) / "commondir").read_bytes()).rstrip("\r\n")
+                self._common_dir = osp.join(self.git_dir, common_dir)
+            except OSError:
+                self._common_dir = ""
+
         self._bare = False
         try:
             self._bare = self.config_reader("repository").getboolean("core", "bare")
         except Exception:
             # Let's not assume the option exists, although it should.
             pass
-
-        try:
-            common_dir = (Path(self.git_dir) / "commondir").read_text().splitlines()[0].strip()
-            self._common_dir = osp.join(self.git_dir, common_dir)
-        except OSError:
-            self._common_dir = ""
 
         # Adjust the working directory in case we are actually bare - we didn't know
         # that in the first place.
@@ -387,9 +394,15 @@ class Repo:
 
         self.working_dir: PathLike = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
+        if common_dir_env is not None:
+            self.git.update_environment(GIT_DIR=os.fspath(self.git_dir), GIT_COMMON_DIR=os.fspath(self.common_dir))
+        elif git_dir_env is not None:
+            self.git.update_environment(GIT_DIR=os.fspath(self.git_dir))
+        if object_dir_env is not None:
+            self.git.update_environment(GIT_OBJECT_DIRECTORY=object_dir_env)
 
         # Special handling, in special times.
-        rootpath = osp.join(self.common_dir, "objects")
+        rootpath = object_dir_env if object_dir_env is not None else osp.join(self.common_dir, "objects")
         if issubclass(odbt, GitCmdObjectDB):
             self.odb = odbt(rootpath, self.git)
         else:
@@ -990,7 +1003,7 @@ class Repo:
         :return:
             List of strings being pathnames of alternates
         """
-        alternates_path = osp.join(self.common_dir, "objects", "info", "alternates")
+        alternates_path = osp.join(self.odb.root_path(), "info", "alternates")
 
         if osp.exists(alternates_path):
             with open(alternates_path, "rb") as f:
@@ -1011,7 +1024,7 @@ class Repo:
             The method does not check for the existence of the paths in `alts`, as the
             caller is responsible.
         """
-        alternates_path = osp.join(self.common_dir, "objects", "info", "alternates")
+        alternates_path = osp.join(self.odb.root_path(), "info", "alternates")
         if not alts:
             if osp.isfile(alternates_path):
                 os.remove(alternates_path)
