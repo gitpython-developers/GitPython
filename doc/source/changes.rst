@@ -9,6 +9,7 @@ Security fixes for
 
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-g5vv-9gxw-82hx
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-whh4-5q6c-9v3x
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-239g-whfq-7xj9
 
 If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.

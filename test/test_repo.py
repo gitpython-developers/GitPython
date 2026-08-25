@@ -40,7 +40,8 @@ from git import (
 from git.exc import UnsafeOptionError
 from git.exc import UnsafeProtocolError
 from git.exc import BadObject
-from git.repo.fun import touch
+from git.exc import WorkTreeRepositoryUnsupported
+from git.repo.fun import find_worktree_git_dir, touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
 
 from test.lib import TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo, PathLikeMock
@@ -121,6 +122,178 @@ class TestRepo(TestBase):
         with tempfile.TemporaryDirectory() as tdir:
             nonexistent = osp.join(tdir, "foobar")
             self.assertRaises(NoSuchPathError, Repo, nonexistent)
+
+    def test_repo_discovery_prefers_dotgit(self):
+        layouts = {
+            "linked-worktree": {
+                "gitdir": ".git\n",
+                "commondir": ".git\n",
+                "HEAD": "ref: refs/heads/main\n",
+            },
+            "bare": {"objects": None, "refs": None, "HEAD": "ref: refs/heads/main\n"},
+        }
+
+        with tempfile.TemporaryDirectory() as tdir:
+            for name, entries in layouts.items():
+                path = Path(tdir) / name
+                Repo.init(path).close()
+                for entry, contents in entries.items():
+                    item = path / entry
+                    if contents is None:
+                        item.mkdir()
+                    else:
+                        item.write_text(contents)
+
+                with self.subTest(layout=name):
+                    expected_git_dir = Git(path).rev_parse("--absolute-git-dir")
+                    assert osp.samefile(Repo(path).git_dir, expected_git_dir)
+
+    def test_repo_discovery_honors_explicit_git_dir(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            git_dir = Path(tdir) / "repo.git"
+            Repo.init(git_dir, bare=True).close()
+            Repo.init(git_dir / ".git", bare=True).close()
+
+            with mock.patch.dict(os.environ, {"GIT_DIR": os.fspath(git_dir)}):
+                for path in (None, ""):
+                    with Repo(path) as repo, self.subTest(path=path):
+                        assert osp.samefile(repo.git_dir, git_dir)
+
+            worktree = Path(tdir) / "worktree"
+            Repo.init(worktree).close()
+            with cwd(worktree), mock.patch.dict(os.environ, {"GIT_DIR": ""}):
+                with Repo() as repo:
+                    assert osp.samefile(repo.git_dir, worktree / ".git")
+
+    def test_repo_discovery_rejects_invalid_metadata(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            path = Path(tdir)
+            (path / "objects").mkdir()
+            (path / "refs").mkdir()
+            (path / "HEAD").write_text("not a ref")
+
+            with self.subTest(metadata="HEAD"):
+                self.assertRaises(InvalidGitRepositoryError, Repo, path)
+
+            (path / "HEAD").write_text("ref: refs/heads/main\n")
+
+            for contents in (b"", b"\xff"):
+                (path / "commondir").write_bytes(contents)
+                with cwd(path), self.subTest(metadata="commondir", contents=contents):
+                    self.assertRaises(InvalidGitRepositoryError, Repo, path)
+
+            (path / "gitdir").write_text("../worktree/.git\n")
+            (path / "commondir").write_text("missing\n")
+            with self.subTest(metadata="linked-worktree"):
+                self.assertRaises(WorkTreeRepositoryUnsupported, Repo, path)
+
+            (path / "gitdir").unlink()
+            (path / "commondir").unlink()
+            for variable in ("GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY"):
+                with mock.patch.dict(os.environ, {variable: ""}), self.subTest(metadata=variable):
+                    self.assertRaises(InvalidGitRepositoryError, Repo, path)
+
+            for contents in (b"not a gitfile", b"gitdir: \n", b"gitdir: .git\n", b"\xff"):
+                (path / ".git").write_bytes(contents)
+                with self.subTest(metadata=".git", contents=contents):
+                    self.assertRaises(InvalidGitRepositoryError, Repo, path)
+
+    @requires_symlinks
+    def test_repo_discovery_rejects_dangling_commondir(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            path = Path(tdir)
+            (path / "objects").mkdir()
+            (path / "refs").mkdir()
+            (path / "HEAD").write_text("ref: refs/heads/main\n")
+            (path / "commondir").symlink_to("missing")
+
+            self.assertRaises(InvalidGitRepositoryError, Repo, path)
+
+    @requires_symlinks
+    def test_repo_discovery_rejects_dotgit_stat_errors(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            path = Path(tdir)
+            Repo.init(path).close()
+            child = path / "child"
+            child.mkdir()
+            (child / ".git").symlink_to(".git")
+
+            self.assertRaises(InvalidGitRepositoryError, Repo, child, search_parent_directories=True)
+
+    def test_gitfile_read_is_bounded(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            dotgit = Path(tdir) / ".git"
+            content = b"gitdir: target\n"
+            dotgit.write_bytes(content)
+            reader = mock.mock_open(read_data=b"")
+
+            with mock.patch("builtins.open", reader):
+                assert find_worktree_git_dir(dotgit) is None
+
+            reader().read.assert_called_once_with(len(content))
+
+    def test_repo_discovery_uses_storage_environment(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            git_dir = Path(tdir) / "git"
+            common_dir = Path(tdir) / "common"
+            git_dir.mkdir()
+            common_dir.mkdir()
+            (git_dir / "HEAD").write_text("ref: refs/heads/main\n")
+            (common_dir / "objects").mkdir()
+            (common_dir / "refs").mkdir()
+            (common_dir / "config").write_text("[core]\n\tbare = true\n")
+
+            with cwd(tdir):
+                with mock.patch.dict(os.environ, {"GIT_DIR": "git", "GIT_COMMON_DIR": "common"}):
+                    repo = Repo()
+
+            assert osp.samefile(repo.common_dir, common_dir)
+            assert osp.samefile(repo.odb.root_path(), common_dir / "objects")
+            assert repo.bare
+            assert osp.samefile(repo.git.rev_parse("--absolute-git-dir"), git_dir)
+            assert osp.samefile(repo.git.rev_parse("--git-common-dir"), common_dir)
+
+            (git_dir / "commondir").write_text("../common\n")
+            environment = dict(os.environ)
+            environment["GIT_DIR"] = "git"
+            environment.pop("GIT_COMMON_DIR", None)
+            with cwd(tdir), mock.patch.dict(os.environ, environment, clear=True):
+                repo = Repo()
+
+            assert osp.samefile(repo.git.rev_parse("--absolute-git-dir"), git_dir)
+
+            if sys.platform.startswith("linux"):
+                byte_common_dir = Path(tdir) / os.fsdecode(b"common-\xff")
+                byte_common_dir.mkdir()
+                (byte_common_dir / "objects").mkdir()
+                (byte_common_dir / "refs").mkdir()
+                (git_dir / "commondir").write_bytes(b"../common-\xff\n")
+
+                assert osp.samefile(Repo(git_dir).common_dir, byte_common_dir)
+
+    @with_rw_directory
+    def test_repo_discovery_preserves_object_directory(self, tdir):
+        git_dir = Path(tdir) / "git"
+        payload = b"custom object database"
+        payload_file = Path(tdir) / "payload"
+        payload_file.write_bytes(payload)
+
+        source_repo = Repo.init(git_dir, bare=True)
+        blob_hexsha = source_repo.git.hash_object("-w", payload_file)
+        source_repo.close()
+        object_dir = Path(tdir) / "objects"
+        (git_dir / "objects").rename(object_dir)
+
+        with cwd(tdir), mock.patch.dict(os.environ, {"GIT_DIR": "git", "GIT_OBJECT_DIRECTORY": "objects"}):
+            repo = Repo(odbt=GitDB)
+
+        with repo:
+            assert osp.samefile(repo.odb.root_path(), object_dir)
+            assert repo.odb.has_object(bytes.fromhex(blob_hexsha))
+            assert repo.git.cat_file("blob", blob_hexsha) == payload.decode()
+            repo.alternates = ["other/location"]
+            assert repo.alternates == ["other/location"]
+            assert (object_dir / "info" / "alternates").is_file()
 
     @with_rw_repo("0.3.2.1")
     def test_repo_creation_from_different_paths(self, rw_repo):
@@ -389,6 +562,7 @@ class TestRepo(TestBase):
         os.makedirs(osp.join(common_dir, "objects", "info"))
         os.makedirs(osp.join(git_dir, "objects", "info"))
         repo = mock.Mock(common_dir=common_dir, git_dir=git_dir)
+        repo.odb.root_path.return_value = osp.join(common_dir, "objects")
 
         alts = ["other/location", "this/location"]
         Repo._set_alternates(repo, alts)
@@ -1146,6 +1320,30 @@ class TestRepo(TestBase):
             r"refs/heads/\.invalid.*older clients",
             lambda: repo.active_branch,
         )
+
+    @with_rw_directory
+    def test_reftable_repo_opens_but_direct_refs_are_unsupported(self, rw_dir):
+        git = Git(rw_dir)
+        try:
+            git.init(ref_format="reftable")
+        except GitCommandError as err:
+            if err.status == 129:
+                pytest.skip("git init --ref-format is not supported by this git version")
+            raise
+
+        git.update_environment(
+            GIT_AUTHOR_NAME="Test Author",
+            GIT_AUTHOR_EMAIL="author@example.com",
+            GIT_COMMITTER_NAME="Test Committer",
+            GIT_COMMITTER_EMAIL="committer@example.com",
+        )
+        git.commit(allow_empty=True, message="initial commit")
+        expected_head = git.rev_parse("HEAD")
+
+        repo = Repo(rw_dir)
+        assert repo.git.rev_parse("HEAD") == expected_head
+        assert repo.head.reference.name == ".invalid"
+        assert not repo.heads
 
     @with_rw_directory
     def test_active_branch_raises_type_error_when_head_is_detached(self, rw_dir):

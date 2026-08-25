@@ -60,22 +60,61 @@ def touch(filename: str) -> str:
 def is_git_dir(d: PathLike) -> bool:
     """This is taken from the git setup.c:is_git_directory function.
 
+    .. note::
+        This function recognizes repositories using reftable through their
+        compatibility files, but GitPython's direct reference access does not support
+        reftable.
+
     :raise git.exc.WorkTreeRepositoryUnsupported:
         If it sees a worktree directory. It's quite hacky to do that here, but at least
         clearly indicates that we don't support it. There is the unlikely danger to
         throw if we see directories which just look like a worktree dir, but are none.
     """
     if osp.isdir(d):
-        if (osp.isdir(osp.join(d, "objects")) or "GIT_OBJECT_DIRECTORY" in os.environ) and osp.isdir(
-            osp.join(d, "refs")
-        ):
-            headref = osp.join(d, "HEAD")
-            return osp.isfile(headref) or (osp.islink(headref) and os.readlink(headref).startswith("refs"))
-        elif (
-            osp.isfile(osp.join(d, "gitdir"))
-            and osp.isfile(osp.join(d, "commondir"))
-            and osp.isfile(osp.join(d, "gitfile"))
-        ):
+        headref = osp.join(d, "HEAD")
+        if osp.islink(headref):
+            try:
+                valid_head = os.readlink(headref).startswith("refs/")
+            except OSError:
+                valid_head = False
+        else:
+            try:
+                with open(headref, "rb") as fp:
+                    head = fp.read(256)
+            except OSError:
+                valid_head = False
+            else:
+                valid_head = (head.startswith(b"ref:") and head[4:].lstrip().startswith(b"refs/")) or bool(
+                    re.match(rb"(?:[0-9A-Fa-f]{64}|[0-9A-Fa-f]{40})", head)
+                )
+
+        common_dir = os.getenv("GIT_COMMON_DIR")
+        if common_dir == "":
+            return False
+        if common_dir is None:
+            common_dir_file = Path(d) / "commondir"
+            try:
+                common_dir = os.fsdecode(common_dir_file.read_bytes()).rstrip("\r\n")
+            except FileNotFoundError:
+                if osp.lexists(common_dir_file):
+                    return False
+                common_dir = os.fspath(d)
+            except (OSError, UnicodeError):
+                return False
+            else:
+                if not common_dir:
+                    return False
+                try:
+                    common_dir = osp.realpath(osp.join(d, common_dir))
+                except (OSError, ValueError):
+                    return False
+
+        object_dir = os.getenv("GIT_OBJECT_DIRECTORY")
+        if object_dir is None:
+            object_dir = osp.join(common_dir, "objects")
+        if valid_head and osp.isdir(object_dir) and osp.isdir(osp.join(common_dir, "refs")):
+            return True
+        if osp.isfile(osp.join(d, "gitdir")) and osp.isfile(osp.join(d, "commondir")) and osp.isfile(headref):
             raise WorkTreeRepositoryUnsupported(d)
     return False
 
@@ -84,19 +123,20 @@ def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
     """Search for a gitdir for this worktree."""
     try:
         statbuf = os.stat(dotgit)
-    except OSError:
+    except (FileNotFoundError, NotADirectoryError):
         return None
-    if not stat.S_ISREG(statbuf.st_mode):
+    if not stat.S_ISREG(statbuf.st_mode) or statbuf.st_size > (1 << 20):
         return None
 
     try:
-        lines = Path(dotgit).read_text().splitlines()
-        for key, value in [line.strip().split(": ") for line in lines]:
-            if key == "gitdir":
-                return value
-    except ValueError:
-        pass
-    return None
+        with open(dotgit, "rb") as fp:
+            content_bytes = fp.read(statbuf.st_size)
+        if len(content_bytes) != statbuf.st_size:
+            return None
+        content = os.fsdecode(content_bytes).rstrip("\r\n")
+    except (OSError, UnicodeError):
+        return None
+    return content[8:] if len(content) >= 9 and content.startswith("gitdir: ") else None
 
 
 def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
@@ -104,26 +144,18 @@ def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     if is_git_dir(d):
         return d
 
-    try:
-        with open(d) as fp:
-            content = fp.read().rstrip()
-    except IOError:
-        # It's probably not a file.
-        pass
-    else:
-        if content.startswith("gitdir: "):
-            path = content[8:]
+    path = find_worktree_git_dir(d)
+    if path is None:
+        return None
 
-            if Git.is_cygwin():
-                # Cygwin creates submodules prefixed with `/cygdrive/...`.
-                # Cygwin git understands Cygwin paths much better than Windows ones.
-                # Also the Cygwin tests are assuming Cygwin paths.
-                path = cygpath(path)
-            if not osp.isabs(path):
-                path = osp.normpath(osp.join(osp.dirname(d), path))
-            return find_submodule_git_dir(path)
-    # END handle exception
-    return None
+    if Git.is_cygwin():
+        # Cygwin creates submodules prefixed with `/cygdrive/...`.
+        # Cygwin git understands Cygwin paths much better than Windows ones.
+        # Also the Cygwin tests are assuming Cygwin paths.
+        path = cygpath(path)
+    if not osp.isabs(path):
+        path = osp.normpath(osp.join(osp.dirname(d), path))
+    return path if is_git_dir(path) else None
 
 
 def short_to_long(odb: "GitCmdObjectDB", hexsha: str) -> Optional[bytes]:
