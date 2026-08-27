@@ -32,6 +32,7 @@ import logging
 import os
 import os.path as osp
 from stat import S_ISLNK, ST_MODE
+import socket
 import subprocess
 import sys
 import tempfile
@@ -218,8 +219,15 @@ def git_daemon_launched(base_path, ip, port):
                 base_path=base_path,
                 as_process=True,
             )
-        # Yes, I know... fortunately, this is always going to work if sleep time is just large enough.
-        time.sleep(1.0 if sys.platform == "win32" else 0.5)
+
+        # Wait until git daemon listens for connections.
+        for _attempt in range(1, 30):
+            try:
+                socket.create_connection((ip, port), timeout=30).close()
+                break
+            except ConnectionRefusedError:
+                time.sleep(0.5)
+
     except Exception as ex:
         msg = textwrap.dedent(
             """
