@@ -2,6 +2,18 @@
 Changelog
 =========
 
+3.1.61
+======
+
+A fixup release to avoid accidental removal of public class regex on Actor.
+It's now deprecated instead.
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.61
+
 3.1.60
 ======
 
