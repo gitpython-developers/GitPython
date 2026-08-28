@@ -80,6 +80,7 @@ from typing import (
     Sequence,
     Tuple,
     TYPE_CHECKING,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -108,6 +109,7 @@ from git.types import (
 
 T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attribute"], covariant=True)
 # So IterableList[Head] is subtype of IterableList[IterableObj].
+T_Actor = TypeVar("T_Actor", bound="Actor")
 
 _logger = logging.getLogger(__name__)
 
@@ -853,10 +855,26 @@ class CallableRemoteProgress(RemoteProgress):
         self._callable(*args, **kwargs)
 
 
+class _DeprecatedActorNameEmailRegex:
+    _pattern = re.compile(r"(.*) <(.*?)>")
+
+    def __get__(self, _instance: Any, _owner: Any) -> Pattern[str]:
+        warnings.warn(
+            "Actor.name_email_regex is deprecated and will be removed in GitPython 4.0.0 because searching long "
+            "malformed strings with it can take quadratic time. Use Actor.from_string() to parse actor identities, "
+            "or Actor(name, email) when the fields are already separate.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._pattern
+
+
 class Actor:
     """Actors hold information about a person acting on the repository. They can be
     committers and authors or anything with a name and an email as mentioned in the git
     log entries."""
+
+    name_email_regex = _DeprecatedActorNameEmailRegex()
 
     # ENVIRONMENT VARIABLES
     # These are read when creating new commits.
@@ -891,7 +909,7 @@ class Actor:
         return '<git.Actor "%s <%s>">' % (self.name, self.email)
 
     @classmethod
-    def _from_string(cls, string: str) -> "Actor":
+    def from_string(cls: Type[T_Actor], string: str) -> T_Actor:
         """Create an :class:`Actor` from a string.
 
         :param string:
@@ -906,10 +924,12 @@ class Actor:
         left_bracket = line.find("<")
         right_bracket = line.find(">", left_bracket + 1)
         if left_bracket >= 0 and right_bracket >= 0:
-            return Actor(line[:left_bracket].rstrip(), line[left_bracket + 1 : right_bracket])
+            return cls(line[:left_bracket].rstrip(), line[left_bracket + 1 : right_bracket])
 
         # Assume the best and use the whole string as name.
-        return Actor(string, None)
+        return cls(string, None)
+
+    _from_string = from_string
 
     @classmethod
     def _main_actor(
