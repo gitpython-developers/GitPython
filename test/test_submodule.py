@@ -1369,6 +1369,46 @@ class TestSubmodule(TestBase):
             osp.join(Repo.working_tree_dir + "-other", "module"),
         )
 
+    @with_rw_directory
+    def test_update_rejects_checkout_path_outside_parent(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = Submodule(
+            parent,
+            Submodule.NULL_BIN_SHA,
+            name="module",
+            path=osp.join("..", "outside"),
+            url="unused",
+        )
+
+        with mock.patch.object(Submodule, "_clone_repo", side_effect=AssertionError("clone attempted")):
+            with pytest.raises(ValueError, match="is not in repository"):
+                submodule.update(init=True)
+
+    @with_rw_directory
+    def test_update_rejects_checkout_path_through_symlink(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        os.mkdir(osp.join(parent.working_tree_dir, "target"))
+        os.symlink("target", osp.join(parent.working_tree_dir, "link"))
+        submodule = Submodule(
+            parent,
+            Submodule.NULL_BIN_SHA,
+            name="module",
+            path=osp.join("link", "module"),
+            url="unused",
+        )
+
+        with mock.patch.object(Submodule, "_clone_repo", side_effect=AssertionError("clone attempted")):
+            with pytest.raises(ValueError, match="contains a symbolic link"):
+                submodule.update(init=True)
+
+    @with_rw_directory
+    def test_update_rejects_checkout_path_at_parent_root(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        submodule = Submodule(parent, Submodule.NULL_BIN_SHA, name="module", path=".", url="unused")
+
+        with pytest.raises(ValueError, match="must not be the repository root"):
+            submodule.update(init=True)
+
     @skipUnless(sys.platform == "win32", "Specifically for Windows.")
     @with_rw_directory
     def test_to_relative_path_windows_path_kinds(self, rwdir):
