@@ -414,6 +414,18 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return path
 
+    @property
+    def abspath(self) -> PathLike:
+        root = self.repo.working_tree_dir
+        if root is None:
+            return super().abspath
+        path = root
+        for component in os.fspath(self._to_relative_path(self.repo, self.path)).split("/"):
+            path = join_path_native(path, component)
+            if osp.islink(path):
+                raise ValueError("Submodule checkout path %r contains a symbolic link" % self.path)
+        return path
+
     @classmethod
     def _write_git_file_and_module_config(cls, working_tree_dir: PathLike, module_abspath: PathLike) -> None:
         """Write a ``.git`` file containing a (preferably) relative path to the actual
