@@ -1459,6 +1459,23 @@ class TestRepo(TestBase):
 
         self.assertIsInstance(repo.heads["aaaaaaaa"], Head)
 
+    @with_rw_directory
+    def test_git_work_tree_from_bare_repo(self, rw_dir):
+        if Git().version_info[:3] < (2, 5, 1):
+            pytest.skip("worktree feature unsupported, needs git 2.5.1 or later")
+
+        bare_repo = self.rorepo.clone(join_path_native(rw_dir, "bare_repo"), bare=True)
+        worktree_path = join_path_native(rw_dir, "worktree_repo")
+        if Git.is_cygwin():
+            worktree_path = cygpath(worktree_path)
+        bare_repo.git.worktree("add", "--detach", worktree_path)
+
+        repo = Repo(worktree_path)
+
+        assert Git(worktree_path).rev_parse("--is-bare-repository") == "false"
+        assert not repo.bare
+        assert osp.samefile(repo.working_tree_dir, worktree_path)
+
     def test_git_work_tree_dotgit_relative(self):
         """Check that we find .git as a worktree file containing a relative path
         and find the worktree based on it."""

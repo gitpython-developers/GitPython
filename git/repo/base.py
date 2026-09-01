@@ -386,6 +386,10 @@ class Repo:
             # Let's not assume the option exists, although it should.
             pass
 
+        # A linked worktree is not bare even when its main repository is.
+        if self._bare and self._working_tree_dir and osp.isfile(osp.join(self.git_dir, "commondir")):
+            self._bare = False
+
         # Adjust the working directory in case we are actually bare - we didn't know
         # that in the first place.
         if self._bare:
