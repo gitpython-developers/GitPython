@@ -9,7 +9,7 @@ repos:
     exclude: ^test/fixtures/
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.16.0
+  rev: v0.16.5
   hooks:
   - id: ruff-check
     args: ["--fix"]
