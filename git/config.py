@@ -513,7 +513,26 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
                     if len(optval) < 2 or optval[0] != '"':
                         # Does not open quoting.
-                        pass
+                        # A value ending in an odd number of backslashes
+                        # continues on the next line, exactly as git does: the
+                        # final backslash and the newline are removed and the
+                        # next line is appended verbatim (leading whitespace
+                        # included). An even number means the last backslash
+                        # is escaped and the value ends there.
+                        while True:
+                            trailing = len(optval) - len(optval.rstrip("\\"))
+                            if trailing % 2 == 0:
+                                break
+                            continuation = fp.readline()
+                            if not continuation:
+                                # Backslash at end of file: git drops it.
+                                optval = optval[:-1]
+                                break
+                            lineno = lineno + 1
+                            joined = continuation.decode(defenc)
+                            while joined.endswith("\n") or joined.endswith("\r"):
+                                joined = joined[:-1]
+                            optval = optval[:-1] + joined
                     elif optval[-1] != '"':
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True

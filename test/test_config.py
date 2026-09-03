@@ -143,6 +143,26 @@ class TestBase(TestCase):
             )
             self.assertEqual(len(config.sections()), 23)
 
+    def test_backslash_line_continuation(self):
+        """An unquoted value ending in a backslash continues on the next line,
+        exactly as git config parses it: the final backslash and the newline
+        are removed and the next line is appended verbatim."""
+        cases = [
+            (b"[a]\n\tk = line1\\\n line2\n", "line1 line2"),
+            (b"[a]\n\tk = one\\\n two\\\n three\n", "one two three"),
+            (b"[a]\n\tk = val\\\\\n next\n", "val\\\\"),
+            (b"[a]\n\tk = end\\\n", "end"),
+            (b"[alias]\n\tco = checkout \\\n\t\t-v\n", "checkout \t\t-v"),
+        ]
+        for content, expected in cases:
+            config_file = io.BytesIO(content)
+            config_file.name = "backslash_continuation.config"
+            config = GitConfigParser(config_file)
+            config.read()
+            section = "alias" if b"[alias]" in content else "a"
+            key = "co" if section == "alias" else "k"
+            self.assertEqual(config.get_value(section, key), expected)
+
     def test_config_value_with_trailing_new_line(self):
         config_content = b'[section-header]\nkey:"value\n"'
         config_file = io.BytesIO(config_content)
