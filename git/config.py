@@ -467,6 +467,45 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         # END string_decode
 
+        def is_line_continuation(value: str) -> bool:
+            quoted = escaped = False
+            for char in value:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                elif char in "#;" and not quoted:
+                    return False
+            return escaped
+
+        def parse_value(value: str) -> str:
+            parsed: List[str] = []
+            whitespace: List[str] = []
+            quoted = escaped = False
+            escapes = {"b": "\b", "n": "\n", "t": "\t", '"': '"', "\\": "\\"}
+            for char in value:
+                if escaped:
+                    parsed.append(escapes.get(char, "\\" + char))
+                    escaped = False
+                    continue
+                if char.isspace() and not quoted:
+                    if parsed:
+                        whitespace.append(char)
+                    continue
+                if char in "#;" and not quoted:
+                    break
+                parsed.extend(whitespace)
+                whitespace.clear()
+                if char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                else:
+                    parsed.append(char)
+            return "".join(parsed)
+
         while True:
             # We assume to read binary!
             line = fp.readline().decode(defenc)
@@ -513,7 +552,29 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
                     if len(optval) < 2 or optval[0] != '"':
                         # Does not open quoting.
-                        pass
+                        # A value ending in an odd number of backslashes
+                        # continues on the next line, exactly as git does: the
+                        # final backslash and the newline are removed and the
+                        # next line is appended before the complete value is
+                        # parsed. An even number means the last backslash is
+                        # escaped and the value ends there.
+                        continued = False
+                        while True:
+                            if not is_line_continuation(optval):
+                                break
+                            continuation = fp.readline()
+                            if not continuation:
+                                # Backslash at end of file: git drops it.
+                                optval = optval[:-1]
+                                break
+                            lineno = lineno + 1
+                            joined = continuation.decode(defenc)
+                            while joined.endswith("\n") or joined.endswith("\r"):
+                                joined = joined[:-1]
+                            optval = optval[:-1] + joined
+                            continued = True
+                        if continued:
+                            optval = parse_value(optval)
                     elif optval[-1] != '"':
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
