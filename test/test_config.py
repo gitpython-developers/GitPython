@@ -163,6 +163,19 @@ class TestBase(TestCase):
             key = "co" if section == "alias" else "k"
             self.assertEqual(config.get_value(section, key), expected)
 
+    @with_rw_directory
+    def test_comment_backslash_does_not_continue_value(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(b"[a]\n\tk = one\\\n two ; ignored \\\n\tx = two\n")
+
+        with GitConfigParser(config_path, read_only=False) as config:
+            self.assertEqual(config.get_value("a", "x"), "two")
+            config.set_value("a", "added", "three")
+
+        with GitConfigParser(config_path) as config:
+            self.assertEqual(config.get_value("a", "x"), "two")
+
     def test_config_value_with_trailing_new_line(self):
         config_content = b'[section-header]\nkey:"value\n"'
         config_file = io.BytesIO(config_content)

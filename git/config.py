@@ -467,6 +467,19 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         # END string_decode
 
+        def is_line_continuation(value: str) -> bool:
+            quoted = escaped = False
+            for char in value:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                elif char in "#;" and not quoted:
+                    return False
+            return escaped
+
         while True:
             # We assume to read binary!
             line = fp.readline().decode(defenc)
@@ -520,8 +533,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # included). An even number means the last backslash
                         # is escaped and the value ends there.
                         while True:
-                            trailing = len(optval) - len(optval.rstrip("\\"))
-                            if trailing % 2 == 0:
+                            if not is_line_continuation(optval):
                                 break
                             continuation = fp.readline()
                             if not continuation:
