@@ -480,6 +480,32 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     return False
             return escaped
 
+        def parse_value(value: str) -> str:
+            parsed: List[str] = []
+            whitespace: List[str] = []
+            quoted = escaped = False
+            escapes = {"b": "\b", "n": "\n", "t": "\t", '"': '"', "\\": "\\"}
+            for char in value:
+                if escaped:
+                    parsed.append(escapes.get(char, "\\" + char))
+                    escaped = False
+                    continue
+                if char.isspace() and not quoted:
+                    if parsed:
+                        whitespace.append(char)
+                    continue
+                if char in "#;" and not quoted:
+                    break
+                parsed.extend(whitespace)
+                whitespace.clear()
+                if char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                else:
+                    parsed.append(char)
+            return "".join(parsed)
+
         while True:
             # We assume to read binary!
             line = fp.readline().decode(defenc)
@@ -529,9 +555,10 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # A value ending in an odd number of backslashes
                         # continues on the next line, exactly as git does: the
                         # final backslash and the newline are removed and the
-                        # next line is appended verbatim (leading whitespace
-                        # included). An even number means the last backslash
-                        # is escaped and the value ends there.
+                        # next line is appended before the complete value is
+                        # parsed. An even number means the last backslash is
+                        # escaped and the value ends there.
+                        continued = False
                         while True:
                             if not is_line_continuation(optval):
                                 break
@@ -545,6 +572,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                             while joined.endswith("\n") or joined.endswith("\r"):
                                 joined = joined[:-1]
                             optval = optval[:-1] + joined
+                            continued = True
+                        if continued:
+                            optval = parse_value(optval)
                     elif optval[-1] != '"':
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True

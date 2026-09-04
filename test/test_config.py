@@ -146,10 +146,14 @@ class TestBase(TestCase):
     def test_backslash_line_continuation(self):
         """An unquoted value ending in a backslash continues on the next line,
         exactly as git config parses it: the final backslash and the newline
-        are removed and the next line is appended verbatim."""
+        are removed before the complete logical value is parsed."""
         cases = [
             (b"[a]\n\tk = line1\\\n line2\n", "line1 line2"),
             (b"[a]\n\tk = one\\\n two\\\n three\n", "one two three"),
+            (b"[a]\n\tk = one\\\n two   \n", "one two"),
+            (b"[a]\n\tk = one\\\n two ; ignored\n", "one two"),
+            (b'[a]\n\tk = one\\\n "two"\n', "one two"),
+            (b"[a]\n\tk = one\\\n two\\tthree\n", "one two\tthree"),
             (b"[a]\n\tk = val\\\\\n next\n", "val\\\\"),
             (b"[a]\n\tk = end\\\n", "end"),
             (b"[alias]\n\tco = checkout \\\n\t\t-v\n", "checkout \t\t-v"),
@@ -170,6 +174,7 @@ class TestBase(TestCase):
             config_file.write(b"[a]\n\tk = one\\\n two ; ignored \\\n\tx = two\n")
 
         with GitConfigParser(config_path, read_only=False) as config:
+            self.assertEqual(config.get_value("a", "k"), "one two")
             self.assertEqual(config.get_value("a", "x"), "two")
             config.set_value("a", "added", "three")
 
