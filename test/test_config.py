@@ -167,6 +167,38 @@ class TestBase(TestCase):
             key = "co" if section == "alias" else "k"
             self.assertEqual(config.get_value(section, key), expected)
 
+    def test_get_value_reads_git_boolean_spellings(self):
+        # git accepts yes/no and on/off as well as true/false, and getboolean on
+        # this class already did. get_value returned them as strings, so "no" and
+        # "off" arrived as non-empty (truthy) values for a caller testing them.
+        cases = [
+            (b"true", True),
+            (b"TRUE", True),
+            (b"yes", True),
+            (b"Yes", True),
+            (b"on", True),
+            (b"On", True),
+            (b"false", False),
+            (b"no", False),
+            (b"off", False),
+            (b"Off", False),
+        ]
+        for raw, expected in cases:
+            config_file = io.BytesIO(b"[core]\n\tflag = " + raw + b"\n")
+            config_file.name = "boolean_spellings.config"
+            config = GitConfigParser(config_file)
+            config.read()
+            self.assertIs(config.get_value("core", "flag"), expected, raw.decode())
+            # The two accessors must not disagree about the same value.
+            self.assertIs(config.getboolean("core", "flag"), expected, raw.decode())
+
+        # A value that is not a boolean at all still comes back untouched.
+        config_file = io.BytesIO(b"[core]\n\tflag = meld\n")
+        config_file.name = "boolean_spellings.config"
+        config = GitConfigParser(config_file)
+        config.read()
+        self.assertEqual(config.get_value("core", "flag"), "meld")
+
     @with_rw_directory
     def test_comment_backslash_does_not_continue_value(self, rw_dir):
         config_path = osp.join(rw_dir, "config")

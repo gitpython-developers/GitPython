@@ -956,11 +956,16 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 continue
         # END for each numeric type
 
-        # Try boolean values as git uses them.
+        # Try boolean values as git uses them. git accepts yes/no and on/off as
+        # well as true/false (git_parse_maybe_bool_text in parse.c), and so does
+        # ConfigParser.getboolean on this class, so only get_value lagged behind.
+        # Leaving them as strings was worse than merely inexact: "no" and "off"
+        # are non-empty, so a caller testing the result got True for a value git
+        # reads as false.
         vl = valuestr.lower()
-        if vl == "false":
+        if vl in ("false", "no", "off"):
             return False
-        if vl == "true":
+        if vl in ("true", "yes", "on"):
             return True
 
         if not isinstance(valuestr, str):
