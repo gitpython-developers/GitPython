@@ -1476,6 +1476,17 @@ class TestRepo(TestBase):
         assert not repo.bare
         assert osp.samefile(repo.working_tree_dir, worktree_path)
 
+        # Discovering from a subdirectory (as tools such as mkdocs plugins do) and then
+        # running a command with an absolute pathspec must use the worktree, not the
+        # bare common dir, as the working directory; 3.1.61 failed here with
+        # "is outside repository at '<bare_repo>/.'" (#2223).
+        subdir = osp.join(worktree_path, "git", "repo")
+        sub_repo = Repo(subdir, search_parent_directories=True)
+        assert not sub_repo.bare
+        assert osp.samefile(sub_repo.working_dir, worktree_path)
+        expected = repo.git.log("-n", "1", "--format=%H", "--", "git/repo")
+        assert sub_repo.git.log("-n", "1", "--format=%H", "--", subdir) == expected
+
     def test_git_work_tree_dotgit_relative(self):
         """Check that we find .git as a worktree file containing a relative path
         and find the worktree based on it."""
