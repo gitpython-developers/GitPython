@@ -10,36 +10,34 @@ __all__ = ["GitConfigParser", "SectionConstraint"]
 import abc
 import configparser as cp
 import fnmatch
-from functools import wraps
 import inspect
-from io import BufferedReader, IOBase
 import logging
 import os
 import os.path as osp
 import re
 import sys
-
-from git.compat import defenc, force_text
-from git.util import LockFile
+from functools import wraps
+from io import BufferedReader, IOBase
 
 # typing-------------------------------------------------------
-
 from typing import (
+    IO,
+    TYPE_CHECKING,
     Any,
     Callable,
-    Generic,
-    IO,
-    List,
     Dict,
+    Generic,
+    List,
     Sequence,
-    TYPE_CHECKING,
     Tuple,
     TypeVar,
     Union,
     cast,
 )
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, assert_never, _T
+from git.compat import defenc, force_text
+from git.types import _T, ConfigLevels_Tup, Lit_config_levels, PathLike, assert_never
+from git.util import LockFile
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -956,12 +954,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 continue
         # END for each numeric type
 
-        # Try boolean values as git uses them. git accepts yes/no and on/off as
-        # well as true/false (git_parse_maybe_bool_text in parse.c), and so does
-        # ConfigParser.getboolean on this class, so only get_value lagged behind.
-        # Leaving them as strings was worse than merely inexact: "no" and "off"
-        # are non-empty, so a caller testing the result got True for a value git
-        # reads as false.
+        # Try boolean values as git uses them.
         vl = valuestr.lower()
         if vl in ("false", "no", "off"):
             return False
