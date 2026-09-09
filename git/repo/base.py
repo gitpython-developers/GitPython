@@ -1150,7 +1150,11 @@ class Repo:
 
     @property
     def active_branch(self) -> Head:
-        """The name of the currently active branch.
+        """The currently active branch.
+
+        Check ``repo.head.is_detached`` before accessing this property if HEAD
+        may be detached. To access the current commit in either state, use
+        ``repo.head.commit`` instead.
 
         :raise TypeError:
             If HEAD is detached.

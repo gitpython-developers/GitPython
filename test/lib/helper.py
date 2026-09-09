@@ -139,7 +139,8 @@ def with_rw_directory(func):
 
 def with_rw_repo(working_tree_ref, bare=False):
     """Same as with_bare_repo, but clones the rorepo as non-bare repository, checking
-    out the working tree at the given working_tree_ref.
+    out the working tree at the given working_tree_ref with an attached HEAD,
+    regardless of the source repository's HEAD state.
 
     This repository type is more costly due to the working copy checkout.
 
@@ -158,7 +159,12 @@ def with_rw_repo(working_tree_ref, bare=False):
             repo_dir = tempfile.mktemp(prefix="%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 
-            rw_repo.head.commit = rw_repo.commit(working_tree_ref)
+            if rw_repo.head.is_detached:
+                rw_repo.head.reference = rw_repo.create_head(
+                    "master", working_tree_ref, force=True, logmsg="Create test branch"
+                )
+            else:
+                rw_repo.head.commit = rw_repo.commit(working_tree_ref)
             if not bare:
                 rw_repo.head.reference.checkout()
             # END handle checkout
@@ -294,6 +300,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
 
             rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
+            rw_daemon_repo.head.reference = rw_daemon_repo.create_head("master", force=True)
             # Recursive alternates info?
             rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
             try:

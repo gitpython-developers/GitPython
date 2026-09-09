@@ -59,12 +59,14 @@ def _git_dir(repo: "Repo", path: Union[PathLike, None]) -> PathLike:
 
 
 class SymbolicReference:
-    """Special case of a reference that is symbolic.
+    """A reference that can point to another reference or be detached.
 
-    This does not point to a specific commit, but to another
-    :class:`~git.refs.head.Head`, which itself specifies a commit.
+    An attached :class:`~git.refs.head.HEAD` usually points to a
+    :class:`~git.refs.head.Head`, which itself specifies a commit. A detached
+    :class:`~git.refs.head.HEAD` points directly to a commit instead.
 
-    A typical example for a symbolic reference is :class:`~git.refs.head.HEAD`.
+    Use :attr:`commit` to access the commit in either case, and :attr:`reference`
+    to access the target reference when attached.
     """
 
     __slots__ = ("repo", "path")
@@ -416,7 +418,15 @@ class SymbolicReference:
 
     @property
     def commit(self) -> "Commit":
-        """Query or set commits directly"""
+        """The commit this reference resolves to, whether detached or symbolic.
+
+        For example, ``repo.head.commit.hexsha`` returns the current commit ID
+        both on a branch and with a detached HEAD. HEAD must resolve to an
+        existing commit; an unborn branch in an empty repository has none.
+
+        Assigning updates the commit without changing whether this reference
+        is detached.
+        """
         return self._get_commit()
 
     @commit.setter
@@ -443,7 +453,10 @@ class SymbolicReference:
         """
         sha, target_ref_path = self._get_ref_info(self.repo, self.path)
         if target_ref_path is None:
-            raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
+            raise TypeError(
+                "%s is a detached symbolic reference as it points to %r. "
+                "Use .commit or .object to access the target directly." % (self, sha)
+            )
         return cast("Reference", self.from_path(self.repo, target_ref_path))
 
     def set_reference(
@@ -531,6 +544,18 @@ class SymbolicReference:
     # Aliased reference
     @property
     def reference(self) -> "Reference":
+        """The reference we point to, available only when not detached.
+
+        Check :attr:`is_detached` before reading this property if a target
+        reference is required. To access the target commit or object in either
+        state, use :attr:`commit` or :attr:`object` instead.
+
+        Assigning a reference keeps this reference symbolic. Assigning a git
+        object or revision string detaches it; reading this property then raises.
+
+        :raise TypeError:
+            If this reference is detached when reading the property.
+        """
         return self._get_reference()
 
     @reference.setter
