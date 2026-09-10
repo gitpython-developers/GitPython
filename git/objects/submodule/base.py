@@ -377,6 +377,18 @@ class Submodule(IndexObject, TraversableIterableObj):
                         repo.unsafe_git_clone_options,
                     )
             allow_unsafe_options = True
+            if osp.islink(module_abspath):
+                # Clone into the target while retaining the metadata alias. Git for
+                # Windows cannot initialize through a dangling directory symlink.
+                # Read the link explicitly for Python 3.7, and remove the Windows
+                # namespace prefix returned by newer Python versions for Git.
+                target = os.readlink(module_abspath)
+                if sys.platform == "win32":
+                    if target.startswith("\\\\?\\UNC\\"):
+                        target = "\\\\" + target[8:]
+                    elif target.startswith("\\\\?\\"):
+                        target = target[4:]
+                module_abspath = to_native_path_linux(osp.join(osp.dirname(module_abspath), target))
             kwargs["separate_git_dir"] = module_abspath
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):

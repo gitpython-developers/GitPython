@@ -451,6 +451,25 @@ def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(
         assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
 
 
+@pytest.mark.parametrize("relative_target", [False, True], ids=["absolute-target", "relative-target"])
+def test_add_to_dangling_metadata_symlink(movable_submodule, tmp_path, metadata_realpath, relative_target):
+    sm = movable_submodule
+    link = Path(sm.repo.git_dir) / "modules/new"
+    target = tmp_path / "missing" / "metadata"
+    link.symlink_to(osp.relpath(target, link.parent) if relative_target else target, target_is_directory=True)
+    link_target = os.readlink(link)
+
+    added = Submodule.add(sm.repo, "new", "new", sm.url)
+
+    assert link.is_symlink() and link.is_dir()
+    assert os.readlink(link) == link_target
+    assert (target / "HEAD").is_file()
+    with added.module() as module:
+        assert Path(module.git_dir).resolve() == target.resolve()
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(added.abspath).resolve()
+    assert Path(added.abspath, "file").read_text() == "content"
+
+
 class TestRootProgress(RootUpdateProgress):
     """Just prints messages, for now without checking the correctness of the states"""
 
