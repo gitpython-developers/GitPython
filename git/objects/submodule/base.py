@@ -9,6 +9,7 @@ import logging
 import ntpath
 import os
 import os.path as osp
+from pathlib import Path
 import shlex
 import stat
 import sys
@@ -444,6 +445,20 @@ class Submodule(IndexObject, TraversableIterableObj):
                 raise ValueError("Submodule path %r contains a symbolic link" % relative_path)
         return path
 
+    @staticmethod
+    def _renames(source: PathLike, destination: PathLike) -> None:
+        os.makedirs(osp.dirname(destination), exist_ok=True)
+        os.rename(source, destination)
+        # Match renames() cleanup, but stop before directory symlinks: Windows
+        # rmdir() removes the link even when its target is nonempty.
+        parent = osp.dirname(source)
+        while parent and not osp.islink(parent):
+            try:
+                os.rmdir(parent)
+            except OSError:
+                break
+            parent = osp.dirname(parent)
+
     @classmethod
     def _write_git_file_and_module_config(cls, working_tree_dir: PathLike, module_abspath: PathLike) -> None:
         """Write a ``.git`` file containing a (preferably) relative path to the actual
@@ -468,8 +483,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             Absolute path to the bare repository.
         """
         # Git resolves metadata symlinks before interpreting core.worktree.
-        module_abspath = osp.realpath(module_abspath)
-        working_tree_dir = osp.realpath(working_tree_dir)
+        # Path.resolve() also handles Windows symlinks on Python 3.7.
+        module_abspath = str(Path(module_abspath).resolve())
+        working_tree_dir = str(Path(working_tree_dir).resolve())
         git_file = osp.join(working_tree_dir, ".git")
         module_config = osp.join(module_abspath, "config")
         rela_path = osp.relpath(module_abspath, start=working_tree_dir)
@@ -685,7 +701,9 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # We deliberately assume that our head matches our index!
         if mrepo:
-            sm.binsha = mrepo.head.commit.binsha
+            # Release cat-file processes before callers move the checkout on Windows.
+            with mrepo:
+                sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
         return sm
@@ -1120,7 +1138,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # Move the module into place if possible.
         renamed_module = False
         if module and osp.exists(cur_path):
-            os.renames(cur_path, module_checkout_abspath)
+            self._renames(cur_path, module_checkout_abspath)
             renamed_module = True
 
             if osp.isfile(osp.join(module_checkout_abspath, ".git")):
@@ -1151,7 +1169,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END handle configuration flag
         except Exception:
             if renamed_module:
-                os.renames(module_checkout_abspath, cur_path)
+                self._renames(module_checkout_abspath, cur_path)
             # END undo module renaming
             raise
         # END handle undo rename
@@ -1239,7 +1257,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         ################################
         if module and self.module_exists():
             mod = self.module()
-            git_dir = osp.realpath(mod.git_dir)
+            git_dir = str(Path(mod.git_dir).resolve())
             if force:
                 # Take the fast lane and just delete everything in our module path.
                 # TODO: If we run into permission problems, we have a highly
@@ -1504,10 +1522,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             # Let's be sure the submodule name is not so obviously tied to a directory.
             if str(destination_module_abspath).startswith(str(mod.git_dir)):
                 tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
-                os.renames(source_dir, tmp_dir)
+                self._renames(source_dir, tmp_dir)
                 source_dir = tmp_dir
             # END handle self-containment
-            os.renames(source_dir, destination_module_abspath)
+            self._renames(source_dir, destination_module_abspath)
             if mod.working_tree_dir:
                 self._write_git_file_and_module_config(mod.working_tree_dir, destination_module_abspath)
         # END move separate git repository

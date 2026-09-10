@@ -252,7 +252,53 @@ def test_submodule_rejects_checkout_and_gitmodules_symlinks(movable_submodule, t
     assert (root / "moved").is_dir()
 
 
-def test_submodule_allows_symlink_above_worktree(movable_submodule, tmp_path):
+def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
+    """Adding a submodule must not leave a child process holding its checkout open."""
+    sm = movable_submodule
+    checkout = Path(sm.repo.working_tree_dir, "new")
+    execute = Git.execute
+    processes = []
+
+    def capture_process(self, command, *args, **kwargs):
+        result = execute(self, command, *args, **kwargs)
+        if (
+            kwargs.get("as_process")
+            and "cat-file" in command
+            and Path(self.working_dir).resolve() == checkout.resolve()
+        ):
+            processes.append(result.proc)
+        return result
+
+    monkeypatch.setattr(Git, "execute", capture_process)
+    try:
+        added = Submodule.add(sm.repo, "new", "new", sm.url)
+        assert processes, "The HEAD read must exercise a persistent cat-file process"
+        assert all(process.poll() is not None for process in processes)
+        added.move("moved")
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+            process.wait()
+
+
+@pytest.fixture
+def windows_directory_symlink_removal(monkeypatch):
+    """Exercise Windows rmdir semantics on POSIX, where rmdir rejects symlinks."""
+    if sys.platform != "win32":
+        original_rmdir = os.rmdir
+
+        def rmdir(path, *args, **kwargs):
+            if osp.islink(path):
+                return os.unlink(path, *args, **kwargs)
+            return original_rmdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(os, "rmdir", rmdir)
+
+
+def test_submodule_allows_symlink_above_worktree(
+    movable_submodule, tmp_path, windows_directory_symlink_removal, metadata_realpath
+):
     """Allow adding and moving submodules when the parent is opened through a symlink."""
     sm = movable_submodule
     alias = tmp_path / "alias"
@@ -260,13 +306,25 @@ def test_submodule_allows_symlink_above_worktree(movable_submodule, tmp_path):
     with git.Repo(alias) as parent:
         added = Submodule.add(parent, "new", "new", sm.url)
         added.move("moved")
+        assert alias.is_symlink()
         with added.module() as module:
             assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(added.abspath).resolve()
         assert Path(added.abspath, "file").read_text() == "content"
 
 
+@pytest.fixture(params=[False, True], ids=["native-realpath", "windows37-realpath"])
+def metadata_realpath(request):
+    """Model Python 3.7 on Windows without altering pathlib's own resolver."""
+    if request.param:
+        with mock.patch("git.objects.submodule.base.osp", wraps=osp) as paths:
+            paths.realpath.side_effect = osp.abspath
+            yield
+    else:
+        yield
+
+
 @pytest.mark.parametrize("operation", ["add", "reconnect", "rename"])
-def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_path, operation):
+def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_path, operation, metadata_realpath):
     """Allow linked metadata destinations while keeping the checkout correctly connected.
 
     Adding, reconnecting after deinit, and renaming may store metadata outside the
@@ -296,7 +354,9 @@ def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_p
 
 @pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf", "gitfile", "config", "alias"])
 @pytest.mark.parametrize("operation", ["update", "move", "rename", "remove"])
-def test_submodule_allows_existing_metadata_symlinks(movable_submodule, tmp_path, kind, operation):
+def test_submodule_allows_existing_metadata_symlinks(
+    movable_submodule, tmp_path, kind, operation, windows_directory_symlink_removal, metadata_realpath
+):
     """Keep submodule operations compatible with existing symlinks in Git metadata.
 
     Cover linked metadata directories, gitfiles, configs, and internal aliases.
@@ -336,6 +396,12 @@ def test_submodule_allows_existing_metadata_symlinks(movable_submodule, tmp_path
         sm.move("moved")
     else:
         sm.rename("renamed")
+    if kind == "modules" or (operation == "rename" and kind in ("intermediate", "alias")):
+        assert link.is_symlink()
+        assert link.is_dir()
+    if operation == "rename" and kind == "leaf":
+        assert (modules / "renamed").is_symlink()
+        assert target.is_dir()
     with sm.module() as module:
         assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
     assert Path(sm.abspath, "file").read_text() == "content"
