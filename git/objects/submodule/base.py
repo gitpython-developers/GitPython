@@ -419,11 +419,20 @@ class Submodule(IndexObject, TraversableIterableObj):
         root = self.repo.working_tree_dir
         if root is None:
             return super().abspath
-        path = root
-        for component in os.fspath(self._to_relative_path(self.repo, self.path)).split("/"):
+        return self._checkout_abspath(self._to_relative_path(self.repo, self.path))
+
+    def _checkout_abspath(self, relative_path: PathLike, allow_final_symlink: bool = False) -> PathLike:
+        """Check a checkout path already normalized by :meth:`_to_relative_path`."""
+        path = self.repo.working_tree_dir
+        if path is None:
+            raise NotADirectoryError("Submodules require a working tree")
+        components = os.fspath(relative_path).split("/")
+        for index, component in enumerate(components):
             path = join_path_native(path, component)
+            if allow_final_symlink and index == len(components) - 1:
+                break
             if osp.islink(path):
-                raise ValueError("Submodule checkout path %r contains a symbolic link" % self.path)
+                raise ValueError("Submodule checkout path %r contains a symbolic link" % relative_path)
         return path
 
     @classmethod
@@ -1039,7 +1048,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             self
 
         :raise ValueError:
-            If the module path existed and was not empty, or was a file.
+            If the module path existed and was not empty, was a file, or had a
+            symbolic link in an intermediate component.
 
         :note:
             Currently the method is not atomic, and it could leave the repository in an
@@ -1057,7 +1067,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             return self
         # END handle no change
 
-        module_checkout_abspath = join_path_native(str(self.repo.working_tree_dir), module_checkout_path)
+        module_checkout_abspath = self._checkout_abspath(module_checkout_path, allow_final_symlink=True)
         if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files

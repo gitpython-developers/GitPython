@@ -51,6 +51,131 @@ def _patch_git_config(name, value):
         yield
 
 
+@pytest.fixture
+def movable_submodule(tmp_path):
+    """Create a committed local submodule whose logical name stays fixed when moved."""
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        (tmp_path / "source" / "file").write_text("content", encoding="utf-8")
+        source.index.add(["file"])
+        source.index.commit("Create source")
+        with _patch_git_config("protocol.file.allow", "always"):
+            submodule = parent.create_submodule("logical-name", "module", source.working_tree_dir)
+        parent.index.commit("Create submodule")
+        # Release clone handles before Windows moves the checkout.
+        submodule.module().close()
+        yield submodule
+
+
+def _move_snapshot(submodule):
+    """Capture index, configuration, and path state to detect side effects of rejected moves."""
+    parent = submodule.repo
+    with submodule.module() as module:
+        config = Path(module.git_dir, "config").read_bytes()
+    return (
+        Path(parent.index.path).read_bytes(),
+        Path(parent.working_tree_dir, ".gitmodules").read_bytes(),
+        Path(submodule.abspath, ".git").read_bytes(),
+        config,
+        submodule.path,
+    )
+
+
+@pytest.mark.parametrize("target_kind", ["relative", "absolute", "internal", "dangling"])
+@pytest.mark.parametrize("configuration,module", [(True, True), (False, True), (True, False)])
+@pytest.mark.parametrize("absolute_path", [False, True])
+def test_move_rejects_intermediate_symlink(
+    movable_submodule, tmp_path, target_kind, configuration, module, absolute_path
+):
+    """Reject intermediate symlinks before changing repository state or their targets.
+
+    Cover relative and absolute destinations in every move mode, including links
+    within the repository and dangling links, which must also be rejected.
+    """
+    submodule = movable_submodule
+    parent = submodule.repo
+    root = Path(parent.working_tree_dir)
+    target = root / "target" if target_kind == "internal" else tmp_path / "outside"
+    if target_kind != "dangling":
+        target.mkdir()
+    (root / "nested").mkdir()
+    link = root / "nested" / "link"
+    link.symlink_to(
+        target if target_kind == "absolute" else os.path.relpath(target, link.parent), target_is_directory=True
+    )
+    parent.index.add(["nested/link"])
+    parent.index.commit("Record layout")
+    tree = parent.git.write_tree()
+    before = _move_snapshot(submodule)
+    destination = root / "nested/link/new/moved" if absolute_path else "nested/link/new/moved"
+
+    with pytest.raises(ValueError, match="contains a symbolic link"):
+        submodule.move(destination, configuration=configuration, module=module)
+
+    assert _move_snapshot(submodule) == before
+    assert parent.git.write_tree() == tree
+    assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
+    if target_kind == "dangling":
+        assert not target.exists()
+    else:
+        assert list(target.iterdir()) == []
+
+
+@pytest.mark.parametrize("absolute_path", [False, True])
+def test_move_normal_destination(movable_submodule, absolute_path):
+    """Allow ordinary relative and absolute moves, and make a repeated move a no-op."""
+    submodule = movable_submodule
+    root = Path(submodule.repo.working_tree_dir)
+    destination = root / "nested/moved" if absolute_path else "nested/moved"
+    assert submodule.move(destination) is submodule
+    assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
+    assert not (root / "module").exists()
+    assert submodule.path == "nested/moved"
+    submodule.repo.git.write_tree()
+    before = _move_snapshot(submodule)
+    assert submodule.move(destination) is submodule
+    assert _move_snapshot(submodule) == before
+
+
+@pytest.mark.parametrize("kind", ["empty", "nonempty", "file", "dangling"])
+def test_move_leaf_symlink_compatibility(movable_submodule, tmp_path, kind):
+    """Preserve leaf-symlink replacement without modifying the external target.
+
+    Moving onto a link to an empty directory replaces the link; nonempty, file,
+    and dangling targets fail without changing repository state. Direct checkout
+    path access must still reject every leaf symlink.
+    """
+    submodule = movable_submodule
+    root = Path(submodule.repo.working_tree_dir)
+    target = tmp_path / "outside"
+    if kind in ("empty", "nonempty"):
+        target.mkdir()
+    if kind == "nonempty":
+        (target / "keep").write_text("keep", encoding="utf-8")
+    if kind == "file":
+        target.write_text("keep", encoding="utf-8")
+    destination = root / "destination"
+    destination.symlink_to(target, target_is_directory=kind != "file")
+    with pytest.raises(ValueError, match="contains a symbolic link"):
+        Submodule(submodule.repo, Submodule.NULL_BIN_SHA, name="unused", path="destination").abspath
+    before = _move_snapshot(submodule)
+    if kind == "empty":
+        assert submodule.move("destination") is submodule
+        assert not destination.is_symlink()
+        assert (destination / "file").is_file()
+        assert list(target.iterdir()) == []
+    else:
+        with pytest.raises(OSError if kind == "dangling" else ValueError):
+            submodule.move("destination")
+        assert _move_snapshot(submodule) == before
+        assert destination.is_symlink()
+        if kind == "nonempty":
+            assert (target / "keep").read_text(encoding="utf-8") == "keep"
+        elif kind == "file":
+            assert target.read_text(encoding="utf-8") == "keep"
+        else:
+            assert not target.exists()
+
+
 class TestRootProgress(RootUpdateProgress):
     """Just prints messages, for now without checking the correctness of the states"""
 
