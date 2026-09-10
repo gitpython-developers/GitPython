@@ -457,12 +457,12 @@ def test_add_to_dangling_metadata_symlink(movable_submodule, tmp_path, metadata_
     link = Path(sm.repo.git_dir) / "modules/new"
     target = tmp_path / "missing" / "metadata"
     link.symlink_to(osp.relpath(target, link.parent) if relative_target else target, target_is_directory=True)
-    link_target = os.readlink(link)
+    link_target = os.readlink(str(link))
 
     added = Submodule.add(sm.repo, "new", "new", sm.url)
 
     assert link.is_symlink() and link.is_dir()
-    assert os.readlink(link) == link_target
+    assert os.readlink(str(link)) == link_target
     assert (target / "HEAD").is_file()
     with added.module() as module:
         assert Path(module.git_dir).resolve() == target.resolve()
