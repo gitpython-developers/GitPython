@@ -289,6 +289,25 @@ class TestRefs(TestBase):
                         pathspec_file_nul=True,
                         **{option_name: str(pathspecs)},
                     )
+            for option_name in ("--pathspec-from-file", "--pathspec-from"):
+                branch = Head(rw_repo, f"refs/heads/{option_name}={pathspecs}")
+                with self.assertRaises(UnsafeOptionError):
+                    branch.checkout()
+
+    def test_cloned_head_checkout_rejects_pathspec_from_file(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            base_dir = Path(tdir)
+            with self._repo_with_initial_commit(base_dir) as source:
+                branch = source.create_head("--pathspec-from-file=pathspecs")
+                source.head.reference = branch
+                with Repo.clone_from(source.working_tree_dir, base_dir / "clone") as cloned:
+                    (base_dir / "clone" / "pathspecs").write_text("unmatched-private-content\n", encoding="utf-8")
+                    assert cloned.active_branch.name == branch.name
+                    with self.assertRaises(UnsafeOptionError):
+                        cloned.active_branch.checkout()
+                    with self.assertRaises(GitCommandError) as error:
+                        cloned.active_branch.checkout(allow_unsafe_options=True)
+                    assert "unmatched-private-content" in str(error.exception)
 
     @with_rw_repo("HEAD")
     def test_head_reset_rejects_pathspec_from_file(self, rw_repo):

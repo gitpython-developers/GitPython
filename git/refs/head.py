@@ -283,7 +283,7 @@ class Head(Reference):
         """
         if not allow_unsafe_options:
             Git.check_unsafe_options(
-                options=Git._option_candidates([], kwargs),
+                options=Git._option_candidates([self], kwargs),
                 unsafe_options=Git.unsafe_git_pathspec_from_file_options,
             )
         kwargs["f"] = force
