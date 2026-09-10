@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+from types import SimpleNamespace
 from unittest import mock, skipUnless
 
 import pytest
@@ -49,6 +50,424 @@ def _patch_git_config(name, value):
 
     with patcher:
         yield
+
+
+@pytest.fixture
+def movable_submodule(tmp_path):
+    """Create a committed local submodule whose logical name stays fixed when moved."""
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        (tmp_path / "source" / "file").write_text("content", encoding="utf-8")
+        source.index.add(["file"])
+        source.index.commit("Create source")
+        with _patch_git_config("protocol.file.allow", "always"):
+            submodule = parent.create_submodule("logical-name", "module", source.working_tree_dir)
+        parent.index.commit("Create submodule")
+        # Release clone handles before Windows moves the checkout.
+        submodule.module().close()
+        yield submodule
+
+
+def _move_snapshot(submodule):
+    """Capture index, configuration, and path state to detect side effects of rejected moves."""
+    parent = submodule.repo
+    with submodule.module() as module:
+        config = Path(module.git_dir, "config").read_bytes()
+    return (
+        Path(parent.index.path).read_bytes(),
+        Path(parent.working_tree_dir, ".gitmodules").read_bytes(),
+        Path(submodule.abspath, ".git").read_bytes(),
+        config,
+        submodule.path,
+    )
+
+
+@pytest.mark.parametrize("target_kind", ["relative", "absolute", "internal", "dangling"])
+@pytest.mark.parametrize("configuration,module", [(True, True), (False, True), (True, False)])
+@pytest.mark.parametrize("absolute_path", [False, True])
+def test_move_rejects_intermediate_symlink(
+    movable_submodule, tmp_path, target_kind, configuration, module, absolute_path
+):
+    """Reject intermediate symlinks before changing repository state or their targets.
+
+    Cover relative and absolute destinations in every move mode, including links
+    within the repository and dangling links, which must also be rejected.
+    """
+    submodule = movable_submodule
+    parent = submodule.repo
+    root = Path(parent.working_tree_dir)
+    target = root / "target" if target_kind == "internal" else tmp_path / "outside"
+    if target_kind != "dangling":
+        target.mkdir()
+    (root / "nested").mkdir()
+    link = root / "nested" / "link"
+    link.symlink_to(
+        target if target_kind == "absolute" else os.path.relpath(target, link.parent), target_is_directory=True
+    )
+    parent.index.add(["nested/link"])
+    parent.index.commit("Record layout")
+    tree = parent.git.write_tree()
+    before = _move_snapshot(submodule)
+    destination = root / "nested/link/new/moved" if absolute_path else "nested/link/new/moved"
+
+    with pytest.raises(ValueError, match="contains a symbolic link"):
+        submodule.move(destination, configuration=configuration, module=module)
+
+    assert _move_snapshot(submodule) == before
+    assert parent.git.write_tree() == tree
+    assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
+    if target_kind == "dangling":
+        assert not target.exists()
+    else:
+        assert list(target.iterdir()) == []
+
+
+@pytest.mark.parametrize("absolute_path", [False, True])
+def test_move_normal_destination(movable_submodule, absolute_path):
+    """Allow ordinary relative and absolute moves, and make a repeated move a no-op."""
+    submodule = movable_submodule
+    root = Path(submodule.repo.working_tree_dir)
+    destination = root / "nested/moved" if absolute_path else "nested/moved"
+    assert submodule.move(destination) is submodule
+    assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
+    assert not (root / "module").exists()
+    assert submodule.path == "nested/moved"
+    submodule.repo.git.write_tree()
+    before = _move_snapshot(submodule)
+    assert submodule.move(destination) is submodule
+    assert _move_snapshot(submodule) == before
+
+
+@pytest.mark.parametrize("kind", ["empty", "nonempty", "file", "dangling"])
+def test_move_leaf_symlink_compatibility(movable_submodule, tmp_path, kind):
+    """Preserve leaf-symlink replacement without modifying the external target.
+
+    Moving onto a link to an empty directory replaces the link; nonempty, file,
+    and dangling targets fail without changing repository state. Direct checkout
+    path access must still reject every leaf symlink.
+    """
+    submodule = movable_submodule
+    root = Path(submodule.repo.working_tree_dir)
+    target = tmp_path / "outside"
+    if kind in ("empty", "nonempty"):
+        target.mkdir()
+    if kind == "nonempty":
+        (target / "keep").write_text("keep", encoding="utf-8")
+    if kind == "file":
+        target.write_text("keep", encoding="utf-8")
+    destination = root / "destination"
+    destination.symlink_to(target, target_is_directory=kind != "file")
+    with pytest.raises(ValueError, match="contains a symbolic link"):
+        Submodule(submodule.repo, Submodule.NULL_BIN_SHA, name="unused", path="destination").abspath
+    before = _move_snapshot(submodule)
+    if kind == "empty":
+        assert submodule.move("destination") is submodule
+        assert not destination.is_symlink()
+        assert (destination / "file").is_file()
+        assert list(target.iterdir()) == []
+    else:
+        with pytest.raises(OSError if kind == "dangling" else ValueError):
+            submodule.move("destination")
+        assert _move_snapshot(submodule) == before
+        assert destination.is_symlink()
+        if kind == "nonempty":
+            assert (target / "keep").read_text(encoding="utf-8") == "keep"
+        elif kind == "file":
+            assert target.read_text(encoding="utf-8") == "keep"
+        else:
+            assert not target.exists()
+
+
+@pytest.mark.parametrize("leaf", [False, True])
+@pytest.mark.parametrize("dangling", [False, True])
+@pytest.mark.parametrize("operation", ["add", "clone"])
+@pytest.mark.parametrize("gitfile", [False, True])
+def test_clone_rejects_checkout_symlinks(movable_submodule, tmp_path, leaf, dangling, operation, gitfile):
+    """Reject checkout symlinks before add or clone creates metadata or touches the target.
+
+    Cover leaf and intermediate links, including dangling targets, with both
+    embedded and separate Git directories.
+    """
+    sm = movable_submodule
+    root = Path(sm.repo.working_tree_dir)
+    target = tmp_path / "outside"
+    if not dangling:
+        target.mkdir()
+    (root / "link").symlink_to(target, target_is_directory=True)
+    path = "link" if leaf else "link/new/module"
+    before = _move_snapshot(sm)
+    with mock.patch.object(Submodule, "_need_gitfile_submodules", return_value=gitfile):
+        with pytest.raises(ValueError, match="contains a symbolic link"):
+            if operation == "add":
+                Submodule.add(sm.repo, "new", path, sm.url)
+            else:
+                Submodule._clone_repo(sm.repo, sm.url, path, "new")
+    assert _move_snapshot(sm) == before
+    assert not (Path(sm.repo.git_dir) / "modules/new").exists()
+    assert not target.exists() if dangling else list(target.iterdir()) == []
+
+
+@pytest.mark.parametrize("link_kind", ["gitmodules", "checkout"])
+@pytest.mark.parametrize("operation", ["update", "move", "rename", "remove"])
+def test_submodule_rejects_checkout_and_gitmodules_symlinks(movable_submodule, tmp_path, link_kind, operation):
+    """Reject operations on symlinked checkouts or .gitmodules without side effects.
+
+    Update, move, rename, and forced removal must preserve the external target,
+    repository configuration, index, checkout, and any existing move destination.
+    """
+    sm = movable_submodule
+    sm.rename("nested/module")
+    root = Path(sm.repo.working_tree_dir)
+    path = root / (".gitmodules" if link_kind == "gitmodules" else "module")
+    target = tmp_path / "outside"
+    path.rename(target)
+    path.symlink_to(target, target_is_directory=target.is_dir())
+    before = (
+        {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+        if target.is_dir()
+        else target.read_bytes()
+    )
+    config = Path(sm.repo.git_dir, "config").read_bytes()
+    index = Path(sm.repo.index.path).read_bytes()
+    gitmodules = (root / ".gitmodules").read_bytes()
+    (root / "moved").mkdir()
+    with pytest.raises(ValueError, match="contains a symbolic link"):
+        if operation == "update":
+            sm.update()
+        elif operation == "move":
+            sm.move("moved")
+        elif operation == "rename":
+            sm.rename("renamed")
+        else:
+            sm.remove(force=True)
+    after = (
+        {p.relative_to(target): p.read_bytes() for p in target.rglob("*") if p.is_file()}
+        if target.is_dir()
+        else target.read_bytes()
+    )
+    assert after == before
+    assert Path(sm.repo.git_dir, "config").read_bytes() == config
+    assert Path(sm.repo.index.path).read_bytes() == index
+    assert (root / ".gitmodules").read_bytes() == gitmodules
+    assert (root / "module/file").read_text() == "content"
+    assert path.is_symlink()
+    assert (root / "moved").is_dir()
+
+
+def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
+    """Adding a submodule must not leave a child process holding its checkout open."""
+    sm = movable_submodule
+    checkout = Path(sm.repo.working_tree_dir, "new")
+    execute = Git.execute
+    processes = []
+
+    def capture_process(self, command, *args, **kwargs):
+        result = execute(self, command, *args, **kwargs)
+        if (
+            kwargs.get("as_process")
+            and "cat-file" in command
+            and Path(self.working_dir).resolve() == checkout.resolve()
+        ):
+            processes.append(result.proc)
+        return result
+
+    monkeypatch.setattr(Git, "execute", capture_process)
+    try:
+        added = Submodule.add(sm.repo, "new", "new", sm.url)
+        assert processes, "The HEAD read must exercise a persistent cat-file process"
+        assert all(process.poll() is not None for process in processes)
+        added.move("moved")
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+            process.wait()
+
+
+@pytest.fixture
+def windows_directory_symlink_removal(monkeypatch):
+    """Exercise Windows rmdir semantics on POSIX, where rmdir rejects symlinks."""
+    if sys.platform != "win32":
+        original_rmdir = os.rmdir
+
+        def rmdir(path, *args, **kwargs):
+            if osp.islink(path):
+                return os.unlink(path, *args, **kwargs)
+            return original_rmdir(path, *args, **kwargs)
+
+        monkeypatch.setattr(os, "rmdir", rmdir)
+
+
+def test_submodule_allows_symlink_above_worktree(
+    movable_submodule, tmp_path, windows_directory_symlink_removal, metadata_realpath
+):
+    """Allow adding and moving submodules when the parent is opened through a symlink."""
+    sm = movable_submodule
+    alias = tmp_path / "alias"
+    alias.symlink_to(sm.repo.working_tree_dir, target_is_directory=True)
+    with git.Repo(alias) as parent:
+        added = Submodule.add(parent, "new", "new", sm.url)
+        added.move("moved")
+        assert alias.is_symlink()
+        with added.module() as module:
+            assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(added.abspath).resolve()
+        assert Path(added.abspath, "file").read_text() == "content"
+
+
+@pytest.fixture(params=[False, True], ids=["native-realpath", "windows37-realpath"])
+def metadata_realpath(request):
+    """Model Python 3.7 on Windows without altering pathlib's own resolver."""
+    if request.param:
+        paths = SimpleNamespace(**vars(osp))
+        paths.realpath = osp.abspath
+        with mock.patch("git.objects.submodule.base.osp", paths):
+            yield
+    else:
+        yield
+
+
+@pytest.mark.parametrize("operation", ["add", "reconnect", "rename"])
+def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_path, operation, metadata_realpath):
+    """Allow linked metadata destinations while keeping the checkout correctly connected.
+
+    Adding, reconnecting after deinit, and renaming may store metadata outside the
+    parent repository through a symlink under .git/modules, preserving that link.
+    """
+    sm = movable_submodule
+    root = Path(sm.repo.working_tree_dir)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = Path(sm.repo.git_dir) / "modules/link"
+    link.symlink_to(outside, target_is_directory=True)
+    if operation == "rename":
+        sm.rename("link/new")
+    else:
+        sm = Submodule.add(sm.repo, "link/new", "new", sm.url)
+        if operation == "reconnect":
+            sm.repo.index.commit("Add linked metadata submodule")
+            sm.repo.git.submodule("deinit", "--force", "new")
+            sm.update(init=True)
+    assert link.is_symlink()
+    assert (outside / "new/HEAD").is_file()
+    with sm.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
+    assert Path(sm.abspath, "file").read_text() == "content"
+    assert (root / ".gitmodules").is_file()
+
+
+@pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf", "gitfile", "config", "alias"])
+@pytest.mark.parametrize("operation", ["update", "move", "rename", "remove"])
+def test_submodule_allows_existing_metadata_symlinks(
+    movable_submodule, tmp_path, kind, operation, windows_directory_symlink_removal, metadata_realpath
+):
+    """Keep submodule operations compatible with existing symlinks in Git metadata.
+
+    Cover linked metadata directories, gitfiles, configs, and internal aliases.
+    Update, move, and rename must retain a usable checkout; forced removal must
+    still remove both the checkout and the resolved metadata directory.
+    """
+    sm = movable_submodule
+    sm.rename("nested/module")
+    root = Path(sm.repo.working_tree_dir)
+    modules = Path(sm.repo.git_dir) / "modules"
+    paths = {
+        "modules": modules,
+        "intermediate": modules / "nested",
+        "leaf": modules / "nested/module",
+        "gitfile": root / "module/.git",
+        "config": modules / "nested/module/config",
+        "alias": modules / "alias",
+    }
+    link = paths[kind]
+    target = tmp_path / "outside"
+    if kind == "alias":
+        target = modules / "nested"
+        (root / "module/.git").write_text("gitdir: ../.git/modules/alias/module")
+    else:
+        link.rename(target)
+    link.symlink_to(target, target_is_directory=target.is_dir())
+    # Relocating metadata changes the base of a relative core.worktree setting.
+    sm.repo.git.config("--file", str(modules / "nested/module/config"), "core.worktree", str(root / "module"))
+    assert sm.module_exists()
+    if operation == "remove":
+        metadata_dir = (modules / "nested/module").resolve()
+        assert metadata_dir.is_dir()
+        url = sm.url
+        sm.remove(force=True)
+        assert not (root / "module").exists()
+        assert not metadata_dir.exists()
+        if kind in ("modules", "intermediate", "alias"):
+            assert link.is_symlink() and link.is_dir()
+        replacement = Submodule.add(sm.repo, "nested/module", "module", url)
+        if kind == "leaf":
+            assert link.is_symlink() and link.is_dir()
+            assert target.is_dir()
+        with replacement.module() as module:
+            assert Path(module.git.rev_parse("--show-toplevel")).resolve() == (root / "module").resolve()
+        return
+    if operation == "update":
+        sm.update()
+    elif operation == "move":
+        sm.move("moved")
+    else:
+        sm.rename("renamed")
+    if kind == "modules" or (operation == "rename" and kind in ("intermediate", "alias")):
+        assert link.is_symlink()
+        assert link.is_dir()
+    if operation == "rename" and kind == "leaf":
+        assert (modules / "renamed").is_symlink()
+        assert target.is_dir()
+    with sm.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
+    assert Path(sm.abspath, "file").read_text() == "content"
+
+
+@pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf"])
+def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(
+    movable_submodule, tmp_path, kind, metadata_realpath
+):
+    sm = movable_submodule
+    sm.rename("nested/module")
+    sibling = Submodule.add(sm.repo, "nested/sibling", "sibling", sm.url)
+    sm.repo.index.commit("Add sibling")
+    modules = Path(sm.repo.git_dir) / "modules"
+    link = {"modules": modules, "intermediate": modules / "nested", "leaf": modules / "nested/module"}[kind]
+    target = tmp_path / "outside"
+    link.rename(target)
+    link.symlink_to(target, target_is_directory=True)
+    for child in (sm, sibling):
+        sm.repo.git.config("--file", str(modules / child.name / "config"), "core.worktree", str(child.abspath))
+
+    sm.remove(force=True, configuration=False)
+
+    assert link.is_symlink()
+    assert link.exists() == (kind != "leaf")
+    with sibling.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sibling.abspath).resolve()
+        assert Path(sibling.abspath, "file").read_text() == "content"
+    sm.update(init=True)
+    assert link.is_symlink() and link.is_dir()
+    assert Path(sm.abspath, "file").read_text() == "content"
+    with sm.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
+
+
+@pytest.mark.parametrize("relative_target", [False, True], ids=["absolute-target", "relative-target"])
+def test_add_to_dangling_metadata_symlink(movable_submodule, tmp_path, metadata_realpath, relative_target):
+    sm = movable_submodule
+    link = Path(sm.repo.git_dir) / "modules/new"
+    target = tmp_path / "missing" / "metadata"
+    link.symlink_to(osp.relpath(target, link.parent) if relative_target else target, target_is_directory=True)
+    link_target = os.readlink(str(link))
+
+    added = Submodule.add(sm.repo, "new", "new", sm.url)
+
+    assert link.is_symlink() and link.is_dir()
+    assert os.readlink(str(link)) == link_target
+    assert (target / "HEAD").is_file()
+    with added.module() as module:
+        assert Path(module.git_dir).resolve() == target.resolve()
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(added.abspath).resolve()
+    assert Path(added.abspath, "file").read_text() == "content"
 
 
 class TestRootProgress(RootUpdateProgress):
