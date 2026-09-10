@@ -777,9 +777,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             except ValueError:
                 # head is not yet set to the ref our HEAD points to.
                 # Happens on first commit.
+                reference = repo.head.ref
+                if reference is None:
+                    raise
                 master = git.refs.Head.create(
                     repo,
-                    repo.head.ref,
+                    reference,
                     new_commit,
                     logmsg="commit (initial): %s" % message,
                 )

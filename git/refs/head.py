@@ -13,7 +13,7 @@ from git.exc import GitCommandError
 from git.util import join_path
 
 from .reference import Reference
-from .symbolic import SymbolicReference
+from .symbolic import SymbolicReference, _ReferenceNotFoundError
 
 # typing ---------------------------------------------------
 
@@ -48,6 +48,27 @@ class HEAD(SymbolicReference):
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super().__init__(repo, path)
+
+    @property
+    def hexsha(self) -> Union[str, None]:
+        """HEAD's hexadecimal object ID, or ``None`` if its target is unborn.
+
+        Resolve symbolic references without reading the object database. This works
+        for attached and detached HEADs, including bare repositories and worktrees.
+
+        :raise ValueError:
+            If HEAD is missing or reference data is malformed or cyclic.
+
+        :raise OSError:
+            If HEAD, its target, or packed references cannot be read.
+        """
+        hexsha, ref_path = self._get_ref_info(self.repo, self.path)
+        if ref_path is None:
+            return hexsha
+        try:
+            return self.dereference_recursive(self.repo, ref_path)
+        except _ReferenceNotFoundError:
+            return None
 
     def orig_head(self) -> SymbolicReference:
         """
@@ -291,10 +312,7 @@ class Head(Reference):
             kwargs.pop("f")
 
         self.repo.git.checkout(self, **kwargs)
-        if self.repo.head.is_detached:
-            return self.repo.head
-        else:
-            return self.repo.active_branch
+        return self.repo.active_branch or self.repo.head
 
     # { Configuration
     def _config_parser(self, read_only: bool) -> SectionConstraint[GitConfigParser]:

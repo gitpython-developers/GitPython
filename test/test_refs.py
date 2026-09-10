@@ -9,6 +9,8 @@ import os.path as osp
 from pathlib import Path
 import tempfile
 
+import pytest
+
 from gitdb.exc import BadName
 
 from git import (
@@ -29,6 +31,98 @@ import git.refs as refs
 from git.util import Actor, rmtree
 
 from test.lib import TestBase, requires_symlinks, with_rw_repo, PathLikeMock
+
+
+def test_head_lookup_states(tmp_path):
+    with Repo.init(tmp_path) as repo:
+        head = repo.head
+        branch = head.reference
+        assert branch == repo.active_branch
+        assert not head.is_detached
+        assert head.hexsha is None
+
+        initial = repo.index.commit("initial")
+        assert head.hexsha == initial.hexsha
+        assert branch.reference is None
+        repo.git.pack_refs(all=True, prune=True)
+        assert not Path(branch.abspath).exists()
+        assert head.hexsha == initial.hexsha
+
+        alias = SymbolicReference.create(repo, "refs/heads/alias", branch)
+        head.reference = alias
+        assert head.hexsha == initial.hexsha
+
+        head.ref = initial
+        assert head.reference is None
+        assert head.ref is None
+        assert repo.active_branch is None
+        assert head.is_detached
+        assert head.hexsha == initial.hexsha
+        assert head.commit == initial
+
+        detached = repo.index.commit("detached")
+        assert head.hexsha == detached.hexsha
+        assert branch.commit == initial
+        head.reference = branch
+        head.commit = detached
+        assert head.hexsha == branch.commit.hexsha == detached.hexsha
+        assert repo.active_branch == branch
+
+
+@pytest.mark.parametrize("bare", (False, True))
+@pytest.mark.parametrize("detached", (False, True))
+def test_head_hexsha_without_reading_objects(tmp_path, bare, detached):
+    with Repo.init(tmp_path, bare=bare) as repo:
+        repo.head.reference = Head(repo, "refs/heads/main")
+        path = Path(repo.git_dir) / ("HEAD" if detached else "refs/heads/main")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # This object does not exist: reading its ID must not require the object database.
+        hexsha = "1234567890" * 4
+        path.write_text(hexsha + "\n")
+        assert repo.head.hexsha == hexsha
+
+
+@pytest.mark.parametrize("ref_path", ("HEAD", "refs/heads/main"))
+@pytest.mark.parametrize("content", ("", "ref:\n", "not-an-object-id\n", "ref: refs/heads/invalid branch\n"))
+def test_head_hexsha_rejects_malformed_refs(tmp_path, ref_path, content):
+    with Repo.init(tmp_path) as repo:
+        repo.head.reference = Head(repo, "refs/heads/main")
+        path = Path(repo.git_dir) / ref_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        with pytest.raises(ValueError):
+            repo.head.hexsha
+
+
+@pytest.mark.parametrize("ref_path", ("HEAD", "refs/heads/main", "packed-refs"))
+def test_head_hexsha_propagates_read_errors(tmp_path, ref_path):
+    with Repo.init(tmp_path) as repo:
+        repo.head.reference = Head(repo, "refs/heads/main")
+        # A loose ref that cannot be read must not fall back to its packed value.
+        Path(repo.git_dir, "packed-refs").write_text("1234567890" * 4 + " refs/heads/main\n")
+        path = Path(repo.git_dir) / ref_path
+        if path.is_file():
+            path.unlink()
+        path.mkdir(parents=True)
+        with pytest.raises(OSError):
+            repo.head.hexsha
+
+
+def test_head_hexsha_rejects_missing_head(tmp_path):
+    with Repo.init(tmp_path) as repo:
+        Path(repo.git_dir, "HEAD").unlink()
+        with pytest.raises(ValueError):
+            repo.head.hexsha
+
+
+@pytest.mark.parametrize("target", ("HEAD", "refs/heads/loop"))
+def test_head_hexsha_rejects_symbolic_ref_cycles(tmp_path, target):
+    with Repo.init(tmp_path) as repo:
+        Path(repo.git_dir, "HEAD").write_text("ref: " + target + "\n")
+        if target != "HEAD":
+            Path(repo.git_dir, target).write_text("ref: HEAD\n")
+        with pytest.raises(ValueError, match="cycle"):
+            repo.head.hexsha
 
 
 class TestRefs(TestBase):
@@ -266,7 +360,9 @@ class TestRefs(TestBase):
     def test_is_valid(self):
         assert not Reference(self.rorepo, "refs/doesnt/exist").is_valid()
         assert self.rorepo.head.is_valid()
-        assert self.rorepo.head.reference.is_valid()
+        reference = self.rorepo.head.reference
+        if reference is not None:
+            assert reference.is_valid()
         assert not SymbolicReference(self.rorepo, "hellothere").is_valid()
 
     def test_orig_head(self):
@@ -371,7 +467,7 @@ class TestRefs(TestBase):
         cur_head.reference = curhead_commit
         assert cur_head.commit == curhead_commit
         assert cur_head.is_detached
-        self.assertRaises(TypeError, getattr, cur_head, "reference")
+        assert cur_head.reference is None
 
         # Tags are references, hence we can point to them.
         some_tag = rw_repo.tags[0]
@@ -722,7 +818,10 @@ class TestRefs(TestBase):
         assert SymbolicReference.dereference_recursive(self.rorepo, "HEAD")
 
     def test_reflog(self):
-        assert isinstance(self.rorepo.active_branch.log(), RefLog)
+        assert isinstance(self.rorepo.head.log(), RefLog)
+        branch = self.rorepo.active_branch
+        if branch is not None:
+            assert isinstance(branch.log(), RefLog)
 
     def test_refs_outside_repo(self):
         # Create a file containing a valid reference outside the repository. Attempting

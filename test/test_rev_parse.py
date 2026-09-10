@@ -76,6 +76,13 @@ def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
     assert repo.rev_parse(describe_name) == release
 
 
+@pytest.mark.parametrize("name", ("objects", "config/branch"))
+def test_rev_parse_names_conflicting_with_git_dir_entries(rev_parse_repo, name):
+    repo = rev_parse_repo["repo"]
+    branch = repo.create_head(name)
+    assert repo.rev_parse(name) == branch.commit
+
+
 def test_rev_parse_navigation_and_peeling(rev_parse_repo):
     repo = rev_parse_repo["repo"]
     root = rev_parse_repo["root"]
@@ -128,6 +135,13 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     SymbolicReference.create(repo, "refs/remotes/origin/%s" % main.name, merge)
     main.set_tracking_branch(RemoteReference(repo, "refs/remotes/origin/%s" % main.name))
     assert repo.rev_parse("%s@{upstream}" % main.name) == merge
+
+    repo.head.reference = merge
+    assert repo.rev_parse("@{0}") == merge
+    assert repo.rev_parse("@{1}").hexsha == repo.git.rev_parse("@{1}")
+    assert repo.rev_parse("%s@{upstream}" % main.name) == merge
+    with pytest.raises(BadName):
+        repo.rev_parse("@{upstream}")
 
 
 def test_rev_parse_commit_message_search(rev_parse_repo):

@@ -50,6 +50,10 @@ T_References = TypeVar("T_References", bound="SymbolicReference")
 # ------------------------------------------------------------------------------
 
 
+class _ReferenceNotFoundError(ValueError):
+    """A reference has neither a loose nor a packed entry."""
+
+
 def _git_dir(repo: "Repo", path: Union[PathLike, None]) -> PathLike:
     """Find the git dir that is appropriate for the path."""
     name = f"{path}"
@@ -176,7 +180,7 @@ class SymbolicReference:
 
                     yield cast(Tuple[str, str], tuple(line.split(" ", 1)))
                 # END for each line
-        except OSError:
+        except FileNotFoundError:
             return None
         # END no packed-refs file handling
 
@@ -191,8 +195,13 @@ class SymbolicReference:
             The repository containing the reference at `ref_path`.
         """
 
+        seen = set()
         while True:
-            hexsha, ref_path = cls._get_ref_info(repo, ref_path)
+            path = os.fspath(ref_path) if ref_path is not None else None
+            if path in seen:
+                raise ValueError("Symbolic reference cycle at %r" % path)
+            seen.add(path)
+            hexsha, ref_path = cls._get_ref_info(repo, path)
             if hexsha is not None:
                 return hexsha
         # END recursive dereferencing
@@ -267,8 +276,7 @@ class SymbolicReference:
             # Don't only split on spaces, but on whitespace, which allows to parse lines like:
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
             tokens = value.split()
-            assert len(tokens) != 0
-        except OSError:
+        except FileNotFoundError:
             # Probably we are just packed. Find our entry in the packed refs file.
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
             # are excluded explicitly.
@@ -281,14 +289,14 @@ class SymbolicReference:
             # END for each packed ref
         # END handle packed refs
         if tokens is None:
-            raise ValueError("Reference at %r does not exist" % ref_path)
+            raise _ReferenceNotFoundError("Reference at %r does not exist" % ref_path)
 
         # Is it a reference?
-        if tokens[0] == "ref:":
+        if len(tokens) == 2 and tokens[0] == "ref:":
             return (None, tokens[1])
 
         # It's a commit.
-        if repo.re_hexsha_only.match(tokens[0]):
+        if tokens and repo.re_hexsha_only.match(tokens[0]):
             return (tokens[0], None)
 
         raise ValueError("Failed to parse reference information from %r" % ref_path)
@@ -401,18 +409,18 @@ class SymbolicReference:
             object = object.object  # @ReservedAssignment
         # END resolve references
 
-        is_detached = True
+        reference = None
         try:
-            is_detached = self.is_detached
+            reference = self._get_reference()
         except ValueError:
             pass
         # END handle non-existing ones
 
-        if is_detached:
+        if reference is None:
             return self.set_reference(object, logmsg)
 
         # set the commit on our reference
-        return self._get_reference().set_object(object, logmsg)
+        return reference.set_object(object, logmsg)
 
     @property
     def commit(self) -> "Commit":
@@ -432,18 +440,11 @@ class SymbolicReference:
     def object(self, object: Union[AnyGitObject, "SymbolicReference", str]) -> "SymbolicReference":
         return self.set_object(object)
 
-    def _get_reference(self) -> "Reference":
-        """
-        :return:
-            :class:`~git.refs.reference.Reference` object we point to
-
-        :raise TypeError:
-            If this symbolic reference is detached, hence it doesn't point to a
-            reference, but to a commit.
-        """
-        sha, target_ref_path = self._get_ref_info(self.repo, self.path)
+    def _get_reference(self) -> Union["Reference", None]:
+        """Return the reference we point to, or ``None`` if detached."""
+        _sha, target_ref_path = self._get_ref_info(self.repo, self.path)
         if target_ref_path is None:
-            raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
+            return None
         return cast("Reference", self.from_path(self.repo, target_ref_path))
 
     def set_reference(
@@ -530,7 +531,13 @@ class SymbolicReference:
 
     # Aliased reference
     @property
-    def reference(self) -> "Reference":
+    def reference(self) -> Union["Reference", None]:
+        """The reference we point to, or ``None`` if detached.
+
+        An unborn branch still has a reference. Missing or malformed reference data
+        raises :exc:`ValueError`; other read errors propagate as :exc:`OSError`.
+        For HEAD's object ID, use :attr:`~git.refs.head.HEAD.hexsha`.
+        """
         return self._get_reference()
 
     @reference.setter
@@ -559,11 +566,7 @@ class SymbolicReference:
             ``True`` if we are a detached reference, hence we point to a specific commit
             instead to another reference.
         """
-        try:
-            self.ref  # noqa: B018
-            return False
-        except TypeError:
-            return True
+        return self.ref is None
 
     def log(self) -> "RefLog":
         """

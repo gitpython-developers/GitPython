@@ -1703,3 +1703,7 @@ class TestSubmodule(TestBase):
 
         has_module = any(sm.name == "module" for sm in cloned_repo.submodules)
         assert has_module, "Relative submodule was not updated properly"
+
+        cloned_repo.head.reference = cloned_repo.head.commit
+        added = cloned_repo.create_submodule("second", "second", url="../module")
+        assert added.module().head.hexsha == submodule_repo.head.hexsha

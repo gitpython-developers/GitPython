@@ -157,6 +157,8 @@ def with_rw_repo(working_tree_ref, bare=False):
             repo_dir = tempfile.mktemp(prefix="%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 
+            if rw_repo.head.reference is None:
+                rw_repo.head.reference = rw_repo.create_head("master", force=True)
             rw_repo.head.commit = rw_repo.commit(working_tree_ref)
             if not bare:
                 rw_repo.head.reference.checkout()
@@ -286,6 +288,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
 
             rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
+            # Remote tests expect master regardless of the source repository's HEAD.
+            rw_daemon_repo.head.reference = rw_daemon_repo.create_head("master", force=True)
             # Recursive alternates info?
             rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
             try:

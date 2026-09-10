@@ -776,10 +776,8 @@ class TestBase(TestCase):
             assert config._included_paths() == [("path", path2)]
 
     @with_rw_directory
-    def test_conditional_includes_from_branch_name_error(self, rw_dir):
-        # Initiate mocked repository to raise an error if HEAD is detached.
-        repo = mock.Mock()
-        type(repo).active_branch = mock.PropertyMock(side_effect=TypeError)
+    def test_conditional_includes_from_detached_head(self, rw_dir):
+        repo = mock.Mock(active_branch=None)
 
         # Initiate config file.
         path1 = osp.join(rw_dir, "config1")

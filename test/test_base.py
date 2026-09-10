@@ -92,7 +92,7 @@ class TestBase(_TestBase):
 
     def test_object_resolution(self):
         # Objects must be resolved to shas so they compare equal.
-        self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
+        self.assertEqual(self.rorepo.head.object, self.rorepo.commit())
 
     @with_rw_repo("HEAD", bare=True)
     def test_with_bare_rw_repo(self, bare_rw_repo: Repo):

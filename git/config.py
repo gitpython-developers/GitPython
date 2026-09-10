@@ -81,6 +81,7 @@ UNSAFE_CONFIG_VALUE_CHARS_RE = re.compile(r"\x00")
 
 _MISSING = object()
 
+
 def _escape_section_subsection(value: str) -> str:
     """Return *value* escaped for Git's double-quoted subsection syntax."""
     return value.replace("\\", "\\\\").replace('"', '\\"')
@@ -819,13 +820,12 @@ class GitConfigParser:
                     paths += _all_items(section)
 
             elif keyword == "onbranch":
-                try:
-                    branch_name = self._repo.active_branch.name
-                except TypeError:
+                branch = self._repo.active_branch
+                if branch is None:
                     # Ignore section if active branch cannot be retrieved.
                     continue
 
-                if fnmatch.fnmatchcase(branch_name, value):
+                if fnmatch.fnmatchcase(branch.name, value):
                     paths += _all_items(section)
             elif keyword == "hasconfig:remote.*.url":
                 for remote in self._repo.remotes:

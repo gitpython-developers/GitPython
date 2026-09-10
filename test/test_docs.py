@@ -75,7 +75,8 @@ class Tutorials(TestBase):
         active_branch = repo.active_branch
         self.assertEqual(repo.head.ref, active_branch)  # HEAD is a sym-ref pointing to the active branch.
         self.assertEqual(repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5"))  # You can access tags in various ways too.
-        self.assertEqual(repo.refs[active_branch.name], repo.heads[active_branch.name])  # .refs provides all refs...
+        if active_branch is not None:  # A detached HEAD has no active branch.
+            self.assertEqual(repo.refs[active_branch.name], repo.heads[active_branch.name])  # .refs provides all refs.
 
         if "TRAVIS" not in os.environ:
             remote_branch = next(ref for ref in repo.remotes.origin.refs if ref.remote_head != "HEAD")
@@ -86,6 +87,9 @@ class Tutorials(TestBase):
         # Create a new head/branch.
         # [9-test_init_repo_object]
         original_branch = cloned_repo.active_branch
+        if original_branch is None:
+            original_branch = cloned_repo.create_head("master")
+            cloned_repo.head.reference = original_branch
         new_branch = cloned_repo.create_head("feature")  # Create a new branch ...
         assert cloned_repo.active_branch != new_branch  # which wasn't checked out yet ...
         self.assertEqual(new_branch.commit, cloned_repo.active_branch.commit)  # pointing to the checked-out commit.

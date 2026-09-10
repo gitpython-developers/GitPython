@@ -525,6 +525,9 @@ class Repo:
         """
         :return:
             :class:`~git.refs.head.HEAD` object pointing to the current head reference
+
+        Use :attr:`~git.refs.head.HEAD.hexsha` for the current object ID without
+        loading a commit. It returns ``None`` for an unborn branch.
         """
         return HEAD(self, "HEAD")
 
@@ -1130,21 +1133,19 @@ class Repo:
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")
 
     @property
-    def active_branch(self) -> Head:
-        """The name of the currently active branch.
-
-        :raise TypeError:
-            If HEAD is detached.
+    def active_branch(self) -> Union[Head, None]:
+        """The currently active branch, or ``None`` if HEAD is detached.
 
         :raise ValueError:
             If HEAD points to the ``.invalid`` ref Git uses to mark refs as
             incompatible with older clients.
 
         :return:
-            :class:`~git.refs.head.Head` to the active branch
+            :class:`~git.refs.head.Head` to the active branch, including an unborn
+            branch, or ``None`` if HEAD points directly to an object.
         """
         active_branch = self.head.reference
-        if active_branch.name == ".invalid":
+        if active_branch is not None and active_branch.name == ".invalid":
             raise ValueError(
                 "HEAD points to 'refs/heads/.invalid', which Git uses to mark refs as incompatible with older clients"
             )

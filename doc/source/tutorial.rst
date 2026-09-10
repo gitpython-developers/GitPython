@@ -160,6 +160,15 @@ A :class:`symbolic reference <git.refs.symbolic.SymbolicReference>` is a special
     :start-after: # [3-test_references_and_objects]
     :end-before: # ![3-test_references_and_objects]
 
+Use ``repo.head.hexsha`` to read HEAD's hexadecimal object ID without loading a
+commit. It works with both attached and detached HEADs and returns ``None`` for an
+unborn branch. Missing HEAD files, malformed references, and read errors raise
+exceptions.
+
+``repo.head.reference`` (also ``repo.head.ref``) and ``repo.active_branch`` return
+``None`` when HEAD is detached. An unborn branch still has a reference, even though
+it has no object ID yet.
+
 Access the :class:`reflog <git.refs.log.RefLog>` easily.
 
 .. literalinclude:: ../../test/test_docs.py

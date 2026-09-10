@@ -71,7 +71,7 @@ from git.types import Commit_ish, PathLike, TBD
 if TYPE_CHECKING:
     from git.index import IndexFile
     from git.objects.commit import Commit
-    from git.refs import Head, RemoteReference
+    from git.refs import Head
     from git.repo import Repo
 
 # -----------------------------------------------------------------------------
@@ -381,7 +381,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_checkout_path = osp.join(repo.working_tree_dir, path)  # type: ignore[arg-type]
 
         if url.startswith("../"):
-            remote_name = cast("RemoteReference", repo.active_branch.tracking_branch()).remote_name
+            branch = repo.active_branch
+            tracking_branch = branch.tracking_branch() if branch is not None else None
+            remote_name = tracking_branch.remote_name if tracking_branch is not None else "origin"
             repo_remote_url = repo.remote(remote_name).url
             url = os.path.join(repo_remote_url, url)
 
@@ -876,7 +878,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                                 local_branch,
                                 logmsg="submodule: attaching head to %s" % local_branch,
                             )
-                            mrepo.head.reference.set_tracking_branch(remote_branch)
+                            local_branch.set_tracking_branch(remote_branch)
                         except (IndexError, InvalidGitRepositoryError):
                             _logger.warning("Failed to checkout tracking branch %s", self.branch_path)
 
@@ -897,8 +899,9 @@ class Submodule(IndexObject, TraversableIterableObj):
 
             if mrepo is not None and to_latest_revision:
                 msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
-                if not is_detached:
-                    rref = mrepo.head.reference.tracking_branch()
+                branch = mrepo.active_branch
+                if branch is not None:
+                    rref = branch.tracking_branch()
                     if rref is not None:
                         rcommit = rref.commit
                         binsha = rcommit.binsha
@@ -907,7 +910,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                         _logger.error(
                             "%s a tracking branch was not set for local branch '%s'",
                             msg_base,
-                            mrepo.head.reference,
+                            branch,
                         )
                     # END handle remote ref
                 else:

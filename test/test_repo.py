@@ -156,8 +156,9 @@ class TestRepo(TestBase):
         # END for each head
 
         active_branch = self.rorepo.active_branch
-        self.assertIsInstance(self.rorepo.heads[active_branch.name], Head)
-        self.assertEqual(self.rorepo.heads[active_branch.name], active_branch)
+        if active_branch is not None:
+            self.assertIsInstance(self.rorepo.heads[active_branch.name], Head)
+            self.assertEqual(self.rorepo.heads[active_branch.name], active_branch)
 
     def test_tree_from_revision(self):
         tree = self.rorepo.tree("0.1.6")
@@ -461,7 +462,8 @@ class TestRepo(TestBase):
         assert rwrepo.is_dirty(path=PathLikeMock("doc")) is False
 
     def test_head(self):
-        self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
+        self.assertEqual(self.rorepo.head.reference, self.rorepo.active_branch)
+        self.assertEqual(self.rorepo.head.hexsha, self.rorepo.git.rev_parse("HEAD"))
 
     def test_index(self):
         index = self.rorepo.index
@@ -1011,7 +1013,7 @@ class TestRepo(TestBase):
         except IndexError:
             pass
         else:
-            self.assertNotEqual(previous, head.commit)
+            self.assertEqual(previous.hexsha, self.rorepo.git.rev_parse("@{1}"))
 
     def test_repo_odbtype(self):
         target_type = GitCmdObjectDB
@@ -1148,14 +1150,14 @@ class TestRepo(TestBase):
         )
 
     @with_rw_directory
-    def test_active_branch_raises_type_error_when_head_is_detached(self, rw_dir):
+    def test_active_branch_is_none_when_head_is_detached(self, rw_dir):
         repo = Repo.init(rw_dir)
         with open(osp.join(rw_dir, "a.txt"), "w") as f:
             f.write("a")
         repo.index.add(["a.txt"])
         repo.index.commit("initial commit")
         repo.git.checkout(repo.head.commit.hexsha)
-        self.assertRaisesRegex(TypeError, "detached symbolic reference", lambda: repo.active_branch)
+        self.assertIsNone(repo.active_branch)
 
     def test_merge_base(self):
         repo = self.rorepo
@@ -1253,6 +1255,14 @@ class TestRepo(TestBase):
         # can read commondir correctly.
         commit = repo.head.commit
         self.assertIsInstance(commit, Object)
+        self.assertEqual(repo.head.hexsha, commit.hexsha)
+        rw_master.git.pack_refs(all=True, prune=True)
+        self.assertEqual(repo.head.hexsha, commit.hexsha)
+        repo.head.reference = commit.parents[0]
+        self.assertEqual(repo.head.hexsha, commit.parents[0].hexsha)
+        self.assertEqual(rw_master.head.hexsha, commit.hexsha)
+        repo.head.reference = Head(repo, "refs/heads/unborn")
+        self.assertIsNone(repo.head.hexsha)
 
         # This ensures we can read the remotes, which confirms we're reading the config
         # correctly.

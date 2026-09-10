@@ -207,8 +207,12 @@ def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[A
                     return SymbolicReference(repo, base % name)
                 # END handle symbolic ref
                 break
-            except ValueError:
+            except (ValueError, NotADirectoryError):
                 pass
+            except OSError:
+                # Metadata directories such as .git/objects are not candidate refs.
+                if not osp.isdir(SymbolicReference(repo, base % name).abspath):
+                    raise
         # END for each base
     # END handle hexsha
 
@@ -256,11 +260,7 @@ def _object_from_hexsha(repo: "Repo", hexsha: str) -> AnyGitObject:
 
 
 def _current_reflog_ref(repo: "Repo") -> SymbolicReference:
-    try:
-        return repo.head.ref
-    except TypeError:
-        return repo.head
-    # END handle detached head
+    return repo.head.ref or repo.head
 
 
 def _common_reflog_path(repo: "Repo", ref: SymbolicReference) -> Optional[str]:
@@ -280,13 +280,9 @@ def _ref_log(repo: "Repo", ref: SymbolicReference) -> "RefLog":
 
             return RefLog.from_file(common_path)
         # END handle linked-worktree branch logs
-        try:
-            if ref.path == repo.head.ref.path:
-                return repo.head.log()
-            # END handle linked-worktree current branch logs
-        except TypeError:
-            pass
-        # END handle detached head
+        if ref == repo.head.ref:
+            return repo.head.log()
+        # END handle linked-worktree current branch logs
         raise
     # END handle missing branch log
 
@@ -301,13 +297,9 @@ def _ref_log_entry(repo: "Repo", ref: SymbolicReference, index: int) -> "RefLogE
 
             return RefLog.entry_at(common_path, index)
         # END handle linked-worktree branch logs
-        try:
-            if ref.path == repo.head.ref.path:
-                return repo.head.log_entry(index)
-            # END handle linked-worktree current branch logs
-        except TypeError:
-            pass
-        # END handle detached head
+        if ref == repo.head.ref:
+            return repo.head.log_entry(index)
+        # END handle linked-worktree current branch logs
         raise
     # END handle missing branch log
 
@@ -357,10 +349,9 @@ def _tracking_branch_object(repo: "Repo", ref: Optional[SymbolicReference]) -> A
     from git.refs.head import Head
 
     if ref is None:
-        try:
-            head = repo.active_branch
-        except TypeError as e:
-            raise BadName("@{upstream}") from e
+        head = repo.active_branch
+        if head is None:
+            raise BadName("@{upstream}")
     elif isinstance(ref, Head):
         head = ref
     elif os.fspath(ref.path).startswith("refs/heads/"):
