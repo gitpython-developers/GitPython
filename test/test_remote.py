@@ -1090,14 +1090,16 @@ class TestRemote(TestBase):
 class TestTimeouts(TestBase):
     @with_rw_repo("HEAD", bare=False)
     def test_timeout_funcs(self, repo):
-        # Force error code to prevent a race condition if the python thread is slow.
-        default = Git.AutoInterrupt._status_code_if_terminate
-        Git.AutoInterrupt._status_code_if_terminate = -15
-        for function in ["pull", "fetch"]:  # Can't get push to time out.
-            f = getattr(repo.remotes.origin, function)
-            assert f is not None  # Make sure these functions exist.
-            _ = f()  # Make sure the function runs.
-            with pytest.raises(GitCommandError, match="kill_after_timeout=0 s"):
-                f(kill_after_timeout=0)
+        # Maintenance may outlive a timed-out fetch and race with fixture cleanup.
+        with repo.config_writer() as config:
+            config.set_value("maintenance", "auto", False)
+            config.set_value("gc", "auto", 0)  # Older Git versions use auto-gc.
 
-        Git.AutoInterrupt._status_code_if_terminate = default
+        # Force error code to prevent a race condition if the python thread is slow.
+        with mock.patch.object(Git.AutoInterrupt, "_status_code_if_terminate", -15):
+            for function in ["pull", "fetch"]:  # Can't get push to time out.
+                f = getattr(repo.remotes.origin, function)
+                assert f is not None  # Make sure these functions exist.
+                _ = f()  # Make sure the function runs.
+                with pytest.raises(GitCommandError, match="kill_after_timeout=0 s"):
+                    f(kill_after_timeout=0)
