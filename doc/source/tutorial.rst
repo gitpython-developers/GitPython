@@ -78,6 +78,12 @@ Query relevant repository paths ...
 
 :class:`Heads <git.refs.head.Head>` Heads are branches in git-speak. :class:`References <git.refs.reference.Reference>` are pointers to a specific commit or to other references. Heads and :class:`Tags <git.refs.tag.TagReference>` are a kind of references. GitPython allows you to query them rather intuitively.
 
+To obtain the current commit ID, use ``repo.head.commit.hexsha``. This works both
+on a branch and with a detached HEAD, provided HEAD resolves to an existing commit.
+When ``repo.head.is_detached`` is true, HEAD points directly to a commit and there
+is no active branch: reading ``repo.head.reference`` or ``repo.active_branch``
+raises :exc:`TypeError`. The branch examples below assume an attached HEAD.
+
 .. literalinclude:: ../../test/test_docs.py
     :language: python
     :dedent: 8
@@ -152,7 +158,7 @@ Examining References
     :start-after: # [2-test_references_and_objects]
     :end-before: # ![2-test_references_and_objects]
 
-A :class:`symbolic reference <git.refs.symbolic.SymbolicReference>` is a special case of a reference as it points to another reference instead of a commit.
+A :class:`symbolic reference <git.refs.symbolic.SymbolicReference>` can point to another reference. When detached, it points directly to a commit instead. Reading its ``commit`` property resolves the commit in either state. Assigning a commit to ``reference`` detaches it; reading ``reference`` then raises :exc:`TypeError`.
 
 .. literalinclude:: ../../test/test_docs.py
     :language: python
