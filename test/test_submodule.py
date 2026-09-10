@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
+from types import SimpleNamespace
 from unittest import mock, skipUnless
 
 import pytest
@@ -316,8 +317,9 @@ def test_submodule_allows_symlink_above_worktree(
 def metadata_realpath(request):
     """Model Python 3.7 on Windows without altering pathlib's own resolver."""
     if request.param:
-        with mock.patch("git.objects.submodule.base.osp", wraps=osp) as paths:
-            paths.realpath.side_effect = osp.abspath
+        paths = SimpleNamespace(**vars(osp))
+        paths.realpath = osp.abspath
+        with mock.patch("git.objects.submodule.base.osp", paths):
             yield
     else:
         yield
@@ -361,7 +363,7 @@ def test_submodule_allows_existing_metadata_symlinks(
 
     Cover linked metadata directories, gitfiles, configs, and internal aliases.
     Update, move, and rename must retain a usable checkout; forced removal must
-    still remove it.
+    still remove both the checkout and the resolved metadata directory.
     """
     sm = movable_submodule
     sm.rename("nested/module")
@@ -387,8 +389,20 @@ def test_submodule_allows_existing_metadata_symlinks(
     sm.repo.git.config("--file", str(modules / "nested/module/config"), "core.worktree", str(root / "module"))
     assert sm.module_exists()
     if operation == "remove":
+        metadata_dir = (modules / "nested/module").resolve()
+        assert metadata_dir.is_dir()
+        url = sm.url
         sm.remove(force=True)
         assert not (root / "module").exists()
+        assert not metadata_dir.exists()
+        if kind in ("modules", "intermediate", "alias"):
+            assert link.is_symlink() and link.is_dir()
+        replacement = Submodule.add(sm.repo, "nested/module", "module", url)
+        if kind == "leaf":
+            assert link.is_symlink() and link.is_dir()
+            assert target.is_dir()
+        with replacement.module() as module:
+            assert Path(module.git.rev_parse("--show-toplevel")).resolve() == (root / "module").resolve()
         return
     if operation == "update":
         sm.update()
@@ -405,6 +419,36 @@ def test_submodule_allows_existing_metadata_symlinks(
     with sm.module() as module:
         assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
     assert Path(sm.abspath, "file").read_text() == "content"
+
+
+@pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf"])
+def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(
+    movable_submodule, tmp_path, kind, metadata_realpath
+):
+    sm = movable_submodule
+    sm.rename("nested/module")
+    sibling = Submodule.add(sm.repo, "nested/sibling", "sibling", sm.url)
+    sm.repo.index.commit("Add sibling")
+    modules = Path(sm.repo.git_dir) / "modules"
+    link = {"modules": modules, "intermediate": modules / "nested", "leaf": modules / "nested/module"}[kind]
+    target = tmp_path / "outside"
+    link.rename(target)
+    link.symlink_to(target, target_is_directory=True)
+    for child in (sm, sibling):
+        sm.repo.git.config("--file", str(modules / child.name / "config"), "core.worktree", str(child.abspath))
+
+    sm.remove(force=True, configuration=False)
+
+    assert link.is_symlink()
+    assert link.exists() == (kind != "leaf")
+    with sibling.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sibling.abspath).resolve()
+        assert Path(sibling.abspath, "file").read_text() == "content"
+    sm.update(init=True)
+    assert link.is_symlink() and link.is_dir()
+    assert Path(sm.abspath, "file").read_text() == "content"
+    with sm.module() as module:
+        assert Path(module.git.rev_parse("--show-toplevel")).resolve() == Path(sm.abspath).resolve()
 
 
 class TestRootProgress(RootUpdateProgress):

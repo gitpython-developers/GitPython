@@ -1226,6 +1226,12 @@ class Submodule(IndexObject, TraversableIterableObj):
             Doesn't work atomically, as failure to remove any part of the submodule will
             leave an inconsistent state.
 
+        :note:
+            Metadata-directory aliases under ``.git/modules`` are retained. A link
+            directly to the deleted repository becomes dangling; adding or initializing
+            the submodule again recreates its target. Linked parent directories remain
+            available to sibling submodules.
+
         :raise git.exc.InvalidGitRepositoryError:
             Thrown if the repository cannot be deleted.
 
