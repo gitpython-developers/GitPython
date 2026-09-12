@@ -1303,9 +1303,9 @@ class Git(metaclass=_GitMeta):
             carefully considered, due to the following limitations:
 
             1. This feature is not supported at all on Windows.
-            2. Effectiveness may vary by operating system. ``ps --ppid`` is used to
-               enumerate child processes, which is available on most GNU/Linux systems
-               but not most others.
+            2. Enumerating child processes requires ``pgrep -P``, or a ``ps`` command
+               supporting the POSIX ``-A`` and ``-o`` options if ``pgrep`` is not
+               installed. Effectiveness may vary on systems without these commands.
             3. Deeper descendants do not receive signals, though they may sometimes
                terminate as a consequence of their parent processes being killed.
             4. `kill_after_timeout` uses ``SIGKILL``, which can have negative side
@@ -1465,14 +1465,24 @@ class Git(metaclass=_GitMeta):
 
                 This callback implementation would be ineffective and unsafe on Windows.
                 """
-                p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
                 child_pids = []
-                if p.stdout is not None:
-                    for line in p.stdout:
-                        if len(line.split()) > 0:
-                            local_pid = (line.split())[0]
-                            if local_pid.isdigit():
-                                child_pids.append(int(local_pid))
+                try:
+                    p = Popen(["pgrep", "-P", str(pid)], stdout=PIPE)
+                except FileNotFoundError:
+                    # POSIX ps does not support selecting by parent PID.
+                    with Popen(["ps", "-A", "-o", "pid=", "-o", "ppid="], stdout=PIPE) as p:
+                        if p.stdout is not None:
+                            for line in p.stdout:
+                                fields = line.split()
+                                if len(fields) == 2 and all(field.isdigit() for field in fields):
+                                    if int(fields[1]) == pid:
+                                        child_pids.append(int(fields[0]))
+                else:
+                    with p:
+                        if p.stdout is not None:
+                            for line in p.stdout:
+                                if line.strip().isdigit():
+                                    child_pids.append(int(line))
                 try:
                     os.kill(pid, signal.SIGKILL)
                     for child_pid in child_pids:

@@ -14,6 +14,7 @@ from pathlib import Path
 import pickle
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -331,6 +332,63 @@ class TestGit(TestBase):
         self.assertNotEqual(status, 0)
         self.assertEqual(output_stream.getvalue(), b"started\n")
         self.assertIn("Timeout: the command", stderr)
+
+    @skipUnless(
+        sys.platform not in ("win32", "cygwin"),
+        "child process lookup requires pgrep or POSIX ps",
+    )
+    @ddt.data(False, True)
+    def test_timeout_kills_direct_child(self, without_pgrep):
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory, "child-survived")
+            child_code = (
+                "import pathlib, sys, time; time.sleep(2); "
+                "pathlib.Path(sys.argv[1]).write_text('survived', encoding='utf-8')"
+            )
+            parent_code = (
+                "import subprocess, sys, time; "
+                "subprocess.Popen([sys.executable, '-c', sys.argv[1], sys.argv[2]]); "
+                "time.sleep(30)"
+            )
+            popen = cmd.Popen
+
+            def portable_popen(args, **kwargs):
+                if without_pgrep and args[0] == "pgrep":
+                    raise FileNotFoundError("pgrep is not installed")
+                return popen(args, **kwargs)
+
+            with mock.patch.object(cmd, "Popen", side_effect=portable_popen):
+                status, _, stderr = self.git.execute(
+                    [sys.executable, "-c", parent_code, child_code, str(marker)],
+                    kill_after_timeout=1,
+                    with_exceptions=False,
+                    with_extended_output=True,
+                )
+
+            self.assertNotEqual(status, 0)
+            self.assertIn("Timeout: the command", stderr)
+            self.assertFalse(marker.exists(), "the direct child survived the timeout")
+
+    @skipUnless(sys.platform != "win32", "kill_after_timeout is not supported on Windows")
+    def test_timeout_ps_fallback_selects_only_direct_children(self):
+        process = mock.MagicMock()
+        process.pid = 1234
+        process.communicate.return_value = (b"", b"")
+        process.returncode = -signal.SIGKILL
+        ps = mock.MagicMock()
+        ps.__enter__.return_value = ps
+        ps.stdout = io.BytesIO(b"PID PPID\n 321 1\n 5678 1234\n 9012 5678\n\n")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(cmd, "safer_popen", return_value=process))
+            stack.enter_context(mock.patch.object(cmd, "Popen", side_effect=[FileNotFoundError, ps]))
+            kill = stack.enter_context(mock.patch.object(cmd.os, "kill"))
+            timer = stack.enter_context(mock.patch.object(cmd.threading, "Timer"))
+            # Run the timeout callback synchronously, with no real processes or signals.
+            timer.return_value.start.side_effect = lambda: timer.call_args.args[1](1234)
+            self.git.execute(["git", "version"], kill_after_timeout=1, with_exceptions=False)
+
+        self.assertEqual(kill.call_args_list, [mock.call(1234, signal.SIGKILL), mock.call(5678, signal.SIGKILL)])
 
     def test_it_executes_git_without_stdout_redirect(self):
         returncode, stdout, stderr = self.git.execute(
