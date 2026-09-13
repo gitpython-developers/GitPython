@@ -864,8 +864,58 @@ class TestBase(TestCase):
 
         assert cr.get_value("core", "filemode"), "Should read keys with values"
 
-        with self.assertRaises(cp.NoOptionError):
-            cr.get_value("color", "ui")
+        self.assertTrue(cr.has_option("color", "ui"))
+        self.assertIsNone(cr.get("color", "ui"))
+        self.assertEqual(cr.get_value("color", "ui"), "")
+        self.assertIs(cr.getboolean("color", "ui"), True)
+
+    @with_rw_directory
+    def test_implicit_boolean_round_trip(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(
+                b"[include]\n"
+                b"\toptional\n"
+                b"[flag]\n"
+                b"\timplicit\n"
+                b"\ttrailing-space   \n"
+                b"\ttrailing-tab\t\n"
+                b"\tempty =\n"
+                b'\tquoted = ""\n'
+                b"\tmultiple = false\n"
+                b"\tmultiple\n"
+                b"\tmultiple =\n"
+                b"\tmultiple"
+            )
+        git_config = ["git", "config", "--file", config_path]
+        original = subprocess.check_output(git_config + ["--null", "--list"])
+
+        with GitConfigParser(config_path, read_only=False) as config:
+            for option in ("implicit", "trailing-space", "trailing-tab"):
+                self.assertIsNone(config.get("flag", option))
+                self.assertEqual(config.get_value("flag", option), "")
+                self.assertIs(config.getboolean("flag", option), True)
+            for option in ("empty", "quoted"):
+                self.assertEqual(config.get("flag", option), "")
+                self.assertEqual(config.get_value("flag", option), "")
+                self.assertIs(config.getboolean("flag", option), False)
+            self.assertEqual(config.get_values("flag", "multiple"), [False, "", "", ""])
+            self.assertIsNone(dict(config.items("flag"))["multiple"])
+            self.assertEqual(dict(config.items_all("flag"))["multiple"], ["false", None, "", None])
+            config.set_value("other", "value", "updated")
+
+        self.assertEqual(
+            subprocess.check_output(git_config + ["--null", "--list"]),
+            original + b"other.value\nupdated\0",
+        )
+        self.assertEqual(
+            subprocess.check_output(git_config + ["--type=bool", "--get-all", "flag.multiple"]),
+            b"false\ntrue\nfalse\ntrue\n",
+        )
+        with GitConfigParser(config_path) as config:
+            self.assertIs(config.getboolean("flag", "implicit"), True)
+            self.assertIs(config.getboolean("flag", "empty"), False)
+            self.assertEqual(dict(config.items_all("flag"))["multiple"], ["false", None, "", None])
 
     def test_config_with_quotes(self):
         cr = GitConfigParser(fixture_path("git_config_with_quotes"), read_only=True)
