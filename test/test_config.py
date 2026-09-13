@@ -917,6 +917,39 @@ class TestBase(TestCase):
             self.assertIs(config.getboolean("flag", "empty"), False)
             self.assertEqual(dict(config.items_all("flag"))["multiple"], ["false", None, "", None])
 
+    @with_rw_directory
+    def test_implicit_boolean_rejects_comments_like_git(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        comments = (
+            " # comment",
+            " ; comment",
+            "# comment = value",
+            "; comment = value",
+            "\t# comment: value",
+            "\t; comment: value",
+        )
+        for comment in comments:
+            with self.subTest(comment=comment):
+                content = ("[flag]\n\tenabled%s\n" % comment).encode(defenc)
+                with open(config_path, "wb") as config_file:
+                    config_file.write(content)
+
+                result = subprocess.run(
+                    ["git", "config", "--file", config_path, "--bool", "flag.enabled"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                self.assertEqual(result.returncode, 128, result.stderr)
+                with GitConfigParser(config_path) as config:
+                    with self.assertRaises(cp.ParsingError):
+                        config.getboolean("flag", "enabled")
+                with GitConfigParser(config_path, read_only=False) as config:
+                    with self.assertRaises(cp.ParsingError):
+                        config.set_value("other", "value", "updated")
+
+                with open(config_path, "rb") as config_file:
+                    self.assertEqual(config_file.read(), content)
+
     def test_config_with_quotes(self):
         cr = GitConfigParser(fixture_path("git_config_with_quotes"), read_only=True)
 

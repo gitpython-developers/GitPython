@@ -310,7 +310,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     re_comment = re.compile(r"^\s*[#;]")
     # } END configuration
 
-    optvalueonly_source = r"\s*(?P<option>[^:=\s][^:=]*)"
+    optvalueonly_source = r"\s*(?P<option>[^:=\s#;][^:=#;]*)"
 
     OPTVALUEONLY = re.compile(optvalueonly_source)
 
@@ -594,7 +594,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     cursect.add(optname, optval)
                 else:
                     # A valueless option is an implicit boolean true, not an empty value.
-                    mo = self.OPTVALUEONLY.match(line)
+                    mo = self.OPTVALUEONLY.fullmatch(line)
                     if mo:
                         optname = self.optionxform(mo.group("option").rstrip())
                         cursect.add(optname, None)
