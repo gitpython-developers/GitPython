@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
 
 T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
-T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool)
+T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool, None)
 
 if sys.version_info[:3] < (3, 7, 2):
     # typing.Ordereddict not added until Python 3.7.2.
@@ -291,6 +291,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     :note:
         If used as a context manager, this will release the locked file.
+
+    :note:
+        Options without a value are stored as ``None`` and written without ``=``.
+        :meth:`get_value` and :meth:`get_values` return an empty string for them,
+        while :meth:`getboolean` returns ``True``. An explicit empty value is
+        stored as an empty string and reads as ``False`` with :meth:`getboolean`.
     """
 
     # { Configuration
@@ -348,7 +354,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             Reference to repository to use if ``[includeIf]`` sections are found in
             configuration files.
         """
-        cp.RawConfigParser.__init__(self, dict_type=_OMD)
+        cp.RawConfigParser.__init__(self, dict_type=_OMD, allow_no_value=True)
         self._dict: Callable[..., _OMD]
         self._defaults: _OMD
         self._sections: _OMD
@@ -587,8 +593,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
                 else:
-                    # Check if it's an option with no value - it's just ignored by git.
-                    if not self.OPTVALUEONLY.match(line):
+                    # A valueless option is an implicit boolean true, not an empty value.
+                    mo = self.OPTVALUEONLY.match(line)
+                    if mo:
+                        optname = self.optionxform(mo.group("option").rstrip())
+                        cursect.add(optname, None)
+                    else:
                         if not e:
                             e = cp.ParsingError(fpname)
                         e.append(lineno, repr(line))
@@ -625,6 +635,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 for key, values in self._sections[section].items_all()
                 if key != "__name__"
                 for value in values
+                if value is not None
             ]
 
         paths = []
@@ -760,13 +771,16 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         def write_section(name: str, section_dict: _OMD) -> None:
             fp.write(("[%s]\n" % name).encode(defenc))
 
-            values: Sequence[str]  # Runtime only gets str in tests, but should be whatever _OMD stores.
-            v: str
+            values: List[Any]
+            v: Any
             for key, values in section_dict.items_all():
                 if key == "__name__":
                     continue
 
                 for v in values:
+                    if v is None:
+                        fp.write(("\t%s\n" % key).encode(defenc))
+                        continue
                     value = self._value_to_string(v)
                     if any(char in value for char in '\n\t\b\\"#;') or value[:1].isspace() or value[-1:].isspace():
                         value = value.replace("\\", "\\\\").replace('"', '\\"')
@@ -783,11 +797,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         for name, value in self._sections.items():
             write_section(name, value)
 
-    def items(self, section_name: str) -> List[Tuple[str, str]]:  # type: ignore[override]
+    def items(self, section_name: str) -> List[Tuple[str, Union[str, None]]]:  # type: ignore[override]
         """:return: list((option, value), ...) pairs of all items in the given section"""
         return [(k, v) for k, v in super().items(section_name) if k != "__name__"]
 
-    def items_all(self, section_name: str) -> List[Tuple[str, List[str]]]:
+    def items_all(self, section_name: str) -> List[Tuple[str, List[Union[str, None]]]]:
         """:return: list((option, [values...]), ...) pairs of all items in the given section"""
         rv = _OMD(self._defaults)
 
@@ -841,6 +855,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             for key, values in section.items_all():
                 if key != "__name__":
                     for raw_value in values:
+                        if raw_value is None:
+                            continue
                         if "\r" in self._value_to_string(raw_value) or "\x00" in self._value_to_string(raw_value):
                             raise ValueError("Git config values must not contain CR or NUL")
 
@@ -877,7 +893,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """:return: ``True`` if this instance may change the configuration file"""
         return self._read_only
 
-    # FIXME: Figure out if default or return type can really include bool.
     def get_value(
         self,
         section: str,
@@ -894,7 +909,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             did not exist.
 
         :return:
-            A properly typed value, either int, float or string
+            A properly typed value, either int, float, string or bool
 
         :raise TypeError:
             In case the value could not be understood.
@@ -925,7 +940,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             in case the option did not exist.
 
         :return:
-            A list of properly typed values, either int, float or string
+            A list of properly typed values, either int, float, string or bool
 
         :raise TypeError:
             In case the value could not be understood.
@@ -941,7 +956,19 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         return [self._string_to_value(valuestr) for valuestr in lst]
 
-    def _string_to_value(self, valuestr: str) -> Union[int, float, str, bool]:
+    def _convert_to_boolean(self, value: Union[str, None]) -> bool:
+        if value is None:
+            return True
+        if value == "":
+            return False
+        try:
+            return self.BOOLEAN_STATES[value.lower()]
+        except KeyError:
+            raise ValueError("Not a boolean: %s" % value) from None
+
+    def _string_to_value(self, valuestr: Union[str, None]) -> Union[int, float, str, bool]:
+        if valuestr is None:
+            return ""
         types = (int, float)
         for numtype in types:
             try:
