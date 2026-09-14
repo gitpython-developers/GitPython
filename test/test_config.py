@@ -13,7 +13,7 @@ from unittest import mock
 
 import pytest
 
-from git import GitConfigParser
+from git import GitConfigParser, Repo
 from git.compat import defenc
 from git.config import _OMD, cp
 from git.util import cwd, rmfile
@@ -102,6 +102,102 @@ class TestBase(TestCase):
                 assert r_config.get_value("sec", "var1") == "value1_main"
             except AssertionError as e:
                 raise SkipTest("Known failure -- included values are not in effect right away") from e
+
+    @with_rw_directory
+    def test_case_insensitive_names(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        with open(config_path, "wb") as config_file:
+            config_file.write(
+                b"[core]\n\tBigName = 1\n"
+                b"[CoRe]\n\tbigname = 2\n\tFlag\n"
+                b'[REMOTE "Origin"]\n\tUrl = upper\n'
+                b'[remote "origin"]\n\tURL = lower\n'
+            )
+
+        with GitConfigParser(config_path) as config:
+            for section in ("core", "CORE", "CoRe"):
+                for option in ("BigName", "bigname", "BIGNAME"):
+                    self.assertTrue(config.has_section(section))
+                    self.assertTrue(config.has_option(section, option))
+                    self.assertEqual(config.get(section, option), "2")
+                    self.assertEqual(config.getint(section, option), 2)
+                    self.assertEqual(config.get_value(section, option), 2)
+                    self.assertEqual(config.get_values(section, option), [1, 2])
+                self.assertIs(config.getboolean(section, "FLAG"), True)
+            self.assertEqual(config.sections(), ["core", 'REMOTE "Origin"', 'remote "origin"'])
+            self.assertEqual(config.items("CORE"), [("BigName", "2"), ("Flag", None)])
+            self.assertEqual(config.items_all("CORE"), [("BigName", ["1", "2"]), ("Flag", [None])])
+            self.assertIn("BigName", config.options("CORE"))
+            self.assertEqual(config.get('remote "Origin"', "URL"), "upper")
+            self.assertEqual(config.get('REMOTE "origin"', "url"), "lower")
+            self.assertFalse(config.has_section('remote "ORIGIN"'))
+            with self.assertRaises(cp.NoSectionError):
+                config.get('remote "ORIGIN"', "url")
+
+        git_config = ["git", "config", "--file", config_path]
+        self.assertEqual(subprocess.check_output(git_config + ["--get-all", "CORE.BIGNAME"]), b"1\n2\n")
+        self.assertEqual(subprocess.check_output(git_config + ["--get", "remote.Origin.URL"]), b"upper\n")
+        self.assertEqual(subprocess.check_output(git_config + ["--get", "REMOTE.origin.url"]), b"lower\n")
+
+    @with_rw_directory
+    def test_case_insensitive_writes_preserve_spelling(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        content = b'[CoRe]\n\tBigName = 1\n[REMOTE "Origin"]\n\tUrl = upper\n'
+        with open(config_path, "wb") as config_file:
+            config_file.write(content)
+
+        with GitConfigParser(config_path, read_only=False) as config:
+            config.set_value("core", "bigname", 1)
+            with open(config_path, "rb") as config_file:
+                self.assertEqual(config_file.read(), content)
+            with self.assertRaises(cp.DuplicateSectionError):
+                config.add_section("CORE")
+            config.set("CORE", "BIGNAME", "3")
+            config.add_value("core", "bigname", 4)
+            config.set_value("CORE", "NewKey", "new")
+            self.assertEqual(config.items_all("core"), [("BigName", ["3", "4"]), ("NewKey", ["new"])])
+            self.assertEqual(config.get_values("CORE", "BIGNAME"), [3, 4])
+            self.assertTrue(config.remove_option("CORE", "NEWKEY"))
+            self.assertFalse(config.has_option("core", "newkey"))
+            config.set_value("core", "newkey", "again")
+            self.assertIn(("newkey", "again"), config.items("CORE"))
+            self.assertTrue(config.remove_option("CORE", "NEWKEY"))
+            config.rename_section('remote "Origin"', 'Remote "Other"')
+            self.assertEqual(config.get('REMOTE "Other"', "URL"), "upper")
+            self.assertTrue(config.remove_section('REMOTE "Other"'))
+
+        with open(config_path, "rb") as config_file:
+            self.assertEqual(config_file.read(), b"[CoRe]\n\tBigName = 3\n\tBigName = 4\n")
+        with GitConfigParser(config_path) as config:
+            self.assertEqual(config.get_values("CORE", "bigname"), [3, 4])
+
+    @with_rw_directory
+    def test_case_insensitive_includes_and_remotes(self, rw_dir):
+        with Repo.init(rw_dir) as repo:
+            config_path = osp.join(repo.git_dir, "config")
+            with open(config_path, "ab") as config_file:
+                config_file.write(
+                    b'[REMOTE "Origin"]\n\tURL = upper\n'
+                    b'[Remote "origin"]\n\tUrl = lower\n'
+                    b"[core]\n\tBigName = 1\n"
+                    b"[INCLUDE]\n\tPaTh = included\n"
+                    b'[INCLUDEIF "onbranch:*"]\n\tPATH = conditional\n'
+                    b'[INCLUDEIF "ONBRANCH:*"]\n\tpath = wrong-case\n'
+                )
+            for filename, content in (
+                ("included", b"[CORE]\n\tBIGNAME = 2\n"),
+                ("conditional", b"[core]\n\tBranchName = 3\n"),
+                ("wrong-case", b"[core]\n\tbigname = 4\n"),
+            ):
+                with open(osp.join(repo.git_dir, filename), "wb") as config_file:
+                    config_file.write(content)
+
+            with repo.config_reader("repository") as config:
+                self.assertEqual(config.get_values("CORE", "bigname"), [1, 2])
+                self.assertEqual(config.get_value("CORE", "branchname"), 3)
+            self.assertEqual([remote.name for remote in repo.remotes], ["Origin", "origin"])
+            self.assertEqual(repo.remote("Origin").config_reader.get("url"), "upper")
+            self.assertEqual(repo.remote("origin").config_reader.get("URL"), "lower")
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
@@ -1119,6 +1215,9 @@ class TestBase(TestCase):
         omd.setlast("key", "value1")
         self.assertEqual(omd["key"], "value1")
         self.assertEqual(omd.getall("key"), ["value1"])
-        omd.setlast("key", "value2")
+        omd.setlast("KEY", "value2")
         self.assertEqual(omd["key"], "value2")
         self.assertEqual(omd.getall("key"), ["value2"])
+        omd.clear()
+        omd.setall("KEY", ["value3"])
+        self.assertEqual(omd.items_all(), [("KEY", ["value3"])])
