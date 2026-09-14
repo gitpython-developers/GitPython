@@ -64,7 +64,7 @@ _logger = logging.getLogger(__name__)
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 """The configuration level of a configuration file."""
 
-CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)\"")
+CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeif )\"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)\"")
 """Section pattern to detect conditional includes.
 
 See: https://git-scm.com/docs/git-config#_conditional_includes
@@ -203,41 +203,67 @@ class SectionConstraint(Generic[T_ConfigParser]):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
+def _normalize_name(name: str) -> str:
+    """Fold section and option names, leaving quoted subsections unchanged."""
+    prefix, separator, subsection = name.partition('"')
+    return prefix.lower() + separator + subsection
+
+
 class _OMD(OrderedDict_OMD):
-    """Ordered multi-dict."""
+    """Ordered multi-dict matching config names while retaining their first spelling."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._keymap: Dict[str, str] = {}
+        super().__init__(*args, **kwargs)
+
+    def _key(self, key: str) -> str:
+        stored = self._keymap.get(_normalize_name(key), key)
+        return stored if super().__contains__(stored) else key
+
+    def __contains__(self, key: object) -> bool:
+        return isinstance(key, str) and super().__contains__(self._key(key))
+
+    def __delitem__(self, key: str) -> None:
+        super().__delitem__(self._key(key))
+        del self._keymap[_normalize_name(key)]
 
     def __setitem__(self, key: str, value: _T) -> None:
-        super().__setitem__(key, [value])
+        self.setall(key, [value])
+
+    def clear(self) -> None:
+        super().clear()
+        self._keymap.clear()
 
     def add(self, key: str, value: Any) -> None:
         if key not in self:
-            super().__setitem__(key, [value])
+            self[key] = value
             return
 
-        super().__getitem__(key).append(value)
+        self.getall(key).append(value)
 
     def setall(self, key: str, values: List[_T]) -> None:
+        key = self._key(key)
         super().__setitem__(key, values)
+        self._keymap[_normalize_name(key)] = key
 
     def __getitem__(self, key: str) -> Any:
-        return super().__getitem__(key)[-1]
+        return super().__getitem__(self._key(key))[-1]
 
     def getlast(self, key: str) -> Any:
-        return super().__getitem__(key)[-1]
+        return self[key]
 
     def setlast(self, key: str, value: Any) -> None:
         if key not in self:
-            super().__setitem__(key, [value])
+            self[key] = value
             return
 
-        prior = super().__getitem__(key)
-        prior[-1] = value
+        self.getall(key)[-1] = value
 
     def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:
-        return super().get(key, [default])[-1]
+        return super().get(self._key(key), [default])[-1]
 
     def getall(self, key: str) -> List[_T]:
-        return super().__getitem__(key)
+        return super().__getitem__(self._key(key))
 
     def items(self) -> List[Tuple[str, _T]]:  # type: ignore[override]
         """List of (key, last value for key)."""
@@ -286,8 +312,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     other instances to write concurrently.
 
     :note:
-        The config is case-sensitive even when queried, hence section and option names
-        must match perfectly.
+        Section and option names are case-insensitive; quoted subsection names are
+        case-sensitive. Names retain their first spelling when enumerated or written.
+        Case variants are merged, preserving all values in the order they are read.
 
     :note:
         If used as a context manager, this will release the locked file.
@@ -641,10 +668,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         paths = []
 
         for section in self.sections():
-            if section == "include":
+            normalized_section = _normalize_name(section)
+            if normalized_section == "include":
                 paths += _all_items(section)
 
-            match = CONDITIONAL_INCLUDE_REGEXP.search(section)
+            match = CONDITIONAL_INCLUDE_REGEXP.search(normalized_section)
             if match is None or self._repo is None:
                 continue
 
