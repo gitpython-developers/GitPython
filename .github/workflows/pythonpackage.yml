@@ -173,5 +173,5 @@ jobs:
     - name: Documentation
       if: matrix.build-docs
       run: |
-        pip install '.[doc]'
+        pip install --group doc
         make -C doc html
