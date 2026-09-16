@@ -54,17 +54,13 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Literal,
     Mapping,
     Sequence,
     TYPE_CHECKING,
     Union,
     cast,
 )
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from git.types import Commit_ish, PathLike, TBD
 
@@ -262,7 +258,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             try:
                 fp_module = cls._sio_modules(parent_commit)
             except KeyError as e:
-                raise IOError(
+                raise OSError(
                     "Could not find %s file in the tree of parent commit %s" % (cls.k_modules_file, parent_commit)
                 ) from e
             # END handle exceptions
@@ -1738,7 +1734,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         try:
             pc = repo.commit(parent_commit)  # Parent commit instance
             parser = cls._config_parser(repo, pc, read_only=True)
-        except (IOError, BadName):
+        except (OSError, BadName):
             return
         # END handle empty iterator
 

@@ -2,7 +2,6 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import os
-import sys
 from typing import (
     Any,
     Callable,
@@ -18,22 +17,13 @@ from typing import (
 )
 import warnings
 
-if sys.version_info >= (3, 8):
-    from typing import (
-        Literal,
-        Protocol,
-        SupportsIndex as SupportsIndex,
-        TypedDict,
-        runtime_checkable,
-    )
-else:
-    from typing_extensions import (
-        Literal,
-        Protocol,
-        SupportsIndex as SupportsIndex,
-        TypedDict,
-        runtime_checkable,
-    )
+from typing import (
+    Literal,
+    Protocol,
+    SupportsIndex as SupportsIndex,
+    TypedDict,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
     from git.objects import Commit, Tree, TagObject, Blob

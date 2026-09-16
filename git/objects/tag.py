@@ -11,8 +11,6 @@ For lightweight tags, see the :mod:`git.refs.tag` module.
 
 __all__ = ["TagObject"]
 
-import sys
-
 from git.compat import defenc
 from git.util import Actor, hex_to_bin
 
@@ -21,14 +19,9 @@ from .util import get_object_type_by_name, parse_actor_and_date
 
 # typing ----------------------------------------------
 
-from typing import List, TYPE_CHECKING, Union
+from typing import List, Literal, TYPE_CHECKING, Union
 
 from git.types import AnyGitObject
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo

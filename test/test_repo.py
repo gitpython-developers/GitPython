@@ -49,8 +49,7 @@ from test.lib import TestBase, fixture, requires_symlinks, with_rw_directory, wi
 
 def iter_flatten(lol):
     for items in lol:
-        for item in items:
-            yield item
+        yield from items
 
 
 def flatten(lol):
@@ -886,7 +885,7 @@ class TestRepo(TestBase):
             try:
                 with self.rorepo.config_writer(config_level) as writer:
                     self.assertFalse(writer.read_only)
-            except IOError:
+            except OSError:
                 # It's okay not to get a writer for some configuration files if we
                 # have no permissions.
                 pass

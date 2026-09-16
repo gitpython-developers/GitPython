@@ -7,12 +7,8 @@ __all__ = ["Blob"]
 
 from mimetypes import guess_type
 import os
-import sys
 
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
+from typing import Literal
 
 from . import base
 

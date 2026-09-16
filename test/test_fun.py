@@ -303,7 +303,7 @@ class TestFun(TestBase):
         statbuf = stat(gitdir)
         self.assertTrue(statbuf.st_mode & S_IFDIR)
 
-    def test_tree_entries_from_data_with_failing_name_decode_py3(self):
+    def test_tree_entries_from_data_with_failing_name_decode(self):
         r = tree_entries_from_data(b"100644 \x9f\0aaa")
         assert r == [(b"aaa", 33188, "\udc9f")], r
 

@@ -330,9 +330,7 @@ class TestIndex(TestBase):
             ## First, fail on purpose adding into index.
             add_bad_blob()
         except Exception as ex:
-            msg_py3 = "required argument is not an integer"
-            msg_py2 = "cannot convert argument to integer"
-            assert msg_py2 in str(ex) or msg_py3 in str(ex)
+            assert "required argument is not an integer" in str(ex)
 
         ## The second time should not fail due to stray lock file.
         try:
@@ -1067,11 +1065,9 @@ class TestIndex(TestBase):
 
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
-        # NOTE: fp is not a Unicode object in Python 2
-        # (which is the source of the problem).
         fp = osp.join(rw_dir, "ø.txt")
         with open(fp, "wb") as fs:
-            fs.write("content of ø".encode("utf-8"))
+            fs.write("content of ø".encode())
 
         r = Repo.init(rw_dir)
         r.index.add([fp])

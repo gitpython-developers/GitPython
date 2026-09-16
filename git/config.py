@@ -28,6 +28,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    OrderedDict,
     Sequence,
     Tuple,
     TypeVar,
@@ -47,15 +48,7 @@ if TYPE_CHECKING:
 T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
 T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool, None)
 
-if sys.version_info[:3] < (3, 7, 2):
-    # typing.Ordereddict not added until Python 3.7.2.
-    from collections import OrderedDict
-
-    OrderedDict_OMD = OrderedDict
-else:
-    from typing import OrderedDict
-
-    OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]  # type: ignore[assignment, misc]
+OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]
 
 # -------------------------------------------------------------
 
@@ -259,7 +252,7 @@ class _OMD(OrderedDict_OMD):
 
         self.getall(key)[-1] = value
 
-    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:
+    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:  # type: ignore[override]
         return super().get(self._key(key), [default])[-1]
 
     def getall(self, key: str) -> List[_T]:
@@ -381,7 +374,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             Reference to repository to use if ``[includeIf]`` sections are found in
             configuration files.
         """
-        cp.RawConfigParser.__init__(self, dict_type=_OMD, allow_no_value=True)
+        cp.RawConfigParser.__init__(self, dict_type=cast(Any, _OMD), allow_no_value=True)
         self._dict: Callable[..., _OMD]
         self._defaults: _OMD
         self._sections: _OMD
@@ -458,7 +451,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         try:
             self.write()
-        except IOError:
+        except OSError:
             _logger.error("Exception during destruction of GitConfigParser", exc_info=True)
         except ReferenceError:
             # This happens in Python 3... and usually means that some state cannot be
@@ -759,7 +752,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     with open(file_path, "rb") as fp:
                         file_ok = True
                         self._read(fp, fp.name)
-                except IOError:
+                except OSError:
                     continue
 
             # Read includes and append those that we didn't handle yet. We expect all
@@ -909,7 +902,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def _assure_writable(self, method_name: str) -> None:
         if self.read_only:
-            raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
+            raise OSError(f"Cannot execute non-constant method {self}.{method_name}")
 
     def add_section(self, section: "cp._SectionName") -> None:
         """Assures added options will stay in order."""

@@ -12,7 +12,6 @@ import logging
 import os
 import re
 from subprocess import Popen, PIPE
-import sys
 from time import altzone, daylight, localtime, time, timezone
 import warnings
 
@@ -41,17 +40,13 @@ from typing import (
     IO,
     Iterator,
     List,
+    Literal,
     Sequence,
     Tuple,
     TYPE_CHECKING,
     Union,
     cast,
 )
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from git.types import PathLike
 

@@ -516,7 +516,7 @@ def decygpath(path: PathLike) -> str:
 
 
 #: Store boolean flags denoting if a specific Git executable
-#: is from a Cygwin installation (since `cache_lru()` unsupported on PY2).
+#: is from a Cygwin installation. TODO: use @functools.lru_cache(user_function)
 _is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
@@ -558,8 +558,7 @@ def is_cygwin_git(git_executable: PathLike) -> bool: ...
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    # TODO: when py3.7 support is dropped, use the new interpolation f"{variable=}"
-    _logger.debug(f"sys.platform={sys.platform!r}, git_executable={git_executable!r}")
+    _logger.debug(f"{sys.platform=}, {git_executable=}")
     if sys.platform != "cygwin":
         return False
     elif git_executable is None:
@@ -1140,7 +1139,7 @@ class LockFile:
             return
         lock_file = self._lock_file_path()
         if osp.isfile(lock_file):
-            raise IOError(
+            raise OSError(
                 "Lock for file %r did already exist, delete %r in case the lock is illegal"
                 % (self._file_path, lock_file)
             )
@@ -1149,7 +1148,7 @@ class LockFile:
             with open(lock_file, mode="w"):
                 pass
         except OSError as e:
-            raise IOError(str(e)) from e
+            raise OSError(str(e)) from e
 
         self._owns_lock = True
 
@@ -1216,7 +1215,7 @@ class BlockingLockFile(LockFile):
         while True:
             try:
                 super()._obtain_lock()
-            except IOError as e:
+            except OSError as e:
                 # synity check: if the directory leading to the lockfile is not
                 # readable anymore, raise an exception
                 curtime = time.time()
@@ -1225,7 +1224,7 @@ class BlockingLockFile(LockFile):
                         self._lock_file_path(),
                         curtime - starttime,
                     )
-                    raise IOError(msg) from e
+                    raise OSError(msg) from e
                 # END handle missing directory
 
                 if curtime >= maxtime:
@@ -1233,7 +1232,7 @@ class BlockingLockFile(LockFile):
                         maxtime - starttime,
                         self._lock_file_path(),
                     )
-                    raise IOError(msg) from e
+                    raise OSError(msg) from e
                 # END abort if we wait too long
                 time.sleep(self._check_interval)
             else:

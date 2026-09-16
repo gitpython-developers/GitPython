@@ -49,7 +49,7 @@ def read_lines_from_file(file_path: str) -> list:
     except FileNotFoundError:
         print(f"File not found: {file_path}")
         return []
-    except IOError as e:
+    except OSError as e:
         print(f"Error reading file {file_path}: {e}")
         return []
 
