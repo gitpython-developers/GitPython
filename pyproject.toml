@@ -1,6 +1,56 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools >= 62.6"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "GitPython"
+description = "GitPython is a Python library used to interact with Git repositories"
+authors = [
+    {name = "Sebastian Thiel", email = "byronimo@gmail.com"},
+    {name = "Michael Trier", email = "mtrier@gmail.com"},
+]
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["git"]
+# license = "BSD-3-Clause"  # not done until setuptools >= 77 (Python >= 3.9)
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Typing :: Typed",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+]
+dynamic = ["license", "version", "dependencies", "optional-dependencies"]
+
+[project.urls]
+"Source code" = "https://github.com/gitpython-developers/GitPython"
+"Documentation" = "https://gitpython.readthedocs.io/en/stable/"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+dependencies = {file = "requirements.txt"}
+optional-dependencies."test" = {file = "test-requirements.txt"}
+optional-dependencies."doc" = {file = "doc/requirements.txt"}
+
+[tool.setuptools.packages.find]
+include = ["git", "git.*"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=git --cov-report=term -rfEX"

@@ -5,6 +5,7 @@ import ast
 import functools
 import os
 import subprocess
+import sys
 
 from test.lib import TestBase, VirtualEnvironment, requires_symlinks, with_rw_directory
 
@@ -49,6 +50,9 @@ class TestInstallation(TestBase):
             target_is_directory=True,
         )
 
+        # Turn warnings into exceptions except for Python 3.7
+        pywarnings = "error" if tuple(sys.version_info)[0:2] > (3, 7) else "default"
+
         # Create a convenience function to run commands in it.
         run = functools.partial(
             subprocess.run,
@@ -56,7 +60,7 @@ class TestInstallation(TestBase):
             stderr=subprocess.PIPE,
             universal_newlines=True,
             cwd=venv.sources,
-            env={**os.environ, "PYTHONWARNINGS": "error"},
+            env={**os.environ, "PYTHONWARNINGS": pywarnings},
         )
 
         return venv, run
