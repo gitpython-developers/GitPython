@@ -729,6 +729,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         clone_multi_options: Union[Sequence[TBD], None] = None,
         allow_unsafe_options: bool = False,
         allow_unsafe_protocols: bool = False,
+        no_fetch: bool = False,
     ) -> "Submodule":
         """Update the repository of this submodule to point to the checkout we point at
         with the binsha of this instance.
@@ -790,6 +791,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
+
+        :param no_fetch:
+            If ``True``, submodule updating will be attempted without fetching
+            new changes from remotes.
 
         :note:
             Does nothing in bare repositories.
@@ -853,7 +858,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             #######################################
             try:
                 mrepo = self.module()
-                fetch_remotes(mrepo)
+                if not no_fetch:
+                    fetch_remotes(mrepo)
             except InvalidGitRepositoryError:
                 mrepo = None
                 if not init:
@@ -879,6 +885,10 @@ class Submodule(IndexObject, TraversableIterableObj):
                         ):
                             raise OSError(
                                 "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
+                            )
+                        elif no_fetch:
+                            raise ValueError(
+                                "Module directory at %r is empty but fetching is disabled" % checkout_module_abspath
                             )
                         os.makedirs(checkout_module_abspath, exist_ok=True)
                         self._write_git_file_and_module_config(checkout_module_abspath, module_abspath)
@@ -909,6 +919,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                         + "Cloning url '%s' to '%s' in submodule %r" % (self.url, checkout_module_abspath, self.name),
                     )
                     if not dry_run:
+                        if no_fetch:
+                            raise ValueError("Missing module at %r but fetching is disabled" % self.path) from None
                         if self.url.startswith("."):
                             url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
                         else:
@@ -1057,6 +1069,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                         dry_run=dry_run,
                         force=force,
                         keep_going=keep_going,
+                        no_fetch=no_fetch,
                     )
                 # END handle recursive update
             # END handle dry run

@@ -87,6 +87,7 @@ class RootModule(Submodule):
         dry_run: bool = False,
         force_reset: bool = False,
         keep_going: bool = False,
+        no_fetch: bool = False,
     ) -> "RootModule":
         """Update the submodules of this repository to the current HEAD commit.
 
@@ -145,6 +146,10 @@ class RootModule(Submodule):
             subsequent/inherited errors you wouldn't see otherwise.
             In conjunction with `dry_run`, this can be useful to anticipate all errors
             when updating submodules.
+
+        :param no_fetch:
+            If ``True``, submodule updating will be attempted without fetching
+            new changes from remotes.
 
         :return:
             self
@@ -274,7 +279,8 @@ class RootModule(Submodule):
                             if not dry_run:
                                 assert nn not in [r.name for r in rmts]
                                 smr = smm.create_remote(nn, sm.url)
-                                smr.fetch(progress=progress)
+                                if not no_fetch:
+                                    smr.fetch(progress=progress)
 
                                 # If we have a tracking branch, it should be available
                                 # in the new remote as well.
@@ -433,6 +439,7 @@ class RootModule(Submodule):
                 dry_run=dry_run,
                 force=force_reset,
                 keep_going=keep_going,
+                no_fetch=no_fetch,
             )
 
             # Update recursively depth first - question is which inconsistent state will
