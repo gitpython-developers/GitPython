@@ -13,6 +13,10 @@ build:
     # nodejs: "20"
     # rust: "1.70"
     # golang: "1.20"
+  jobs:
+    install:
+    - python -m pip install --upgrade --no-cache-dir pip setuptools
+    - python -m pip install --upgrade --upgrade-strategy only-if-needed --no-cache-dir --group doc .
 
 # Build documentation in the "doc/" directory with Sphinx.
 sphinx:
@@ -24,13 +28,3 @@ sphinx:
 
 # Optionally build your docs in additional formats such as PDF and ePub.
 formats: all
-
-# Optional but recommended, declare the Python requirements required
-# to build your documentation.
-# See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
-python:
-  install:
-  - method: pip
-    path: .
-    extra_requirements:
-    - doc

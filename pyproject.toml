@@ -40,6 +40,13 @@ dynamic = ["license", "version", "dependencies", "optional-dependencies"]
 "Source code" = "https://github.com/gitpython-developers/GitPython"
 "Documentation" = "https://gitpython.readthedocs.io/en/stable/"
 
+[dependency-groups]
+doc = [
+    'sphinx >=7.4.7,<8 ; python_version >= "3.9"',
+    "sphinx-autodoc-typehints",
+    "sphinx-rtd-theme",
+]
+
 [tool.setuptools]
 include-package-data = true
 
@@ -47,7 +54,6 @@ include-package-data = true
 version = {file = "VERSION"}
 dependencies = {file = "requirements.txt"}
 optional-dependencies."test" = {file = "test-requirements.txt"}
-optional-dependencies."doc" = {file = "doc/requirements.txt"}
 
 [tool.setuptools.packages.find]
 include = ["git", "git.*"]

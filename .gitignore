@@ -52,3 +52,6 @@ output.txt
 
 # Files created by OSS-Fuzz when running locally
 fuzz_*.pkg.spec
+
+# Lock files created by uv, pixi, pipenv and others
+*.lock
