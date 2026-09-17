@@ -511,6 +511,24 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     return False
             return escaped
 
+        def strip_inline_comment(value: str) -> str:
+            """Cut an unquoted ``#`` or ``;`` comment, as git's ``parse_value`` does.
+
+            Quoting and backslash escapes are honoured, so a ``#`` inside a quoted
+            value is literal and an unterminated quote swallows the rest of the line.
+            """
+            quoted = escaped = False
+            for index, char in enumerate(value):
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                elif char in "#;" and not quoted:
+                    return value[:index]
+            return value
+
         def parse_value(value: str) -> str:
             parsed: List[str] = []
             whitespace: List[str] = []
@@ -575,11 +593,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     optname, vi, optval = mo.group("option", "vi", "value")
                     optname = self.optionxform(optname.rstrip())
 
-                    if vi in ("=", ":") and ";" in optval and not optval.strip().startswith('"'):
-                        pos = optval.find(";")
-                        if pos != -1 and optval[pos - 1].isspace():
-                            optval = optval[:pos]
-                    optval = optval.strip()
+                    optval = strip_inline_comment(optval).strip()
 
                     if len(optval) < 2 or optval[0] != '"':
                         # Does not open quoting.

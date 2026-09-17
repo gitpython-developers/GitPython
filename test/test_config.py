@@ -239,6 +239,29 @@ class TestBase(TestCase):
             )
             self.assertEqual(len(config.sections()), 23)
 
+    def test_inline_comments_are_stripped_like_git(self):
+        """A `#` or `;` outside quotes starts a comment, with or without a space
+        before it, and whether or not the value is quoted. Expectations are what
+        `git config -f <file> --get a.k` prints on git 2.50.1."""
+        cases = [
+            (b"[a]\n\tk = value # comment\n", "value"),
+            (b"[a]\n\tk = value ; comment\n", "value"),
+            (b"[a]\n\tk = value#nospace\n", "value"),
+            (b"[a]\n\tk = value;nospace\n", "value"),
+            (b"[a]\n\tk = a # b ; c\n", "a"),
+            (b'[a]\n\tk = "quoted" # after\n', "quoted"),
+            # A comment character inside quotes is literal.
+            (b'[a]\n\tk = "has # inside"\n', "has # inside"),
+            (b'[a]\n\tk = "has ; inside"\n', "has ; inside"),
+        ]
+        for content, expected in cases:
+            config_file = io.BytesIO(content)
+            config_file.name = "inline_comment.config"
+            config = GitConfigParser(config_file)
+            config.read()
+            with self.subTest(content=content):
+                self.assertEqual(config.get_value("a", "k"), expected)
+
     def test_backslash_line_continuation(self):
         """An unquoted value ending in a backslash continues on the next line,
         exactly as git config parses it: the final backslash and the newline
