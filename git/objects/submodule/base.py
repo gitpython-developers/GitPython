@@ -4,17 +4,32 @@
 __all__ = ["Submodule", "UpdateProgress"]
 
 import gc
-from io import BytesIO
 import logging
 import ntpath
 import os
 import os.path as osp
-from pathlib import Path
 import shlex
 import stat
 import sys
-import uuid
 import urllib.parse
+import uuid
+from io import BytesIO
+from pathlib import Path
+
+# typing ----------------------------------------------------------------------
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Literal,
+    Mapping,
+    Sequence,
+    Union,
+    cast,
+)
 
 import git
 from git.cmd import Git
@@ -46,23 +61,7 @@ from .util import (
     sm_section,
 )
 
-# typing ----------------------------------------------------------------------
-
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Literal,
-    Mapping,
-    Sequence,
-    TYPE_CHECKING,
-    Union,
-    cast,
-)
-
-from git.types import Commit_ish, PathLike, TBD
+from git.types import TBD, Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.index import IndexFile
@@ -793,8 +792,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             Allow unsafe options to be used, like ``--upload-pack``.
 
         :param no_fetch:
-            If ``True``, submodule updating will be attempted without fetching
-            new changes from remotes.
+            If ``True``, update using locally available objects and remote-tracking
+            refs without fetching or cloning. Repositories retained after
+            :meth:`deinit` can be restored without fetching.
 
         :note:
             Does nothing in bare repositories.
@@ -886,15 +886,12 @@ class Submodule(IndexObject, TraversableIterableObj):
                             raise OSError(
                                 "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
                             )
-                        elif no_fetch:
-                            raise ValueError(
-                                "Module directory at %r is empty but fetching is disabled" % checkout_module_abspath
-                            )
                         os.makedirs(checkout_module_abspath, exist_ok=True)
                         self._write_git_file_and_module_config(checkout_module_abspath, module_abspath)
                         mrepo = git.Repo(checkout_module_abspath)
                         mrepo.head.reset(mrepo.head.commit, index=True, working_tree=True)
-                        fetch_remotes(mrepo)
+                        if not no_fetch:
+                            fetch_remotes(mrepo)
                         with self.repo.config_writer() as writer:
                             writer.set_value(sm_section(self.name), "url", self.url)
 
