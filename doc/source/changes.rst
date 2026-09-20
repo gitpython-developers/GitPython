@@ -2,8 +2,10 @@
 Changelog
 =========
 
-3.1.63
-======
+3.2.0
+=====
+
+Drops support for Python 3.7 (5 years after its EOL)
 
 Security fixes for
 
