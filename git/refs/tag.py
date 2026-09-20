@@ -155,7 +155,7 @@ class TagReference(Reference):
         if force:
             kwargs["f"] = True
 
-        args = (path, reference)
+        args = ("--", path, reference)
 
         repo.git.tag(*args, **kwargs)
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
@@ -163,7 +163,7 @@ class TagReference(Reference):
     @classmethod
     def delete(cls, repo: "Repo", *tags: "TagReference") -> None:  # type: ignore[override]
         """Delete the given existing tag or tags."""
-        repo.git.tag("-d", *tags)
+        repo.git.tag("-d", "--", *tags)
 
 
 # Provide an alias.

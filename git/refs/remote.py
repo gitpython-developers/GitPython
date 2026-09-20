@@ -61,7 +61,7 @@ class RemoteReference(Head):
         for ref in refs:
             cls._check_ref_name_valid(ref.path)
 
-        repo.git.branch("-d", "-r", *refs)
+        repo.git.branch("-d", "-r", "--", *refs)
         # The official deletion method will ignore remote symbolic refs - these are
         # generally ignored in the refs/ folder. We don't though and delete remainders
         # manually.

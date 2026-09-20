@@ -1795,6 +1795,12 @@ class Git(metaclass=_GitMeta):
             This allows your commands to call git more conveniently, as ``None`` is
             realized as non-existent.
 
+            Positional arguments may intentionally contain command options. Higher-level
+            APIs must separate their operands with ``--`` where the Git command supports
+            it, or reject option-shaped operands where Git reparses them internally (for
+            example, ``pull`` and ``remote update``). Shell quoting cannot prevent Git
+            from interpreting a leading-dash argument as an option.
+
         :param kwargs:
             Contains key-values for the following:
 

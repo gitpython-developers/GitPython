@@ -14,7 +14,7 @@ import re
 from git.cmd import Git, handle_process_output
 from git.compat import defenc, force_text
 from git.config import GitConfigParser, SectionConstraint, cp
-from git.exc import GitCommandError
+from git.exc import GitCommandError, UnsafeOptionError
 from git.refs import Head, Reference, RemoteReference, SymbolicReference, TagReference
 from git.util import (
     CallableRemoteProgress,
@@ -871,6 +871,9 @@ class Remote(LazyMixin, IterableObj):
         :return:
             self
         """
+        # Like pull, remote update forwards operands to fetch without `--`.
+        if self.name.startswith("-"):
+            raise UnsafeOptionError("Remote names used by update must not start with '-'.")
         scmd = "update"
         kwargs["insert_kwargs_after"] = scmd
         self.repo.git.remote(scmd, self.name, **kwargs)
@@ -1101,7 +1104,8 @@ class Remote(LazyMixin, IterableObj):
         merge of branch with your local branch.
 
         :param refspec:
-            See :meth:`fetch` method.
+            See :meth:`fetch` method. Values starting with ``-`` are rejected,
+            even when ``allow_unsafe_options`` is enabled. Pass options as keywords.
 
         :param progress:
             See :meth:`push` method.
@@ -1127,6 +1131,12 @@ class Remote(LazyMixin, IterableObj):
         kwargs = add_progress(kwargs, self.repo.git, progress)
 
         refspec = Git._unpack_args(refspec or [])
+        # Git pull forwards these operands to fetch without preserving `--`.
+        # Reject every option-shaped operand, including with unsafe options enabled:
+        # opting into an explicit option must not turn a refspec into an option.
+        for operand in [self.name, *refspec]:
+            if operand.startswith("-"):
+                raise UnsafeOptionError("Remote names and pull refspecs must not start with '-'.")
         if not allow_unsafe_protocols:
             for ref in refspec:
                 Git.check_unsafe_protocols(ref)

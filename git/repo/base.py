@@ -1137,7 +1137,7 @@ class Repo:
             Subset of those paths which are ignored
         """
         try:
-            proc: str = self.git.check_ignore(*paths)
+            proc: str = self.git.check_ignore("--", *paths)
         except GitCommandError as err:
             if err.status == 1:
                 # If return code is 1, this means none of the items in *paths are
