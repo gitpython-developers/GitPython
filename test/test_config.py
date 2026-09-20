@@ -262,6 +262,28 @@ class TestBase(TestCase):
             with self.subTest(content=content):
                 self.assertEqual(config.get_value("a", "k"), expected)
 
+    @with_rw_directory
+    def test_inline_comments_preserve_balanced_quotes_and_following_settings(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        values = (b'"foo"bar', b'"foo\\"bar"baz', b'"foo#;bar"baz')
+        for value in values:
+            for comment in (b' # "note"', b' ; "note"'):
+                with self.subTest(value=value, comment=comment):
+                    with open(config_path, "wb") as config_file:
+                        config_file.write(b"[a]\n\tk = " + value + comment + b"\n\tx = keep\n[b]\n\ty = stay\n")
+
+                    with GitConfigParser(config_path, read_only=False) as config:
+                        self.assertEqual(config.get_value("a", "k"), value.decode(defenc))
+                        self.assertEqual(config.get_value("a", "x"), "keep")
+                        self.assertEqual(config.get_value("b", "y"), "stay")
+                        config.set_value("other", "value", "updated")
+
+                    with GitConfigParser(config_path) as config:
+                        self.assertEqual(config.get_value("a", "k"), value.decode(defenc))
+                        self.assertEqual(config.get_value("a", "x"), "keep")
+                        self.assertEqual(config.get_value("b", "y"), "stay")
+                        self.assertEqual(config.get_value("other", "value"), "updated")
+
     def test_backslash_line_continuation(self):
         """An unquoted value ending in a backslash continues on the next line,
         exactly as git config parses it: the final backslash and the newline
