@@ -10,7 +10,7 @@ authors = [
     {name = "Michael Trier", email = "mtrier@gmail.com"},
 ]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 keywords = ["git"]
 # license = "BSD-3-Clause"  # not done until setuptools >= 77 (Python >= 3.9)
 classifiers = [
@@ -24,7 +24,6 @@ classifiers = [
     "Typing :: Typed",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -92,7 +91,7 @@ ignore_missing_imports = true
 
 [tool.basedpyright]
 typeCheckingMode = "standard"
-pythonVersion = "3.7"
+pythonVersion = "3.8"
 include = [
     "git",
     "test/deprecation",
@@ -116,7 +115,6 @@ include = ["*/git/*"]
 omit = ["*/git/ext/*"]
 
 [tool.ruff]
-target-version = "py37"
 line-length = 120
 # Exclude a variety of commonly ignored directories.
 exclude = [

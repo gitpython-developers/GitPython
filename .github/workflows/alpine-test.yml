@@ -89,7 +89,7 @@ jobs:
         command -v git python
         git version
         python --version
-        python -c 'import os, sys; print(f"sys.platform={sys.platform!r}, os.name={os.name!r}")'
+        python -c 'import os, sys; print(f"{sys.platform=}, {os.name=}")'
 
     - name: Test with pytest
       run: |

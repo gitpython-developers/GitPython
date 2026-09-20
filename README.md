@@ -44,7 +44,7 @@ GitPython needs the `git` executable to be installed on the system and available
 by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 - Git (1.7.x or newer)
-- Python >= 3.7
+- Python >= 3.8
 
 The list of dependencies are listed in [`./requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/requirements.txt) and [`./test-requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/test-requirements.txt).
 The installer takes care of installing them for you.

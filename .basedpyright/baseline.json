@@ -2,14 +2,6 @@
   "files": {
     "./git/config.py": [
       {
-        "code": "reportGeneralTypeIssues",
-        "range": {
-          "startColumn": 11,
-          "endColumn": 26,
-          "lineCount": 1
-        }
-      },
-      {
         "code": "reportInvalidTypeVarUse",
         "range": {
           "startColumn": 43,

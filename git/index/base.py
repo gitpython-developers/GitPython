@@ -523,7 +523,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if proc.stdin is not None:
             try:
                 proc.stdin.write(("%s\n" % filepath).encode(defenc))
-            except IOError as e:
+            except OSError as e:
                 # Pipe broke, usually because some error happened.
                 raise fmakeexc() from e
             # END write exception handling
@@ -727,8 +727,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         st = os.lstat(filepath)  # Handles non-symlinks as well.
 
         if S_ISLNK(st.st_mode):
-            # In PY3, readlink is a string, but we need bytes.
-            # In PY2, it was just OS encoded bytes, we assumed UTF-8.
+            # readlink is a string, but we need bytes.
             def open_stream() -> BinaryIO:
                 return BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
         else:

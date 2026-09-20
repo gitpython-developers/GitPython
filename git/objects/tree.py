@@ -6,7 +6,6 @@
 __all__ = ["TreeModifier", "Tree"]
 
 import os
-import sys
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
@@ -26,17 +25,13 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Literal,
     Tuple,
     TYPE_CHECKING,
     Type,
     Union,
     cast,
 )
-
-if sys.version_info >= (3, 8):
-    from typing import Literal
-else:
-    from typing_extensions import Literal
 
 from git.types import PathLike
 

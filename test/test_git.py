@@ -19,12 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from unittest import skipUnless
-
-if sys.version_info >= (3, 8):
-    from unittest import mock
-else:
-    import mock  # To be able to examine call_args.kwargs on a mock.
+from unittest import mock, skipUnless
 
 import ddt
 
