@@ -1133,6 +1133,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         args = []
         if skip_errors:
             args.append("-k")
+        args.append("--")
 
         paths = self._items_to_rela_paths(items)
         if len(paths) < 2:

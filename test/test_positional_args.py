@@ -80,3 +80,41 @@ def test_remote_ref_delete_preserves_operand(tmp_path):
     with mock.patch.object(Git, "_call_process") as run:
         RemoteReference.delete(repo, ref)
     assert run.call_args[0] == ("branch", "-d", "-r", "--", ref)
+
+
+def test_move_treats_option_shaped_source_as_filename(tmp_path):
+    repo = Repo.init(tmp_path)
+    (tmp_path / "--force").write_text("literal source")
+    repo.index.add(["--force"])
+    assert repo.index.move(["--force", "destination"]) == [("--force", "destination")]
+    assert (tmp_path / "destination").read_text() == "literal source"
+    assert not (tmp_path / "--force").exists()
+
+
+def test_move_cannot_override_overwrite_protection(tmp_path):
+    repo = Repo.init(tmp_path)
+    for name in ("--force", "source", "destination"):
+        (tmp_path / name).write_text(name)
+    repo.index.add(["--force", "source", "destination"])
+    with pytest.raises(GitCommandError):
+        repo.index.move(["--force", "source", "destination"])
+    assert (tmp_path / "source").read_text() == "source"
+    assert (tmp_path / "destination").read_text() == "destination"
+    repo.index.move(["source", "destination"], force=True)
+    assert (tmp_path / "destination").read_text() == "source"
+
+
+def test_ignored_treats_option_shaped_path_as_filename(tmp_path):
+    repo = Repo.init(tmp_path)
+    (tmp_path / ".gitignore").write_text("--verbose\n--arg value\n")
+    assert repo.ignored("--verbose", "--arg value") == ["--verbose", "--arg value"]
+
+
+def test_move_cannot_override_dry_run(tmp_path):
+    repo = Repo.init(tmp_path)
+    (tmp_path / "source").write_text("source")
+    repo.index.add(["source"])
+    with pytest.raises(GitCommandError):
+        repo.index.move(["--no-dry-run", "source", "destination"], dry_run=True)
+    assert (tmp_path / "source").read_text() == "source"
+    assert not (tmp_path / "destination").exists()
