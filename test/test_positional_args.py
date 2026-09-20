@@ -118,3 +118,12 @@ def test_move_cannot_override_dry_run(tmp_path):
         repo.index.move(["--no-dry-run", "source", "destination"], dry_run=True)
     assert (tmp_path / "source").read_text() == "source"
     assert not (tmp_path / "destination").exists()
+
+
+@pytest.mark.parametrize("name", ["--prune", "--all", "--upload-pack=helper"])
+def test_remote_update_rejects_option_shaped_name(tmp_path, name):
+    repo = Repo.init(tmp_path)
+    with mock.patch.object(Git, "_call_process", side_effect=AssertionError("Git must not run")) as run:
+        with pytest.raises(UnsafeOptionError):
+            Remote(repo, name).update()
+        run.assert_not_called()

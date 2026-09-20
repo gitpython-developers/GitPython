@@ -871,6 +871,9 @@ class Remote(LazyMixin, IterableObj):
         :return:
             self
         """
+        # Like pull, remote update forwards operands to fetch without `--`.
+        if self.name.startswith("-"):
+            raise UnsafeOptionError("Remote names used by update must not start with '-'.")
         scmd = "update"
         kwargs["insert_kwargs_after"] = scmd
         self.repo.git.remote(scmd, self.name, **kwargs)
