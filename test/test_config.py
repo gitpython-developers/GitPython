@@ -239,6 +239,51 @@ class TestBase(TestCase):
             )
             self.assertEqual(len(config.sections()), 23)
 
+    def test_inline_comments_are_stripped_like_git(self):
+        """A `#` or `;` outside quotes starts a comment, with or without a space
+        before it, and whether or not the value is quoted. Expectations are what
+        `git config -f <file> --get a.k` prints on git 2.50.1."""
+        cases = [
+            (b"[a]\n\tk = value # comment\n", "value"),
+            (b"[a]\n\tk = value ; comment\n", "value"),
+            (b"[a]\n\tk = value#nospace\n", "value"),
+            (b"[a]\n\tk = value;nospace\n", "value"),
+            (b"[a]\n\tk = a # b ; c\n", "a"),
+            (b'[a]\n\tk = "quoted" # after\n', "quoted"),
+            # A comment character inside quotes is literal.
+            (b'[a]\n\tk = "has # inside"\n', "has # inside"),
+            (b'[a]\n\tk = "has ; inside"\n', "has ; inside"),
+        ]
+        for content, expected in cases:
+            config_file = io.BytesIO(content)
+            config_file.name = "inline_comment.config"
+            config = GitConfigParser(config_file)
+            config.read()
+            with self.subTest(content=content):
+                self.assertEqual(config.get_value("a", "k"), expected)
+
+    @with_rw_directory
+    def test_inline_comments_preserve_balanced_quotes_and_following_settings(self, rw_dir):
+        config_path = osp.join(rw_dir, "config")
+        values = (b'"foo"bar', b'"foo\\"bar"baz', b'"foo#;bar"baz')
+        for value in values:
+            for comment in (b' # "note"', b' ; "note"'):
+                with self.subTest(value=value, comment=comment):
+                    with open(config_path, "wb") as config_file:
+                        config_file.write(b"[a]\n\tk = " + value + comment + b"\n\tx = keep\n[b]\n\ty = stay\n")
+
+                    with GitConfigParser(config_path, read_only=False) as config:
+                        self.assertEqual(config.get_value("a", "k"), value.decode(defenc))
+                        self.assertEqual(config.get_value("a", "x"), "keep")
+                        self.assertEqual(config.get_value("b", "y"), "stay")
+                        config.set_value("other", "value", "updated")
+
+                    with GitConfigParser(config_path) as config:
+                        self.assertEqual(config.get_value("a", "k"), value.decode(defenc))
+                        self.assertEqual(config.get_value("a", "x"), "keep")
+                        self.assertEqual(config.get_value("b", "y"), "stay")
+                        self.assertEqual(config.get_value("other", "value"), "updated")
+
     def test_backslash_line_continuation(self):
         """An unquoted value ending in a backslash continues on the next line,
         exactly as git config parses it: the final backslash and the newline

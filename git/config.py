@@ -511,6 +511,24 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     return False
             return escaped
 
+        def strip_inline_comment(value: str) -> Tuple[str, bool]:
+            """Cut an unquoted ``#`` or ``;`` comment and report whether a quote is open.
+
+            Quoting and backslash escapes are honoured, so a ``#`` inside a quoted
+            value is literal and an unterminated quote swallows the rest of the line.
+            """
+            quoted = escaped = False
+            for index, char in enumerate(value):
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                elif char in "#;" and not quoted:
+                    return value[:index], False
+            return value, quoted
+
         def parse_value(value: str) -> str:
             parsed: List[str] = []
             whitespace: List[str] = []
@@ -575,10 +593,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     optname, vi, optval = mo.group("option", "vi", "value")
                     optname = self.optionxform(optname.rstrip())
 
-                    if vi in ("=", ":") and ";" in optval and not optval.strip().startswith('"'):
-                        pos = optval.find(";")
-                        if pos != -1 and optval[pos - 1].isspace():
-                            optval = optval[:pos]
+                    optval, quote_open = strip_inline_comment(optval)
                     optval = optval.strip()
 
                     if len(optval) < 2 or optval[0] != '"':
@@ -606,12 +621,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                             continued = True
                         if continued:
                             optval = parse_value(optval)
-                    elif optval[-1] != '"':
+                    elif quote_open:
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
                         optval = string_decode(optval[1:])
                     elif re.search(r'(?:^|[^\\])(?:\\\\)*"', optval[1:-1]):
-                        # Preserve malformed values containing unescaped quotes.
+                        # Preserve values containing additional unescaped quotes.
                         pass
                     else:
                         # Opens and closes quoting.
