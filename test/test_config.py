@@ -354,6 +354,17 @@ class TestBase(TestCase):
         with GitConfigParser(config_path) as config:
             self.assertEqual(config.get_value("a", "x"), "two")
 
+    def test_utf8_bom_is_skipped_like_git(self):
+        """git skips a UTF-8 BOM at the start of a config file, so one written by
+        a Windows editor still parses. Expectations are what
+        `git config -f <file> --list` prints on git 2.47.3."""
+        content = b"\xef\xbb\xbf[core]\n\tbare = true\n"
+        config_file = io.BytesIO(content)
+        config_file.name = "bom.config"
+        config = GitConfigParser(config_file)
+        config.read()
+        self.assertIs(config.get_value("core", "bare"), True)
+
     def test_config_value_with_trailing_new_line(self):
         config_content = b'[section-header]\nkey:"value\n"'
         config_file = io.BytesIO(config_content)

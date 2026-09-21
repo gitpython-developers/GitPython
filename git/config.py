@@ -550,9 +550,14 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         while True:
             # We assume to read binary!
-            line = fp.readline().decode(defenc)
-            if not line:
+            raw_line = fp.readline()
+            if not raw_line:
                 break
+            if lineno == 0 and raw_line.startswith(b"\xef\xbb\xbf"):
+                # A UTF-8 BOM is not part of the content. git skips it, so a
+                # config file written by a Windows editor still parses.
+                raw_line = raw_line[3:]
+            line = raw_line.decode(defenc)
             lineno = lineno + 1
             # Comment or blank line?
             if line.strip() == "" or self.re_comment.match(line):
