@@ -645,7 +645,8 @@ class Git(metaclass=_GitMeta):
         "_version_info_token",
     )
 
-    re_unsafe_protocol = re.compile(r"(.+)::.+")
+    # Match Git's leading transport selector, including an empty helper name.
+    re_unsafe_protocol = re.compile(r"([A-Za-z0-9][A-Za-z0-9+.-]*|)::")
 
     unsafe_git_ls_remote_options = [
         # This option allows arbitrary command execution in git-ls-remote.
@@ -1129,16 +1130,28 @@ class Git(metaclass=_GitMeta):
         self,
         *args: Any,
         allow_unsafe_options: bool = False,
+        allow_unsafe_protocols: bool = False,
         **kwargs: Any,
     ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]:
         """List references in a remote repository.
 
         :param allow_unsafe_options:
             Allow unsafe options, like ``--upload-pack`` or ``--exec``.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``. Positional arguments
+            and split short-option values are checked.
         """
         if not allow_unsafe_options:
             candidate_options = self._option_candidates(args, kwargs)
             Git.check_unsafe_options(options=candidate_options, unsafe_options=self.unsafe_git_ls_remote_options)
+        if not allow_unsafe_protocols:
+            protocol_args = list(args)
+            if kwargs.get("split_single_char_options", True):
+                # Split short-option values can become the URL after parsing earlier options.
+                protocol_args.extend(value for key, value in kwargs.items() if len(key) == 1)
+            for arg in self._unpack_args(protocol_args):
+                self.check_unsafe_protocols(arg)
         return self._call_process("ls_remote", *args, **kwargs)
 
     @property

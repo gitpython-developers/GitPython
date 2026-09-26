@@ -1093,6 +1093,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         self,
         items: Union[PathLike, Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]],
         skip_errors: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> List[Tuple[str, str]]:
         """Rename/move the items, whereas the last item is considered the destination of
@@ -1113,6 +1114,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             If ``True``, errors such as ones resulting from missing source files will be
             skipped.
 
+        :param allow_unsafe_options:
+            Allow unsafe options such as ``--pathspec-from-file`` to be passed to
+            :manpage:`git-mv(1)`.
+
         :param kwargs:
             Additional arguments you would like to pass to :manpage:`git-mv(1)`, such as
             ``dry_run`` or ``force``.
@@ -1129,6 +1134,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :raise git.exc.GitCommandError:
             If git could not handle your request.
         """
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates([], kwargs),
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+            )
         args = []
         if skip_errors:
             args.append("-k")

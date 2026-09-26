@@ -2,6 +2,13 @@
 Changelog
 =========
 
+3.2.1
+=====
+
+Security fixes for
+
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-w8jc-g24h-crhw
+
 3.2.0
 =====
 
