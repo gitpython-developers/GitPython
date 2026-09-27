@@ -22,6 +22,7 @@ from git.cmd import dashify
 from git.objects.util import (
     altz_to_utctz_str,
     from_timestamp,
+    parse_actor_and_date,
     parse_date,
     tzoffset,
     utctz_to_altz,
@@ -570,6 +571,54 @@ class TestUtils(TestBase):
             Actor._from_string("name last another <some-very-long-email@example.com>"),
             Actor("name last another", "some-very-long-email@example.com"),
         )
+
+    @ddt.data(
+        ("", Actor("", None), 0, 0),
+        ("author", Actor("author", None), 0, 0),
+        ("author Name <email> 42 -0700", Actor("Name", "email"), 42, 25200),
+        ("committer Name <email> 42 +0530\n", Actor("Name", "email"), 42, -19800),
+        ("tagger Name <email> 42 +0000\r\n", Actor("Name", "email"), 42, 0),
+        ("author Name <email> 42 -0700 trailing", Actor("Name", "email"), 42, 25200),
+        ("author Name <email> 1 +0 42 -0700", Actor("Name", "email"), 42, 25200),
+        ("author Name <email> invalid -0700", Actor("Name", "email"), 0, 0),
+        ("author Name <email> 42 invalid", Actor("Name", "email"), 0, 0),
+        ("author 42 -0700", Actor("42 -0700", None), 0, 0),
+        ("author  42 -0700", Actor("", None), 42, 25200),
+        (" author Name <email> 42 -0700", Actor("Name", "email"), 42, 25200),
+        ("author Näme <email> ١ +٠١٣٠", Actor("Näme", "email"), 1, -5400),
+        ("author\nName <email> 42 -0700", Actor("author\nName <email> 42 -0700", None), 0, 0),
+        ("author Name <email> 42 -0700\nextra", Actor("author Name", "email"), 0, 0),
+    )
+    @ddt.unpack
+    def test_parse_actor_and_date(self, line, actor, epoch, offset):
+        self.assertEqual(parse_actor_and_date(line), (actor, epoch, offset))
+
+    def test_parse_actor_and_date_long_malformed_lines(self):
+        padding = " " * 64_000
+        for field in ("author", "committer", "tagger"):
+            for tail in ("", "<unterminated", "invalid -0700", "42", "-0700", "42 invalid", "42 +"):
+                actor_text = padding + tail
+                start = time.process_time()
+                result = parse_actor_and_date(f"{field} {actor_text}")
+                elapsed = time.process_time() - start
+                # Leave ample CPU time for slow runners, but catch excessive backtracking.
+                self.assertLess(elapsed, 1.0, (field, tail))
+                self.assertEqual(result, (Actor(actor_text, None), 0, 0))
+
+            name = "Long name " * 6_400
+            self.assertEqual(
+                parse_actor_and_date(f"{field} {name}<email> 42 -0700"),
+                (Actor(name.rstrip(), "email"), 42, 25200),
+            )
+
+    def test_parse_actor_and_date_long_multiline_input(self):
+        for field in ("author", "committer", "tagger"):
+            line = f"{field} Name <email> 42 +" + "0" * 64_000 + "\nextra"
+            start = time.process_time()
+            result = parse_actor_and_date(line)
+            elapsed = time.process_time() - start
+            self.assertLess(elapsed, 1.0, field)
+            self.assertEqual(result, (Actor(f"{field} Name", "email"), 0, 0))
 
     @ddt.data(
         ("name", ""),

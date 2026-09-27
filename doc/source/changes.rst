@@ -8,6 +8,7 @@ Changelog
 Security fixes for
 
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-w8jc-g24h-crhw
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-m64x-33q8-m5h7
 
 3.2.0
 =====
