@@ -318,9 +318,10 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     # END handle exceptions
 
 
-# Precompiled regexes
-_re_actor_epoch = re.compile(r"^.+? (.*) (\d+) ([+-]\d+).*$")
-_re_only_actor = re.compile(r"^.+? (.*)$")
+# Check the line ending once, before parsing fields, to avoid repeated backtracking.
+# Keep the field name from consuming spaces belonging to the actor.
+_re_actor_epoch = re.compile(r"^(?=[^\n]*$).[^ \n]* (.*) (\d+) ([+-]\d+)")
+_re_only_actor = re.compile(r"^.[^ \n]* (.*)$")
 
 
 def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
