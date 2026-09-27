@@ -892,13 +892,16 @@ class Repo:
             **kwargs,
         )
 
-    def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Commit]:
+    def merge_base(self, *rev: TBD, allow_unsafe_options: bool = False, **kwargs: Any) -> List[Commit]:
         R"""Find the closest common ancestor for the given revision
         (:class:`~git.objects.commit.Commit`\s, :class:`~git.refs.tag.Tag`\s,
         :class:`~git.refs.reference.Reference`\s, etc.).
 
         :param rev:
             At least two revs to find the common ancestor for.
+
+        :param allow_unsafe_options:
+            Allow unsafe options in the revision arguments, like ``--output``.
 
         :param kwargs:
             Additional arguments to be passed to the ``repo.git.merge_base()`` command
@@ -912,18 +915,25 @@ class Repo:
 
         :raise ValueError:
             If fewer than two revisions are provided.
+
+        :raise git.exc.GitCommandError:
+            If git fails for a reason other than having no common merge base.
         """
         if len(rev) < 2:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # END handle input
 
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(
+                options=Git._option_candidates(rev, kwargs), unsafe_options=self.unsafe_git_revision_options
+            )
+
         res: List[Commit] = []
         try:
             lines: List[str] = self.git.merge_base(*rev, **kwargs).splitlines()
         except GitCommandError as err:
-            if err.status == 128:
+            if err.status != 1:
                 raise
-            # END handle invalid rev
             # Status code 1 is returned if there is no merge-base.
             # (See: https://github.com/git/git/blob/v2.44.0/builtin/merge-base.c#L19)
             return res
