@@ -1537,7 +1537,7 @@ class Repo:
         clone_path = Git.polish_url(path) if Git.is_cygwin() and "bare" in kwargs else path
         sep_dir = kwargs.get("separate_git_dir")
         if sep_dir:
-            kwargs["separate_git_dir"] = Git.polish_url(sep_dir)
+            kwargs["separate_git_dir"] = Git.polish_url(os.fspath(sep_dir), expand_vars=False)
         multi = None
         if multi_options:
             multi = shlex.split(" ".join(multi_options))

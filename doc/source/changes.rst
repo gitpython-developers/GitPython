@@ -9,6 +9,13 @@ Security fixes for
 
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-w8jc-g24h-crhw
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-m64x-33q8-m5h7
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fx3j-rwgx-fr94
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.2.1
 
 3.2.0
 =====
@@ -25,7 +32,7 @@ If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
 
 See the following for all changes.
-https://github.com/gitpython-developers/GitPython/releases/tag/3.1.63
+https://github.com/gitpython-developers/GitPython/releases/tag/3.2.0
 
 3.1.62
 ======
