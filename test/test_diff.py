@@ -348,7 +348,7 @@ class TestDiff(TestBase):
         with open(self.submodule_dir + "/subfile", "w") as sub_subfile:
             sub_subfile.write("")
         sub.index.add(["subfile"])
-        sub.index.commit("first commit")
+        first_commit = sub.index.commit("first commit")
 
         # Init a temp git repo that will incorporate the submodule.
         repo = Repo.init(self.repo_dir)
@@ -364,7 +364,7 @@ class TestDiff(TestBase):
         with open(self.repo_dir + "/sub/subfile", "w") as foo_sub_subfile:
             foo_sub_subfile.write("blub")
         submodule.module().index.add(["subfile"])
-        submodule.module().index.commit("changed subfile")
+        changed_commit = submodule.module().index.commit("changed subfile")
         submodule.binsha = submodule.module().head.commit.binsha
 
         # Commit submodule updates in parent repo.
@@ -373,11 +373,10 @@ class TestDiff(TestBase):
         repo.create_tag("2")
 
         diff = repo.commit("1").diff(repo.commit("2"))[0]
-        # If diff is unable to find the commit hashes (looks in wrong repo) the
-        # *_blob.size property will be a string containing exception text, an int
-        # indicates success.
-        self.assertIsInstance(diff.a_blob.size, int)
-        self.assertIsInstance(diff.b_blob.size, int)
+        # Gitlinks refer to commits in the submodule's object database.
+        for item, commit in ((diff.a_blob, first_commit), (diff.b_blob, changed_commit)):
+            self.assertEqual(item.size, commit.size)
+            self.assertEqual(item.data_stream.read(), commit.data_stream.read())
 
     def test_diff_rejects_unsafe_output_options(self):
         commit = self.rorepo.head.commit

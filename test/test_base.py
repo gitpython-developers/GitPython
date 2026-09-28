@@ -4,11 +4,15 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
+from io import BytesIO
 import os
 import os.path as osp
 import sys
 import tempfile
 from unittest import skipIf
+from unittest.mock import patch
+
+from gitdb import OInfo
 
 from git import Repo
 from git.objects import Blob, Commit, TagObject, Tree
@@ -76,6 +80,20 @@ class TestBase(_TestBase):
             # Remove the file this way, instead of with a context manager or "finally",
             # so it is only removed on success, and we can inspect the file on failure.
             os.remove(tmpfile.name)
+
+            for stored_type in (typename, typename.encode("ascii")):
+                with patch.object(self.rorepo.odb, "info", return_value=OInfo(binsha, stored_type, item.size)):
+                    self.assertEqual(obj_type(self.rorepo, binsha).size, item.size)
+                    for wrong_type in types:
+                        if wrong_type is obj_type:
+                            continue
+                        invalid = wrong_type(self.rorepo, binsha)
+                        with self.assertRaisesRegex(ValueError, f"{hexsha}.*{typename}.*{wrong_type.type}"):
+                            invalid.size
+                        self.assertEqual(invalid.data_stream.read(), data)
+                        ostream = BytesIO()
+                        invalid.stream_data(ostream)
+                        self.assertEqual(ostream.getvalue(), data)
         # END for each object type to create
 
         # Each has a unique sha.
