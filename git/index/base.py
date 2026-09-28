@@ -310,7 +310,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return self
 
     @classmethod
-    def new(cls, repo: "Repo", *tree_sha: Union[str, Tree]) -> "IndexFile":
+    def new(cls, repo: "Repo", *tree_sha: Union[str, bytes, Tree]) -> "IndexFile":
         """Merge the given treeish revisions into a new index which is returned.
 
         This method behaves like ``git-read-tree --aggressive`` when doing the merge.
@@ -326,7 +326,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             If you intend to write such a merged Index, supply an alternate
             ``file_path`` to its :meth:`write` method.
         """
-        tree_sha_bytes: List[bytes] = [to_bin_sha(str(t)) for t in tree_sha]
+        tree_sha_bytes: List[bytes] = [
+            to_bin_sha(t if isinstance(t, bytes) else str(t).encode("ascii")) for t in tree_sha
+        ]
         base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
 
         inst = cls(repo)

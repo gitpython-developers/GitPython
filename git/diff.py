@@ -11,6 +11,7 @@ import warnings
 
 from git.cmd import Git, handle_process_output
 from git.compat import defenc
+from git.objects.base import IndexObject
 from git.objects.blob import Blob
 from git.objects.util import mode_str_to_int
 from git.util import finalize_process, hex_to_bin
@@ -35,7 +36,6 @@ from git.types import PathLike, Literal
 if TYPE_CHECKING:
     from subprocess import Popen
 
-    from git.objects.base import IndexObject
     from git.objects.commit import Commit
     from git.objects.tree import Tree
     from git.repo.base import Repo
@@ -378,6 +378,10 @@ class Diff:
     Diffs keep information about the changed blob objects, the file mode, renames,
     deletions and new files.
 
+    For submodule changes, ``a_blob`` and ``b_blob`` are
+    :class:`~git.objects.base.IndexObject` instances whose SHAs refer to commits in
+    the submodule repository.
+
     There are a few cases where ``None`` has to be expected as member variable value:
 
     New File::
@@ -481,17 +485,22 @@ class Diff:
                         repo = submodule.module()
                     break
 
+        # Gitlinks reference commits; generic index objects preserve their path and mode.
         self.a_blob: Union["IndexObject", None]
         if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
             self.a_blob = None
         else:
-            self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=self.a_path)
+            self.a_blob = (IndexObject if self.a_mode == 0o160000 else Blob)(
+                repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=self.a_path
+            )
 
         self.b_blob: Union["IndexObject", None]
         if b_blob_id is None or b_blob_id == self.NULL_HEX_SHA:
             self.b_blob = None
         else:
-            self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=self.b_path)
+            self.b_blob = (IndexObject if self.b_mode == 0o160000 else Blob)(
+                repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=self.b_path
+            )
 
         self.new_file: bool = new_file
         self.deleted_file: bool = deleted_file

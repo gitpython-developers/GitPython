@@ -78,14 +78,6 @@
         }
       },
       {
-        "code": "reportAssignmentType",
-        "range": {
-          "startColumn": 38,
-          "endColumn": 76,
-          "lineCount": 1
-        }
-      },
-      {
         "code": "reportArgumentType",
         "range": {
           "startColumn": 51,
