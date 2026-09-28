@@ -21,6 +21,28 @@ import git
 import pytest
 
 
+@pytest.mark.parametrize("clone_method", ["clone", "clone_from"])
+@pytest.mark.parametrize("path_type", [str, Path, PathLikeMock])
+@pytest.mark.parametrize("name", ["$GITPYTHON_TEST_SECRET", "${GITPYTHON_TEST_SECRET}", "%GITPYTHON_TEST_SECRET%"])
+def test_clone_preserves_literal_separate_git_dir(tmp_path, monkeypatch, caplog, clone_method, path_type, name):
+    monkeypatch.setenv("GITPYTHON_TEST_SECRET", "sensitive-value")
+    caplog.set_level("DEBUG", logger="git.cmd")
+    separate_git_dir = tmp_path / name
+    options = {"separate_git_dir": path_type(str(separate_git_dir)), "allow_unsafe_options": True}
+
+    with Repo.init(tmp_path / "source") as source:
+        if clone_method == "clone":
+            cloned = source.clone(tmp_path / "clone", **options)
+        else:
+            cloned = Repo.clone_from(source.git_dir, tmp_path / "clone", **options)
+        with cloned:
+            assert (separate_git_dir / "HEAD").is_file()
+            assert separate_git_dir.samefile(cloned.git_dir)
+
+    assert not (tmp_path / "sensitive-value").exists()
+    assert "sensitive-value" not in caplog.text
+
+
 class TestClone(TestBase):
     @with_rw_directory
     def test_checkout_in_non_empty_dir(self, rw_dir):

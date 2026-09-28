@@ -52,6 +52,36 @@ def _patch_git_config(name, value):
         yield
 
 
+@pytest.mark.parametrize(
+    "name", ["module", "$GITPYTHON_TEST_SECRET", "prefix-${GITPYTHON_TEST_SECRET}-suffix", "%GITPYTHON_TEST_SECRET%"]
+)
+def test_submodule_update_preserves_literal_name(tmp_path, monkeypatch, caplog, name):
+    monkeypatch.setenv("GITPYTHON_TEST_SECRET", "sensitive-value")
+    caplog.set_level("DEBUG", logger="git.cmd")
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        with _patch_git_config("protocol.file.allow", "always"):
+            parent.git.submodule("add", "--name", name, source.working_tree_dir, "module")
+        parent.index.commit("Add submodule")
+
+        with git.Repo.clone_from(parent.working_tree_dir, tmp_path / "clone") as clone:
+            clone.submodule_update(init=True, recursive=True)
+
+            modules_dir = Path(clone.git_dir, "modules")
+            assert {path.name for path in modules_dir.iterdir()} == {name}
+            # Exercise relative gitfile conversion on every platform.
+            with mock.patch.object(Git, "is_cygwin", return_value=True):
+                resolved_git_dir = find_submodule_git_dir(Path(clone.working_tree_dir, "module", ".git"))
+            assert resolved_git_dir is not None
+            assert (modules_dir / name).samefile(resolved_git_dir)
+            with clone.submodules[0].module() as module:
+                assert (modules_dir / name).samefile(module.git_dir)
+                assert module.head.commit == source.head.commit
+
+    assert "sensitive-value" not in caplog.text
+
+
 @pytest.fixture
 def movable_submodule(tmp_path):
     """Create a committed local submodule whose logical name stays fixed when moved."""
