@@ -1180,6 +1180,110 @@ class TestIndex(TestBase):
         r.index.add([fp])
         r.index.commit("Added [.exe")
 
+    @ddt.data(*product(("path", "glob", "blob", "entry"), (False, True)))
+    @ddt.unpack
+    @with_rw_directory
+    def test_staging_never_reads_through_a_directory_symlink(self, rw_dir, kind, outside):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path / "repo") as repo:
+            root = tmp_path / "repo"
+            target = (tmp_path if outside else root) / "target"
+            target.mkdir()
+            (target / "secret").write_text("private data")
+            try:
+                (root / "link").symlink_to(target, target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            item = "link/secret"
+            if kind == "glob":
+                item = "link/*"
+            elif kind == "blob":
+                item = Blob(repo, Blob.NULL_BIN_SHA, 0o100644, item)
+            elif kind == "entry":
+                item = BaseIndexEntry((0o100644, Blob.NULL_BIN_SHA, 0, item))
+            with mock.patch.object(repo.odb, "store", wraps=repo.odb.store) as store:
+                with pytest.raises(ValueError, match="symbolic link"):
+                    repo.index.add([item], write=False)
+                store.assert_not_called()
+
+    @ddt.data("blob", "entry", "rewriter")
+    @with_rw_directory
+    def test_staging_rejects_unsafe_object_paths_even_without_writing(self, rw_dir, kind):
+        with Repo.init(rw_dir) as repo:
+            entry = BaseIndexEntry((0o100644, b"a" * 20, 0, "../outside"))
+            item = Blob(repo, entry.binsha, entry.mode, entry.path) if kind == "blob" else entry
+            kwargs = {}
+            if kind == "rewriter":
+                item = BaseIndexEntry((0o100644, b"a" * 20, 0, "safe"))
+                kwargs["path_rewriter"] = lambda entry: "../outside"
+            index = repo.index
+            with pytest.raises(ValueError):
+                index.add([item], write=False, **kwargs)
+            assert not index.entries
+
+    @with_rw_directory
+    def test_staging_root_preserves_symlinks_and_skips_git_metadata(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        root = tmp_path / "repo"
+        (tmp_path / "outside").mkdir()
+        with Repo.init(root) as repo:
+            (root / "file").write_text("contents")
+            try:
+                (root / "link").symlink_to("../outside", target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            entries = repo.index.add(["."])
+            assert {entry.path for entry in entries} == {"file", "link"}
+            link = repo.index.entries[("link", 0)]
+            assert link.mode == 0o120000
+            assert repo.odb.stream(link.binsha).read() == os.fsencode(os.readlink(root / "link"))
+
+    @with_rw_directory
+    def test_staging_symlink_measures_encoded_target_instead_of_stat_size(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            link = tmp_path / "link"
+            try:
+                link.symlink_to("../café", target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            target = os.fsencode(os.readlink(link))
+            original_lstat = os.lstat
+
+            def zero_size_for_symlinks(*args, **kwargs):
+                result = original_lstat(*args, **kwargs)
+                if S_ISLNK(result.st_mode):
+                    fields = list(result)
+                    fields[6] = 0
+                    return os.stat_result(fields)
+                return result
+
+            with mock.patch("os.lstat", side_effect=zero_size_for_symlinks):
+                (entry,) = repo.index.add(["link"])
+            assert entry.mode == 0o120000
+            assert repo.odb.stream(entry.binsha).read() == target
+
+    @pytest.mark.skipif(os.name == "nt", reason="Colons are not valid Windows filenames")
+    @with_rw_directory
+    def test_staging_nested_colon_directory(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            directory = tmp_path / "nested" / "a:b"
+            directory.mkdir(parents=True)
+            (directory / "file").write_text("contents")
+            assert [entry.path for entry in repo.index.add(["nested"])] == ["nested/a:b/file"]
+            assert repo.index.write_tree()["nested/a:b/file"].data_stream.read() == b"contents"
+
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFOs unavailable")
+    @with_rw_directory
+    def test_staging_special_files_fails_before_opening(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            os.mkfifo(tmp_path / "fifo")
+            with mock.patch("builtins.open", side_effect=AssertionError("must not open a FIFO")):
+                with pytest.raises(ValueError, match="regular file"):
+                    repo.index.add(["fifo"], write=False)
+
     def test__to_relative_path_at_root(self):
         root = osp.abspath(os.sep)
 
