@@ -1390,6 +1390,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # END stderr handler
 
+        # Read and validate the index before Git trusts its paths for checkout.
+        self._delete_entries_cache()
+        self.entries  # noqa: B018
         if paths is None:
             args.append("--all")
             kwargs["as_process"] = 1

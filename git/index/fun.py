@@ -34,7 +34,7 @@ from git.objects.fun import (
     traverse_trees_recursive,
     tree_to_stream,
 )
-from git.util import IndexFileSHA1Writer, finalize_process
+from git.util import IndexFileSHA1Writer, finalize_process, _validate_repo_path
 
 from .typ import CE_EXTENDED, BaseIndexEntry, IndexEntry, CE_NAMEMASK, CE_STAGESHIFT
 from .util import pack, unpack
@@ -279,13 +279,13 @@ def write_cache(
 
     # Body
     for entry in entries:
+        _validate_repo_path(entry.path)
         beginoffset = tell()
         write(entry.ctime_bytes)  # ctime
         write(entry.mtime_bytes)  # mtime
-        path_str = str(entry.path)
+        path_str = os.fspath(entry.path)
         path: bytes = force_bytes(path_str, encoding=defenc)
-        plen = len(path) & CE_NAMEMASK  # Path length
-        assert plen == len(path), "Path %s too long to fit into index" % entry.path
+        plen = min(len(path), CE_NAMEMASK)  # Longer names use a sentinel.
         flags = plen | (entry.flags & CE_NAMEMASK_INV)  # Clear possible previous values.
         if entry.extended_flags:
             flags |= CE_EXTENDED
@@ -325,7 +325,8 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
     unpacked = cast(Tuple[int, int], unpack(">LL", stream.read(4 * 2)))
     version, num_entries = unpacked
 
-    assert version in (1, 2, 3), "Unsupported git index version %i, only 1, 2, and 3 are supported" % version
+    if version not in (1, 2, 3):
+        raise AssertionError("Unsupported git index version %i, only 1, 2, and 3 are supported" % version)
     return version, num_entries
 
 
@@ -382,10 +383,23 @@ def read_cache(
         if flags & CE_EXTENDED:
             extended_flags = unpack(">H", read(2))[0]
         path_size = flags & CE_NAMEMASK
-        path = read(path_size).decode(defenc)
+        path_bytes = bytearray(read(path_size))
+        if len(path_bytes) != path_size:
+            raise ValueError("Truncated index entry path")
+        terminator = read(1)
+        if path_size == CE_NAMEMASK:
+            while terminator and terminator != b"\0":
+                path_bytes.extend(terminator)
+                terminator = read(1)
+        if terminator != b"\0":
+            raise ValueError("Unterminated index entry path")
+        path = path_bytes.decode(defenc)
+        _validate_repo_path(path)
 
-        real_size = (tell() - beginoffset + 8) & ~7
-        read((beginoffset + real_size) - tell())
+        real_size = (tell() - beginoffset + 7) & ~7
+        padding_size = beginoffset + real_size - tell()
+        if read(padding_size) != b"\0" * padding_size:
+            raise ValueError("Invalid index entry padding")
         entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size, extended_flags))
         # entry_key would be the method to use, but we save the effort.
         entries[(path, entry.stage)] = entry
@@ -407,6 +421,18 @@ def read_cache(
 
     # Truncate the sha in the end as we will dynamically create it anyway.
     extension_data = extension_data[:-20]
+
+    offset = 0
+    while offset < len(extension_data):
+        header = extension_data[offset : offset + 8]
+        if len(header) != 8:
+            raise ValueError("Truncated index extension header")
+        signature, size = unpack(">4sL", header)
+        if not b"A" <= signature[:1] <= b"Z":
+            raise ValueError("Unsupported mandatory index extension %r" % signature)
+        offset += 8 + size
+        if offset > len(extension_data):
+            raise ValueError("Truncated index extension %r" % signature)
 
     return (version, entries, extension_data, content_sha)
 
@@ -434,6 +460,9 @@ def write_tree_from_cache(
 
         A tuple of a sha and a list of tree entries being a tuple of hexsha, mode, name.
     """
+    if si == 0:
+        for entry in entries[sl]:
+            _validate_repo_path(entry.path)
     tree_items: List["TreeCacheTup"] = []
 
     ci = sl.start
@@ -481,6 +510,7 @@ def write_tree_from_cache(
 
 
 def _tree_entry_to_baseindexentry(tree_entry: "TreeCacheTup", stage: int) -> BaseIndexEntry:
+    _validate_repo_path(tree_entry[2])
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 
