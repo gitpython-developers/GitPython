@@ -3,14 +3,15 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-
-from git import Repo
-from git.refs import RemoteReference
-from git.refs import SymbolicReference
 from gitdb.exc import BadName
+
+from git import Actor, Commit, Repo
+from git.refs import RemoteReference, SymbolicReference
 
 
 def _write(repo, path, content):
@@ -140,6 +141,109 @@ def test_rev_parse_commit_message_search(rev_parse_repo):
     assert repo.rev_parse("HEAD^{/!-release}") == merge
 
 
+@pytest.mark.parametrize(
+    "revision",
+    [
+        ":/release[[:space:]]candidate",
+        "HEAD^{/release{1}}",
+        "ann^{/root}",
+        ":/!-release",
+        "HEAD^{/!-release}",
+        "HEAD^{/release}^0",
+        "HEAD^{/release}^{tree}",
+    ],
+)
+def test_rev_parse_commit_message_search_matches_git(rev_parse_repo, revision):
+    repo = rev_parse_repo["repo"]
+    expected = repo.git.rev_parse("--verify", revision)
+    assert repo.rev_parse(revision).hexsha == expected
+
+
+@pytest.mark.parametrize("revision", [":/release", "HEAD^{/release}"])
+def test_commit_and_tree_message_search(rev_parse_repo, revision):
+    repo = rev_parse_repo["repo"]
+    release = rev_parse_repo["release"]
+    assert repo.commit(revision) == release
+    assert repo.tree(revision) == release.tree
+
+
+def test_rev_parse_commit_message_literal_bang_and_option(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    commit = repo.index.commit("!urgent --all")
+    assert repo.rev_parse(":/!!urgent") == commit
+    assert repo.rev_parse("HEAD^{/!!urgent}") == commit
+    assert repo.rev_parse(":/--all") == commit
+    assert repo.rev_parse("HEAD^{/--all}") == commit
+
+
+def test_rev_parse_commit_message_escaped_braces(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    commit = repo.index.commit("literal{3}")
+    repo.index.commit("literalll")
+    assert repo.rev_parse(r"HEAD^{/literal\{3\}}") == commit
+
+
+def test_revision_message_search_does_not_backtrack_in_python(tmp_path):
+    with Repo.init(tmp_path) as repo:
+        actor = Actor("GitPython Tests", "gitpython@example.com")
+        repo.index.commit("hello " + "b" * 80, author=actor, committer=actor)
+
+    # Run the adversarial expression in a killable process: Python's regex engine
+    # can otherwise hold the GIL indefinitely, including against a short message.
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import sys
+from git import Repo
+from gitdb.exc import BadName
+
+with Repo(sys.argv[1]) as repo:
+    for resolve in (repo.rev_parse, repo.commit, repo.tree):
+        for revision in (':/(.+)+ZZZ', 'HEAD^{/(.+)+ZZZ}'):
+            try:
+                resolve(revision)
+            except BadName:
+                pass
+            else:
+                raise AssertionError('Unexpected match: ' + revision)
+""",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=5,
+    )
+
+
+def test_revision_message_search_does_not_deserialize_history(tmp_path, monkeypatch):
+    with Repo.init(tmp_path) as repo:
+        actor = Actor("GitPython Tests", "gitpython@example.com")
+        commit = repo.index.commit("needle", author=actor, committer=actor)
+
+        def reject_deserialization(*args, **kwargs):
+            raise AssertionError("Message search must not deserialize commits in Python")
+
+        monkeypatch.setattr(Commit, "_deserialize", reject_deserialization)
+        assert repo.rev_parse(":/needle") == commit
+        assert repo.rev_parse("HEAD^{/needle}") == commit
+
+
+def test_commit_and_tree_resolve_before_peeling(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    root = rev_parse_repo["root"]
+    merge = rev_parse_repo["merge"]
+    assert repo.commit("ann") == root
+    assert repo.tree("ann") == root.tree
+    assert repo.tree("HEAD:dir") == merge.tree["dir"]
+    assert repo.tree("HEAD^{tree}") == merge.tree
+    with pytest.raises(ValueError):
+        repo.commit("HEAD^{tree}")
+    with pytest.raises(ValueError):
+        repo.tree("HEAD:README.md")
+
+
 def test_rev_parse_rejects_invalid_object_specs(rev_parse_repo):
     repo = rev_parse_repo["repo"]
 
@@ -147,10 +251,14 @@ def test_rev_parse_rejects_invalid_object_specs(rev_parse_repo):
         repo.rev_parse(":")
     with pytest.raises(ValueError):
         repo.rev_parse(":/")
-    with pytest.raises(ValueError):
+    with pytest.raises(BadName):
         repo.rev_parse(":/[")
-    with pytest.raises(ValueError):
+    with pytest.raises(BadName):
         repo.rev_parse("HEAD^{/[}")
+    with pytest.raises(ValueError):
+        repo.rev_parse(":/!reserved")
+    with pytest.raises(ValueError):
+        repo.rev_parse("HEAD^{/!reserved}")
     with pytest.raises(ValueError):
         repo.rev_parse("@{-0}")
     with pytest.raises(ValueError):

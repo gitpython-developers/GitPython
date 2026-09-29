@@ -48,6 +48,7 @@ from .fun import (
     find_submodule_git_dir,
     is_git_dir,
     rev_parse,
+    to_commit,
     touch,
 )
 
@@ -821,7 +822,7 @@ class Repo:
         """
         if rev is None:
             return self.head.commit
-        return self.rev_parse(str(rev) + "^0")
+        return to_commit(self.rev_parse(str(rev)))
 
     def iter_trees(self, *args: Any, **kwargs: Any) -> Iterator["Tree"]:
         """:return: Iterator yielding :class:`~git.objects.tree.Tree` objects
@@ -851,7 +852,8 @@ class Repo:
         """
         if rev is None:
             return self.head.commit.tree
-        return self.rev_parse(str(rev) + "^{tree}")
+        obj = self.rev_parse(str(rev))
+        return obj if obj.type == "tree" else to_commit(obj).tree
 
     def iter_commits(
         self,

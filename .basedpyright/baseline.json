@@ -377,22 +377,6 @@
         "code": "reportReturnType",
         "range": {
           "startColumn": 15,
-          "endColumn": 46,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportReturnType",
-        "range": {
-          "startColumn": 15,
-          "endColumn": 51,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportReturnType",
-        "range": {
-          "startColumn": 15,
           "endColumn": 28,
           "lineCount": 1
         }
