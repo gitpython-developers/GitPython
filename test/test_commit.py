@@ -590,6 +590,23 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
             Actor("test_user_3", "test_user_3@github.com"),
         ]
 
+    def test_commit_co_authors_bounds_malformed_trailer(self):
+        """A malformed trailer line must not make co_authors run in quadratic time."""
+        commit = copy.copy(self.rorepo.commit("4251bd5"))
+        # An unterminated trailer repeating " <" without a closing ">". The old
+        # `(.*) <(.*?)>` regex backtracked over every " <" (O(n^2)); the crafted line
+        # is fully attacker-controlled through the commit message.
+        commit.message = (
+            "Subject\n\nCo-authored-by: " + ("a <" * 20_000) + "\nCo-authored-by: Real Name <real@example.com>"
+        )
+        start = time.process_time()
+        result = commit.co_authors
+        elapsed = time.process_time() - start
+        # Leave ample CPU time for slow runners, but catch quadratic backtracking.
+        self.assertLess(elapsed, 1.0)
+        # The malformed line yields nothing; the well-formed trailer still parses.
+        assert result == [Actor("Real Name", "real@example.com")]
+
     @with_rw_directory
     def test_create_from_tree_with_trailers_dict(self, rw_dir):
         """Test that create_from_tree supports adding trailers via a dict."""
