@@ -1778,9 +1778,13 @@ class Repo:
             treeish = self.head.commit
         if prefix and "prefix" not in kwargs:
             kwargs["prefix"] = prefix
-        remote = kwargs.get("remote")
-        if not allow_unsafe_protocols and remote is not None:
-            Git.check_unsafe_protocols(str(remote))
+        if not allow_unsafe_protocols:
+            # Check the emitted URL, including repeated values and Git's long-option
+            # abbreviations, rather than only the untransformed `remote` keyword.
+            for arg in self.git.transform_kwargs(**kwargs):
+                option, separator, remote = arg.partition("=")
+                if separator and option.startswith("--r") and "--remote".startswith(option):
+                    Git.check_unsafe_protocols(remote)
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([], kwargs),

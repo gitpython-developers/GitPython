@@ -6,7 +6,6 @@
 import gc
 import glob
 import io
-from io import BytesIO
 import itertools
 import os
 import os.path as osp
@@ -14,8 +13,9 @@ import pathlib
 import pickle
 import sys
 import tempfile
-from unittest import mock
+from io import BytesIO
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -37,14 +37,10 @@ from git import (
     Submodule,
     Tree,
 )
-from git.exc import UnsafeOptionError
-from git.exc import UnsafeProtocolError
-from git.exc import BadObject
-from git.exc import WorkTreeRepositoryUnsupported
+from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError, WorkTreeRepositoryUnsupported
 from git.repo.fun import find_worktree_git_dir, touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
-
-from test.lib import TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo, PathLikeMock
+from test.lib import PathLikeMock, TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo
 
 
 def iter_flatten(lol):
@@ -1672,3 +1668,57 @@ class TestRepo(TestBase):
 
             with pytest.raises(GitCommandError):
                 temp_repo.ignored(tmp_dir / "symlink/file.txt")
+
+
+@pytest.mark.parametrize("allow_unsafe_options", (False, True))
+@pytest.mark.parametrize(
+    "kwargs",
+    (
+        {"rem": "ext::helper"},
+        {"re": "ext::helper"},
+        {"remo": "ext::helper"},
+        {"remot": "ext::helper"},  # codespell:ignore remot
+        {"remote": ["https://example.com/repo", "ext::helper"]},
+        {"remote": (None, False, "ext::helper")},
+        {"remote=ext::helper": True},
+        {"r=ext::helper": True},
+        {"remote": "ext://helper"},
+    ),
+)
+def test_archive_protocol_guard_checks_emitted_remote_options(tmp_path, kwargs, allow_unsafe_options):
+    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
+        with pytest.raises(UnsafeProtocolError):
+            repo.archive(BytesIO(), "HEAD", allow_unsafe_options=allow_unsafe_options, **kwargs)
+        execute.assert_not_called()
+
+
+def test_archive_preserves_safe_repeated_remote_options(tmp_path):
+    urls = ["https://[::1]/repo.git", "ssh://git@[2001:db8::1]/repo.git"]
+    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
+        output = BytesIO()
+        repo.archive(output, "HEAD", rem=urls)
+        execute.assert_called_once_with(
+            [Git.GIT_PYTHON_GIT_EXECUTABLE, "archive", *(f"--rem={url}" for url in urls), "--", "HEAD"],
+            output_stream=output,
+        )
+
+
+def test_archive_protocol_and_option_opt_ins_are_independent(tmp_path):
+    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
+        with pytest.raises(UnsafeOptionError):
+            repo.archive(BytesIO(), "HEAD", rem=["ext::helper"], exec="helper", allow_unsafe_protocols=True)
+        execute.assert_not_called()
+
+        output = BytesIO()
+        repo.archive(
+            output,
+            "HEAD",
+            rem=["ext::helper"],
+            exec="helper",
+            allow_unsafe_options=True,
+            allow_unsafe_protocols=True,
+        )
+        execute.assert_called_once_with(
+            [Git.GIT_PYTHON_GIT_EXECUTABLE, "archive", "--rem=ext::helper", "--exec=helper", "--", "HEAD"],
+            output_stream=output,
+        )
