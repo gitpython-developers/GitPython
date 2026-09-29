@@ -10,7 +10,6 @@ import datetime
 from io import BytesIO
 import logging
 import os
-import re
 from subprocess import Popen, PIPE
 from time import altzone, daylight, localtime, time, timezone
 import warnings
@@ -964,12 +963,21 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         co_authors = []
 
         if self.message:
-            results = re.findall(
-                r"^Co-authored-by: (.*) <(.*?)>$",
-                str(self.message),
-                re.MULTILINE,
-            )
-            for author in results:
-                co_authors.append(Actor(*author))
+            # Scan line by line instead of matching `(.*) <(.*?)>` across the whole
+            # message. On a single trailer line that repeats " <" without ever closing
+            # a ">", greedy backtracking over each " <" made the regex run in O(n^2)
+            # time, so a large (fully attacker-controlled) commit message could stall
+            # any caller of this property. A trailer is "Co-authored-by: <name> <email>"
+            # with the email in the final angle brackets, so the name ends at the last
+            # " <" and the line ends at ">".
+            prefix = "Co-authored-by: "
+            for line in str(self.message).split("\n"):
+                if not line.startswith(prefix) or not line.endswith(">"):
+                    continue
+                identity = line[len(prefix) :]
+                separator = identity.rfind(" <")
+                if separator == -1:
+                    continue
+                co_authors.append(Actor(identity[:separator], identity[separator + 2 : -1]))
 
         return co_authors
