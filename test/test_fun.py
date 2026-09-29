@@ -1,11 +1,12 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from io import BytesIO
-from stat import S_IFDIR, S_IFLNK, S_IFREG, S_IXUSR
-from os import stat
 import os.path as osp
+from io import BytesIO
+from os import stat
+from stat import S_IFDIR, S_IFLNK, S_IFREG, S_IXUSR
 
+import ddt
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
@@ -20,10 +21,10 @@ from git.objects.fun import (
 )
 from git.repo.fun import find_worktree_git_dir
 from git.util import bin_to_hex, cygpath, join_path_native
-
 from test.lib import TestBase, with_rw_directory, with_rw_repo
 
 
+@ddt.ddt
 class TestFun(TestBase):
     def _assert_index_entries(self, entries, trees):
         index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t).decode("ascii")) for t in trees])
@@ -304,9 +305,25 @@ class TestFun(TestBase):
         self.assertTrue(statbuf.st_mode & S_IFDIR)
 
     def test_tree_entries_from_data_with_failing_name_decode(self):
-        r = tree_entries_from_data(b"100644 \x9f\0aaa")
-        assert r == [(b"aaa", 33188, "\udc9f")], r
+        r = tree_entries_from_data(b"100644 \x9f\0" + b"a" * 20)
+        assert r == [(b"a" * 20, 33188, "\udc9f")], r
 
     def test_tree_entries_from_bytearray(self):
         r = tree_entries_from_data(bytearray(b"100644 name\0abcdefghijklmnopqrst"))
         assert r == [(b"abcdefghijklmnopqrst", 33188, "name")], r
+        assert isinstance(r[0][0], bytes)
+
+    @ddt.data(b"", b".", b"..", b".git", b"a/b")
+    def test_tree_reader_rejects_paths_that_cannot_be_tree_components(self, name):
+        with self.assertRaises(ValueError):
+            tree_entries_from_data(b"100644 " + name + b"\0" + b"a" * 20)
+
+    @ddt.data(b"100644", b"100644 missing-nul", b"100644 name\0short", b"xyz name\0" + b"a" * 20)
+    def test_malformed_tree_records_fail_cleanly(self, data):
+        with self.assertRaises(ValueError):
+            tree_entries_from_data(data)
+
+    @ddt.data(b"", b"a" * 19, b"a" * 20 + b"100644 extra\0" + b"b" * 20)
+    def test_tree_serializer_rejects_wrong_length_object_ids(self, sha):
+        with self.assertRaises(ValueError):
+            tree_to_stream([(sha, 0o100644, "file")], BytesIO().write)

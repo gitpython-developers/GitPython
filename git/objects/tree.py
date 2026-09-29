@@ -13,7 +13,7 @@ from git.util import IterableList, join_path, to_bin_sha
 from . import util
 from .base import IndexObjUnion, IndexObject
 from .blob import Blob
-from .fun import tree_entries_from_data, tree_to_stream
+from .fun import tree_entries_from_data, tree_to_stream, _validate_tree_entry_name
 from .submodule.base import Submodule
 
 # typing -------------------------------------------------
@@ -110,8 +110,7 @@ class TreeModifier:
         :return:
             self
         """
-        if "/" in name:
-            raise ValueError("Name must not contain '/' characters")
+        _validate_tree_entry_name(name)
         if (mode >> 12) not in Tree._map_id_to_type:
             raise ValueError("Invalid object type according to mode %o" % mode)
 

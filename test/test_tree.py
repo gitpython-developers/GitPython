@@ -3,21 +3,26 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from io import BytesIO
+import os
 import os.path as osp
-from pathlib import Path
 import subprocess
+from io import BytesIO
+from pathlib import Path
 
+import ddt
 import pytest
 
 from git.objects import Blob, Tree
+from git.objects.fun import tree_entries_from_data, tree_to_stream
+from git.objects.tree import TreeModifier
 from git.repo import Repo
 from git.util import cwd
-
 from test.lib import TestBase, with_rw_directory
+
 from .lib.helper import PathLikeMock, with_rw_repo
 
 
+@ddt.ddt
 class TestTree(TestBase):
     def test_serializable(self):
         # Tree at the given commit contains a submodule as well.
@@ -46,6 +51,19 @@ class TestTree(TestBase):
             del testtree._cache
             testtree._deserialize(stream)
         # END for each item in tree
+
+    def test_valid_unusual_tree_names_round_trip(self):
+        names = ["a b", "a\nb", "a\tb", "café", ".gitignore"]
+        if os.name != "nt":
+            names.extend(["a\\b", "a:b", "C:relative"])
+        cache = []
+        modifier = TreeModifier(cache)
+        for name in names:
+            modifier.add(b"a" * 20, 0o100644, name)
+        modifier.set_done()
+        data = BytesIO()
+        tree_to_stream(cache, data.write)
+        assert tree_entries_from_data(data.getvalue()) == cache
 
     @with_rw_directory
     def _get_git_ordered_files(self, rw_dir):
@@ -110,6 +128,15 @@ class TestTree(TestBase):
 
         mod.set_done()
         assert names_in_mod_cache() == git_file_names_in_order, "set_done() performs git-sorting"
+
+    @ddt.data("", ".", "..", ".git", ".GIT", "git~1", ".git. ", ".g\u200cit", "a/b", "a\0b")
+    def test_tree_names_are_checked_at_construction_and_serialization(self, name):
+        cache = []
+        with pytest.raises(ValueError):
+            TreeModifier(cache).add(b"a" * 20, 0o100644, name)
+        assert not cache
+        with pytest.raises(ValueError):
+            tree_to_stream([(b"a" * 20, 0o100644, name)], BytesIO().write)
 
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")
