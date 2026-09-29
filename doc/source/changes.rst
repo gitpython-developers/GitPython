@@ -2,6 +2,15 @@
 Changelog
 =========
 
+Unreleased
+==========
+
+* Deprecate the pure-Python ``GitDB`` object database backend due to security and
+  performance issues. Selecting it or a subclass through ``odbt`` now emits a
+  ``DeprecationWarning``. Remove ``odbt=GitDB`` to use ``GitCmdObjectDB``, the
+  existing default, or select ``odbt=GitCmdObjectDB`` explicitly. The ``gitdb``
+  package remains a dependency for shared types and utilities.
+
 3.2.1
 =====
 
