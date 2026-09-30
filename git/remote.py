@@ -1073,9 +1073,7 @@ class Remote(LazyMixin, IterableObj):
             args = [refspec]
 
         if not allow_unsafe_protocols:
-            for ref in args:
-                if ref:
-                    Git.check_unsafe_protocols(ref)
+            self.repo.git._check_unsafe_protocols_in_args([self, *args], kwargs)
 
         if not allow_unsafe_options:
             Git.check_unsafe_options(
@@ -1084,7 +1082,7 @@ class Remote(LazyMixin, IterableObj):
             )
 
         proc = self.repo.git.fetch(
-            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
+            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=bool(verbose), **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
@@ -1138,8 +1136,7 @@ class Remote(LazyMixin, IterableObj):
             if operand.startswith("-"):
                 raise UnsafeOptionError("Remote names and pull refspecs must not start with '-'.")
         if not allow_unsafe_protocols:
-            for ref in refspec:
-                Git.check_unsafe_protocols(ref)
+            self.repo.git._check_unsafe_protocols_in_args([self, *refspec], kwargs)
 
         if not allow_unsafe_options:
             Git.check_unsafe_options(
@@ -1214,8 +1211,7 @@ class Remote(LazyMixin, IterableObj):
 
         refspec = Git._unpack_args(refspec or [])
         if not allow_unsafe_protocols:
-            for ref in refspec:
-                Git.check_unsafe_protocols(ref)
+            self.repo.git._check_unsafe_protocols_in_args([self, *refspec], kwargs)
 
         if not allow_unsafe_options:
             Git.check_unsafe_options(
