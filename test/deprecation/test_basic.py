@@ -17,6 +17,7 @@ It is inapplicable to the deprecations whose warnings are tested in this module.
 
 import pytest
 
+from git.db import GitCmdObjectDB, GitDB
 from git.diff import NULL_TREE
 from git.objects.util import Traversable
 from git.repo import Repo
@@ -58,6 +59,32 @@ def diff(commit: "Commit") -> Generator["Diff", None, None]:
 def diffs(commit: "Commit") -> Generator["DiffIndex", None, None]:
     """Fixture to supply a DiffIndex."""
     yield commit.diff(NULL_TREE)
+
+
+def test_gitdb_backend_warns(commit: "Commit") -> None:
+    class DerivedGitDB(GitDB):
+        pass
+
+    for backend in (GitDB, DerivedGitDB):
+        with pytest.deprecated_call(match="GitDB.*deprecated.*GitCmdObjectDB") as caught:
+            with Repo(commit.repo.working_dir, odbt=backend) as repo:
+                assert type(repo.odb) is backend
+                assert repo.head.commit.message == commit.message
+        assert len(caught) == 1
+        assert caught[0].filename == __file__
+
+
+def test_gitcmdobjectdb_backend_does_not_warn(commit: "Commit") -> None:
+    class DerivedGitCmdObjectDB(GitCmdObjectDB):
+        pass
+
+    with assert_no_deprecation_warning():
+        with Repo(commit.repo.working_dir) as repo:
+            assert type(repo.odb) is GitCmdObjectDB
+        for backend in (GitCmdObjectDB, DerivedGitCmdObjectDB):
+            with Repo(commit.repo.working_dir, odbt=backend) as repo:
+                assert type(repo.odb) is backend
+                assert repo.head.commit.message == commit.message
 
 
 def test_diff_renamed_warns(diff: "Diff") -> None:

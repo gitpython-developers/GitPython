@@ -513,24 +513,29 @@ Object Databases
 
 The type of the database determines certain performance characteristics, such as the quantity of objects that can be read per second, the resource usage when reading large data files, as well as the average memory footprint of your application.
 
-GitDB
-=====
-The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. It uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities of small objects from densely packed repositories::
-
-    repo = Repo("path/to/repo", odbt=GitDB)
-
-.. warning::
-   ``GitDB`` may fail or become extremely slow when traversing trees in
-   repositories with very large commits (thousands of changed files in a
-   single commit). If you encounter ``RecursionError`` or excessive
-   slowness during tree traversal, switch to ``GitCmdObjectDB`` instead.
-
-
 GitCmdObjectDB
 ==============
-The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than ``GitDB``::
+``GitCmdObjectDB`` is the default and recommended backend. It reads objects and
+resolves abbreviated object IDs through persistent ``git cat-file`` processes::
 
+    repo = Repo("path/to/repo")
+    # Equivalent explicit selection:
     repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
+
+GitDB
+=====
+.. warning::
+   The pure-Python ``GitDB`` backend is deprecated due to security and performance
+   issues. Its object parsers can exhaust resources or return incorrect object
+   data when processing untrusted repositories. Do not use it for untrusted data.
+
+Selecting ``odbt=GitDB`` (including a subclass) emits a ``DeprecationWarning``.
+To migrate, remove ``odbt=GitDB`` or replace it with ``odbt=GitCmdObjectDB`` when
+opening, initializing, or cloning a repository. The deprecated backend remains
+available for compatibility; deprecation does not fix its parsing issues.
+
+The ``gitdb`` package remains a dependency because GitPython still uses its shared
+types and utilities.
 
 Git Command Debugging and Customization
 ***************************************

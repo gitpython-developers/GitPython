@@ -14,7 +14,7 @@ import glob
 from io import BytesIO
 import os
 import os.path as osp
-from stat import S_ISLNK
+from stat import S_ISLNK, S_ISREG
 import subprocess
 import sys
 import tempfile
@@ -36,6 +36,7 @@ from git.util import (
     file_contents_ro,
     _is_path_rooted,
     _to_relative_path,
+    _validate_repo_path,
     to_native_path_linux,
     unbare_repo,
     to_bin_sha,
@@ -476,7 +477,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     continue
             # END glob handling
             try:
-                for root, _dirs, files in os.walk(abs_path, onerror=raise_exc):
+                for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
+                    for dirname in dirs[:]:
+                        directory = osp.join(root, dirname)
+                        try:
+                            _validate_repo_path(to_native_path_linux(osp.relpath(directory, r)))
+                        except ValueError:
+                            dirs.remove(dirname)
+                            continue
+                        if osp.islink(directory):
+                            dirs.remove(dirname)
+                            yield osp.relpath(directory, r)
                     for rela_file in files:
                         # Add relative paths only.
                         yield osp.join(root.replace(rs, ""), rela_file)
@@ -717,6 +728,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             else:
                 raise TypeError("Invalid Type: %r" % item)
         # END for each item
+        for entry in entries:
+            _validate_repo_path(entry.path)
         return paths, entries
 
     def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
@@ -726,20 +739,43 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             This needs the :func:`~git.index.util.git_working_dir` decorator active!
             This must be ensured in the calling code.
         """
-        st = os.lstat(filepath)  # Handles non-symlinks as well.
+        filepath = self._to_relative_path(filepath)
+        _validate_repo_path(filepath)
+        parent = osp.realpath(self.repo.working_dir)
+        for component in os.fspath(filepath).split("/")[:-1]:
+            parent = osp.join(parent, component)
+            if osp.islink(parent) or osp.normcase(osp.realpath(parent)) != osp.normcase(osp.abspath(parent)):
+                raise ValueError("Cannot stage a path beyond a symbolic link: %r" % filepath)
+        st = os.lstat(filepath)
+        if not S_ISLNK(st.st_mode) and not S_ISREG(st.st_mode):
+            raise ValueError("Can only stage a regular file or symbolic link: %r" % filepath)
 
+        stream_size = st.st_size
         if S_ISLNK(st.st_mode):
             # readlink is a string, but we need bytes.
+            target = force_bytes(os.readlink(filepath), encoding=defenc)
+            stream_size = len(target)
+
             def open_stream() -> BinaryIO:
-                return BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
+                return BytesIO(target)
         else:
 
             def open_stream() -> BinaryIO:
-                return open(filepath, "rb")
+                # Do not follow a final symlink or block on a FIFO substituted
+                # between lstat and open on platforms supporting these flags.
+                def opener(path: str, flags: int) -> int:
+                    return os.open(path, flags | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
+
+                return open(filepath, "rb", opener=opener)
 
         with open_stream() as stream:
+            if not S_ISLNK(st.st_mode):
+                st = os.fstat(stream.fileno())
+                if not S_ISREG(st.st_mode):
+                    raise ValueError("Can only stage a regular file: %r" % filepath)
+                stream_size = st.st_size
             fprogress(filepath, False, filepath)
-            istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
+            istream = self.repo.odb.store(IStream(Blob.type, stream_size, stream))
             fprogress(filepath, True, filepath)
         return BaseIndexEntry(
             (
@@ -777,7 +813,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 blob = Blob(
                     self.repo,
                     Blob.NULL_BIN_SHA,
-                    stat_mode_to_index_mode(os.stat(abspath).st_mode),
+                    stat_mode_to_index_mode(os.lstat(abspath).st_mode),
                     to_native_path_linux(gitrelative_path),
                 )
                 # TODO: variable undefined
@@ -989,6 +1025,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # FINALIZE
         # Add the new entries to this instance.
+        for entry in entries_added:
+            _validate_repo_path(entry.path)
         for entry in entries_added:
             self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
 
@@ -1390,6 +1428,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # END stderr handler
 
+        # Read and validate the index before Git trusts its paths for checkout.
+        self._delete_entries_cache()
+        self.entries  # noqa: B018
         if paths is None:
             args.append("--all")
             kwargs["as_process"] = 1

@@ -34,6 +34,7 @@ import contextlib
 from functools import wraps
 import getpass
 import logging
+import ntpath
 import os
 import os.path as osp
 from pathlib import Path
@@ -378,6 +379,33 @@ def _to_relative_path(root: PathLike, path: PathLike) -> str:
     if path_str.endswith(separators) and relative_path != "." and not relative_path.endswith("/"):
         relative_path += "/"
     return relative_path
+
+
+_HFS_IGNORABLES = str.maketrans(
+    "", "", "\u200c\u200d\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u206a\u206b\u206c\u206d\u206e\u206f\ufeff"
+)
+
+
+def _validate_repo_path(path: PathLike) -> None:
+    """Reject unsafe tree/index paths without normalizing away their components.
+
+    Protect Git metadata aliases on NTFS and HFS even when writing on another
+    platform. Other POSIX filename characters, including newlines, remain valid.
+    """
+    name = os.fspath(path)
+    if not name or "\0" in name or ntpath.splitdrive(name)[0] or name.startswith("/"):
+        raise ValueError("Invalid repository path %r" % name)
+    if os.name == "nt" and "\\" in name:
+        raise ValueError("Index paths must use '/' separators: %r" % name)
+    for component in name.split("/"):
+        if component in ("", ".", ".."):
+            raise ValueError("Invalid repository path %r" % name)
+        # NTFS recognizes backslashes and alternate data streams in metadata names.
+        for part in component.split("\\"):
+            ntfs_name = part.split(":", 1)[0].rstrip(" .").lower()
+            hfs_name = part.translate(_HFS_IGNORABLES).lower()
+            if ntfs_name in (".git", "git~1") or hfs_name == ".git":
+                raise ValueError("Repository path aliases Git metadata: %r" % name)
 
 
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:

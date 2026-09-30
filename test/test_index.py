@@ -4,26 +4,28 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
-from dataclasses import dataclass
-from io import BytesIO
 import logging
 import os
 import os.path as osp
-from pathlib import Path
 import re
 import shutil
-from stat import S_ISLNK, ST_MODE
+import struct
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
+from hashlib import sha1
+from io import BytesIO
+from itertools import product
+from pathlib import Path
+from stat import S_ISLNK, ST_MODE
 from unittest import mock
-
-from gitdb.base import IStream
 
 import ddt
 import pytest
+from gitdb.base import IStream
 
-from git import BlobFilter, Diff, Git, IndexFile, NULL_TREE, Object, Repo, Tree
+from git import NULL_TREE, BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
 from git.diff import NULL_TREE_SHA
 from git.exc import (
     CheckoutError,
@@ -33,13 +35,12 @@ from git.exc import (
     UnmergedEntriesError,
     UnsafeOptionError,
 )
-from git.index.fun import _git_for_windows_bash, _which_from_path, hook_path, run_commit_hook
+from git.index.fun import _git_for_windows_bash, _which_from_path, hook_path, read_cache, run_commit_hook, write_cache
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
-
-from test.lib import TestBase, VirtualEnvironment, fixture, fixture_path, with_rw_directory, with_rw_repo, PathLikeMock
+from test.lib import PathLikeMock, TestBase, VirtualEnvironment, fixture, fixture_path, with_rw_directory, with_rw_repo
 from test.lib.helper import symlinks_supported, xfail_if_raises
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
@@ -188,6 +189,15 @@ def _make_hook(git_dir, name, content, make_exec=True):
     return hp
 
 
+def _raw_index(path):
+    """Build an index without using the writer under test."""
+    name = path.encode("utf-8")
+    entry = struct.pack(">10L20sH", 0, 0, 0, 0, 0, 0, 0o100644, 0, 0, 0, b"a" * 20, min(len(name), 0xFFF)) + name
+    entry += b"\0" * (8 - len(entry) % 8)
+    data = b"DIRC" + struct.pack(">LL", 2, 1) + entry
+    return data + sha1(data).digest()
+
+
 @ddt.ddt
 class TestIndex(TestBase):
     @with_rw_repo("HEAD")
@@ -302,6 +312,54 @@ class TestIndex(TestBase):
         with open(tmpfile, "rb") as fp:
             self.assertEqual(fp.read(), fixture("index_merge"))
         os.remove(tmpfile)
+
+    @ddt.data(
+        "",
+        ".",
+        "..",
+        "../outside",
+        "a/../outside",
+        "/absolute",
+        "C:relative",
+        "a//b",
+        "a/./b",
+        "a/",
+        "nul\0name",
+        ".git/config",
+        "a/.GiT/hooks/hook",
+        "git~1/config",
+        ".git. /config",
+        ".git:stream",
+        ".g\u200cit/config",
+        "a\\.git\\config",
+    )
+    def test_index_reader_and_writer_reject_unsafe_paths(self, path):
+        with pytest.raises(ValueError):
+            read_cache(BytesIO(_raw_index(path)))
+        entry = IndexEntry((0o100644, b"a" * 20, 0, path))
+        with pytest.raises(ValueError):
+            write_cache([entry], BytesIO())
+
+    def test_valid_unusual_index_names_round_trip(self):
+        names = ["a b", "a\nb", "a\tb", "name:value", "dir/.gitignore", "café"]
+        if os.name != "nt":
+            names.append("a\\b")
+        entries = [IndexEntry((0o100644, b"a" * 20, 0, name)) for name in sorted(names)]
+        stream = BytesIO()
+        write_cache(entries, stream)
+        stream.seek(0)
+        assert [entry.path for entry in read_cache(stream)[1].values()] == sorted(names)
+
+    def test_long_index_names_are_fully_validated(self):
+        prefix = "a/" + "nested/" * 650
+        with pytest.raises(ValueError):
+            read_cache(BytesIO(_raw_index(prefix + "../outside")))
+        name = prefix + "file"
+        assert next(iter(read_cache(BytesIO(_raw_index(name)))[1])) == (name, 0)
+        stream = BytesIO()
+        write_cache([IndexEntry((0o100644, b"a" * 20, 0, name))], stream)
+        stream.seek(0)
+        assert next(iter(read_cache(stream)[1])) == (name, 0)
 
     def _cmp_tree_index(self, tree, index):
         # Fail unless both objects contain the same paths and blobs.
@@ -636,6 +694,30 @@ class TestIndex(TestBase):
         return existing
 
     # END num existing helper
+
+    @ddt.data("write", "write_tree", "checkout", "cached_checkout")
+    @with_rw_directory
+    def test_index_boundaries_reject_injected_entries_before_side_effects(self, rw_dir, operation):
+        tmp_path = Path(rw_dir) / "repo"
+        with Repo.init(tmp_path) as repo:
+            index_path = Path(repo.index.path)
+            if operation == "checkout":
+                index_path.write_bytes(_raw_index("../outside"))
+            else:
+                repo.index.write()
+            before = index_path.read_bytes()
+            index = repo.index
+            if operation == "cached_checkout":
+                assert not index.entries
+                index_path.write_bytes(_raw_index("../outside"))
+                before = index_path.read_bytes()
+                operation = "checkout"
+            elif operation != "checkout":
+                index.entries[("../outside", 0)] = IndexEntry((0o100644, b"a" * 20, 0, "../outside"))
+            with pytest.raises(ValueError):
+                getattr(index, operation)()
+            assert index_path.read_bytes() == before
+            assert not (tmp_path.parent / "outside").exists()
 
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
@@ -1035,6 +1117,20 @@ class TestIndex(TestBase):
             assert isinstance(index, IndexFile)
         # END for each arg tuple
 
+    @ddt.data(*product(("../outside", ".git/hooks/pre-commit", "a/.GIT/config"), (1, 2, 3)))
+    @ddt.unpack
+    @with_rw_directory
+    def test_native_tree_merge_rejects_unsafe_paths(self, rw_dir, path, tree_count):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            blob = repo.odb.store(IStream("blob", 4, BytesIO(b"data"))).binsha
+            data = b"100755 " + path.encode() + b"\0" + blob
+            tree = repo.odb.store(IStream("tree", len(data), BytesIO(data))).binsha
+            empty = repo.odb.store(IStream("tree", 0, BytesIO())).binsha
+            with pytest.raises(ValueError):
+                IndexFile.new(repo, *([empty] * (tree_count - 1) + [tree]))
+            assert not (tmp_path / ".git" / "index").exists()
+
     @with_rw_repo("HEAD", bare=True)
     def test_index_bare_add(self, rw_bare_repo):
         # Something is wrong after cloning to a bare repo, reading the property
@@ -1083,6 +1179,110 @@ class TestIndex(TestBase):
         r = Repo.init(rw_dir)
         r.index.add([fp])
         r.index.commit("Added [.exe")
+
+    @ddt.data(*product(("path", "glob", "blob", "entry"), (False, True)))
+    @ddt.unpack
+    @with_rw_directory
+    def test_staging_never_reads_through_a_directory_symlink(self, rw_dir, kind, outside):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path / "repo") as repo:
+            root = tmp_path / "repo"
+            target = (tmp_path if outside else root) / "target"
+            target.mkdir()
+            (target / "secret").write_text("private data")
+            try:
+                (root / "link").symlink_to(target, target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            item = "link/secret"
+            if kind == "glob":
+                item = "link/*"
+            elif kind == "blob":
+                item = Blob(repo, Blob.NULL_BIN_SHA, 0o100644, item)
+            elif kind == "entry":
+                item = BaseIndexEntry((0o100644, Blob.NULL_BIN_SHA, 0, item))
+            with mock.patch.object(repo.odb, "store", wraps=repo.odb.store) as store:
+                with pytest.raises(ValueError, match="symbolic link"):
+                    repo.index.add([item], write=False)
+                store.assert_not_called()
+
+    @ddt.data("blob", "entry", "rewriter")
+    @with_rw_directory
+    def test_staging_rejects_unsafe_object_paths_even_without_writing(self, rw_dir, kind):
+        with Repo.init(rw_dir) as repo:
+            entry = BaseIndexEntry((0o100644, b"a" * 20, 0, "../outside"))
+            item = Blob(repo, entry.binsha, entry.mode, entry.path) if kind == "blob" else entry
+            kwargs = {}
+            if kind == "rewriter":
+                item = BaseIndexEntry((0o100644, b"a" * 20, 0, "safe"))
+                kwargs["path_rewriter"] = lambda entry: "../outside"
+            index = repo.index
+            with pytest.raises(ValueError):
+                index.add([item], write=False, **kwargs)
+            assert not index.entries
+
+    @with_rw_directory
+    def test_staging_root_preserves_symlinks_and_skips_git_metadata(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        root = tmp_path / "repo"
+        (tmp_path / "outside").mkdir()
+        with Repo.init(root) as repo:
+            (root / "file").write_text("contents")
+            try:
+                (root / "link").symlink_to("../outside", target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            entries = repo.index.add(["."])
+            assert {entry.path for entry in entries} == {"file", "link"}
+            link = repo.index.entries[("link", 0)]
+            assert link.mode == 0o120000
+            assert repo.odb.stream(link.binsha).read() == os.fsencode(os.readlink(root / "link"))
+
+    @with_rw_directory
+    def test_staging_symlink_measures_encoded_target_instead_of_stat_size(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            link = tmp_path / "link"
+            try:
+                link.symlink_to("../café", target_is_directory=True)
+            except OSError:
+                pytest.skip("Symlinks unavailable")
+            target = os.fsencode(os.readlink(link))
+            original_lstat = os.lstat
+
+            def zero_size_for_symlinks(*args, **kwargs):
+                result = original_lstat(*args, **kwargs)
+                if S_ISLNK(result.st_mode):
+                    fields = list(result)
+                    fields[6] = 0
+                    return os.stat_result(fields)
+                return result
+
+            with mock.patch("os.lstat", side_effect=zero_size_for_symlinks):
+                (entry,) = repo.index.add(["link"])
+            assert entry.mode == 0o120000
+            assert repo.odb.stream(entry.binsha).read() == target
+
+    @pytest.mark.skipif(os.name == "nt", reason="Colons are not valid Windows filenames")
+    @with_rw_directory
+    def test_staging_nested_colon_directory(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            directory = tmp_path / "nested" / "a:b"
+            directory.mkdir(parents=True)
+            (directory / "file").write_text("contents")
+            assert [entry.path for entry in repo.index.add(["nested"])] == ["nested/a:b/file"]
+            assert repo.index.write_tree()["nested/a:b/file"].data_stream.read() == b"contents"
+
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFOs unavailable")
+    @with_rw_directory
+    def test_staging_special_files_fails_before_opening(self, rw_dir):
+        tmp_path = Path(rw_dir)
+        with Repo.init(tmp_path) as repo:
+            os.mkfifo(tmp_path / "fifo")
+            with mock.patch("builtins.open", side_effect=AssertionError("must not open a FIFO")):
+                with pytest.raises(ValueError, match="regular file"):
+                    repo.index.add(["fifo"], write=False)
 
     def test__to_relative_path_at_root(self):
         root = osp.abspath(os.sep)
@@ -1433,33 +1633,60 @@ class TestIndex(TestBase):
 
     @with_rw_repo("HEAD")
     def test_index_add_pathlib(self, rw_repo):
-        git_dir = Path(rw_repo.git_dir)
+        worktree = Path(rw_repo.working_tree_dir)
 
-        file = git_dir / "file.txt"
+        file = worktree / "file.txt"
         file.touch()
 
         rw_repo.index.add(file)
 
     @with_rw_repo("HEAD")
     def test_index_add_pathlike(self, rw_repo):
-        git_dir = Path(rw_repo.git_dir)
+        worktree = Path(rw_repo.working_tree_dir)
 
-        file = git_dir / "file.txt"
+        file = worktree / "file.txt"
         file.touch()
 
         rw_repo.index.add(PathLikeMock(str(file)))
 
     @with_rw_repo("HEAD")
     def test_index_add_non_normalized_path(self, rw_repo):
-        git_dir = Path(rw_repo.git_dir)
+        worktree = Path(rw_repo.working_tree_dir)
 
-        file = git_dir / "file.txt"
+        file = worktree / "file.txt"
         file.touch()
         non_normalized_path = file.as_posix()
         if os.name != "nt":
             non_normalized_path = "/" + non_normalized_path[1:].replace("/", "//")
 
         rw_repo.index.add(non_normalized_path)
+
+    @ddt.data(0, 4, 5)
+    def test_unsupported_index_versions_fail_even_with_optimization(self, version):
+        data = b"DIRC" + struct.pack(">LL", version, 0)
+        data += sha1(data).digest()
+        with pytest.raises(AssertionError, match="Unsupported git index version"):
+            read_cache(BytesIO(data))
+        code = """
+from io import BytesIO
+import sys
+from git.index.fun import read_cache
+try:
+    read_cache(BytesIO(sys.stdin.buffer.read()))
+except AssertionError as error:
+    if "Unsupported git index version" not in str(error):
+        raise
+else:
+    raise SystemExit("Unsupported index version was accepted")
+"""
+        result = subprocess.run([sys.executable, "-O", "-c", code], input=data, capture_output=True, timeout=10)
+        assert result.returncode == 0, result.stderr.decode()
+
+    @ddt.data(b"link", b"sdir")
+    def test_unsupported_mandatory_index_extensions_fail_closed(self, signature):
+        data = b"DIRC" + struct.pack(">LL", 2, 0) + signature + struct.pack(">L", 0)
+        with pytest.raises(ValueError, match="extension"):
+            read_cache(BytesIO(data + sha1(data).digest()))
 
     def test_index_file_v3(self):
         index = IndexFile(self.rorepo, fixture_path("index_extended_flags"))

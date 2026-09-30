@@ -13,6 +13,7 @@ __all__ = [
 from stat import S_ISDIR
 
 from git.compat import safe_decode, defenc
+from git.util import _validate_repo_path
 
 # typing ----------------------------------------------
 
@@ -38,6 +39,13 @@ EntryTupOrNone = Union[EntryTup, None]
 # ---------------------------------------------------
 
 
+def _validate_tree_entry_name(name: str) -> None:
+    if "/" in name:
+        raise ValueError("Tree entry names must not contain '/' characters")
+    # A tree name is a component, not a rooted path; a colon cannot select a drive.
+    _validate_repo_path("tree/" + name)
+
+
 def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
     """Write the given list of entries into a stream using its ``write`` method.
 
@@ -51,6 +59,10 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
     bit_mask = 7  # 3 bits set.
 
     for binsha, mode, name in entries:
+        if len(binsha) != 20:
+            raise ValueError("Tree entry object IDs must be exactly 20 bytes")
+        if mode >> 12 not in (4, 8, 10, 14):
+            raise ValueError("Invalid tree entry mode")
         mode_str = b""
         for i in range(6):
             mode_str = bytes([((mode >> (i * 3)) & bit_mask) + ord_zero]) + mode_str
@@ -70,13 +82,13 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
             name_bytes = name.encode(defenc)
         else:
             name_bytes = name  # type: ignore[unreachable]  # check runtime types - is always str?
+        _validate_tree_entry_name(safe_decode(name_bytes))
         write(b"".join((mode_str, b" ", name_bytes, b"\0", binsha)))
     # END for each item
 
 
 def tree_entries_from_data(data: bytes) -> List[EntryTup]:
-    """Read the binary representation of a tree and returns tuples of
-    :class:`~git.objects.tree.Tree` items.
+    """Read complete tree records, rejecting invalid names and truncated fields.
 
     :param data:
         Data block with tree data (as bytes).
@@ -84,45 +96,25 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     :return:
         list(tuple(binsha, mode, tree_relative_path), ...)
     """
-    ord_zero = ord("0")
-    space_ord = ord(" ")
-    len_data = len(data)
-    i = 0
     out = []
-    while i < len_data:
-        mode = 0
-
-        # Read Mode
-        # Some git versions truncate the leading 0, some don't.
-        # The type will be extracted from the mode later.
-        while data[i] != space_ord:
-            # Move existing mode integer up one level being 3 bits and add the actual
-            # ordinal value of the character.
-            mode = (mode << 3) + (data[i] - ord_zero)
-            i += 1
-        # END while reading mode
-
-        # Byte is space now, skip it.
-        i += 1
-
-        # Parse name, it is NULL separated.
-
-        ns = i
-        while data[i] != 0:
-            i += 1
-        # END while not reached NULL
-
-        # Default encoding for strings in git is UTF-8.
-        # Only use the respective unicode object if the byte stream was encoded.
-        name_bytes = data[ns:i]
-        name = safe_decode(bytes(name_bytes))
-
-        # Byte is NULL, get next 20.
-        i += 1
-        sha = bytes(data[i : i + 20])
-        i = i + 20
-        out.append((sha, mode, name))
-    # END for each byte in data stream
+    offset = 0
+    while offset < len(data):
+        mode_end = data.find(b" ", offset)
+        if mode_end < 0:
+            raise ValueError("Unterminated tree entry mode")
+        mode_bytes = data[offset:mode_end]
+        if not mode_bytes or mode_bytes.strip(b"01234567"):
+            raise ValueError("Invalid tree entry mode")
+        mode = int(mode_bytes, 8)
+        if mode >> 12 not in (4, 8, 10, 14):
+            raise ValueError("Invalid tree entry mode")
+        name_end = data.find(b"\0", mode_end + 1)
+        if name_end < 0 or name_end + 21 > len(data):
+            raise ValueError("Truncated tree entry")
+        name = safe_decode(bytes(data[mode_end + 1 : name_end]))
+        _validate_tree_entry_name(name)
+        offset = name_end + 21
+        out.append((bytes(data[name_end + 1 : offset]), mode, name))
     return out
 
 

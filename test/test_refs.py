@@ -4,20 +4,23 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
-from itertools import chain
 import os.path as osp
-from pathlib import Path
 import tempfile
+import unittest
+from itertools import chain
+from pathlib import Path
+from unittest.mock import patch
 
 from gitdb.exc import BadName
 
+import git.refs as refs
 from git import (
     Commit,
     GitCommandError,
     GitConfigParser,
     Head,
-    RefLog,
     Reference,
+    RefLog,
     RemoteReference,
     Repo,
     SymbolicReference,
@@ -25,10 +28,8 @@ from git import (
 )
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
-import git.refs as refs
 from git.util import Actor, rmtree
-
-from test.lib import TestBase, requires_symlinks, with_rw_repo, PathLikeMock
+from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 
 
 class TestRefs(TestBase):
@@ -912,3 +913,158 @@ class TestRefs(TestBase):
 
         # Valid reference name should not raise.
         check_ref("valid/ref/name")
+
+
+class TestSymbolicReferenceSecurity(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo = Repo.init(Path(self.tmp.name) / "repo")
+        self.addCleanup(self.repo.close)
+        actor = Actor("Reference Test", "reference@example.invalid")
+        self.commit = self.repo.index.commit("initial", author=actor, committer=actor)
+        self.next_commit = self.repo.index.commit("next", author=actor, committer=actor, head=False)
+
+    def write_ref(self, path, value):
+        file = Path(self.repo.git_dir) / path
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(value + "\n", encoding="utf-8")
+
+    def chain(self, count, terminal=None):
+        paths = ["HEAD"] + [f"refs/heads/link-{i}" for i in range(1, count)]
+        for path, target in zip(paths, paths[1:]):
+            self.write_ref(path, "ref: " + target)
+        self.write_ref(paths[-1], self.commit.hexsha if terminal is None else terminal)
+        return paths
+
+    @contextlib.contextmanager
+    def bounded_reads(self):
+        # Make the regression fail deterministically instead of hanging on a cycle.
+        read_ref = SymbolicReference._get_ref_info
+        reads = 0
+
+        def read(repo, path):
+            nonlocal reads
+            reads += 1
+            if reads > 100:
+                self.fail("Reference traversal exceeded its read budget")
+            return read_ref(repo, path)
+
+        with patch.object(SymbolicReference, "_get_ref_info", side_effect=read):
+            yield
+
+    def test_cycles_fail_in_all_object_read_entry_points(self):
+        for target in ("refs/heads/a", "refs/heads/b"):
+            self.write_ref("HEAD", "ref: refs/heads/a")
+            self.write_ref("refs/heads/a", "ref: " + target)
+            self.write_ref("refs/heads/b", "ref: refs/heads/a")
+            self.write_ref("refs/tags/loop", "ref: refs/heads/a")
+            for read in (
+                lambda: SymbolicReference.dereference_recursive(self.repo, "HEAD"),
+                lambda: self.repo.head.commit,
+                lambda: self.repo.head.object,
+                lambda: Head(self.repo, "refs/heads/a").commit,
+                lambda: TagReference(self.repo, "refs/tags/loop").object,
+            ):
+                with self.subTest(target=target, read=read), self.bounded_reads():
+                    with self.assertRaisesRegex(ValueError, "symbolic reference"):
+                        read()
+            for read in (lambda: self.repo.commit("HEAD"), lambda: self.repo.rev_parse("a")):
+                with self.subTest(target=target, read=read), self.bounded_reads():
+                    with self.assertRaises(BadName):
+                        read()
+            with self.bounded_reads():
+                self.assertFalse(self.repo.head.is_valid())
+
+    def test_depth_limit_matches_git_including_terminal_reference(self):
+        for count in range(1, 7):
+            self.chain(count)
+            with self.subTest(count=count), self.bounded_reads():
+                if count <= 5:
+                    self.assertEqual(self.repo.head.commit, self.commit)
+                    self.assertEqual(self.repo.git.rev_parse("--verify", "HEAD"), self.commit.hexsha)
+                else:
+                    with self.assertRaises(ValueError):
+                        self.repo.head.commit
+                    with self.assertRaises(GitCommandError):
+                        self.repo.git.rev_parse("--verify", "HEAD")
+
+    def test_packed_terminal_reference_resolves(self):
+        paths = self.chain(5)
+        (Path(self.repo.git_dir) / paths[-1]).unlink()
+        self.write_ref("packed-refs", f"{self.commit.hexsha} {paths[-1]}")
+        self.assertEqual(self.repo.head.commit, self.commit)
+
+    def test_writes_reject_cycles_and_excessive_depth_without_side_effects(self):
+        for terminal in ("ref: refs/heads/link-1", self.commit.hexsha):
+            paths = self.chain(6, terminal)
+            before = {path: (Path(self.repo.git_dir) / path).read_bytes() for path in paths}
+            head_log = Path(self.repo.git_dir) / "logs" / "HEAD"
+            old_log = head_log.read_bytes()
+            for logmsg in (None, "must not write"):
+                with self.subTest(terminal=terminal, logmsg=logmsg), self.bounded_reads():
+                    with self.assertRaisesRegex(ValueError, "symbolic reference"):
+                        self.repo.head.set_object(self.next_commit, logmsg)
+                    self.assertEqual(before, {path: (Path(self.repo.git_dir) / path).read_bytes() for path in paths})
+                    self.assertEqual(head_log.read_bytes(), old_log)
+
+    def test_valid_chain_updates_preserve_symbols_and_head_reflog(self):
+        paths = self.chain(5)
+        self.repo.head.set_object(self.next_commit, "updated through chain")
+        self.assertEqual(self.repo.head.commit, self.next_commit)
+        for path, target in zip(paths, paths[1:]):
+            self.assertEqual((Path(self.repo.git_dir) / path).read_text(), "ref: " + target + "\n")
+        for path in ("HEAD", paths[-1]):
+            entry = SymbolicReference(self.repo, path).log()[-1]
+            self.assertEqual(entry.oldhexsha, self.commit.hexsha)
+            self.assertEqual(entry.newhexsha, self.next_commit.hexsha)
+            self.assertEqual(entry.message, "updated through chain")
+
+    def test_writes_create_unborn_terminal_reference(self):
+        paths = self.chain(5)
+        (Path(self.repo.git_dir) / paths[-1]).unlink()
+        self.repo.head.set_object(self.next_commit)
+        self.assertEqual(self.repo.head.commit, self.next_commit)
+        self.assertEqual(self.repo.head.reference.path, paths[1])
+
+    def test_set_object_preserves_subclass_override_signature_and_dispatch(self):
+        calls = []
+
+        class CustomReference(Reference):
+            @classmethod
+            def from_path(cls, repo, path):
+                return cls(repo, path, check_path=False)
+
+            def set_object(self, object, logmsg=None):
+                calls.append(self.path)
+                return super().set_object(object, logmsg)
+
+        paths = self.chain(5)
+        ref = CustomReference(self.repo, "HEAD", check_path=False)
+        self.assertIs(ref.set_object(self.next_commit, "custom reference"), ref)
+        self.assertEqual(calls, paths)
+        self.assertEqual(self.repo.head.commit, self.next_commit)
+        self.assertEqual(self.repo.head.log()[-1].message, "custom reference")
+
+    def test_custom_symbolic_reference_names_do_not_recurse_during_construction(self):
+        self.write_ref("CUSTOM_A", "ref: CUSTOM_B")
+        self.write_ref("CUSTOM_B", "ref: CUSTOM_A")
+        with self.bounded_reads():
+            ref = SymbolicReference.from_path(self.repo, "CUSTOM_A")
+            self.assertEqual(ref.reference.path, "CUSTOM_B")
+            self.assertFalse(ref.is_detached)
+            self.assertFalse(ref.is_valid())
+            with self.assertRaises(ValueError):
+                ref.set_object(self.next_commit)
+
+    def test_reference_reads_reject_symlinks_outside_repository(self):
+        outside = Path(self.tmp.name) / "outside"
+        outside.write_text(self.commit.hexsha + "\n", encoding="utf-8")
+        path = Path(self.repo.git_dir) / "refs" / "heads" / "external"
+        try:
+            path.symlink_to(outside)
+        except OSError:
+            self.skipTest("Symlinks are unavailable")
+        self.write_ref("HEAD", "ref: refs/heads/external")
+        with self.assertRaisesRegex(ValueError, "escapes the repository"):
+            self.repo.head.commit

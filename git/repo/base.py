@@ -48,6 +48,7 @@ from .fun import (
     find_submodule_git_dir,
     is_git_dir,
     rev_parse,
+    to_commit,
     touch,
 )
 
@@ -228,7 +229,7 @@ class Repo:
     def __init__(
         self,
         path: Optional[PathLike] = None,
-        odbt: Type[LooseObjectDB] = GitCmdObjectDB,
+        odbt: Type[Union[LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
         search_parent_directories: bool = False,
         expand_vars: bool = True,
     ) -> None:
@@ -255,7 +256,9 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data.
+            used to access all object data. The pure-Python ``GitDB`` backend is
+            deprecated due to security and performance issues. Use the default
+            :class:`~git.db.GitCmdObjectDB` instead.
 
         :param search_parent_directories:
             If ``True``, all parent directories will be searched for a valid repo as
@@ -411,6 +414,13 @@ class Repo:
         if issubclass(odbt, GitCmdObjectDB):
             self.odb = odbt(rootpath, self.git)
         else:
+            if issubclass(odbt, gitdb.GitDB):
+                warnings.warn(
+                    "GitDB is deprecated as a GitPython backend due to security and performance issues. "
+                    "Use the default GitCmdObjectDB backend instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
             self.odb = odbt(rootpath)
 
     def __enter__(self) -> "Repo":
@@ -812,7 +822,7 @@ class Repo:
         """
         if rev is None:
             return self.head.commit
-        return self.rev_parse(str(rev) + "^0")
+        return to_commit(self.rev_parse(str(rev)))
 
     def iter_trees(self, *args: Any, **kwargs: Any) -> Iterator["Tree"]:
         """:return: Iterator yielding :class:`~git.objects.tree.Tree` objects
@@ -842,7 +852,8 @@ class Repo:
         """
         if rev is None:
             return self.head.commit.tree
-        return self.rev_parse(str(rev) + "^{tree}")
+        obj = self.rev_parse(str(rev))
+        return obj if obj.type == "tree" else to_commit(obj).tree
 
     def iter_commits(
         self,
@@ -1456,7 +1467,7 @@ class Repo:
         cls,
         path: Union[PathLike, None] = None,
         mkdir: bool = True,
-        odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
+        odbt: Type[Union[LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
         expand_vars: bool = True,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
@@ -1476,7 +1487,8 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data.
+            used to access all object data. The pure-Python ``GitDB`` backend is
+            deprecated; use the default :class:`~git.db.GitCmdObjectDB` instead.
 
         :param expand_vars:
             If specified, environment variables will not be escaped. This can lead to
@@ -1515,7 +1527,7 @@ class Repo:
         git: "Git",
         url: PathLike,
         path: PathLike,
-        odb_default_type: Type[LooseObjectDB],
+        odb_default_type: Type[Union[LooseObjectDB, gitdb.GitDB]],
         progress: Union["RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None] = None,
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
@@ -1639,7 +1651,9 @@ class Repo:
 
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
-              implementation used by the returned :class:`Repo` instance.
+              implementation used by the returned :class:`Repo` instance. The
+              pure-Python ``GitDB`` backend is deprecated; use the default
+              :class:`~git.db.GitCmdObjectDB` instead.
             * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
               command.
 
@@ -1764,9 +1778,13 @@ class Repo:
             treeish = self.head.commit
         if prefix and "prefix" not in kwargs:
             kwargs["prefix"] = prefix
-        remote = kwargs.get("remote")
-        if not allow_unsafe_protocols and remote is not None:
-            Git.check_unsafe_protocols(str(remote))
+        if not allow_unsafe_protocols:
+            # Check the emitted URL, including repeated values and Git's long-option
+            # abbreviations, rather than only the untransformed `remote` keyword.
+            for arg in self.git.transform_kwargs(**kwargs):
+                option, separator, remote = arg.partition("=")
+                if separator and option.startswith("--r") and "--remote".startswith(option):
+                    Git.check_unsafe_protocols(remote)
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([], kwargs),

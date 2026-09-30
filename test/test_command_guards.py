@@ -5,7 +5,7 @@ from unittest import mock
 
 import pytest
 
-from git import Actor, Git, GitCommandError, Repo
+from git import Actor, Git, GitCommandError, Remote, Repo
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 
 
@@ -34,6 +34,29 @@ def test_ls_remote_rejects_unsafe_protocols(args, kwargs, allow_unsafe_options):
         with pytest.raises(UnsafeProtocolError):
             Git().ls_remote(*args, allow_unsafe_options=allow_unsafe_options, **kwargs)
         run.assert_not_called()
+
+
+@pytest.mark.parametrize("through_repo", (False, True))
+@pytest.mark.parametrize("remote", ("ext::helper", "ext://helper"))
+def test_ls_remote_protocol_guard_at_both_entry_points(tmp_path, through_repo, remote):
+    with Repo.init(tmp_path) as repo:
+        command = repo.git if through_repo else Git()
+        with mock.patch.object(Git, "execute", return_value="refs") as execute:
+            for allow_unsafe_options in (False, True):
+                with pytest.raises(UnsafeProtocolError):
+                    command.ls_remote(remote, allow_unsafe_options=allow_unsafe_options)
+            execute.assert_not_called()
+
+            url = "ssh://git@[2001:db8::1]/repo.git"
+            assert command.ls_remote(url) == "refs"
+            execute.assert_called_once_with([Git.GIT_PYTHON_GIT_EXECUTABLE, "ls-remote", url])
+            execute.reset_mock()
+
+            with pytest.raises(UnsafeOptionError):
+                command.ls_remote(remote, upload_pack="helper", allow_unsafe_protocols=True)
+            execute.assert_not_called()
+            assert command.ls_remote(remote, allow_unsafe_protocols=True) == "refs"
+            execute.assert_called_once_with([Git.GIT_PYTHON_GIT_EXECUTABLE, "ls-remote", remote])
 
 
 @pytest.mark.parametrize(
@@ -78,6 +101,89 @@ def test_ls_remote_unsafe_opt_ins_are_independent():
             == "refs"
         )
         run.assert_called_once_with([Git.GIT_PYTHON_GIT_EXECUTABLE, "ls-remote", "--upload-pack=helper", "ext::helper"])
+
+
+@pytest.mark.parametrize("method", ["fetch", "pull", "push"])
+@pytest.mark.parametrize("allow_unsafe_options", [False, True])
+@pytest.mark.parametrize(
+    "name, kwargs",
+    [
+        ("origin", {"q": "ext::helper"}),
+        ("origin", {"q": "ext://helper"}),
+        ("origin", {"q": [True, "ext::helper"]}),
+        ("origin", {"q": (None, False, True, "custom::address")}),
+        ("origin", {"-": "ext::helper"}),
+        ("ext::helper", {}),
+        ("ext://helper", {}),
+    ],
+)
+def test_remote_protocol_guards_check_rendered_operands(tmp_path, method, allow_unsafe_options, name, kwargs):
+    with Repo.init(tmp_path) as repo:
+        remote = Remote(repo, name)
+        with mock.patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as run:
+            with pytest.raises(UnsafeProtocolError):
+                getattr(remote, method)("HEAD", allow_unsafe_options=allow_unsafe_options, **kwargs)
+            run.assert_not_called()
+
+
+@pytest.mark.parametrize("method", ["fetch", "pull", "push"])
+@pytest.mark.parametrize(
+    "kwargs, token",
+    [
+        ({"q": True}, "-q"),
+        ({"q": [None, False, True]}, "-q"),
+        ({"q": "https://[::1]/repo.git"}, "https://[::1]/repo.git"),
+        ({"o": "ext::literal", "split_single_char_options": False}, "-oext::literal"),
+        ({"server_option": "ext::literal"}, "--server-option=ext::literal"),
+    ],
+)
+def test_remote_protocol_guards_preserve_safe_rendered_arguments(tmp_path, method, kwargs, token):
+    with Repo.init(tmp_path) as repo:
+        remote = Remote(repo, "origin")
+        error = GitCommandError("captured command", 128)
+        with mock.patch.object(Git, "execute", side_effect=error) as run:
+            with pytest.raises(GitCommandError) as raised:
+                getattr(remote, method)("HEAD", **kwargs)
+            assert raised.value is error
+            run.assert_called_once()
+            argv = run.call_args[0][0]
+            assert token in argv
+            assert argv[-3:] == ["--", "origin", "HEAD"]
+
+
+@pytest.mark.parametrize("method", ["fetch", "pull", "push"])
+def test_remote_protocol_and_option_opt_ins_are_independent(tmp_path, method):
+    with Repo.init(tmp_path) as repo:
+        remote = Remote(repo, "origin")
+        kwargs = {"q": "ext::helper"}
+        option = "receive_pack" if method == "push" else "upload_pack"
+        error = GitCommandError("captured command", 128)
+        with mock.patch.object(Git, "execute", side_effect=error) as run:
+            with pytest.raises(UnsafeOptionError):
+                getattr(remote, method)("HEAD", allow_unsafe_protocols=True, **kwargs, **{option: "helper"})
+            run.assert_not_called()
+
+            with pytest.raises(GitCommandError) as raised:
+                getattr(remote, method)("HEAD", allow_unsafe_protocols=True, **kwargs)
+            assert raised.value is error
+            run.assert_called_once()
+            argv = run.call_args[0][0]
+            assert argv[argv.index("-q") + 1] == "ext::helper"
+            assert argv[-3:] == ["--", "origin", "HEAD"]
+            assert not any(arg.startswith("--allow-unsafe") for arg in argv)
+
+
+@pytest.mark.parametrize("verbose", ["ext::helper", "--upload-pack=helper"])
+def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
+    with Repo.init(tmp_path) as repo:
+        remote = Remote(repo, "origin")
+        error = GitCommandError("captured command", 128)
+        with mock.patch.object(Git, "execute", side_effect=error) as run:
+            with pytest.raises(GitCommandError) as raised:
+                remote.fetch("HEAD", verbose=verbose)
+            assert raised.value is error
+            run.assert_called_once()
+            assert run.call_args[0][0] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "fetch", "-v", "--", "origin", "HEAD"]
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])

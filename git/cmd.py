@@ -646,7 +646,8 @@ class Git(metaclass=_GitMeta):
     )
 
     # Match Git's leading transport selector, including an empty helper name.
-    re_unsafe_protocol = re.compile(r"([A-Za-z0-9][A-Za-z0-9+.-]*|)::")
+    # Git also selects the command-executing ext helper for an ext:// URL.
+    re_unsafe_protocol = re.compile(r"([A-Za-z0-9][A-Za-z0-9+.-]*|)::|ext://")
 
     unsafe_git_ls_remote_options = [
         # This option allows arbitrary command execution in git-ls-remote.
@@ -946,7 +947,8 @@ class Git(metaclass=_GitMeta):
 
         Apart from the usual protocols (http, git, ssh), Git allows "remote helpers"
         that have the form ``<transport>::<address>``. One of these helpers (``ext::``)
-        can be used to invoke any arbitrary command.
+        can be used to invoke any arbitrary command. Git also selects that helper
+        for ``ext://`` URLs and interprets the URL as a command path.
 
         See:
 
@@ -955,10 +957,18 @@ class Git(metaclass=_GitMeta):
         """
         match = cls.re_unsafe_protocol.match(url)
         if match:
-            protocol = match.group(1)
+            protocol = match.group(0)
             raise UnsafeProtocolError(
-                f"The `{protocol}::` protocol looks suspicious, use `allow_unsafe_protocols=True` to allow it."
+                f"The `{protocol}` protocol looks suspicious, use `allow_unsafe_protocols=True` to allow it."
             )
+
+    def _check_unsafe_protocols_in_args(self, args: Sequence[Any], kwargs: Mapping[str, Any]) -> None:
+        """Check positional operands and standalone values in rendered command options.
+
+        A short flag's split value can become the repository operand before ``--``.
+        """
+        for arg in self._unpack_args(args) + self.transform_kwargs(**kwargs):
+            self.check_unsafe_protocols(arg)
 
     @classmethod
     def _canonicalize_option_name(cls, option: str) -> str:
@@ -1146,12 +1156,7 @@ class Git(metaclass=_GitMeta):
             candidate_options = self._option_candidates(args, kwargs)
             Git.check_unsafe_options(options=candidate_options, unsafe_options=self.unsafe_git_ls_remote_options)
         if not allow_unsafe_protocols:
-            protocol_args = list(args)
-            if kwargs.get("split_single_char_options", True):
-                # Split short-option values can become the URL after parsing earlier options.
-                protocol_args.extend(value for key, value in kwargs.items() if len(key) == 1)
-            for arg in self._unpack_args(protocol_args):
-                self.check_unsafe_protocols(arg)
+            self._check_unsafe_protocols_in_args(args, kwargs)
         return self._call_process("ls_remote", *args, **kwargs)
 
     @property
