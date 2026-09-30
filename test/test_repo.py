@@ -1677,7 +1677,7 @@ class TestRepo(TestBase):
         {"rem": "ext::helper"},
         {"re": "ext::helper"},
         {"remo": "ext::helper"},
-        {"remot": "ext::helper"},  # codespell:ignore remot
+        {"remot": "ext::helper"},
         {"remote": ["https://example.com/repo", "ext::helper"]},
         {"remote": (None, False, "ext::helper")},
         {"remote=ext::helper": True},

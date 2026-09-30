@@ -153,9 +153,3 @@ lint.unfixable = [
 "fuzzing/fuzz-targets/**" = [
   "E402",  # environment setup must happen before the `git` module is imported, thus cannot happen at top of file
 ]
-
-
-[tool.codespell]
-ignore-words-list="afile,assertIn,doesnt,gud,uptodate"
-#count = true
-quiet-level = 3
