@@ -9,6 +9,7 @@ import os
 import os.path as osp
 import subprocess
 import sys
+import time
 from unittest import mock
 
 import pytest
@@ -261,6 +262,25 @@ class TestBase(TestCase):
             config.read()
             with self.subTest(content=content):
                 self.assertEqual(config.get_value("a", "k"), expected)
+
+    def test_option_line_with_long_whitespace_run_is_not_quadratic(self):
+        """A key followed by a long whitespace run and no indicator must not make
+        the option regex backtrack quadratically.
+
+        `.gitmodules` and other config files are fully controlled by any repository
+        that is inspected, so a crafted line must stay cheap to parse. Keys that come
+        before the malformed line are still read.
+        """
+        malformed = b'[submodule "x"]\n\tpath = x\n\tbranch' + b" " * 200_000 + b"\n"
+        config_file = io.BytesIO(malformed)
+        config_file.name = ".gitmodules"
+        config = GitConfigParser(config_file)
+        start = time.process_time()
+        config.read()
+        elapsed = time.process_time() - start
+        # Leave ample CPU time for slow runners, but catch quadratic backtracking.
+        self.assertLess(elapsed, 1.0)
+        self.assertEqual(config.get_value('submodule "x"', "path"), "x")
 
     @with_rw_directory
     def test_inline_comments_preserve_balanced_quotes_and_following_settings(self, rw_dir):

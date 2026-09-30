@@ -334,7 +334,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     OPTVALUEONLY = re.compile(optvalueonly_source)
 
-    OPTCRE = re.compile(optvalueonly_source + r"\s*(?P<vi>[:=])\s*" + r"(?P<value>.*)$")
+    # The option name class [^:=#;]* already consumes any spaces up to the ":" or "=",
+    # so a second \s* before the indicator would overlap it and backtrack quadratically
+    # on a line that never reaches an indicator (for example a key followed by a long
+    # whitespace run). Drop the redundant \s*; the name is right-stripped after parsing.
+    OPTCRE = re.compile(optvalueonly_source + r"(?P<vi>[:=])\s*" + r"(?P<value>.*)$")
 
     del optvalueonly_source
 
