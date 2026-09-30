@@ -2,40 +2,24 @@
 Changelog
 =========
 
-Unreleased
-==========
+3.2.0
+=====
+
+Drops support for Python 3.7 (5 years after its EOL).
+
+Security fixes for
 
 * Deprecate the pure-Python ``GitDB`` object database backend due to security and
   performance issues. Selecting it or a subclass through ``odbt`` now emits a
   ``DeprecationWarning``. Remove ``odbt=GitDB`` to use ``GitCmdObjectDB``, the
   existing default, or select ``odbt=GitCmdObjectDB`` explicitly. The ``gitdb``
   package remains a dependency for shared types and utilities.
-
-3.2.1
-=====
-
-Security fixes for
-
-* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-w8jc-g24h-crhw
-* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-m64x-33q8-m5h7
-* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fx3j-rwgx-fr94
-
-If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
-
-See the following for all changes.
-https://github.com/gitpython-developers/GitPython/releases/tag/3.2.1
-
-3.2.0
-=====
-
-Drops support for Python 3.7 (5 years after its EOL)
-
-Security fixes for
-
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-gq48-pqfc-9p58
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-23mf-xhv8-69c2
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-f9j4-qggq-h239
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-w8jc-g24h-crhw
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-m64x-33q8-m5h7
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fx3j-rwgx-fr94
 
 If you can, also try and provide feedback on the upcoming v4 branch
 https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
