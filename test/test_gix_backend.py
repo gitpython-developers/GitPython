@@ -1,11 +1,13 @@
 """Exercise the installed backend, including proof that converted calls avoid Git."""
 
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from git import Git, Repo, _backend
+from gitdb import IStream
 
 gix = pytest.importorskip("gix")
 
@@ -29,3 +31,13 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         with repo.git.custom_environment(GIT_INDEX_FILE=".git/index"):
             assert repo.git._call_process_safe("ls_files", "--stage", "-v", "-z", "--full-name") == "fallback"
         assert cli.call_count == 2
+
+
+def test_partial_native_stream_does_not_corrupt_next_read(repo):
+    one = repo.odb.store(IStream("blob", 6, BytesIO(b"abcdef"))).binsha
+    two = repo.odb.store(IStream("blob", 3, BytesIO(b"xyz"))).binsha
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        stream = repo.odb.stream(one)
+        assert stream.read(1) == b"a"
+        assert repo.odb.stream(two).read() == b"xyz"
+        assert stream.read() == b"bcdef"

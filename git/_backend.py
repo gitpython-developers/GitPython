@@ -7,6 +7,7 @@ CLI implementation. Native failures are never retried as CLI mutations.
 
 from collections import Counter
 from importlib import import_module
+import io
 import logging
 import os
 import re
@@ -96,11 +97,11 @@ def _oid(repo: Any, ref: Any) -> Any:
     return repo.rev_parse_single(ref)
 
 
-def object_data(command: Any, ref: bytes) -> Any:
+def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
     """Use native object reads without changing the public cat-file interface."""
     if gix is None:
         return NotImplemented
-    method = "get_object_header"
+    method = "stream_object_data" if stream else "get_object_header"
     command._require_version()
     try:
         repo = _repository(command, {})
@@ -109,6 +110,11 @@ def object_data(command: Any, ref: bytes) -> Any:
         if header is None:
             raise ValueError("SHA %s could not be resolved" % oid)
         result: Tuple[Any, ...] = (str(oid), header.kind(), header.size())
+        if stream:
+            # ponytail: native lookup buffers the object; use CLI above 8 MiB until GIX-2 provides streaming.
+            if header.size() > 8 * 1024 * 1024:
+                raise _Unsupported("large object streaming (GIX-2)")
+            result += (io.BytesIO(repo.find_object(oid).data),)
     except _Unsupported as exc:
         return _fallback(method, str(exc))
     except gix.Error as exc:
