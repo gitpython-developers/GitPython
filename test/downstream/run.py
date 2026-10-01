@@ -110,7 +110,8 @@ def main():
     )
     # Do not let inherited Git settings redirect upstream resets or commits into
     # the caller's repository, index, object database, configuration, or hooks.
-    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    # Inherited pytest options/plugins must not replace the selected coverage.
+    env = {key: value for key, value in os.environ.items() if not key.startswith(("GIT_", "PYTEST_"))}
     env.pop("PYTHONPATH", None)
     env.pop("PYTHONHOME", None)
     env.update(GIT_CONFIG_GLOBAL=str(config), GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0")
