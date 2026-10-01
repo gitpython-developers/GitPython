@@ -100,9 +100,11 @@ def mode_str_to_int(modestr: Union[bytes, str]) -> int:
         module regarding the rwx permissions for user, group and other, special flags
         and file system flags, such as whether it is a symlink.
     """
+    if isinstance(modestr, bytes):
+        # A byte is an int. int(b"4"[0]) is 52, so b"100644" became 0o6767524.
+        modestr = modestr.decode("ascii")
     mode = 0
     for iteration, char in enumerate(reversed(modestr[-6:])):
-        char = cast(Union[str, int], char)
         mode += int(char) << iteration * 3
     # END for each char
     return mode
