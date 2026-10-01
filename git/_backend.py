@@ -431,6 +431,28 @@ def write_tree(command: Any, entries: Sequence[Tuple[bytes, int, str]]) -> Any:
     return result
 
 
+def _mktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["-z", "--missing"]:
+        raise _Unsupported("tree writing options")
+    data = _input(kwargs)
+    entries = []
+    for record in data.split(b"\0"):
+        if not record:
+            continue
+        metadata, path = record.split(b"\t", 1)
+        mode_bytes, kind, oid_bytes = metadata.split()
+        mode = int(mode_bytes, 8)
+        if mode not in _ENTRY_KINDS or b"/" in path or path in (b"", b".", b"..", b".git"):
+            raise _Unsupported("tree entry")
+        expected = b"tree" if mode == 0o40000 else b"commit" if mode == 0o160000 else b"blob"
+        if kind != expected:
+            raise _Unsupported("tree entry kind")
+        entries.append((path, mode, oid_bytes.decode("ascii")))
+    oid = _write_tree(repo, entries)
+    kwargs["istream"].seek(len(data), 1)
+    return oid.encode("ascii") + b"\n"
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
@@ -440,6 +462,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "ls_files": _ls_files,
     "update_index": _update_index,
     "hash_object": _hash_object,
+    "mktree": _mktree,
     "config": _config,
     "worktree": _worktree,
 }
