@@ -142,8 +142,25 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(_oid(repo, args[-1])).encode("ascii") + b"\n"
 
 
+def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) != 3 or args[:2] != ["-z", "--full-tree"]:
+        raise _Unsupported("tree options")
+    with repo.find_tree(_oid(repo, args[2])).iter() as entries:
+        return b"".join(
+            b"%06o %s %s\t%s\0"
+            % (
+                entry.mode(),
+                b"tree" if entry.kind() == "tree" else b"commit" if entry.kind() == "commit" else b"blob",
+                str(entry.id()).encode("ascii"),
+                entry.filename(),
+            )
+            for entry in entries
+        )
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
+    "ls_tree": _ls_tree,
 }
 
 
