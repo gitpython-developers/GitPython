@@ -316,6 +316,63 @@ def history(command: Any, rev: str, paths: Any, options: Dict[str, Any], *, coun
     return result
 
 
+def _date(signature: Any) -> bytes:
+    offset = signature.time.offset
+    hours, minutes = divmod(abs(offset) // 60, 60)
+    return b"%d %s%02d%02d" % (signature.time.seconds, b"-" if offset < 0 else b"+", hours, minutes)
+
+
+def _reflog(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) == 3 and args[:2] == ["exists", "--"]:
+        reference = repo.try_find_reference(args[-1])
+        if reference is None:
+            raise _Unsupported("orphan reflog lookup")
+        if not reference.log_exists():
+            raise GitCommandError(["git", "reflog", "exists"], 1)
+        return b""
+    if (
+        len(args) != 10
+        or args[:8]
+        != [
+            "show",
+            "--format=%H%x00%gn%x00%ge%x00%gD%x00%gs",
+            "--date=raw",
+            "-z",
+            "--no-abbrev",
+            "--no-decorate",
+            "--no-notes",
+            "--no-color",
+        ]
+        or args[-1] != "--"
+    ):
+        raise _Unsupported("reflog writing or format")
+    reference = repo.try_find_reference(args[-2])
+    if reference is None:
+        raise _Unsupported("orphan reflog lookup")
+    cursor = reference.log_iter().rev()
+    if cursor is None:
+        return b""
+    output = []
+    with cursor:
+        for line in cursor:
+            if not repo.has_object(line.new_oid) or repo.find_header(line.new_oid).kind() != "commit":
+                continue
+            signature = line.signature
+            output.append(
+                b"\0".join(
+                    [
+                        str(line.new_oid).encode("ascii"),
+                        signature.name,
+                        signature.email,
+                        os.fsencode(args[-2]) + b"@{" + _date(signature) + b"}",
+                        line.message,
+                    ]
+                )
+                + b"\0"
+            )
+    return b"".join(output)
+
+
 def _index(repo: Any, kwargs: Dict[str, Any]) -> Any:
     if not hasattr(repo, "index_or_empty"):
         raise _Unsupported("index feature disabled")
@@ -609,6 +666,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "mktree": _mktree,
     "read_tree": _read_tree,
     "commit_tree": _commit_tree,
+    "reflog": _reflog,
     "config": _config,
     "worktree": _worktree,
 }
