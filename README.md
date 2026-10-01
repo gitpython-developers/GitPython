@@ -17,7 +17,10 @@ probably the skills to scratch that itch of mine: implement `git` in a way that 
 If you like the idea and want to learn more, please head over to [gitoxide](https://github.com/Byron/gitoxide), an
 implementation of 'git' in [Rust](https://www.rust-lang.org).
 
-*(Please note that `gitoxide` is not currently available for use in Python, and that Rust is required.)*
+The experimental `GitPython[gix]` extra uses the local GixPython bindings for
+supported operations, with automatic Git CLI fallback. See the
+[local installation, test commands, and conversion ledger](doc/gix-backend.md).
+GixPython is not yet available on PyPI.
 
 ## GitPython
 
