@@ -271,23 +271,28 @@ class TestIndex(TestBase):
 
     def test_valid_unusual_index_names_round_trip(self):
         names = ["a b", "--option", "dir/.gitignore", "café"]
-        windows_unsupported = ["a\nb", "a\tb", "name:value"]
+        unsupported = ["a\nb", "a\tb", "name:value"]
         if os.name != "nt":
-            names.extend([*windows_unsupported, "a\\b", "\udc9f"])
+            names.extend([*unsupported, "\udc9f"])
+            unsupported = []
+            if sys.platform == "cygwin":
+                # Cygwin Git applies NTFS protection to backslash separators.
+                unsupported.append("a\\b")
+            else:
+                names.append("a\\b")
         with tempfile.TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
             index.entries = {(name, 0): IndexEntry((0o100644, b"a" * 20, 0, name)) for name in names}
             index.write()
             assert sorted(entry.path for entry in index.update().entries.values()) == sorted(names)
-            if os.name == "nt":
-                before = Path(index.path).read_bytes()
-                for name in windows_unsupported:
-                    index.entries[(name, 0)] = IndexEntry((0o100644, b"a" * 20, 0, name))
-                    with pytest.raises(ValueError, match="Git did not retain"):
-                        index.write()
-                    assert Path(index.path).read_bytes() == before
-                    assert not Path(str(index.path) + ".lock").exists()
-                    del index.entries[(name, 0)]
+            before = Path(index.path).read_bytes()
+            for name in unsupported:
+                index.entries[(name, 0)] = IndexEntry((0o100644, b"a" * 20, 0, name))
+                with pytest.raises(ValueError, match="Git did not retain"):
+                    index.write()
+                assert Path(index.path).read_bytes() == before
+                assert not Path(str(index.path) + ".lock").exists()
+                del index.entries[(name, 0)]
 
     @ddt.data("write", "write_tree")
     def test_index_rejects_silently_ignored_entries_atomically(self, operation):
