@@ -65,8 +65,9 @@ API changes
   indexes isolate tree/merge operations from the real index and working tree.
   Git's platform-specific index filename restrictions apply. Unsupported entries
   raise ``ValueError`` before the original index changes, including names with
-  colons or control characters on Windows. Tree objects can still contain names
-  that the working tree or index cannot represent.
+  colons or control characters on Windows and backslashes with Cygwin Git.
+  Tree objects can still contain names that the working tree or index cannot
+  represent.
   ``version`` is read-only. ``from_tree()`` accepts ``trivial``, ``aggressive``,
   and ``verbose`` options; arbitrary ``read-tree`` keyword forwarding is removed.
 * Standalone binary tree parsers, serializers, and multi-tree traversal helpers
