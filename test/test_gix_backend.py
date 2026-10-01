@@ -2,6 +2,7 @@
 
 from io import BytesIO
 from pathlib import Path
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -84,6 +85,18 @@ def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
         with pytest.raises(GitCommandError, match="write failed after it began"):
             repo.git._call_process_safe("test_write")
     assert attempts == ["write"]
+
+
+@pytest.mark.parametrize("mode,kind", [("100644", "blob"), ("040000", "tree"), ("160000", "commit")])
+def test_tree_writes_validate_child_object_kinds(repo, mode, kind):
+    commit = repo.index.commit("initial", skip_hooks=True)
+    blob = repo.odb.store(IStream("blob", 1, BytesIO(b"x")))
+    wrong_id = blob.hexsha.decode() if kind == "commit" else commit.hexsha
+    with tempfile.TemporaryFile() as stream:
+        stream.write((mode + " " + kind + " " + wrong_id + "\twrong\0").encode())
+        stream.seek(0)
+        with pytest.raises(GitCommandError):
+            repo.git._call_process_safe("mktree", "-z", "--missing", istream=stream)
 
 
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
