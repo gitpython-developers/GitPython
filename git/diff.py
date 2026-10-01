@@ -7,8 +7,8 @@ __all__ = ["DiffConstants", "NULL_TREE", "NULL_TREE_SHA", "INDEX", "Diffable", "
 
 import enum
 import re
-import warnings
 
+from git import _backend
 from git.cmd import Git, handle_process_output
 from git.compat import defenc
 from git.objects.base import IndexObject
@@ -261,9 +261,16 @@ class Diffable:
                 clusterable_short_options="46abceflmnpqrstuvwzBCDMNRW",
             )
 
+        if isinstance(other, str):
+            other = self.repo.rev_parse(Git._check_operand(other, "revision")).hexsha
+        native = _backend.tree_diff(self.repo, self, other, paths, create_patch, kwargs)
+        if native is not NotImplemented:
+            return native
+
         args: List[Union[PathLike, Diffable]] = []
-        args.append("--abbrev=40")  # We need full shas.
+        args.append(f"--abbrev={self.repo._oid_size * 2}")
         args.append("--full-index")  # Get full index paths, not only filenames.
+        args.extend(("--no-ext-diff", "--no-textconv"))
 
         # Remove default '-M' arg (check for renames) if user is overriding it.
         if not any(x in kwargs for x in ("find_renames", "no_renames", "M")):
@@ -283,31 +290,29 @@ class Diffable:
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        diff_cmd = self.repo.git.diff
+        diff_cmd = "diff"
         if other is INDEX:
             args.insert(0, "--cached")
         elif other is NULL_TREE:
             args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, "--root")
-            diff_cmd = self.repo.git.diff_tree
+            diff_cmd = "diff_tree"
         elif other is not None:
             args.insert(0, "-r")  # Recursive diff-tree.
-            args.insert(0, other)
-            diff_cmd = self.repo.git.diff_tree
+            args.insert(0, str(other))
+            diff_cmd = "diff_tree"
 
         args.insert(0, self)
 
         # paths is a list or tuple here, or None.
+        args.append("--")
         if paths:
-            args.append("--")
             args.extend(paths)
         # END paths handling
 
         kwargs["as_process"] = True
         args = self._process_diff_args(args)
-        if create_patch:
-            self.repo.git(c="diff.mnemonicPrefix=false")
-        proc = diff_cmd(*args, **kwargs)
+        proc = self.repo.git._call_process_safe(diff_cmd, *args, _config=["diff.mnemonicPrefix=false"], **kwargs)
 
         diff_method = Diff._index_from_patch_format if create_patch else Diff._index_from_raw_format
         index = diff_method(self.repo, proc)
@@ -478,7 +483,7 @@ class Diff:
 
         # Determine whether this diff references a submodule. If it does then
         # we need to overwrite "repo" to the corresponding submodule's repo instead.
-        if repo and a_rawpath:
+        if repo and a_rawpath and (self.a_mode == 0o160000 or self.b_mode == 0o160000):
             for submodule in repo.submodules:
                 if submodule.path == a_rawpath.decode(defenc, "replace"):
                     if submodule.module_exists():
@@ -487,7 +492,7 @@ class Diff:
 
         # Gitlinks reference commits; generic index objects preserve their path and mode.
         self.a_blob: Union["IndexObject", None]
-        if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
+        if a_blob_id is None or not hex_to_bin(a_blob_id).strip(b"\0"):
             self.a_blob = None
         else:
             self.a_blob = (IndexObject if self.a_mode == 0o160000 else Blob)(
@@ -495,7 +500,7 @@ class Diff:
             )
 
         self.b_blob: Union["IndexObject", None]
-        if b_blob_id is None or b_blob_id == self.NULL_HEX_SHA:
+        if b_blob_id is None or not hex_to_bin(b_blob_id).strip(b"\0"):
             self.b_blob = None
         else:
             self.b_blob = (IndexObject if self.b_mode == 0o160000 else Blob)(
@@ -589,24 +594,6 @@ class Diff:
     @property
     def rename_to(self) -> Optional[str]:
         return self.raw_rename_to.decode(defenc, "replace") if self.raw_rename_to else None
-
-    @property
-    def renamed(self) -> bool:
-        """Deprecated, use :attr:`renamed_file` instead.
-
-        :return:
-            ``True`` if the blob of our diff has been renamed
-
-        :note:
-            This property is deprecated.
-            Please use the :attr:`renamed_file` property instead.
-        """
-        warnings.warn(
-            "Diff.renamed is deprecated, use Diff.renamed_file instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.renamed_file
 
     @property
     def renamed_file(self) -> bool:

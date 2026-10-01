@@ -11,17 +11,18 @@ import gc
 import logging
 import os
 import os.path as osp
-from pathlib import Path
 import re
 import shlex
 import sys
-import warnings
+import tempfile
+from threading import RLock
+import weakref
 
 import gitdb
 import gitdb.util
-from gitdb.db.loose import LooseObjectDB
 from gitdb.exc import BadObject
 
+from git import _backend
 from git.cmd import Git, handle_process_output
 from git.compat import defenc, safe_decode
 from git.config import GitConfigParser
@@ -30,6 +31,7 @@ from git.exc import (
     GitCommandError,
     InvalidGitRepositoryError,
     NoSuchPathError,
+    UnsafeOptionError,
 )
 from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
@@ -42,11 +44,10 @@ from git.util import (
     finalize_process,
     hex_to_bin,
     remove_password_if_present,
+    to_native_path_linux,
 )
 
 from .fun import (
-    find_submodule_git_dir,
-    is_git_dir,
     rev_parse,
     to_commit,
     touch,
@@ -123,6 +124,8 @@ class Repo:
 
     # Must exist, or  __del__  will fail in case we raise on `__init__()`.
     git = cast("Git", None)
+    _gix_repository: Any = None
+    _gix_state: Any = None
 
     working_dir: PathLike
     """The working directory of the git command."""
@@ -133,13 +136,14 @@ class Repo:
     git_dir: PathLike
     """The ``.git`` repository directory."""
 
+    odb: GitCmdObjectDB
+
     _common_dir: PathLike = ""
 
     # Precompiled regex
     re_whitespace = re.compile(r"\s+")
-    re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{40}$")
-    re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,40}$")
-    re_envvars = re.compile(r"(\$(\{\s?)?[a-zA-Z_]\w*(\}\s?)?|%\s?[a-zA-Z_]\w*\s?%)")
+    re_hexsha_only = re.compile(r"^(?:[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$")
+    re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,64}$")
     re_author_committer_start = re.compile(r"^(author|committer)")
     re_tab_full_line = re.compile(r"^\t(.*)$")
 
@@ -203,6 +207,8 @@ class Repo:
     ]
 
     unsafe_git_blame_options = unsafe_git_revision_options + [
+        # Runs a configured text conversion program.
+        "--textconv",
         # These options read from arbitrary files and expose their contents through blame output.
         "--contents",
         "-S",
@@ -229,15 +235,16 @@ class Repo:
     def __init__(
         self,
         path: Optional[PathLike] = None,
-        odbt: Type[Union[LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
+        odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         search_parent_directories: bool = False,
-        expand_vars: bool = True,
+        *,
+        _env: Optional[Mapping[str, Optional[str]]] = None,
     ) -> None:
         R"""Create a new :class:`Repo` instance.
 
         .. note::
-            Repositories using reftable may be opened, but GitPython's direct reference
-            access does not support reftable.
+            Repository storage, object formats, and reference backends are interpreted
+            by GixPython when supported, otherwise Git (version 2.52 or newer).
 
         :param path:
             The path to either the worktree directory or the .git directory itself::
@@ -245,7 +252,7 @@ class Repo:
                 repo = Repo("/Users/mtrier/Development/git-python")
                 repo = Repo("/Users/mtrier/Development/git-python.git")
                 repo = Repo("~/Development/git-python.git")
-                repo = Repo("$REPOSITORIES/Development/git-python.git")
+                repo = Repo(os.path.expandvars("$REPOSITORIES/Development/git-python.git"))
                 repo = Repo(R"C:\Users\mtrier\Development\git-python\.git")
 
             - In *Cygwin*, `path` may be a ``cygdrive/...`` prefixed path.
@@ -256,9 +263,8 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data. The pure-Python ``GitDB`` backend is
-            deprecated due to security and performance issues. Use the default
-            :class:`~git.db.GitCmdObjectDB` instead.
+            used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
+            and its subclasses are supported.
 
         :param search_parent_directories:
             If ``True``, all parent directories will be searched for a valid repo as
@@ -275,8 +281,13 @@ class Repo:
             :class:`Repo`
         """
 
-        git_dir_env = os.getenv("GIT_DIR")
-        object_dir_env = os.getenv("GIT_OBJECT_DIRECTORY")
+        # Clones can clear inherited source-storage variables without changing the
+        # process environment. Apply these overrides to discovery and later calls.
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
+        environment = dict(_env or {})
+        git_dir_env = environment.pop("GIT_DIR", os.getenv("GIT_DIR"))
+        object_dir_env = environment.get("GIT_OBJECT_DIRECTORY", os.getenv("GIT_OBJECT_DIRECTORY"))
         if object_dir_env is not None:
             object_dir_env = osp.abspath(object_dir_env)
         epath = path or git_dir_env
@@ -289,139 +300,205 @@ class Repo:
             # changing to Cygwin-style paths is the relevant operation.
             epath = cygpath(epath)
 
-        if expand_vars and re.search(self.re_envvars, epath):
-            warnings.warn(
-                "The use of environment variables in paths is deprecated"
-                + "\nfor security reasons and may be removed in the future!!",
-                stacklevel=1,
-            )
-        epath = expand_path(epath, expand_vars)
+        epath = expand_path(epath)
         if epath is not None:
             if not os.path.exists(epath):
                 raise NoSuchPathError(epath)
 
-        # Walk up the path to find the `.git` dir.
-        curpath = os.fspath(epath) if epath is not None else ""
-        git_dir: Optional[str] = None
+        # Resolve storage through Git. Absolutize environment paths before changing
+        # the command's working directory, preserving Git's process-CWD semantics.
+        for name in ("GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_WORK_TREE"):
+            value = environment.get(name, os.environ.get(name))
+            if value == "" and name != "GIT_WORK_TREE":
+                raise InvalidGitRepositoryError(epath)
+            if value is not None:
+                environment[name] = osp.abspath(value)
+        probe = self.GitCommandWrapperType(os.getcwd())
+        probe._environment.update(GIT_DIR=None, **environment)
         explicit_git_dir = not path and bool(git_dir_env)
+        assert epath is not None
+        curpath = osp.abspath(os.fspath(epath))
+        git_dir = None
+        native = NotImplemented
         while curpath:
-            # ABOUT osp.NORMPATH
-            # It's important to normalize the paths, as submodules will otherwise
-            # initialize their repo instances with paths that depend on path-portions
-            # that will not exist after being removed. It's just cleaner.
-            if not explicit_git_dir:
-                dotgit = osp.join(curpath, ".git")
-                try:
-                    sm_gitpath = find_submodule_git_dir(dotgit)
-                except OSError:
-                    break
-                if sm_gitpath is not None:
-                    # Worktrees can use relative paths as of Git 2.48, so join to curpath.
-                    git_dir = osp.normpath(osp.join(curpath, os.fspath(sm_gitpath)))
-                    self._working_tree_dir = curpath
-                    break
-
-                # Like Git, do not fall back to a bare repository or parent directory when
-                # a non-directory .git entry exists but is not a valid gitfile.
-                if osp.exists(dotgit) and not osp.isdir(dotgit):
-                    break
-
-            if is_git_dir(curpath):
-                git_dir = curpath
-                if osp.isfile(osp.join(curpath, "gitdir")) and osp.isfile(osp.join(curpath, "commondir")):
-                    if "GIT_WORK_TREE" in os.environ:
-                        self._working_tree_dir = os.getenv("GIT_WORK_TREE")
+            dotgit = osp.join(curpath, ".git")
+            candidate = curpath if explicit_git_dir or not osp.lexists(dotgit) else dotgit
+            try:
+                # Git resolves relative gitfile targets using the last forward
+                # slash in this operand, including on Windows.
+                native = _backend.discover_repository(candidate, environment)
+                git_dir = (
+                    probe._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(candidate))
+                    if native is NotImplemented
+                    else os.fspath(native.git_dir())
+                )
+                git_dir = osp.abspath(git_dir)
+                if osp.isfile(candidate):
+                    # Git canonicalizes gitfile targets. Retain an equivalent
+                    # caller spelling, e.g. /var instead of /private/var on macOS.
+                    parent = osp.dirname(candidate)
+                    try:
+                        relative = osp.relpath(osp.realpath(git_dir), osp.realpath(parent))
+                    except ValueError:
+                        pass  # Gitfile targets may be on another Windows drive.
                     else:
-                        # Linked worktree administrative directories store the path to
-                        # the worktree's .git file in gitdir (without a "gitdir: " prefix).
-                        with open(osp.join(git_dir, "gitdir")) as fp:
-                            worktree_gitfile = fp.read().strip()
-
-                        if not osp.isabs(worktree_gitfile):
-                            worktree_gitfile = osp.normpath(osp.join(git_dir, worktree_gitfile))
-
-                        self._working_tree_dir = osp.dirname(worktree_gitfile)
+                        spelling = osp.abspath(osp.join(parent, relative))
+                        if osp.realpath(spelling) == osp.realpath(git_dir):
+                            git_dir = spelling
+                break
+            except GitCommandError:
+                # A malformed .git entry must not cause fallback to a parent repo.
+                if candidate == dotgit or explicit_git_dir or not search_parent_directories:
                     break
-
-                # from man git-config : core.worktree
-                # Set the path to the root of the working tree. If GIT_COMMON_DIR
-                # environment variable is set, core.worktree is ignored and not used for
-                # determining the root of working tree. This can be overridden by the
-                # GIT_WORK_TREE environment variable. The value can be an absolute path
-                # or relative to the path to the .git directory, which is either
-                # specified by GIT_DIR, or automatically discovered. If GIT_DIR is
-                # specified but none of GIT_WORK_TREE and core.worktree is specified,
-                # the current working directory is regarded as the top level of your
-                # working tree.
-                self._working_tree_dir = os.path.dirname(git_dir)
-                if os.environ.get("GIT_COMMON_DIR") is None:
-                    gitconf = self._config_reader("repository", git_dir)
-                    if gitconf.has_option("core", "worktree"):
-                        self._working_tree_dir = gitconf.get("core", "worktree")
-                if "GIT_WORK_TREE" in os.environ:
-                    self._working_tree_dir = os.getenv("GIT_WORK_TREE")
+            parent = osp.dirname(curpath)
+            if parent == curpath:
                 break
-
-            if explicit_git_dir or not search_parent_directories:
-                break
-            curpath, tail = osp.split(curpath)
-            if not tail:
-                break
-        # END while curpath
-
+            curpath = parent
         if git_dir is None:
             raise InvalidGitRepositoryError(epath)
+
         self.git_dir = git_dir
-
-        common_dir_env = os.getenv("GIT_COMMON_DIR")
-        if common_dir_env is not None:
-            self._common_dir = osp.abspath(common_dir_env)
-        else:
-            try:
-                common_dir = os.fsdecode((Path(self.git_dir) / "commondir").read_bytes()).rstrip("\r\n")
-                self._common_dir = osp.join(self.git_dir, common_dir)
-            except OSError:
-                self._common_dir = ""
-
-        self._bare = False
+        probe.update_environment(GIT_DIR=git_dir)
         try:
-            self._bare = self.config_reader("repository").getboolean("core", "bare")
-        except Exception:
-            # Let's not assume the option exists, although it should.
-            pass
-
-        # A linked worktree is not bare even when its main repository is.
-        if self._bare and self._working_tree_dir and osp.isfile(osp.join(self.git_dir, "commondir")):
-            self._bare = False
-
-        # Adjust the working directory in case we are actually bare - we didn't know
-        # that in the first place.
+            if native is not NotImplemented:
+                self.ref_format = probe._call_process_safe("rev_parse", "--show-ref-format")
+            else:
+                # Query the fixed scalar fields together, leaving the path last so
+                # embedded newlines in the common directory remain unambiguous.
+                metadata = probe._call_process_safe(
+                    "rev_parse",
+                    "--show-ref-format",
+                    "--show-object-format",
+                    "--is-bare-repository",
+                    "--path-format=absolute",
+                    "--git-common-dir",
+                )
+                self.ref_format, self.object_format, bare, self._common_dir = metadata.split("\n", 3)
+                self._bare = bare == "true"
+        except GitCommandError as exc:
+            raise InvalidGitRepositoryError(epath) from exc
+        if native is not NotImplemented:
+            self._common_dir = to_native_path_linux(osp.abspath(native.common_dir()))
+            self.object_format = str(native.object_hash())
+            workdir = native.workdir()
+            self._working_tree_dir = environment.get("GIT_WORK_TREE") or (
+                to_native_path_linux(os.fspath(workdir)) if workdir is not None else None
+            )
+            # Gix's configured bare flag also applies to linked worktrees.
+            self._bare = native.is_bare() and self._working_tree_dir is None
+        else:
+            self._working_tree_dir = environment.get("GIT_WORK_TREE")
+            if self._working_tree_dir is None and not self._bare and environment.get("GIT_COMMON_DIR") is None:
+                try:
+                    probe._call_process_safe("config", "--get", "core.worktree")
+                except GitCommandError as exc:
+                    if exc.status != 1:
+                        raise
+                else:
+                    # Let Git resolve relative paths and per-worktree configuration.
+                    self._working_tree_dir = probe._call_process_safe("rev_parse", "--show-toplevel")
+            if self._working_tree_dir is None:
+                # The worktree registry also resolves administrative directories and
+                # relative worktree metadata without interpreting gitdir/commondir files.
+                listing = probe._call_process_safe("worktree", "list", "--porcelain", "-z")
+                for record in listing.split("\0\0"):
+                    fields = record.split("\0")
+                    if not fields or not fields[0].startswith("worktree ") or "bare" in fields:
+                        continue
+                    worktree = fields[0][9:]
+                    # Git only strips a forward-slash /.git suffix from its registry.
+                    # A Windows gitdir file can instead contain a native backslash.
+                    if osp.basename(worktree) == ".git" and osp.isfile(worktree):
+                        worktree = osp.dirname(worktree)
+                    try:
+                        resolved = probe._call_process_safe(
+                            "rev_parse", "--resolve-git-dir", to_native_path_linux(osp.join(worktree, ".git"))
+                        )
+                    except GitCommandError:
+                        continue
+                    if osp.realpath(resolved) == osp.realpath(git_dir):
+                        self._working_tree_dir = worktree
+                        self._bare = False
+                        break
+                if self._working_tree_dir is None:
+                    try:
+                        configured_bare = probe._call_process_safe(
+                            "config", "--file", osp.join(self.common_dir, "config"), "--bool", "--get", "core.bare"
+                        )
+                        self._bare = configured_bare == "true"
+                    except GitCommandError as exc:
+                        if exc.status != 1:
+                            raise
+                if self._working_tree_dir is None and not self._bare:
+                    self._working_tree_dir = osp.dirname(git_dir)
         if self._bare:
             self._working_tree_dir = None
-        # END working dir handling
+        elif self._working_tree_dir is not None:
+            # Preserve the caller's spelling of symlinked path prefixes (such as
+            # /var on macOS), so absolute index paths remain relative to this repo.
+            for spelling in (curpath, osp.dirname(curpath)):
+                if osp.realpath(spelling) == osp.realpath(self._working_tree_dir):
+                    self._working_tree_dir = spelling
+                    break
 
         self.working_dir = self._working_tree_dir or self.common_dir
+        self._gix_lock = RLock()
         self.git = self.GitCommandWrapperType(self.working_dir)
-        if common_dir_env is not None:
-            self.git.update_environment(GIT_DIR=os.fspath(self.git_dir), GIT_COMMON_DIR=os.fspath(self.common_dir))
-        elif git_dir_env is not None:
-            self.git.update_environment(GIT_DIR=os.fspath(self.git_dir))
-        if object_dir_env is not None:
-            self.git.update_environment(GIT_OBJECT_DIRECTORY=object_dir_env)
+        self.git._repo = weakref.ref(self)
+        self.git._environment.update(GIT_DIR=git_dir, **environment)
+        if self._working_tree_dir is not None:
+            self.git.update_environment(GIT_WORK_TREE=os.fspath(self._working_tree_dir))
+        if native is not NotImplemented:
+            self._gix_repository = native
+            self._empty_tree_hexsha = str(native.empty_tree().id)
+        else:
+            with tempfile.TemporaryFile() as empty:
+                self._empty_tree_hexsha = self.git._call_process_safe(
+                    "hash_object", "-t", "tree", "--stdin", istream=empty
+                )
+        self._oid_size = len(self._empty_tree_hexsha) // 2
+        self._null_binsha = bytes(self._oid_size)
+        self._null_hexsha = "0" * (self._oid_size * 2)
+        self.re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{%d}$" % (self._oid_size * 2))
+        self.re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,%d}$" % (self._oid_size * 2))
 
         # Special handling, in special times.
         rootpath = object_dir_env if object_dir_env is not None else osp.join(self.common_dir, "objects")
-        if issubclass(odbt, GitCmdObjectDB):
-            self.odb = odbt(rootpath, self.git)
-        else:
-            if issubclass(odbt, gitdb.GitDB):
-                warnings.warn(
-                    "GitDB is deprecated as a GitPython backend due to security and performance issues. "
-                    "Use the default GitCmdObjectDB backend instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-            self.odb = odbt(rootpath)
+        self.odb = odbt(rootpath, self.git)
+
+    def _get_gix_repository(
+        self,
+        *,
+        command: Optional[Git] = None,
+        env: Optional[Dict[str, Any]] = None,
+        query_config: bool = False,
+        recreate: bool = False,
+    ) -> Any:
+        """Access native state, reusing the repository unless recreation is requested.
+
+        This method owns the reuse policy so it can later become configurable.
+        Configuration queries currently open a separate handle without the execution
+        restrictions applied to the retained handle. Other operations retain the
+        existing best-effort refresh of configuration, environment and CLI changes.
+        """
+        with self._gix_lock:
+            if recreate:
+                self._gix_repository = self._gix_state = None
+            return _backend._open_repository(
+                command if command is not None else self.git, env or {}, query_config=query_config
+            )
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if key not in ("_gix_repository", "_gix_state", "_gix_lock")
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self._gix_lock = RLock()
+        self.git._repo = weakref.ref(self)
 
     def __enter__(self) -> "Repo":
         return self
@@ -436,6 +513,7 @@ class Repo:
             pass
 
     def close(self) -> None:
+        self._gix_repository = self._gix_state = None
         if self.git:
             self.git.clear_cache()
             # Tempfiles objects on Windows are holding references to open files until
@@ -853,7 +931,10 @@ class Repo:
         if rev is None:
             return self.head.commit.tree
         obj = self.rev_parse(str(rev))
-        return obj if obj.type == "tree" else to_commit(obj).tree
+        if obj.type == "tree":
+            obj.path = getattr(obj, "path", "")
+            return obj
+        return to_commit(obj).tree
 
     def iter_commits(
         self,
@@ -941,7 +1022,9 @@ class Repo:
 
         res: List[Commit] = []
         try:
-            lines: List[str] = self.git.merge_base(*rev, **kwargs).splitlines()
+            lines: List[str] = self.git._call_process_safe(
+                "merge_base", "--", *(Git._check_operand(item, "revision") for item in Git._unpack_args(rev)), **kwargs
+            ).splitlines()
         except GitCommandError as err:
             if err.status != 1:
                 raise
@@ -969,7 +1052,13 @@ class Repo:
             ``True`` if `ancestor_rev` is an ancestor to `rev`.
         """
         try:
-            self.git.merge_base(ancestor_rev, rev, is_ancestor=True)
+            self.git._call_process_safe(
+                "merge_base",
+                "--is-ancestor",
+                "--",
+                Git._check_operand(ancestor_rev, "revision"),
+                Git._check_operand(rev, "revision"),
+            )
         except GitCommandError as err:
             if err.status == 1:
                 return False
@@ -1023,49 +1112,24 @@ class Repo:
     def daemon_export(self, value: object) -> None:
         self._set_daemon_export(value)
 
-    def _get_alternates(self) -> List[str]:
-        """The list of alternates for this repo from which objects can be retrieved.
-
-        :return:
-            List of strings being pathnames of alternates
-        """
-        alternates_path = osp.join(self.odb.root_path(), "info", "alternates")
-
-        if osp.exists(alternates_path):
-            with open(alternates_path, "rb") as f:
-                alts = f.read().decode(defenc)
-            return alts.strip().splitlines()
-        return []
-
-    def _set_alternates(self, alts: List[str]) -> None:
-        """Set the alternates.
-
-        :param alts:
-            The array of string paths representing the alternates at which git should
-            look for objects, i.e. ``/home/user/repo/.git/objects``.
-
-        :raise git.exc.NoSuchPathError:
-
-        :note:
-            The method does not check for the existence of the paths in `alts`, as the
-            caller is responsible.
-        """
-        alternates_path = osp.join(self.odb.root_path(), "info", "alternates")
-        if not alts:
-            if osp.isfile(alternates_path):
-                os.remove(alternates_path)
-        else:
-            with open(alternates_path, "wb") as f:
-                f.write("\n".join(alts).encode(defenc))
-
     @property
     def alternates(self) -> List[str]:
-        """Retrieve a list of alternates paths or set a list paths to be used as alternates"""
-        return self._get_alternates()
+        """Effective alternate object directories reported by Git (read-only).
 
-    @alternates.setter
-    def alternates(self, alts: List[str]) -> None:
-        self._set_alternates(alts)
+        Paths are absolute and may include environment or transitive alternates.
+        Configure object sharing through Git rather than editing its storage files.
+        """
+        from git.diff import _unquote_path
+
+        output = self.git._call_process_safe("count_objects", "-v", stdout_as_string=False)
+        paths = []
+        for line in output.splitlines():
+            if line.startswith(b"alternate: "):
+                path = line[len(b"alternate: ") :]
+                if path.startswith(b'"') and path.endswith(b'"'):
+                    path = _unquote_path(path[1:-1])
+                paths.append(safe_decode(path))
+        return paths
 
     def is_dirty(
         self,
@@ -1086,20 +1150,24 @@ class Repo:
             # always considered to be clean.
             return False
 
+        native = _backend.is_dirty(self.git, index, working_tree, untracked_files, submodules, path)
+        if native is not NotImplemented:
+            return native
+
         # Start from the one which is fastest to evaluate.
-        default_args = ["--abbrev=40", "--full-index", "--raw"]
+        default_args = ["--raw", "--no-ext-diff", "--no-textconv"]
         if not submodules:
             default_args.append("--ignore-submodules")
         if path:
             default_args.extend(["--", os.fspath(path)])
         if index:
             # diff index against HEAD.
-            if osp.isfile(self.index.path) and len(self.git.diff("--cached", *default_args)):
+            if self.git._call_process_safe("diff", "--cached", *default_args):
                 return True
         # END index handling
         if working_tree:
             # diff index against working tree.
-            if len(self.git.diff(*default_args)):
+            if self.git._call_process_safe("diff", *default_args):
                 return True
         # END working tree handling
         if untracked_files:
@@ -1127,48 +1195,50 @@ class Repo:
         return self._get_untracked_files()
 
     def _get_untracked_files(self, *args: Any, **kwargs: Any) -> List[str]:
-        # Make sure we get all files, not only untracked directories.
-        proc = self.git.status(*args, porcelain=True, untracked_files=True, as_process=True, **kwargs)
-        # Untracked files prefix in porcelain mode
-        prefix = "?? "
-        untracked_files = []
-        for line in proc.stdout:
-            line = line.decode(defenc)
-            if not line.startswith(prefix):
-                continue
-            filename = line[len(prefix) :].rstrip("\n")
-            # Special characters are escaped
-            if filename[0] == filename[-1] == '"':
-                filename = filename[1:-1]
-                # WHATEVER ... it's a mess, but works for me
-                filename = filename.encode("ascii").decode("unicode_escape").encode("latin1").decode(defenc)
-            untracked_files.append(filename)
-        finalize_process(proc)
-        return untracked_files
+        native = _backend.untracked_files(self.git, args, kwargs)
+        if native is not NotImplemented:
+            return native
+        # NUL records preserve arbitrary filenames, including newlines and quotes.
+        output = self.git._call_process_safe(
+            "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *args, stdout_as_string=False, **kwargs
+        )
+        records = iter(output.split(b"\0"))
+        paths = []
+        for record in records:
+            if record.startswith(b"?? "):
+                paths.append(safe_decode(record[3:]))
+            elif record[:1] in (b"R", b"C") or record[1:2] in (b"R", b"C"):
+                next(records, None)  # Renames/copies carry a second path record.
+        return paths
 
     def ignored(self, *paths: PathLike) -> List[str]:
-        """Checks if paths are ignored via ``.gitignore``.
-
-        This does so using the :manpage:`git-check-ignore(1)` method.
-
-        :param paths:
-            List of paths to check whether they are ignored or not.
-
-        :return:
-            Subset of those paths which are ignored
-        """
-        try:
-            proc: str = self.git.check_ignore("--", *paths)
-        except GitCommandError as err:
-            if err.status == 1:
-                # If return code is 1, this means none of the items in *paths are
-                # ignored by Git, so return an empty list.
-                return []
-            else:
-                # Raise the exception on all other return codes.
-                raise
-
-        return proc.replace("\\\\", "\\").replace('"', "").split("\n")
+        """Return the given paths ignored by Git, preserving their exact names."""
+        paths = tuple(Git._unpack_args(paths))
+        if not paths:
+            return []
+        for path in paths:
+            if "\0" in os.fspath(path):
+                raise ValueError("Paths cannot contain NUL")
+        native = _backend.ignored(self.git, paths)
+        if native is not NotImplemented:
+            return native
+        with tempfile.TemporaryFile() as stream:
+            stream.write(b"\0".join(os.fspath(path).encode(defenc, "surrogateescape") for path in paths) + b"\0")
+            stream.seek(0)
+            status, output, stderr = self.git._call_process_safe(
+                "check_ignore",
+                "--stdin",
+                "-z",
+                istream=stream,
+                stdout_as_string=False,
+                with_extended_output=True,
+                with_exceptions=False,
+            )
+        if status == 1:
+            return []
+        if status:
+            raise GitCommandError("git check-ignore", status, stderr, output)
+        return [safe_decode(path) for path in output.split(b"\0") if path]
 
     @property
     def active_branch(self) -> Head:
@@ -1182,18 +1252,12 @@ class Repo:
             If HEAD is detached.
 
         :raise ValueError:
-            If HEAD points to the ``.invalid`` ref Git uses to mark refs as
-            incompatible with older clients.
+            If HEAD points to an invalid reference name.
 
         :return:
             :class:`~git.refs.head.Head` to the active branch
         """
-        active_branch = self.head.reference
-        if active_branch.name == ".invalid":
-            raise ValueError(
-                "HEAD points to 'refs/heads/.invalid', which Git uses to mark refs as incompatible with older clients"
-            )
-        return active_branch
+        return cast(Head, self.head.reference)
 
     def blame_incremental(
         self, rev: str | HEAD | None, file: str, allow_unsafe_options: bool = False, **kwargs: Any
@@ -1226,7 +1290,17 @@ class Repo:
                 clusterable_short_options="46bceflnpqstvw",
             )
 
-        data: bytes = self.git.blame(rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs)
+        data: bytes = self.git._call_process_safe(
+            "blame",
+            Git._check_operand(rev, "revision") if rev is not None else None,
+            "--no-textconv" if not allow_unsafe_options else None,
+            "--",
+            file,
+            p=True,
+            incremental=True,
+            stdout_as_string=False,
+            **kwargs,
+        )
         commits: Dict[bytes, Commit] = {}
 
         stream = (line for line in data.split(b"\n") if line)
@@ -1334,7 +1408,17 @@ class Repo:
                 unsafe_options=self.unsafe_git_blame_options,
                 clusterable_short_options="46bceflnpqstvw",
             )
-        data: bytes = self.git.blame(rev, *rev_opts_list, "--", file, p=True, stdout_as_string=False, **kwargs)
+        data: bytes = self.git._call_process_safe(
+            "blame",
+            Git._check_operand(rev, "revision") if rev is not None else None,
+            *rev_opts_list,
+            "--no-textconv" if not allow_unsafe_options else None,
+            "--",
+            file,
+            p=True,
+            stdout_as_string=False,
+            **kwargs,
+        )
         commits: Dict[str, Commit] = {}
         blames: List[List[Commit | List[str | bytes] | None]] = []
 
@@ -1467,8 +1551,7 @@ class Repo:
         cls,
         path: Union[PathLike, None] = None,
         mkdir: bool = True,
-        odbt: Type[Union[LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
-        expand_vars: bool = True,
+        odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
@@ -1487,13 +1570,8 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data. The pure-Python ``GitDB`` backend is
-            deprecated; use the default :class:`~git.db.GitCmdObjectDB` instead.
-
-        :param expand_vars:
-            If specified, environment variables will not be escaped. This can lead to
-            information disclosure, allowing attackers to access the contents of
-            environment variables.
+            used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
+            and its subclasses are supported.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, such as ``--template`` and
@@ -1511,14 +1589,17 @@ class Repo:
                 options=Git._option_candidates([], kwargs),
                 unsafe_options=cls.unsafe_git_init_options,
             )
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
+        cls.GitCommandWrapperType()._require_version()
         if path:
-            path = expand_path(path, expand_vars)
+            path = expand_path(path)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
         # git command automatically chdir into the directory
         git = cls.GitCommandWrapperType(path)
-        git.init(**kwargs)
+        git._call_process_safe("init", **kwargs)
         return cls(path, odbt=odbt)
 
     @classmethod
@@ -1527,7 +1608,7 @@ class Repo:
         git: "Git",
         url: PathLike,
         path: PathLike,
-        odb_default_type: Type[Union[LooseObjectDB, gitdb.GitDB]],
+        odb_default_type: Type[GitCmdObjectDB],
         progress: Union["RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None] = None,
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
@@ -1535,6 +1616,25 @@ class Repo:
         **kwargs: Any,
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
+
+        # A clone creates a different repository. Do not inherit the source
+        # repository's storage paths, including paths bound by Repo.__init__.
+        storage_environment = {
+            "GIT_DIR",
+            "GIT_WORK_TREE",
+            "GIT_COMMON_DIR",
+            "GIT_OBJECT_DIRECTORY",
+            "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+            "GIT_INDEX_FILE",
+            "GIT_NAMESPACE",
+        }
+        clone_git = cls.GitCommandWrapperType(git.working_dir)
+        clone_git.update_environment(
+            **{key: value for key, value in git.environment().items() if key not in storage_environment}
+        )
+        git = clone_git
 
         # url may be a path and this has no effect if it is a string
         url = os.fspath(url)
@@ -1549,12 +1649,12 @@ class Repo:
         clone_path = Git.polish_url(path) if Git.is_cygwin() and "bare" in kwargs else path
         sep_dir = kwargs.get("separate_git_dir")
         if sep_dir:
-            kwargs["separate_git_dir"] = Git.polish_url(os.fspath(sep_dir), expand_vars=False)
+            kwargs["separate_git_dir"] = Git.polish_url(os.fspath(sep_dir))
         multi = None
         if multi_options:
             multi = shlex.split(" ".join(multi_options))
 
-        clone_url = Git.polish_url(url, expand_vars=False)
+        clone_url = Git.polish_url(url)
         if not allow_unsafe_protocols:
             Git.check_unsafe_protocols(clone_url)
         if not allow_unsafe_options:
@@ -1565,7 +1665,11 @@ class Repo:
         if not allow_unsafe_options and multi:
             Git.check_unsafe_options(options=multi, unsafe_options=cls.unsafe_git_clone_options)
 
-        proc = git.clone(
+        clone_environment = dict(kwargs.pop("env", {}) or {})
+        for name in storage_environment:
+            clone_environment.setdefault(name, None)
+        proc = git._call_process_safe(
+            "clone",
             multi,
             "--",
             clone_url,
@@ -1574,6 +1678,8 @@ class Repo:
             as_process=True,
             v=True,
             universal_newlines=True,
+            env=clone_environment,
+            _allow_network=True,
             **add_progress(kwargs, git, progress),
         )
         if progress:
@@ -1597,10 +1703,7 @@ class Repo:
         if not osp.isabs(path):
             path = osp.join(git._working_dir, path) if git._working_dir is not None else path
 
-        repo = cls(path, odbt=odbt)
-
-        # Retain env values that were passed to _clone().
-        repo.git.update_environment(**git.environment())
+        repo = cls(path, odbt=odbt, _env={**git.environment(), **clone_environment})
 
         # Adjust remotes - there may be operating systems which use backslashes, These
         # might be given as initial paths, but when handling the config file that
@@ -1608,7 +1711,7 @@ class Repo:
         # escape the backslashes. Hence we undo the escaping just to be sure.
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
-                writer.set_value("url", Git.polish_url(repo.remotes[0].url, expand_vars=False))
+                writer.set_value("url", Git.polish_url(repo.remotes[0].url))
         # END handle remote repo
         return repo
 
@@ -1652,7 +1755,7 @@ class Repo:
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned :class:`Repo` instance. The
-              pure-Python ``GitDB`` backend is deprecated; use the default
+              backend must be ``GitCmdObjectDB`` or its subclass; use the default
               :class:`~git.db.GitCmdObjectDB` instead.
             * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
               command.
@@ -1763,7 +1866,8 @@ class Repo:
               or a list or tuple of multiple paths.
 
         :param allow_unsafe_options:
-            Allow unsafe options, like ``--exec`` or ``--output``.
+            Allow unsafe options, like ``--exec`` or ``--output``, and configured
+            archive format commands. Otherwise only Git's built-in formats are used.
 
         :param allow_unsafe_protocols:
             Allow unsafe protocols to be used in ``remote``, like ``ext``.
@@ -1790,13 +1894,28 @@ class Repo:
                 options=Git._option_candidates([], kwargs),
                 unsafe_options=self.unsafe_git_archive_options,
             )
+            for arg in self.git.transform_kwargs(**kwargs):
+                option, separator, archive_format = arg.partition("=")
+                if option.startswith("--f") and "--format".startswith(option):
+                    if not separator or archive_format not in ("tar", "zip", "tgz", "tar.gz"):
+                        raise UnsafeOptionError("Custom archive formats require allow_unsafe_options=True")
         kwargs["output_stream"] = ostream
         path = kwargs.pop("path", [])
         path = cast(Union[PathLike, List[PathLike], Tuple[PathLike, ...]], path)
         if not isinstance(path, (tuple, list)):
             path = [path]
         # END ensure paths is list (or tuple)
-        self.git.archive("--", treeish, *path, **kwargs)
+        self.git._call_process_safe(
+            "archive",
+            "--",
+            Git._check_operand(treeish, "revision"),
+            *path,
+            _allow_network=bool(kwargs.get("remote")),
+            _config=()
+            if allow_unsafe_options
+            else ("tar.tgz.command=git archive gzip", "tar.tar.gz.command=git archive gzip"),
+            **kwargs,
+        )
         return self
 
     def has_separate_working_tree(self) -> bool:
@@ -1832,9 +1951,11 @@ class Repo:
         """
         if not self.git_dir:
             return None
-        rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
-        if not osp.isfile(rebase_head_file):
+        status, oid, stderr = self.git._call_process_safe(
+            "rev_parse", "--verify", "--quiet", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
+        )
+        if status == 1:
             return None
-        with open(rebase_head_file, "rt") as f:
-            content = f.readline().strip()
-        return self.commit(content)
+        if status:
+            raise GitCommandError("git rev-parse", status, stderr, oid)
+        return self.commit(oid)

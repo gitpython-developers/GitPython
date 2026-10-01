@@ -107,7 +107,7 @@ class Object(LazyMixin):
             Repository this object is located in.
 
         :param binsha:
-            20 byte SHA1
+            Binary object ID in the repository's object format.
 
         :note:
             Object data is loaded lazily. Loading uncached :attr:`size` metadata
@@ -115,11 +115,13 @@ class Object(LazyMixin):
         """
         super().__init__()
         self.repo = repo
+        # Preserve the public SHA-1 null sentinel for callers constructing placeholders.
+        if repo is not None and binsha == self.NULL_BIN_SHA:
+            binsha = repo._null_binsha
+        sizes = (20, 32) if repo is None else (repo._oid_size,)
+        if not isinstance(binsha, bytes) or len(binsha) not in sizes:
+            raise ValueError("Object ID does not match the repository object format")
         self.binsha = binsha
-        assert len(binsha) == 20, "Require 20 byte binary sha, got %r, len = %i" % (
-            binsha,
-            len(binsha),
-        )
 
     @classmethod
     def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> AnyGitObject:
@@ -142,12 +144,13 @@ class Object(LazyMixin):
     def new_from_sha(cls, repo: "Repo", sha1: bytes) -> AnyGitObject:
         """
         :return:
-            New object instance of a type appropriate to represent the given binary sha1
+            New object instance of a type appropriate to represent the given binary object ID.
 
         :param sha1:
-            20 byte binary sha1.
+            Binary object ID in the repository's object format. The parameter name is
+            retained for compatibility.
         """
-        if sha1 == cls.NULL_BIN_SHA:
+        if sha1 in (cls.NULL_BIN_SHA, repo._null_binsha):
             # The NULL binsha is always the root commit.
             return get_object_type_by_name(b"commit")(repo, sha1)
         # END handle special case
@@ -168,13 +171,13 @@ class Object(LazyMixin):
             super()._set_cache_(attr)
 
     def __eq__(self, other: Any) -> bool:
-        """:return: ``True`` if the objects have the same SHA1"""
+        """:return: ``True`` if the objects have the same object ID"""
         if not hasattr(other, "binsha"):
             return False
         return self.binsha == other.binsha
 
     def __ne__(self, other: Any) -> bool:
-        """:return: ``True`` if the objects do not have the same SHA1"""
+        """:return: ``True`` if the objects do not have the same object ID"""
         if not hasattr(other, "binsha"):
             return True
         return self.binsha != other.binsha
@@ -184,7 +187,7 @@ class Object(LazyMixin):
         return hash(self.binsha)
 
     def __str__(self) -> str:
-        """:return: String of our SHA1 as understood by all git commands"""
+        """:return: Hexadecimal object ID as understood by Git commands"""
         return self.hexsha
 
     def __repr__(self) -> str:
@@ -193,7 +196,7 @@ class Object(LazyMixin):
 
     @property
     def hexsha(self) -> str:
-        """:return: 40 byte hex version of our 20 byte binary sha"""
+        """:return: Hexadecimal object ID in the repository's object format"""
         # b2a_hex produces bytes.
         return bin_to_hex(self.binsha).decode("ascii")
 
@@ -249,7 +252,7 @@ class IndexObject(Object):
             The :class:`~git.repo.base.Repo` we are located in.
 
         :param binsha:
-            20 byte sha1.
+            Binary object ID in the repository's object format.
 
         :param mode:
             The stat-compatible file mode as :class:`int`.

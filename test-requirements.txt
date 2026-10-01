@@ -1,4 +1,5 @@
 coverage[toml]
+GixPython==0.2.0 ; python_version >= "3.11"
 basedpyright==1.39.9 ; python_version >= "3.9" and sys_platform != "cygwin"
 ddt >= 1.1.1, != 1.4.3
 mock  # Also needed to typecheck the Python 3.7 import branches.

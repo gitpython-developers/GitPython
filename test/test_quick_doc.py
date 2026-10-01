@@ -2,8 +2,8 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-
 from test.lib import TestBase
+from test.lib.fixtures import read_only_fixture
 from test.lib.helper import with_rw_directory
 
 
@@ -31,11 +31,13 @@ class QuickDoc(TestBase):
     def test_cloned_repo_object(self, local_dir):
         from git import Repo
 
+        source = read_only_fixture("quick-doc.sh") / "repo"
+
         # Code to clone from url
         # [1-test_cloned_repo_object]
         # $ git clone <url> <local_dir>
 
-        repo_url = "https://github.com/gitpython-developers/QuickStartTutorialFiles.git"
+        repo_url = str(source)  # A local repository path is also a valid Git URL.
 
         repo = Repo.clone_from(repo_url, local_dir)
         # ![1-test_cloned_repo_object]

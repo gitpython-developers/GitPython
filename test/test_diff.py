@@ -3,21 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import gc
 import os.path as osp
-import shutil
-import sys
-import tempfile
 
 import ddt
-import pytest
 
-from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
-from git.cmd import Git
+from git import NULL_TREE, Diff, DiffIndex, Diffable, Repo
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
 
-from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
+from test.lib import StringProcessAdapter, TestBase, fixture
+from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 
 def to_raw(input):
@@ -27,13 +22,9 @@ def to_raw(input):
 @ddt.ddt
 class TestDiff(TestBase):
     def setUp(self):
-        self.repo_dir = tempfile.mkdtemp()
-        self.submodule_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        gc.collect()
-        shutil.rmtree(self.repo_dir)
-        shutil.rmtree(self.submodule_dir)
+        temporary = writable_fixture("empty.sh")
+        self.addCleanup(temporary.close)
+        self.repo_dir = str(temporary.path())
 
     def _assert_diff_format(self, diffs):
         # Verify that the format of the diff is sane.
@@ -50,68 +41,22 @@ class TestDiff(TestBase):
         # END for each diff
         return diffs
 
-    @with_rw_directory
-    def test_diff_with_staged_file(self, rw_dir):
-        # SET UP INDEX WITH MULTIPLE STAGES
-        r = Repo.init(rw_dir)
-        fp = osp.join(rw_dir, "hello.txt")
-        with open(fp, "w") as fs:
-            fs.write("hello world")
-        r.git.add(Git.polish_url(fp))
-        r.git.commit(message="init")
+    def test_diff_with_staged_file(self):
+        with fixture_repo("diff.sh", "stages", "staged") as repo:
+            self.assertEqual(len(repo.index.diff("HEAD", create_patch=True)), 1)
+        with fixture_repo("diff.sh", "stages", "committed") as repo:
+            self.assertEqual(len(repo.index.diff("HEAD", create_patch=True)), 0)
+        with fixture_repo("diff.sh", "stages", "conflict") as repo:
+            self.assertEqual(len(repo.index.diff(None)), 2)
+            self.assertEqual(len(repo.index.diff(None, create_patch=True)), 0)
 
-        with open(fp, "w") as fs:
-            fs.write("Hola Mundo")
-        r.git.add(Git.polish_url(fp))
-        self.assertEqual(
-            len(r.index.diff("HEAD", create_patch=True)),
-            1,
-            "create_patch should generate patch of diff to HEAD",
-        )
-        r.git.commit(message="change on master")
-        self.assertEqual(
-            len(r.index.diff("HEAD", create_patch=True)),
-            0,
-            "create_patch should generate no patch, already on HEAD",
-        )
-
-        r.git.checkout("HEAD~1", b="topic")
-        with open(fp, "w") as fs:
-            fs.write("Hallo Welt")
-        r.git.commit(all=True, message="change on topic branch")
-
-        # There must be a merge conflict.
-        with self.assertRaises(GitCommandError):
-            r.git.cherry_pick("master")
-
-        # Now do the actual testing - this should just work.
-        self.assertEqual(len(r.index.diff(None)), 2)
-
-        self.assertEqual(
-            len(r.index.diff(None, create_patch=True)),
-            0,
-            "This should work, but doesn't right now ... it's OK",
-        )
-
-    @with_rw_directory
-    def test_patch_diff_ignores_mnemonic_prefix(self, rw_dir):
-        repo = Repo.init(rw_dir)
-        filepath = osp.join(rw_dir, "file.txt")
-        with open(filepath, "w") as stream:
-            stream.write("initial\n")
-        repo.index.add([filepath])
-        repo.index.commit("initial")
-
-        with open(filepath, "w") as stream:
-            stream.write("changed\n")
-        repo.git.config("diff.mnemonicPrefix", "true")
-
-        self.assertEqual(len(repo.head.commit.diff(None, create_patch=True)), 1)
-        self.assertEqual(len(repo.index.diff(None, create_patch=True)), 1)
-
-        repo.index.add([filepath])
-        self.assertEqual(len(repo.index.diff(NULL_TREE, create_patch=True)), 1)
-        self.assertEqual(repo.git.config("--get", "diff.mnemonicPrefix"), "true")
+    def test_patch_diff_ignores_mnemonic_prefix(self):
+        with fixture_repo("diff.sh", "mnemonic", "worktree") as repo:
+            self.assertEqual(len(repo.head.commit.diff(None, create_patch=True)), 1)
+            self.assertEqual(len(repo.index.diff(None, create_patch=True)), 1)
+        with fixture_repo("diff.sh", "mnemonic", "staged") as repo:
+            self.assertEqual(len(repo.index.diff(NULL_TREE, create_patch=True)), 1)
+            self.assertEqual(repo.git.config("--get", "diff.mnemonicPrefix"), "true")
 
     def test_list_from_string_new_mode(self):
         output = StringProcessAdapter(fixture("diff_new_mode"))
@@ -130,7 +75,7 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         self.assertTrue(diff.renamed_file)
-        self.assertTrue(diff.renamed)
+        self.assertTrue(diff.renamed_file)
         self.assertEqual(diff.rename_from, "Jérôme")
         self.assertEqual(diff.rename_to, "müller")
         self.assertEqual(diff.raw_rename_from, b"J\xc3\xa9r\xc3\xb4me")
@@ -142,7 +87,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
         self.assertIsNotNone(diff.renamed_file)
-        self.assertIsNotNone(diff.renamed)
+        self.assertIsNotNone(diff.renamed_file)
         self.assertEqual(diff.rename_from, "this")
         self.assertEqual(diff.rename_to, "that")
         self.assertEqual(diff.change_type, "R")
@@ -336,47 +281,15 @@ class TestDiff(TestBase):
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
-    @pytest.mark.xfail(
-        sys.platform == "win32",
-        reason='"Access is denied" when tearDown calls shutil.rmtree',
-        raises=PermissionError,
-    )
     def test_diff_submodule(self):
-        """Test that diff is able to correctly diff commits that cover submodule changes"""
-        # Init a temp git repo that will be referenced as a submodule.
-        sub = Repo.init(self.submodule_dir)
-        with open(self.submodule_dir + "/subfile", "w") as sub_subfile:
-            sub_subfile.write("")
-        sub.index.add(["subfile"])
-        first_commit = sub.index.commit("first commit")
-
-        # Init a temp git repo that will incorporate the submodule.
-        repo = Repo.init(self.repo_dir)
-        with open(self.repo_dir + "/test", "w") as foo_test:
-            foo_test.write("")
-        repo.index.add(["test"])
-        Submodule.add(repo, "subtest", "sub", url="file://" + self.submodule_dir)
-        repo.index.commit("first commit")
-        repo.create_tag("1")
-
-        # Add a commit to the submodule.
-        submodule = repo.submodule("subtest")
-        with open(self.repo_dir + "/sub/subfile", "w") as foo_sub_subfile:
-            foo_sub_subfile.write("blub")
-        submodule.module().index.add(["subfile"])
-        changed_commit = submodule.module().index.commit("changed subfile")
-        submodule.binsha = submodule.module().head.commit.binsha
-
-        # Commit submodule updates in parent repo.
-        repo.index.add([submodule])
-        repo.index.commit("submodule changed")
-        repo.create_tag("2")
-
-        diff = repo.commit("1").diff(repo.commit("2"))[0]
-        # Gitlinks refer to commits in the submodule's object database.
-        for item, commit in ((diff.a_blob, first_commit), (diff.b_blob, changed_commit)):
-            self.assertEqual(item.size, commit.size)
-            self.assertEqual(item.data_stream.read(), commit.data_stream.read())
+        fixture = read_only_fixture("diff.sh", "submodule")
+        with Repo(fixture / "repo") as repo, Repo(fixture / "repo/sub") as sub:
+            first_commit = sub.commit("HEAD~1")
+            changed_commit = sub.head.commit
+            diff = repo.commit("1").diff(repo.commit("2"))[0]
+            for item, commit in ((diff.a_blob, first_commit), (diff.b_blob, changed_commit)):
+                self.assertEqual(item.size, commit.size)
+                self.assertEqual(item.data_stream.read(), commit.data_stream.read())
 
     def test_diff_rejects_unsafe_output_options(self):
         commit = self.rorepo.head.commit
@@ -490,131 +403,76 @@ class TestDiff(TestBase):
             "Equality comparison must be reference-based.",
         )
 
-    @with_rw_directory
-    def test_rename_override(self, rw_dir):
-        """Test disabling of diff rename detection."""
-        # Create and commit file_a.txt.
-        repo = Repo.init(rw_dir)
-        file_a = osp.join(rw_dir, "file_a.txt")
-        with open(file_a, "w", encoding="utf-8") as outfile:
-            outfile.write("hello world\n")
-        repo.git.add(Git.polish_url(file_a))
-        repo.git.commit(message="Added file_a.txt")
+    def test_rename_override(self):
+        with fixture_repo("diff.sh", "rename") as repo:
+            commit_a = repo.commit("HEAD")
+            commit_b = repo.commit("HEAD~1")
 
-        # Remove file_a.txt.
-        repo.git.rm(Git.polish_url(file_a))
+            # Check default diff command with renamed files enabled.
+            diffs = commit_b.diff(commit_a)
+            self.assertEqual(1, len(diffs))
+            diff = diffs[0]
+            self.assertEqual(True, diff.renamed_file)
+            self.assertEqual("file_a.txt", diff.rename_from)
+            self.assertEqual("file_b.txt", diff.rename_to)
 
-        # Create and commit file_b.txt with similarity index of 52.
-        file_b = osp.join(rw_dir, "file_b.txt")
-        with open(file_b, "w", encoding="utf-8") as outfile:
-            outfile.write("hello world\nhello world")
-        repo.git.add(Git.polish_url(file_b))
-        repo.git.commit(message="Removed file_a.txt. Added file_b.txt")
+            # Check diff with rename files disabled.
+            diffs = commit_b.diff(commit_a, no_renames=True)
+            self.assertEqual(2, len(diffs))
 
-        commit_a = repo.commit("HEAD")
-        commit_b = repo.commit("HEAD~1")
+            # Check fileA.txt deleted.
+            diff = diffs[0]
+            self.assertEqual(True, diff.deleted_file)
+            self.assertEqual("file_a.txt", diff.a_path)
 
-        # Check default diff command with renamed files enabled.
-        diffs = commit_b.diff(commit_a)
-        self.assertEqual(1, len(diffs))
-        diff = diffs[0]
-        self.assertEqual(True, diff.renamed_file)
-        self.assertEqual("file_a.txt", diff.rename_from)
-        self.assertEqual("file_b.txt", diff.rename_to)
+            # Check fileB.txt added.
+            diff = diffs[1]
+            self.assertEqual(True, diff.new_file)
+            self.assertEqual("file_b.txt", diff.a_path)
 
-        # Check diff with rename files disabled.
-        diffs = commit_b.diff(commit_a, no_renames=True)
-        self.assertEqual(2, len(diffs))
+            # Check diff with high similarity index.
+            diffs = commit_b.diff(commit_a, split_single_char_options=False, M="75%")
+            self.assertEqual(2, len(diffs))
 
-        # Check fileA.txt deleted.
-        diff = diffs[0]
-        self.assertEqual(True, diff.deleted_file)
-        self.assertEqual("file_a.txt", diff.a_path)
+            # Check fileA.txt deleted.
+            diff = diffs[0]
+            self.assertEqual(True, diff.deleted_file)
+            self.assertEqual("file_a.txt", diff.a_path)
 
-        # Check fileB.txt added.
-        diff = diffs[1]
-        self.assertEqual(True, diff.new_file)
-        self.assertEqual("file_b.txt", diff.a_path)
+            # Check fileB.txt added.
+            diff = diffs[1]
+            self.assertEqual(True, diff.new_file)
+            self.assertEqual("file_b.txt", diff.a_path)
 
-        # Check diff with high similarity index.
-        diffs = commit_b.diff(commit_a, split_single_char_options=False, M="75%")
-        self.assertEqual(2, len(diffs))
+            # Check diff with low similarity index.
+            diffs = commit_b.diff(commit_a, split_single_char_options=False, M="40%")
+            self.assertEqual(1, len(diffs))
+            diff = diffs[0]
+            self.assertEqual(True, diff.renamed_file)
+            self.assertEqual("file_a.txt", diff.rename_from)
+            self.assertEqual("file_b.txt", diff.rename_to)
 
-        # Check fileA.txt deleted.
-        diff = diffs[0]
-        self.assertEqual(True, diff.deleted_file)
-        self.assertEqual("file_a.txt", diff.a_path)
+    def test_diff_patch_with_external_engine(self):
+        with fixture_repo("diff.sh", "external") as repo:
+            head_against_head = repo.head.commit.diff("HEAD^", create_patch=True)
+            self.assertEqual(len(head_against_head), 1)
+            head_against_index = repo.head.commit.diff(create_patch=True)
+            self.assertEqual(len(head_against_index), 1)
+            head_against_working_tree = repo.head.commit.diff(None, create_patch=True)
+            self.assertEqual(len(head_against_working_tree), 1)
 
-        # Check fileB.txt added.
-        diff = diffs[1]
-        self.assertEqual(True, diff.new_file)
-        self.assertEqual("file_b.txt", diff.a_path)
+            index_against_head = repo.index.diff("HEAD", create_patch=True)
+            self.assertEqual(len(index_against_head), 1)
+            index_against_working_tree = repo.index.diff(None, create_patch=True)
+            self.assertEqual(len(index_against_working_tree), 1)
 
-        # Check diff with low similarity index.
-        diffs = commit_b.diff(commit_a, split_single_char_options=False, M="40%")
-        self.assertEqual(1, len(diffs))
-        diff = diffs[0]
-        self.assertEqual(True, diff.renamed_file)
-        self.assertEqual("file_a.txt", diff.rename_from)
-        self.assertEqual("file_b.txt", diff.rename_to)
-
-    @with_rw_directory
-    def test_diff_patch_with_external_engine(self, rw_dir):
-        repo = Repo.init(rw_dir)
-        gitignore = osp.join(rw_dir, ".gitignore")
-
-        # First commit
-        with open(gitignore, "w") as f:
-            f.write("first_line\n")
-        repo.git.add(".gitignore")
-        repo.index.commit("first commit")
-
-        # Adding second line and committing
-        with open(gitignore, "a") as f:
-            f.write("second_line\n")
-        repo.git.add(".gitignore")
-        repo.index.commit("second commit")
-
-        # Adding third line and staging
-        with open(gitignore, "a") as f:
-            f.write("third_line\n")
-        repo.git.add(".gitignore")
-
-        # Adding fourth line
-        with open(gitignore, "a") as f:
-            f.write("fourth_line\n")
-
-        # Set the external diff engine
-        with repo.config_writer(config_level="repository") as writer:
-            writer.set_value("diff", "external", "bogus_diff_engine")
-
-        head_against_head = repo.head.commit.diff("HEAD^", create_patch=True)
-        self.assertEqual(len(head_against_head), 1)
-        head_against_index = repo.head.commit.diff(create_patch=True)
-        self.assertEqual(len(head_against_index), 1)
-        head_against_working_tree = repo.head.commit.diff(None, create_patch=True)
-        self.assertEqual(len(head_against_working_tree), 1)
-
-        index_against_head = repo.index.diff("HEAD", create_patch=True)
-        self.assertEqual(len(index_against_head), 1)
-        index_against_working_tree = repo.index.diff(None, create_patch=True)
-        self.assertEqual(len(index_against_working_tree), 1)
-
-    @with_rw_directory
-    def test_beginning_space(self, rw_dir):
-        # Create a file beginning by a whitespace
-        repo = Repo.init(rw_dir)
-        file = osp.join(rw_dir, " file.txt")
-        with open(file, "w") as f:
-            f.write("hello world")
-        repo.git.add(Git.polish_url(file))
-        repo.index.commit("first commit")
-
-        # Diff the commit with an empty tree
-        # and check the paths
-        diff_index = repo.head.commit.diff(NULL_TREE)
-        d = diff_index[0]
-        a_path = d.a_path
-        b_path = d.b_path
-        self.assertEqual(a_path, " file.txt")
-        self.assertEqual(b_path, " file.txt")
+    def test_beginning_space(self):
+        with fixture_repo("diff.sh", "space") as repo:
+            # Diff the commit with an empty tree
+            # and check the paths
+            diff_index = repo.head.commit.diff(NULL_TREE)
+            d = diff_index[0]
+            a_path = d.a_path
+            b_path = d.b_path
+            self.assertEqual(a_path, " file.txt")
+            self.assertEqual(b_path, " file.txt")

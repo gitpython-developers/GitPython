@@ -1,40 +1,68 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+from contextlib import ExitStack
 from functools import partial
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
-from git import Git, Remote, Repo, RootModule, Submodule
+from git import Remote, Repo, RootModule, Submodule
 from git.exc import GitCommandError
+from test.lib.fixtures import read_only_fixture, writable_fixture
 
 
 def _commit_file(repo, content):
     Path(repo.working_tree_dir, "file").write_text(content, encoding="utf-8")
     repo.index.add(["file"])
-    return repo.index.commit("Write " + content)
+    return repo.index.commit("Write " + content, skip_hooks=True)
 
 
 def _cached_remote_refs(repo):
     return {ref.path: ref.commit.hexsha for remote in repo.remotes for ref in remote.refs}
 
 
+def _configured_submodule_url(submodule):
+    return submodule.repo.git.config("get", "--file", ".gitmodules", f"submodule.{submodule.name}.url")
+
+
+@pytest.fixture(scope="module")
+def local_submodule_baseline():
+    return read_only_fixture("submodule-no-fetch.sh", "baseline", "none", "False", "False", "False")
+
+
 @pytest.fixture
-def local_submodule(tmp_path):
-    """Use only local repositories, with two commits already available in the clone."""
-    with Repo.init(tmp_path / "source") as source, Repo.init(tmp_path / "parent") as parent:
-        # RootModule's URL-change handling currently assumes a master branch.
-        source.git.symbolic_ref("HEAD", "refs/heads/master")
-        _commit_file(source, "initial")
-        _commit_file(source, "cached")
-        submodule = parent.create_submodule(
-            "module", "module", source.working_tree_dir, branch=source.head.reference.name
-        )
-        parent.index.commit("Add submodule")
-        with submodule.module() as module:
-            yield submodule, source, module
+def local_submodule(request):
+    params = getattr(request.node, "callspec", None)
+    params = {} if params is None else params.params
+    # These URL-change fixtures require absolute URLs to private mutable sources.
+    with writable_fixture(
+        "submodule-no-fetch.sh",
+        request.node.originalname,
+        str(params.get("uninitialized_submodule", "none")),
+        str(params.get("to_latest_revision", False)),
+        str(params.get("change_branch", False)),
+        str(params.get("multiple_remotes", False)),
+        execute=True,
+    ) as fixture, ExitStack() as handles:
+        root = fixture.path().resolve()
+        source = handles.enter_context(Repo(root / "source"))
+        parent = handles.enter_context(Repo(root / "parent"))
+        metadata = root / "parent/.git/modules/module"
+        module = handles.enter_context(Repo(metadata)) if metadata.exists() else None
+        yield parent.submodules[0], source, module
+
+
+def test_local_submodule_source_is_isolated(local_submodule, local_submodule_baseline):
+    submodule, source, module = local_submodule
+    source_url = _configured_submodule_url(submodule)
+    assert submodule.url == module.remotes.origin.url == source_url
+    assert Path(source_url).samefile(source.working_tree_dir)
+    remote_only = _commit_file(source, "private")
+    with Repo(local_submodule_baseline / "source") as original:
+        assert original.head.commit != remote_only
+        assert Path(original.working_tree_dir, "file").read_text(encoding="utf-8") == "cached"
 
 
 @pytest.fixture(params=["submodule", "root", "repo"])
@@ -52,12 +80,7 @@ def update_submodule(request, local_submodule):
 @pytest.fixture(params=["missing", "deinitialized"])
 def uninitialized_submodule(request, local_submodule):
     submodule, _, module = local_submodule
-    metadata = Path(module.git_dir)
-    module.close()
-    if request.param == "deinitialized":
-        submodule.deinit()
-    else:
-        submodule.remove(configuration=False, force=True)
+    metadata = Path(submodule.repo.git_dir, "modules/module")
     assert not submodule.module_exists()
     assert metadata.is_dir() == (request.param == "deinitialized")
     return submodule, metadata
@@ -66,8 +89,6 @@ def uninitialized_submodule(request, local_submodule):
 @pytest.mark.parametrize("no_fetch", [None, False, True], ids=["default", "fetch", "no-fetch"])
 def test_update_no_fetch_checks_out_cached_commit(local_submodule, update_submodule, no_fetch):
     submodule, source, module = local_submodule
-    module.create_remote("backup", source.working_tree_dir)
-    module.head.reset("HEAD~1", index=True, working_tree=True)
     assert module.head.commit.binsha != submodule.binsha
     options = {} if no_fetch is None else {"no_fetch": no_fetch}
 
@@ -83,11 +104,7 @@ def test_update_no_fetch_checks_out_cached_commit(local_submodule, update_submod
 def test_update_no_fetch_to_latest_revision_uses_cached_tip(local_submodule, update_submodule):
     submodule, source, module = local_submodule
     cached_tip = module.head.reference.tracking_branch().commit
-    module.head.reset("HEAD~1", index=True, working_tree=True)
-    submodule.binsha = module.head.commit.binsha
-    submodule.repo.index.add([submodule])
-    submodule.repo.index.commit("Pin submodule to initial commit")
-    remote_tip = _commit_file(source, "remote-only")
+    remote_tip = source.head.commit
     assert submodule.binsha != cached_tip.binsha != remote_tip.binsha
 
     with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
@@ -102,9 +119,6 @@ def test_update_no_fetch_to_latest_revision_uses_cached_tip(local_submodule, upd
 def test_update_no_fetch_cannot_check_out_missing_commit(local_submodule, update_submodule):
     submodule, source, module = local_submodule
     cached_tip = module.head.commit
-    submodule.binsha = _commit_file(source, "remote-only").binsha
-    submodule.repo.index.add([submodule])
-    submodule.repo.index.commit("Pin submodule to uncached commit")
 
     with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
         with pytest.raises(GitCommandError, match="merge-base"):
@@ -171,21 +185,14 @@ def test_update_no_fetch_restores_deinitialized_submodule(
     cached_tip = tracking_branch.commit
     branch_path = module.head.reference.path
     cached_refs = _cached_remote_refs(module)
-    module.head.reset("HEAD~1", index=True, working_tree=True)
     assert module.head.commit != cached_tip
     if to_latest_revision:
-        submodule.binsha = module.head.commit.binsha
-        submodule.repo.index.add([submodule])
-        submodule.repo.index.commit("Pin submodule to initial commit")
         assert submodule.binsha != cached_tip.binsha
-
     metadata = Path(module.git_dir)
     module.close()
-    submodule.deinit(force=True)
     assert not submodule.module_exists()
     assert metadata.is_dir()
-    remote_tip = _commit_file(source, "remote-only")
-    assert remote_tip != cached_tip
+    assert source.head.commit != cached_tip
 
     with mock.patch.object(Remote, "fetch") as fetch, mock.patch.object(Submodule, "_clone_repo") as clone:
         update_submodule(no_fetch=True, to_latest_revision=to_latest_revision, keep_going=keep_going)
@@ -212,8 +219,7 @@ def test_update_after_deinit_fetches_remote_tip(local_submodule, update_submodul
     submodule, source, module = local_submodule
     metadata = Path(module.git_dir)
     module.close()
-    submodule.deinit()
-    remote_tip = _commit_file(source, "remote-only")
+    remote_tip = source.head.commit
     options = {} if no_fetch is None else {"no_fetch": no_fetch}
 
     with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
@@ -235,7 +241,6 @@ def test_update_after_deinit_fetches_remote_tip(local_submodule, update_submodul
 def test_update_no_fetch_preserves_nonempty_deinitialized_checkout(uninitialized_submodule, update_submodule):
     submodule, metadata = uninitialized_submodule
     checkout_file = Path(submodule.abspath, "file")
-    checkout_file.write_text("user content", encoding="utf-8")
     parent_config = Path(submodule.repo.git_dir, "config").read_bytes()
 
     with mock.patch.object(Remote, "fetch") as fetch, mock.patch.object(Submodule, "_clone_repo") as clone:
@@ -253,20 +258,10 @@ def test_update_no_fetch_preserves_nonempty_deinitialized_checkout(uninitialized
 @pytest.mark.parametrize("no_fetch", [False, True], ids=["fetch", "no-fetch"])
 def test_update_no_fetch_is_recursive(local_submodule, update_submodule, no_fetch):
     submodule, source, module = local_submodule
-    child = module.create_submodule("nested", "nested", source.working_tree_dir, branch=source.head.reference.name)
+    child = module.submodules[0]
     with child.module() as nested:
-        cached_tip = nested.head.commit
-        nested.head.reset("HEAD~1", index=True, working_tree=True)
-        child.binsha = nested.head.commit.binsha
-        module.index.add([child])
-        previous = module.index.commit("Add nested submodule at initial commit")
-        child.binsha = cached_tip.binsha
-        module.index.add([child])
-        target = module.index.commit("Advance nested submodule")
-        submodule.binsha = target.binsha
-        submodule.repo.index.add([submodule])
-        submodule.repo.index.commit("Record nested submodule update")
-        module.head.reset(previous, index=True, working_tree=True)
+        cached_tip = source.commit("cached")
+        target = module.commit(submodule.hexsha)
 
         with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
             update_submodule(recursive=True, no_fetch=no_fetch)
@@ -284,14 +279,8 @@ def test_update_no_fetch_is_recursive(local_submodule, update_submodule, no_fetc
 def test_root_update_no_fetch_on_branch_change(local_submodule, no_fetch):
     submodule, source, module = local_submodule
     branch_name = source.head.reference.name + "-other"
-    source.create_head(branch_name)
-    module.remotes.origin.fetch()
     tracking_branch = module.remotes.origin.refs[branch_name]
-    previous = submodule.repo.head.commit
-    with submodule.config_writer() as writer:
-        writer.set_value("branch", branch_name)
-    submodule.repo.index.commit("Change submodule branch")
-    module.head.reset("HEAD~1", index=True, working_tree=True)
+    previous = submodule.repo.commit("previous")
 
     with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
         RootModule(submodule.repo).update(previous_commit=previous, recursive=False, no_fetch=no_fetch)
@@ -306,19 +295,16 @@ def test_root_update_no_fetch_on_branch_change(local_submodule, no_fetch):
 
 
 @pytest.mark.parametrize("no_fetch", [False, True], ids=["fetch", "no-fetch"])
-def test_root_update_no_fetch_on_url_change(local_submodule, tmp_path, no_fetch):
+def test_root_update_no_fetch_on_url_change(local_submodule, no_fetch):
     submodule, source, module = local_submodule
-    previous = submodule.repo.head.commit
+    previous = submodule.repo.commit("previous")
     branch_path = module.head.reference.path
     tracking_branch = module.head.reference.tracking_branch()
     cached_refs = _cached_remote_refs(module)
-    module.head.reset("HEAD~1", index=True, working_tree=True)
     assert module.head.commit.binsha != submodule.binsha
-    with source.clone(tmp_path / "mirror") as mirror:
-        mirror_url = Git.polish_url(mirror.working_tree_dir)
-        with submodule.config_writer() as writer:
-            writer.set_value("url", mirror_url)
-        submodule.repo.index.commit("Change submodule URL")
+    with Repo(Path(source.working_tree_dir).with_name("mirror")) as mirror:
+        mirror_url = _configured_submodule_url(submodule)
+        assert Path(mirror_url).samefile(mirror.working_tree_dir)
 
         with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
             RootModule(submodule.repo).update(previous_commit=previous, recursive=False, no_fetch=no_fetch)
@@ -339,32 +325,19 @@ def test_root_update_no_fetch_on_url_change(local_submodule, tmp_path, no_fetch)
 
 
 @pytest.mark.parametrize("change_branch", [False, True], ids=["same-branch", "branch-change"])
-def test_root_update_no_fetch_url_change_uses_cached_tip(local_submodule, tmp_path, change_branch):
+def test_root_update_no_fetch_url_change_uses_cached_tip(local_submodule, change_branch):
     submodule, source, module = local_submodule
-    branch_name = source.head.reference.name
-    if change_branch:
-        branch_name += "-other"
-        source.create_head(branch_name)
-        module.remotes.origin.fetch()
+    branch_name = "master-other" if change_branch else "master"
     tracking_branch = module.remotes.origin.refs[branch_name]
     cached_tip = tracking_branch.commit
     cached_refs = _cached_remote_refs(module)
-    module.head.reset("HEAD~1", index=True, working_tree=True)
-    submodule.binsha = module.head.commit.binsha
-    submodule.repo.index.add([submodule])
-    previous = submodule.repo.index.commit("Pin submodule to initial commit")
+    previous = submodule.repo.commit("previous")
     assert submodule.binsha != cached_tip.binsha
 
-    with source.clone(tmp_path / "mirror") as mirror:
-        if change_branch:
-            mirror.create_head(branch_name).checkout()
-        remote_tip = _commit_file(mirror, "remote-only")
-        assert remote_tip != cached_tip
-        mirror_url = Git.polish_url(mirror.working_tree_dir)
-        with submodule.config_writer() as writer:
-            writer.set_value("url", mirror_url)
-            writer.set_value("branch", branch_name)
-        submodule.repo.index.commit("Change submodule URL and tracking branch")
+    with Repo(Path(source.working_tree_dir).with_name("mirror")) as mirror:
+        assert mirror.head.commit != cached_tip
+        mirror_url = _configured_submodule_url(submodule)
+        assert Path(mirror_url).samefile(mirror.working_tree_dir)
 
         with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
             RootModule(submodule.repo).update(
@@ -382,29 +355,18 @@ def test_root_update_no_fetch_url_change_uses_cached_tip(local_submodule, tmp_pa
 
 
 @pytest.mark.parametrize("multiple_remotes", [False, True], ids=["single-remote-fallback", "matching-remote"])
-def test_root_update_no_fetch_selects_url_change_remote(local_submodule, tmp_path, multiple_remotes):
+def test_root_update_no_fetch_selects_url_change_remote(local_submodule, multiple_remotes):
     submodule, source, module = local_submodule
-    previous = submodule.repo.head.commit
-    original_url = module.remotes.origin.url
-    module.remotes.origin.set_url(Git.polish_url(str(tmp_path / "unrelated")))
-    if multiple_remotes:
-        upstream = module.create_remote("upstream", original_url)
-        upstream.fetch()
-        module.head.reference.set_tracking_branch(upstream.refs[submodule.branch_name])
-    else:
-        module.remotes.origin.rename("upstream")
+    previous = submodule.repo.commit("previous")
     tracking_branch = module.head.reference.tracking_branch()
     cached_refs = _cached_remote_refs(module)
-    module.head.reset("HEAD~1", index=True, working_tree=True)
     assert module.head.commit.binsha != submodule.binsha
 
-    with source.clone(tmp_path / "mirror") as mirror:
-        mirror_url = Git.polish_url(mirror.working_tree_dir)
+    with Repo(Path(source.working_tree_dir).with_name("mirror")) as mirror:
+        mirror_url = _configured_submodule_url(submodule)
+        assert Path(mirror_url).samefile(mirror.working_tree_dir)
         expected_urls = {remote.name: remote.url for remote in module.remotes}
         expected_urls["upstream"] = mirror_url
-        with submodule.config_writer() as writer:
-            writer.set_value("url", mirror_url)
-        submodule.repo.index.commit("Change submodule URL")
 
         with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
             RootModule(submodule.repo).update(previous_commit=previous, recursive=False, no_fetch=True)

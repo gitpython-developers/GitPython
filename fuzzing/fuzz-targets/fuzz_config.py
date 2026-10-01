@@ -39,6 +39,10 @@ def TestOneInput(data):
         git_config.read()
     except (MissingSectionHeaderError, ParsingError, UnicodeDecodeError):
         return -1  # Reject inputs raising expected exceptions
+    except git.GitCommandError as e:
+        if e.status == 128:
+            return -1  # Git rejects invalid includes and other configuration input.
+        raise  # Preserve crashes and unexpected command failures.
     except ValueError as e:
         if "embedded null byte" in str(e):
             # The `os.path.expanduser` function, which does not accept strings
