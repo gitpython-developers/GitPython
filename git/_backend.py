@@ -350,6 +350,53 @@ def _update_index(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(_index(repo, kwargs).version()).encode("ascii") + b"\n"
 
 
+def _write(method: str, function: Callable[[], Any]) -> Any:
+    """Once a write starts, an error must not cause a second attempt through Git."""
+    try:
+        return function()
+    except gix.Error as exc:
+        raise GitCommandError(["gix", method], 128, str(exc)) from exc
+
+
+def _input(kwargs: Dict[str, Any]) -> bytes:
+    stream = kwargs.get("istream")
+    if stream is None or not hasattr(stream, "seekable") or not stream.seekable():
+        raise _Unsupported("nonseekable input")
+    start = stream.tell()
+    try:
+        stream.seek(0, 2)
+        if stream.tell() - start > 8 * 1024 * 1024:
+            raise _Unsupported("large object streaming (GIX-2)")
+        stream.seek(start)
+        data = stream.read()
+    finally:
+        stream.seek(start)
+    if not isinstance(data, bytes):
+        raise _Unsupported("nonbinary input")
+    return data
+
+
+def _hash_object(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) not in (3, 4) or args[0] != "-t" or args[-1] != "--stdin":
+        raise _Unsupported("object hashing options")
+    write = args[2:-1] == ["-w"]
+    if args[2:-1] not in ([], ["-w"]):
+        raise _Unsupported("object hashing options")
+    kind = args[1]
+    if kind not in ("blob", "tree", "commit", "tag"):
+        raise _Unsupported("object kind")
+    data = _input(kwargs)
+    # Validate and check the encoded bytes in memory before touching object storage.
+    memory = repo.with_object_memory()
+    oid = memory.write_object(kind, data)
+    if memory.find_object(oid).data != data:
+        raise _Unsupported("object serialization changes bytes (GIX-5)")
+    if write:
+        oid = _write("hash_object", lambda: repo.write_object(kind, data))
+    kwargs["istream"].seek(len(data), 1)
+    return str(oid).encode("ascii") + b"\n"
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
@@ -358,6 +405,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "merge_base": _merge_base,
     "ls_files": _ls_files,
     "update_index": _update_index,
+    "hash_object": _hash_object,
     "config": _config,
     "worktree": _worktree,
 }
