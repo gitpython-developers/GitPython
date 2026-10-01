@@ -59,7 +59,8 @@ jobs:
       run: |
         # Cygwin's packaged Git is older than our minimum supported version.
         git clone --depth 1 --branch v2.52.0 -- https://github.com/git/git.git /tmp/git-source
-        make -C /tmp/git-source -j2 prefix=/usr/local NO_GETTEXT=YesPlease NO_TCLTK=YesPlease NO_PERL=YesPlease install
+        # Use Cygwin's normal prefix: GitPython checks for uname next to git.
+        make -C /tmp/git-source -j2 prefix=/usr NO_GETTEXT=YesPlease NO_TCLTK=YesPlease NO_PERL=YesPlease install
         hash -r
         test "$(git version)" = 'git version 2.52.0'
 
@@ -96,6 +97,9 @@ jobs:
     - name: Install project and test dependencies
       run: |
         pip install ./smmap ./gitdb '.[test]'
+
+    - name: Verify Cygwin Git detection
+      run: python -c 'from git import Git; assert Git.is_cygwin()'
 
     - name: Show POSIX file ownership
       # Cygwin's `ls -ld` reports the NTFS Owner SID via Cygwin's SID-to-uid
