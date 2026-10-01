@@ -189,6 +189,10 @@ class IndexFile(LazyMixin, git_diff.Diffable):
         desired = self._validated_entries()
         with tempfile.TemporaryDirectory(prefix="gitpython-index-") as directory:
             path = osp.join(directory, "index")
+            native = _backend.materialize_index(self.repo.git, self.path, path, desired, self._dirty_paths)
+            if native is not NotImplemented:
+                yield path
+                return
             env = {"GIT_INDEX_FILE": path}
             if osp.isfile(self.path):
                 shutil.copyfile(self.path, path)

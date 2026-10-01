@@ -184,6 +184,8 @@ def test_git_index_storage_variants(repo, storage):
     assert index.write_tree()["inside/file"].data_stream.read() == b"changed"
     if storage == "v4":
         assert index.version == 4
+    elif storage == "split":
+        assert repo.git.rev_parse("--shared-index-path")
 
 
 def test_trailer_commands_are_not_executed(repo):
