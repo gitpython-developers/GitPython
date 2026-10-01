@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from git import Actor, Git, GitCommandError, Head, Remote, RemoteReference, Repo, TagReference
+from git import Actor, Git, GitCommandError, Head, Remote, RemoteReference, Repo, TagReference, _backend
 from git.exc import UnsafeOptionError
 
 
@@ -95,7 +95,10 @@ def test_remote_ref_delete_preserves_operand(tmp_path):
     commit = repo.index.commit("initial")
     ref = RemoteReference(repo, "refs/remotes/--force")
     repo.git.update_ref(ref.path, commit.hexsha)
-    with mock.patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as run:
+    # Exercise the CLI fallback's option boundary even with GixPython installed.
+    with mock.patch.object(_backend, "dispatch", return_value=NotImplemented), mock.patch.object(
+        Git, "execute", autospec=True, side_effect=Git.execute
+    ) as run:
         RemoteReference.delete(repo, ref)
     argv = run.call_args.args[1]
     assert argv[argv.index("update-ref") :] == ["update-ref", "--no-deref", "-d", "--", ref.path]

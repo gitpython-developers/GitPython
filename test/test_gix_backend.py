@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from git import Actor, Commit, Git, Repo, _backend
+from git import Actor, Commit, Git, Reference, Repo, _backend
 from git.exc import GitCommandError
 from gitdb import IStream
 
@@ -154,6 +154,16 @@ def test_commit_identity_cleanup_matches_git(repo):
         assert commit == Commit.create_from_tree(repo, tree, "message", **kwargs)
 
 
+def test_symbolic_alias_cannot_point_a_branch_at_a_blob(repo):
+    commit = repo.index.commit("initial", skip_hooks=True)
+    blob = repo.odb.store(IStream("blob", 1, BytesIO(b"x")))
+    repo.git.symbolic_ref("refs/aliases/main", "refs/heads/main")
+    alias = Reference(repo, "refs/aliases/main")
+    with pytest.raises(GitCommandError):
+        alias.set_object(blob.hexsha.decode())
+    assert repo.head.commit == commit
+
+
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
     one = repo.odb.store(IStream("blob", 6, BytesIO(b"abcdef"))).binsha
     two = repo.odb.store(IStream("blob", 3, BytesIO(b"xyz"))).binsha
@@ -162,3 +172,29 @@ def test_partial_native_stream_does_not_corrupt_next_read(repo):
         assert stream.read(1) == b"a"
         assert repo.odb.stream(two).read() == b"xyz"
         assert stream.read() == b"bcdef"
+
+
+def test_native_history_and_references(repo):
+    repo.git.update_environment(
+        GIT_COMMITTER_NAME="Reflog Actor",
+        GIT_COMMITTER_EMAIL="actor@example.invalid",
+        GIT_COMMITTER_DATE="1100000000 -0430",
+    )
+    first = repo.index.commit("first", skip_hooks=True)
+    second = first.replace(message="second", parents=[first])
+    branch = repo.create_head("other", first)
+    repo.heads  # Warm the existing, Git-validated reference-name cache.
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        repo.head.set_object(second, "through\tHEAD")
+        branch.set_object(second, "inactive branch")
+        assert first.count() == 1
+        assert second.count() == 2
+        assert list(repo.iter_commits(first_parent=True, skip=1)) == [first]
+        assert list(repo.iter_commits(max_count=1)) == [second]
+        assert repo.head.log_entry(-1).message == "through HEAD"
+        assert branch.log_entry(-1).newhexsha == second.hexsha
+        native_log = repo.head.log()
+        native_refs = [ref.path for ref in repo.heads]
+    with patch.object(_backend, "gix", None):
+        assert native_log == repo.head.log()
+        assert native_refs == [ref.path for ref in repo.heads]
