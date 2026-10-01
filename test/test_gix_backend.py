@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from git import Git, Repo, _backend
+from git import Actor, Commit, Git, Repo, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError
 from gitdb import IStream
 
@@ -54,6 +54,45 @@ def test_native_worktree_inventory_includes_bare_main(repo, tmp_path):
                     assert current.git._call_process_safe("worktree", "list", "--porcelain", "-z") == expected
 
 
+def test_native_objects_trees_commits_and_index_reads(repo):
+    actor = Actor("Example", "example@example.invalid")
+    paths = ["file", "dir/with space", "dir/unicode-é", "--option"]
+    for name in paths:
+        path = Path(repo.working_dir, name)
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(name.encode())
+    index = repo.index
+    # All setup has finished; these operations must succeed without a subprocess.
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        index.add(paths)
+        tree = index.write_tree()
+        assert {blob.path for blob in tree.traverse() if blob.type == "blob"} == set(paths)
+        assert tree["file"].data_stream.read() == b"file"
+        assert set(repo.index.entries) == {(name, 0) for name in paths}
+        stream = IStream("blob", 4, BytesIO(b"data"))
+        assert repo.odb.store(stream) is stream
+        assert repo.odb.stream(stream.binsha).read(2) == b"da"
+    commit = index.commit("message without a trailing newline", author=actor, committer=actor, skip_hooks=True)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        assert repo.commit(commit.hexsha).message == "message without a trailing newline"
+        assert repo.merge_base(commit, commit) == [commit]
+        assert repo.is_ancestor(commit, commit)
+        assert commit.replace(message="changed").message == "changed"
+
+
+def test_native_tree_and_commit_bytes_match_cli(repo):
+    actor = Actor("Example", "example@example.invalid")
+    Path(repo.working_dir, "file").write_bytes(b"payload\n")
+    index = repo.index
+    index.add(["file"])
+    native_tree = index.write_tree()
+    commit = index.commit("message", author=actor, committer=actor, skip_hooks=True)
+    native = commit.replace(message="a changed message")
+    with patch.object(_backend, "gix", None):
+        assert index.write_tree().hexsha == native_tree.hexsha
+        assert commit.replace(message="a changed message").hexsha == native.hexsha
+
+
 def test_unknown_command_and_storage_environment_use_cli(repo):
     before = _backend.statistics()
     assert repo.git._call_process_safe("status", "--porcelain") == ""
@@ -97,6 +136,21 @@ def test_tree_writes_validate_child_object_kinds(repo, mode, kind):
         stream.seek(0)
         with pytest.raises(GitCommandError):
             repo.git._call_process_safe("mktree", "-z", "--missing", istream=stream)
+
+
+def test_commit_identity_cleanup_matches_git(repo):
+    actor = Actor(" Name. ", " email@example.invalid ")
+    tree = repo.index.write_tree()
+    kwargs = {
+        "author": actor,
+        "committer": actor,
+        "author_date": "1100000000 +0000",
+        "commit_date": "1100000000 +0000",
+        "parent_commits": [],
+    }
+    commit = Commit.create_from_tree(repo, tree, "message", **kwargs)
+    with patch.object(_backend, "gix", None):
+        assert commit == Commit.create_from_tree(repo, tree, "message", **kwargs)
 
 
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
