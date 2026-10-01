@@ -660,6 +660,70 @@ def tree_diff(repository: Any, left: Any, right: Any, paths: Any, patch: bool, o
     return result
 
 
+def commit_stats(commit: Any) -> Any:
+    """Count changed lines natively, retaining Git's statistics representation."""
+    if gix is None:
+        return NotImplemented
+    from git.util import Stats
+
+    method = "Commit.stats"
+    commit.repo.git._require_version()
+    try:
+        repo = _repository(commit.repo.git, {})
+        if not hasattr(repo, "diff_tree_to_tree") or not hasattr(repo, "attributes_only"):
+            raise _Unsupported("diff or attributes feature disabled")
+        if repo.config_snapshot().string("diff.algorithm") not in (None, b"myers", b"default"):
+            raise _Unsupported("statistics diff algorithm")
+        native = repo.find_commit(gix.ObjectId(commit.hexsha))
+        with native.parent_ids() as parents:
+            parent = next(parents, None)
+        before = repo.empty_tree() if parent is None else repo.find_commit(parent).tree()
+        changes = repo.diff_tree_to_tree(before, native.tree(), gix.DiffOptions().track_path().track_rewrites(None))
+        index = _index(repo, {"env": commit.repo.git.environment()})
+        # The blob cache reads index attributes, whereas Git also reads worktree attributes.
+        attributes = [repo.attributes_only(index, source) for source in ("id_mapping", "worktree_then_id_mapping")]
+        cache = repo.diff_resource_cache_for_tree_diff()
+        lines = []
+        for change in sorted(changes, key=lambda change: change.location()):
+            mode = change.entry_mode()
+            previous_mode = change.details.get("previous_entry_mode", mode)
+            if mode == 0o40000 or previous_mode == 0o40000:
+                if mode != previous_mode:
+                    raise _Unsupported("statistics directory type change")
+                continue
+            if mode == 0o160000 or previous_mode == 0o160000:
+                raise _Unsupported("statistics gitlinks")
+            path = change.location()
+            if any(byte < 32 or byte >= 127 or byte in b'"\\' for byte in path):
+                raise _Unsupported("statistics filename quoting")
+            for stack in attributes:
+                outcome = stack.selected_attribute_matches(["diff"])
+                stack.at_entry(path, mode).matching_attributes(outcome)
+                with outcome.iter_selected() as matches:
+                    if any(match.state != "unspecified" for match in matches):
+                        raise _Unsupported("statistics diff attributes (GIX-18)")
+            for oid in (change.id(), change.details.get("previous_id")):
+                if oid is not None and repo.find_header(oid).size() > 8 * 1024 * 1024:
+                    raise _Unsupported("large object streaming (GIX-2)")
+            counts = change.diff(cache).line_counts()
+            cache.clear_resource_cache()
+            kind = {"Addition": "A", "Deletion": "D", "Modification": "M"}[change.kind]
+            if mode & 0o170000 != previous_mode & 0o170000:
+                kind = "T"
+            lines.append(
+                "%s\t%d\t%d\t%s\n"
+                % (kind, counts.insertions if counts else 0, counts.removals if counts else 0, safe_decode(path))
+            )
+        result = Stats._list_from_string(commit.repo, "".join(lines))
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("commit_stats native read: %s", exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
+    return result
+
+
 def _mktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if args != ["-z", "--missing"]:
         raise _Unsupported("tree writing options")

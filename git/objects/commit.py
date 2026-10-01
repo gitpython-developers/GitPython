@@ -438,6 +438,9 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         :return:
             :class:`Stats`
         """
+        native = _backend.commit_stats(self)
+        if native is not NotImplemented:
+            return native
 
         def process_lines(lines: List[str]) -> str:
             text = ""

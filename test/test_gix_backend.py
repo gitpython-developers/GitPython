@@ -298,3 +298,28 @@ def test_native_raw_diff_matches_cli(repo):
             native = before.diff(after, **options)
         with patch.object(_backend, "gix", None):
             assert native == before.diff(after, **options)
+
+
+def test_native_commit_statistics_match_cli(repo):
+    root = Path(repo.working_dir)
+    for name, content in (("file", b"one\ntwo\n"), ("binary", b"a\0b"), ("old", b"gone\n"), ("link", b"text")):
+        (root / name).write_bytes(content)
+    repo.index.add(["file", "binary", "old", "link"])
+    first = repo.index.commit("first", skip_hooks=True)
+    (root / "file").write_bytes(b"two\nthree\nfour\n")
+    (root / "binary").write_bytes(b"b\0c")
+    (root / "old").rename(root / "new")
+    (root / "link").unlink()
+    (root / "link").symlink_to("file")
+    repo.git.add("--all")
+    second = repo.index.commit("second", skip_hooks=True)
+    empty = repo.index.commit("empty", skip_hooks=True)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        native = [(commit.stats.total, commit.stats.files) for commit in (first, second, empty)]
+    with patch.object(_backend, "gix", None):
+        assert native == [(commit.stats.total, commit.stats.files) for commit in (first, second, empty)]
+    # Git consults uncommitted attributes too; native tree caches currently do not.
+    (root / ".gitattributes").write_text("file -diff\n")
+    stats = second.stats
+    with patch.object(_backend, "gix", None):
+        assert (stats.total, stats.files) == (second.stats.total, second.stats.files)
