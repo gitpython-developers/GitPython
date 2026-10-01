@@ -1096,6 +1096,10 @@ class Repo:
             # always considered to be clean.
             return False
 
+        native = _backend.is_dirty(self.git, index, working_tree, untracked_files, submodules, path)
+        if native is not NotImplemented:
+            return native
+
         # Start from the one which is fastest to evaluate.
         default_args = ["--raw", "--no-ext-diff", "--no-textconv"]
         if not submodules:

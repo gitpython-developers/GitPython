@@ -247,6 +247,52 @@ def _worktree_root(command: Any, repo: Any) -> str:
     return os.fspath(root)
 
 
+def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, submodules: bool, path: Any) -> Any:
+    if gix is None:
+        return NotImplemented
+    method = "Repo.is_dirty"
+    command._require_version()
+    try:
+        repo = _repository(command, {})
+        _worktree_root(command, repo)
+        if not hasattr(repo, "status"):
+            raise _Unsupported("status feature disabled")
+        patterns = [os.fspath(path)] if path else []
+        if any("\0" in pattern for pattern in patterns):
+            raise _Unsupported("invalid pathspec")
+        status = (
+            repo.status()
+            .index(_index(repo, {"env": command.environment()}))
+            .untracked_files("files" if untracked else "none")
+            .tree_index_track_renames(None)
+            .index_worktree_rewrites(None)
+            .index_worktree_submodules("configured" if submodules else "all", check_dirty=submodules)
+        )
+        dirty = False
+        with status.into_iter(patterns) as entries:
+            for item in entries:
+                if item.summary() is None:
+                    continue
+                if item.kind == "TreeIndex":
+                    if index and (submodules or item.details["entry_mode"] != 0o160000):
+                        dirty = True
+                        break
+                elif item.details["kind"] == "DirectoryContents":
+                    if untracked and item.details["entry"]["status"] == "Untracked":
+                        dirty = True
+                        break
+                elif working_tree:
+                    dirty = True
+                    break
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("is_dirty native read: %s", exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
+    return dirty
+
+
 def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]) -> Any:
     if gix is None:
         return NotImplemented
