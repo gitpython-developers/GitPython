@@ -300,6 +300,49 @@ def test_native_raw_diff_matches_cli(repo):
             assert native == before.diff(after, **options)
 
 
+def test_native_status_and_ignore_match_cli_without_writing_index(repo):
+    root = Path(repo.working_dir)
+    (root / ".gitignore").write_text("*.log\nignored/\n")
+    (root / "tracked.log").write_text("tracked even though ignored\n")
+    repo.index.add([".gitignore", "tracked.log"])
+    repo.index.commit("initial", skip_hooks=True)
+    (root / "ignored").mkdir()
+    (root / "ignored/file").write_text("ignored")
+    (root / "untracked\nfile").write_text("untracked")
+    (root / "tracked.log").write_text("changed")
+    Repo.init(root / "nested").close()
+    paths = ["ignored", "ignored/file", "new.log", "tracked.log", "untracked\nfile"]
+    index_before = Path(repo.index.path).read_bytes()
+    options = [{}, {"working_tree": False}, {"index": False, "untracked_files": True}, {"path": "ignored"}]
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        untracked = repo.untracked_files
+        ignored = repo.ignored(*paths)
+        dirty = [repo.is_dirty(**option) for option in options]
+    assert Path(repo.index.path).read_bytes() == index_before
+    with patch.object(_backend, "gix", None):
+        assert untracked == repo.untracked_files
+        assert ignored == repo.ignored(*paths)
+        assert dirty == [repo.is_dirty(**option) for option in options]
+
+
+def test_native_status_tracks_submodule_dirtiness(repo):
+    root = Path(repo.working_dir)
+    with Repo.init(root.parent / "source", object_format=repo.git.rev_parse("--show-object-format")) as source:
+        Path(source.working_dir, "file").write_text("initial")
+        source.index.add(["file"])
+        source.index.commit("initial", skip_hooks=True)
+        module = repo.create_submodule("module", "module", source.working_dir)
+    repo.index.commit("add submodule", skip_hooks=True)
+    with module.module() as child:
+        Path(child.working_dir, "file").write_text("modified")
+    options = [{}, {"submodules": False}, {"working_tree": False}, {"index": False}]
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        dirty = [repo.is_dirty(**option) for option in options]
+    assert dirty == [True, False, False, True]
+    with patch.object(_backend, "gix", None):
+        assert dirty == [repo.is_dirty(**option) for option in options]
+
+
 def test_native_commit_statistics_match_cli(repo):
     root = Path(repo.working_dir)
     for name, content in (("file", b"one\ntwo\n"), ("binary", b"a\0b"), ("old", b"gone\n"), ("link", b"text")):
