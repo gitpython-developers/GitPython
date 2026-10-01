@@ -1,4 +1,26 @@
 {
+  "mlflow": {
+    "distribution": "mlflow-skinny",
+    "source": "git",
+    "repository": "https://github.com/mlflow/mlflow.git",
+    "tag": "v{version}",
+    "install": ["mlflow=={version}", "pytest>=9,<10", "pytest-timeout", "psutil"],
+    "unset_env": ["CI", "GITHUB_ACTIONS"],
+    "env": {"MLFLOW_DISABLE_TELEMETRY": "true"},
+    "tests": [
+      "tests/genai/test_git_versioning.py",
+      "tests/projects/test_utils.py::test__fetch_project",
+      "tests/projects/test_utils.py::test__fetch_git_repo",
+      "tests/projects/test_utils.py::test_fetch_git_repo_commit",
+      "tests/projects/test_utils.py::test_fetching_non_existing_version_fails",
+      "tests/projects/test_utils.py::test_fetch_project_validations",
+      "tests/projects/test_utils.py::test_is_valid_branch_name",
+      "tests/projects/test_projects.py::test_run_local_git_repo",
+      "tests/projects/test_projects.py::test_invalid_version_local_git_repo",
+      "tests/tracking/context/test_git_context.py",
+      "tests/utils/test_git_utils.py"
+    ]
+  },
   "bandit": {
     "distribution": "bandit",
     "source": "sdist",
