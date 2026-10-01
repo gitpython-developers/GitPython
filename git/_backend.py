@@ -233,11 +233,31 @@ def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return b"".join(records)
 
 
+def _merge_base(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if not hasattr(repo, "merge_base"):
+        raise _Unsupported("revision feature disabled")
+    ancestor = args[:1] == ["--is-ancestor"]
+    if ancestor:
+        args = args[1:]
+    if len(args) != 3 or args[0] != "--":
+        raise _Unsupported("merge-base options")
+    one, two = (_oid(repo, value) for value in args[1:])
+    if kwargs.get("all"):
+        ids = repo.merge_bases_many(one, [two])
+    else:
+        base = repo.merge_base(one, two)
+        ids = [base] if base is not None else []
+    if not ids or (ancestor and ids[0] != one):
+        raise GitCommandError(["git", "merge-base"], 1)
+    return b"" if ancestor else b"".join(str(oid).encode("ascii") + b"\n" for oid in ids)
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
     "for_each_ref": _for_each_ref,
+    "merge_base": _merge_base,
     "config": _config,
     "worktree": _worktree,
 }
