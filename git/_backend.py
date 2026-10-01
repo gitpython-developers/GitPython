@@ -344,6 +344,12 @@ def _ls_files(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return b"".join(output)
 
 
+def _update_index(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["--show-index-version"]:
+        raise _Unsupported("index mutation options")
+    return str(_index(repo, kwargs).version()).encode("ascii") + b"\n"
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
@@ -351,6 +357,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "for_each_ref": _for_each_ref,
     "merge_base": _merge_base,
     "ls_files": _ls_files,
+    "update_index": _update_index,
     "config": _config,
     "worktree": _worktree,
 }
