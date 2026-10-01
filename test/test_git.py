@@ -128,6 +128,13 @@ class TestGit(TestBase):
         mangled_value = "Unicode\u20ac\u2122"
         self.assertEqual(args, ["git", "log", "--", mangled_value])
 
+    def test_call_unpack_pathlike_args(self):
+        class CustomPath:
+            def __fspath__(self):
+                return "a path"
+
+        self.assertEqual(Git._unpack_args(["--", [CustomPath()]]), ["--", "a path"])
+
     def test_it_raises_errors(self):
         self.assertRaises(GitCommandError, self.git.this_does_not_exist)
 

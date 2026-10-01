@@ -43,7 +43,19 @@ class TagReference(Reference):
 
     __slots__ = ()
 
-    unsafe_git_tag_options = ["--file", "-F"]
+    unsafe_git_tag_options = [
+        "--file",
+        "-F",
+        "--sign",
+        "-s",
+        "--local-user",
+        "-u",
+        "--verify",
+        "-v",
+        "--edit",
+        "-e",
+        "--trailer",
+    ]
 
     _common_default = "tags"
     _common_path_default = Reference._common_path_default + "/" + _common_default
@@ -126,7 +138,8 @@ class TagReference(Reference):
             If ``True``, force creation of a tag even though that tag already exists.
 
         :param allow_unsafe_options:
-            Allow unsafe options, such as ``--file``.
+            Allow options that read files or execute configured signing/editor
+            programs. Without this opt-in, tags are created with ``--no-sign``.
 
         :param kwargs:
             Additional keyword arguments to be passed to :manpage:`git-tag(1)`.
@@ -155,15 +168,21 @@ class TagReference(Reference):
         if force:
             kwargs["f"] = True
 
-        args = ("--", path, reference)
-
-        repo.git.tag(*args, **kwargs)
+        name = Git._check_operand(path, "tag")
+        cls._get_validated_ref_path(repo, cls.to_full_path(name))
+        reference = Git._check_operand(reference, "revision")
+        oid = repo.rev_parse(reference).hexsha
+        options = [] if allow_unsafe_options else ["--no-sign"]
+        repo.git._call_process_safe("tag", *options, "--", name, oid, **kwargs)
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
 
     @classmethod
     def delete(cls, repo: "Repo", *tags: "TagReference") -> None:  # type: ignore[override]
         """Delete the given existing tag or tags."""
-        repo.git.tag("-d", "--", *tags)
+        names = [Git._check_operand(tag, "tag") for tag in tags]
+        for name in names:
+            cls._get_validated_ref_path(repo, cls.to_full_path(name))
+        repo.git._call_process_safe("tag", "-d", "--", *names)
 
 
 # Provide an alias.

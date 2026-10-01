@@ -8,7 +8,6 @@ from datetime import datetime
 from io import BytesIO
 import tempfile
 import os.path as osp
-import re
 import sys
 import time
 from unittest.mock import Mock
@@ -364,7 +363,7 @@ class TestCommit(TestCommitSerialization):
     def test_equality(self):
         commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        commit3 = Commit(self.rorepo, "\1" * 20)
+        commit3 = Commit(self.rorepo, b"\1" * 20)
         self.assertEqual(commit1, commit2)
         self.assertNotEqual(commit2, commit3)
 
@@ -448,28 +447,12 @@ JzJMZDRLQLFvnzqZuCjE
 -----END PGP SIGNATURE-----"""
         self.assertEqual(cmt.gpgsig, fixture_sig)
 
-        cmt.gpgsig = "<test\ndummy\nsig>"
-        assert cmt.gpgsig != fixture_sig
-
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert re.search(
-            r"^gpgsig <test\n dummy\n sig>$",
-            cstream.getvalue().decode("ascii"),
-            re.MULTILINE,
-        )
-
-        self.assert_gpgsig_deserialization(cstream)
-
-        cstream.seek(0)
-        cmt.gpgsig = None
-        cmt._deserialize(cstream)
-        self.assertEqual(cmt.gpgsig, "<test\ndummy\nsig>")
-
-        cmt.gpgsig = None
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert not re.search(r"^gpgsig ", cstream.getvalue().decode("ascii"), re.MULTILINE)
+        # Signatures remain readable, but Git cannot inject an existing signature
+        # when creating a new commit through commit-tree.
+        with self.assertRaises(ValueError):
+            cmt._serialize(BytesIO())
+        with self.assertRaises(ValueError):
+            cmt.replace(gpgsig="replacement")
 
     def assert_gpgsig_deserialization(self, cstream):
         assert "gpgsig" in "precondition: need gpgsig"

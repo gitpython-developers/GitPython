@@ -6,14 +6,17 @@
 __all__ = ["TreeModifier", "Tree"]
 
 import os
+import tempfile
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
+from git.compat import safe_decode
+from git.cmd import Git
 
 from . import util
 from .base import IndexObjUnion, IndexObject
 from .blob import Blob
-from .fun import tree_entries_from_data, tree_to_stream, _validate_tree_entry_name
+from .fun import _validate_tree_entry_name
 from .submodule.base import Submodule
 
 # typing -------------------------------------------------
@@ -98,7 +101,8 @@ class TreeModifier:
         match the one you add, unless `force` is ``True``.
 
         :param sha:
-            The 20 or 40 byte sha of the item to add.
+            The binary or hexadecimal object ID of the item to add, in the
+            repository's object format.
 
         :param mode:
             :class:`int` representing the stat-compatible mode of the item.
@@ -140,7 +144,7 @@ class TreeModifier:
         For more information on the parameters, see :meth:`add`.
 
         :param binsha:
-            20 byte binary sha.
+            Binary object ID in the repository's object format.
         """
         assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
         tree_cache = (binsha, mode, name)
@@ -156,7 +160,7 @@ class TreeModifier:
     # } END mutators
 
 
-class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
+class Tree(IndexObject, git_diff.Diffable, util.Traversable):
     R"""Tree objects represent an ordered list of :class:`~git.objects.blob.Blob`\s and
     other :class:`Tree`\s.
 
@@ -206,9 +210,22 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     def _set_cache_(self, attr: str) -> None:
         if attr == "_cache":
-            # Set the data when we need it.
-            ostream = self.repo.odb.stream(self.binsha)
-            self._cache: List[TreeCacheTup] = tree_entries_from_data(ostream.read())
+            Git._check_operand(self.hexsha, "tree object ID")
+            output = self.repo.git._call_process_safe(
+                "ls_tree", "-z", "--full-tree", self.hexsha, stdout_as_string=False
+            )
+            self._cache: List[TreeCacheTup] = []
+            for record in output.split(b"\0"):
+                if not record:
+                    continue
+                metadata, name_bytes = record.split(b"\t", 1)
+                mode, _type, oid = metadata.split()
+                name = safe_decode(name_bytes)
+                _validate_tree_entry_name(name)
+                binsha = bytes.fromhex(oid.decode("ascii"))
+                if len(binsha) != self.repo._oid_size:
+                    raise ValueError("Invalid tree object ID returned by Git")
+                self._cache.append((binsha, int(mode, 8), name))
         else:
             super()._set_cache_(attr)
         # END handle attribute
@@ -391,18 +408,23 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return reversed(self._iter_convert_to_object(self._cache))  # type: ignore[call-overload]
 
     def _serialize(self, stream: "BytesIO") -> "Tree":
-        """Serialize this tree into the stream. Assumes sorted tree data.
-
-        :note:
-            We will assume our tree data to be in a sorted state. If this is not the
-            case, serialization will not generate a correct tree representation as these
-            are assumed to be sorted by algorithms.
-        """
-        tree_to_stream(self._cache, stream.write)
-        return self
-
-    def _deserialize(self, stream: "BytesIO") -> "Tree":
-        self._cache = tree_entries_from_data(stream.read())
+        """Ask Git to build this cache as a tree, then copy its raw object contents."""
+        types = {0o04: "tree", 0o10: "blob", 0o12: "blob", 0o16: "commit"}
+        with tempfile.TemporaryFile() as source:
+            for oid, mode, name in self._cache:
+                _validate_tree_entry_name(name)
+                if len(oid) != self.repo._oid_size or mode >> 12 not in types:
+                    raise ValueError("Invalid tree entry object ID or mode")
+                source.write(("%o %s %s\t" % (mode, types[mode >> 12], oid.hex())).encode("ascii"))
+                source.write(os.fsencode(name) + b"\0")
+            source.seek(0)
+            oid = self.repo.git._call_process_safe("mktree", "-z", "--missing", istream=source)
+        Git._check_operand(oid, "tree object ID")
+        stream.write(
+            self.repo.git._call_process_safe(
+                "cat_file", "tree", oid, stdout_as_string=False, strip_newline_in_stdout=False
+            )
+        )
         return self
 
 

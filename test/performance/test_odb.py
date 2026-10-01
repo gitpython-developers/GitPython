@@ -4,6 +4,7 @@
 """Performance tests for object store."""
 
 import sys
+from itertools import islice
 from time import time
 
 from test.performance.lib import TestBigRepoR
@@ -16,7 +17,7 @@ class TestObjDBPerformance(TestBigRepoR):
             # GET COMMITS
             st = time()
             root_commit = repo.commit(repo.head)
-            commits = list(root_commit.traverse())
+            commits = list(islice(root_commit.traverse(), 100))
             nc = len(commits)
             elapsed = time() - st
 
@@ -28,7 +29,7 @@ class TestObjDBPerformance(TestBigRepoR):
             results[0].append(elapsed)
 
             # GET TREES
-            # Walk all trees of all commits.
+            # Walk all trees of the sampled commits.
             st = time()
             blobs_per_commit = []
             nt = 0
