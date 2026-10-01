@@ -1,10 +1,13 @@
 """Repository-format independent object/index operations and their safety boundary."""
 
+import os
+from io import BytesIO
 from pathlib import Path
 
 import pytest
+from gitdb.base import IStream
 
-from git import Actor, Commit, IndexFile, Repo
+from git import Actor, Commit, IndexFile, Repo, Tree
 from git.exc import HookExecutionError, UnmergedEntriesError, UnsafeOptionError
 from git.index.typ import BaseIndexEntry, IndexEntry
 
@@ -17,7 +20,9 @@ def repo(request, tmp_path):
 
 def test_objects_index_commit_and_merge(repo):
     root = Path(repo.working_tree_dir)
-    names = ["space name", "line\nname", "tab\tname", "--option", "unicode-é", "dir/file"]
+    names = ["space name", "--option", "unicode-é", "dir/file"]
+    if os.name != "nt":
+        names.extend(["line\nname", "tab\tname"])
     for name in names:
         path = root / name
         path.parent.mkdir(exist_ok=True)
@@ -39,9 +44,10 @@ def test_objects_index_commit_and_merge(repo):
     updated = commit.replace(message="updated")
     assert repo.commit(updated.hexsha).message == "updated"
     assert repo.head.commit == commit
-    (root / "line\nname").write_text("modified")
-    index.checkout(["line\nname"], force=True)
-    assert (root / "line\nname").read_text() == "line\nname"
+    checkout_name = "--option" if os.name == "nt" else "line\nname"
+    (root / checkout_name).write_text("modified")
+    index.checkout([checkout_name], force=True)
+    assert (root / checkout_name).read_text() == checkout_name
     before = Path(index.path).read_bytes()
     virtual = IndexFile.from_tree(repo, tree)
     assert virtual.write_tree() == tree
@@ -51,6 +57,18 @@ def test_objects_index_commit_and_merge(repo):
     assert IndexFile.from_tree(repo, merge_base).write_tree() == tree
     index.merge_tree(commit, base=merge_base)
     assert index.write_tree() == tree
+
+
+def test_tree_names_do_not_require_worktree_support(repo):
+    tree = Tree(repo, repo._null_binsha, path="")
+    tree._cache = [
+        (b"a" * repo._oid_size, 0o100644, name) for name in ("line\nname", "tab\tname", "name:with:colons", "\udc9f")
+    ]
+    data = BytesIO()
+    tree._serialize(data)
+    data.seek(0)
+    stored = repo.odb.store(IStream("tree", len(data.getvalue()), data))
+    assert Tree(repo, stored.binsha, path="")._cache == sorted(tree._cache, key=lambda entry: entry[2])
 
 
 def test_index_stages_missing_objects_and_atomic_failure(repo):

@@ -3,6 +3,7 @@
 import configparser
 from collections import UserList
 from io import BytesIO
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -46,7 +47,7 @@ def test_config_includes_and_repository_conditions(tmp_path):
         config.set_value("values", "source", "before")
         config.set_value("include", "path", str(included))
         config.add_value("values", "source", "after")
-        config.set_value('includeIf "gitdir:' + repo.git_dir + '"', "path", str(included))
+        config.set_value('includeIf "gitdir:' + Path(repo.git_dir).as_posix() + '"', "path", str(included))
     assert GitConfigParser(config_path, repo=repo).get_values("values", "source") == [
         "before",
         "after",

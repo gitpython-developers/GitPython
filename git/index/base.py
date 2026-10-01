@@ -21,7 +21,7 @@ import tempfile
 
 from gitdb.base import IStream
 
-from git.compat import defenc, force_bytes
+from git.compat import defenc, force_bytes, safe_decode
 from git.cmd import Git
 import git.diff as git_diff
 from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError, UnmergedEntriesError
@@ -144,7 +144,7 @@ class IndexFile(LazyMixin, git_diff.Diffable):
                 continue
             metadata, path_bytes = record.split(b"\t", 1)
             tag, mode, oid, stage = metadata.split()
-            entry_path = os.fsdecode(path_bytes)
+            entry_path = safe_decode(path_bytes)
             _validate_repo_path(entry_path)
             binsha = bytes.fromhex(oid.decode("ascii"))
             if len(binsha) != self.repo._oid_size or int(stage) not in range(4):
@@ -198,22 +198,28 @@ class IndexFile(LazyMixin, git_diff.Diffable):
                 records = []
                 for name in sorted(changed):
                     _validate_repo_path(name)
-                    records.append(b"0 " + self.repo._null_hexsha.encode("ascii") + b"\t" + os.fsencode(name) + b"\0")
+                    name_bytes = name.encode(defenc, "surrogateescape")
+                    records.append(b"0 " + self.repo._null_hexsha.encode("ascii") + b"\t" + name_bytes + b"\0")
                     for stage in range(4):
                         desired_entry = desired.get((name, stage))
                         if desired_entry is not None:
                             records.append(
                                 ("%o %s %d\t" % (desired_entry.mode, desired_entry.hexsha, stage)).encode("ascii")
-                                + os.fsencode(name)
+                                + name_bytes
                                 + b"\0"
                             )
                 with tempfile.TemporaryFile() as stream:
                     stream.write(b"".join(records))
                     stream.seek(0)
                     self.repo.git._call_process_safe("update_index", "-z", "--index-info", istream=stream, env=env)
+                # Git can report success while ignoring names unsupported on this
+                # platform. Do not publish an index with silently missing entries.
+                actual = self._read_entries(path)
+                if actual.keys() != desired.keys() or any(actual[key][:2] != desired[key][:2] for key in actual):
+                    raise ValueError("Git did not retain the requested index entries; filenames may be unsupported")
                 for option, mask in (("--assume-unchanged", CE_VALID), ("--skip-worktree", CE_EXT_SKIP_WORKTREE << 16)):
                     names = [
-                        os.fsencode(name) + b"\0"
+                        name.encode(defenc, "surrogateescape") + b"\0"
                         for name in sorted(changed)
                         if (name, 0) in desired and desired[(name, 0)].flags & mask
                     ]
@@ -532,7 +538,7 @@ class IndexFile(LazyMixin, git_diff.Diffable):
 
         if proc.stdin is not None:
             try:
-                proc.stdin.write(os.fsencode(filepath) + b"\0")
+                proc.stdin.write(os.fspath(filepath).encode(defenc, "surrogateescape") + b"\0")
             except OSError as e:
                 # Pipe broke, usually because some error happened.
                 raise fmakeexc() from e

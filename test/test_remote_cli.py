@@ -2,6 +2,8 @@
 
 import builtins
 import os
+import sys
+from types import SimpleNamespace
 from unittest import mock
 
 import pytest
@@ -52,13 +54,26 @@ def test_fetch_and_pull_without_reading_fetch_head(tmp_path, object_format, ref_
     clone.close()
 
 
-def test_quoted_remote_and_submodule_names(tmp_path):
+@pytest.mark.parametrize("windows_validation", [False, True], ids=["native", "windows-validation"])
+def test_quoted_remote_and_submodule_names(tmp_path, monkeypatch, windows_validation):
     with Repo.init(tmp_path / "source") as source, Repo.init(tmp_path / "parent") as parent:
         source.index.commit("Initial commit")
         remote = parent.create_remote('quoted"remote', str(tmp_path / "source"))
         assert parent.remote(remote.name).url == remote.url
-        assert remote.config_reader.get_value("url") == str(tmp_path / "source")
-        module = parent.create_submodule('quoted"module', "module", str(tmp_path / "source"))
+        assert remote.config_reader.get_value("url") == (tmp_path / "source").as_posix()
+        # Existing checkouts still require portable logical names on Windows.
+        with Repo.clone_from(str(tmp_path / "source"), tmp_path / "parent" / "module") as checkout:
+            if windows_validation:
+                monkeypatch.setattr("git.objects.submodule.base.sys", SimpleNamespace(platform="win32"))
+            if windows_validation or sys.platform == "win32":
+                with pytest.raises(ValueError, match="Invalid submodule path on Windows"):
+                    parent.create_submodule('quoted"module', "module")
+                assert not parent.submodules
+                assert not (tmp_path / "parent/.gitmodules").exists()
+                assert not (tmp_path / "parent/.git/modules").exists()
+                assert checkout.head.commit == source.head.commit
+                return
+            module = parent.create_submodule('quoted"module', "module")
         parent.index.commit("Add module")
         assert parent.submodules[0].name == module.name
-        assert module.config_reader().get_value("url") == str(tmp_path / "source")
+        assert module.config_reader().get_value("url") == (tmp_path / "source").as_posix()

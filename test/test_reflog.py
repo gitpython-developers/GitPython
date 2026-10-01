@@ -1,6 +1,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import sys
+
 import pytest
 
 from git import Actor, Repo
@@ -138,6 +140,12 @@ def test_checkout_and_reset_reject_interactive_patch_helpers(repo):
 
 
 def test_quoted_branch_configuration_survives_rename(repo):
+    if sys.platform == "win32" and repo.ref_format == "files":
+        # Loose references need filenames that Windows cannot represent.
+        with pytest.raises(OSError, match="Could not create reference") as error:
+            repo.create_head('quoted"branch')
+        assert isinstance(error.value.__cause__, GitCommandError)
+        return
     branch = repo.create_head('quoted"branch')
     with branch.config_writer() as config:
         config.set_value("description", "retained")
