@@ -1,8 +1,8 @@
 """Optional native implementation of library-managed Git operations.
 
 Installing ``GitPython[gix]`` makes the ``gix`` module available. Unsupported
-operations return ``NotImplemented`` *before* doing work and use the existing
-CLI implementation. Native failures are never retried as CLI mutations.
+operations return ``NotImplemented`` before mutation and use the existing CLI
+implementation. Native mutation failures are never retried through the CLI.
 """
 
 from collections import Counter
