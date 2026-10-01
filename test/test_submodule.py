@@ -396,6 +396,53 @@ def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
             process.wait()
 
 
+@pytest.mark.parametrize("operation", ["update", "error", "recursive", "keep-going"])
+def test_update_closes_checkout_processes_retained_by_logging(movable_submodule, monkeypatch, caplog, operation):
+    sm = movable_submodule
+    recursive = operation in ("recursive", "keep-going")
+    with sm.module() as module:
+        module.head.reference.set_tracking_branch(None)
+        if recursive:
+            child = module.create_submodule("child", "child", sm.url)
+            module.index.commit("Add child")
+            sm.binsha = module.head.commit.binsha
+            with child.module() as nested:
+                nested.head.reference.set_tracking_branch(None)
+    if operation in ("error", "keep-going"):
+        sm.binsha = b"\x01" * len(sm.binsha)
+
+    checkout = Path(sm.abspath).resolve()
+    execute = Git.execute
+    processes = []
+
+    def capture_process(self, command, *args, **kwargs):
+        result = execute(self, command, *args, **kwargs)
+        if kwargs.get("as_process") and "cat-file" in command:
+            working_dir = Path(self.working_dir).resolve()
+            if working_dir == checkout or checkout in working_dir.parents:
+                processes.append(result.proc)
+        return result
+
+    monkeypatch.setattr(Git, "execute", capture_process)
+    try:
+        if operation == "error":
+            with pytest.raises(GitCommandError):
+                sm.update(to_latest_revision=True, no_fetch=True)
+        else:
+            sm.update(to_latest_revision=True, no_fetch=True, recursive=recursive, keep_going=operation == "keep-going")
+        # These records retain Head arguments and their internally opened Repos.
+        # Collection cannot release the processes while the records remain alive.
+        records = [record for record in caplog.records if "a tracking branch was not set" in record.msg]
+        assert len(records) == (2 if recursive else 1)
+        assert processes
+        assert all(process.poll() is not None for process in processes)
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+            process.wait()
+
+
 @pytest.fixture
 def windows_directory_symlink_removal(monkeypatch):
     """Exercise Windows rmdir semantics on POSIX, where rmdir rejects symlinks."""
@@ -1664,13 +1711,14 @@ class TestSubmodule(TestBase):
         assert_exists(sm)
 
         # Add additional submodule level.
-        csm = sm.module().create_submodule(
-            "nested-submodule",
-            join_path_native("nested-submodule", "working-tree"),
-            url=self._small_repo_url(),
-        )
-        sm.module().index.commit("added nested submodule")
-        sm_head_commit = sm.module().commit()
+        with sm.module() as module:
+            csm = module.create_submodule(
+                "nested-submodule",
+                join_path_native("nested-submodule", "working-tree"),
+                url=self._small_repo_url(),
+            )
+            module.index.commit("added nested submodule")
+            sm_head_commit = module.commit()
         assert_exists(csm)
 
         # Fails because there are new commits, compared to the remote we cloned from.
@@ -1700,6 +1748,7 @@ class TestSubmodule(TestBase):
 
         # remove
         sm_module_path = sm.module().git_dir
+        csm.repo.close()
 
         for dry_run in (True, False):
             sm.remove(dry_run=dry_run, force=True)
