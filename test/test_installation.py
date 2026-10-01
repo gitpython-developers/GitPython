@@ -6,6 +6,7 @@ import functools
 import os
 import subprocess
 
+from git import _backend
 from test.lib import TestBase, VirtualEnvironment, requires_symlinks, with_rw_directory
 
 
@@ -15,12 +16,17 @@ class TestInstallation(TestBase):
     def test_installation(self, rw_dir):
         venv, run = self._set_up_venv(rw_dir)
 
-        for project in ("./smmap", "./gitdb", "."):
+        gitpython = ".[gix]" if _backend.name == "gix" else "."
+        for project in ("./smmap", "./gitdb", gitpython):
             result = run([venv.pip, "install", project])
             self._check_result(result, f"Can't install {project}")
 
         result = run([venv.python, "-c", "import git"])
         self._check_result(result, "Self-test failed")
+
+        result = run([venv.python, "-c", "from git import _backend; print(_backend.name)"])
+        self._check_result(result, "Backend selection failed")
+        self.assertEqual(result.stdout.strip(), _backend.name)
 
         result = run([venv.python, "-c", "import gitdb; import smmap"])
         self._check_result(result, "Dependencies not installed")

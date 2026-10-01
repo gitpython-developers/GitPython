@@ -22,6 +22,7 @@ import threading
 import warnings
 
 from git.compat import defenc, force_bytes, safe_decode
+from git import _backend
 from git.exc import (
     CommandError,
     GitCommandError,
@@ -1143,6 +1144,9 @@ class Git(metaclass=_GitMeta):
                 options.extend(("-c", setting))
         elif _config:
             raise ValueError("Configuration queries must not include synthetic settings")
+        native = _backend.dispatch(self, method, args, kwargs, _config)
+        if native is not NotImplemented:
+            return native
         env = dict(kwargs.pop("env", {}) or {})
         env.update(LC_ALL="C", LANGUAGE="C")
         if not _allow_network:
