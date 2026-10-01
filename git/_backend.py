@@ -388,6 +388,49 @@ def _hash_object(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(oid).encode("ascii") + b"\n"
 
 
+_ENTRY_KINDS = {0o100644: "blob", 0o100755: "exe", 0o120000: "link", 0o160000: "commit", 0o40000: "tree"}
+
+
+def _write_tree(repo: Any, entries: Sequence[Tuple[bytes, int, str]]) -> str:
+    names = {name for name, _mode, _oid in entries}
+    if len(names) != len(entries):
+        raise _Unsupported("duplicate or overlapping tree paths")
+    for name in names:
+        while b"/" in name:
+            name = name.rsplit(b"/", 1)[0]
+            if name in names:
+                raise _Unsupported("duplicate or overlapping tree paths")
+    for _path, mode, oid in entries:
+        object_id = gix.ObjectId(oid)
+        if object_id.is_null():
+            raise _Unsupported("null tree object IDs")
+        header = repo.try_find_header(object_id)
+        if header is None:
+            if mode != 0o160000:
+                raise _Unsupported("missing tree children (GIX-7)")
+        elif header.kind() != ("tree" if mode == 0o40000 else "commit" if mode == 0o160000 else "blob"):
+            raise _Unsupported("tree child object kind")
+    with repo.empty_tree().edit() as editor:
+        for path, mode, oid in entries:
+            editor.upsert(path, _ENTRY_KINDS[mode], gix.ObjectId(oid))
+        return str(_write("write_tree", editor.write))
+
+
+def write_tree(command: Any, entries: Sequence[Tuple[bytes, int, str]]) -> Any:
+    if gix is None:
+        return NotImplemented
+    command._require_version()
+    try:
+        result = _write_tree(_repository(command, {}), entries)
+    except _Unsupported as exc:
+        return _fallback("IndexFile.write_tree", str(exc))
+    except gix.Error as exc:
+        _logger.debug("write_tree native preparation: %s", exc)
+        return _fallback("IndexFile.write_tree", "native preparation diagnostics")
+    record("IndexFile.write_tree", "native")
+    return result
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
