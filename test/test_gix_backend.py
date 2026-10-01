@@ -109,6 +109,53 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         assert cli.call_count == 3
 
 
+def test_native_command_queries_match_cli(repo, monkeypatch):
+    Path(repo.working_dir, "file").write_bytes(b"content")
+    repo.index.add(["file"])
+    commit = repo.index.commit("initial", skip_hooks=True)
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Example")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "example@example.invalid")
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "1100000000 -0430")
+    with repo.config_writer() as writer:
+        writer.set_value("test", "value", "configured")
+    queries = [
+        ("rev_parse", "--verify", "--end-of-options", "HEAD"),
+        ("rev_parse", "--path-format=absolute", "--git-common-dir"),
+        ("rev_parse", "--is-bare-repository"),
+        ("rev_parse", "--show-object-format"),
+        ("rev_parse", "--show-toplevel"),
+        ("ls_tree", "-z", "--full-tree", commit.tree.hexsha),
+        ("symbolic_ref", "--quiet", "--no-recurse", "--", "HEAD"),
+        ("for_each_ref", "--format=%(refname)", "--", "refs/heads"),
+        ("config", "--get", "test.value"),
+        ("worktree", "list", "--porcelain", "-z"),
+        ("merge_base", "--", commit.hexsha, commit.hexsha),
+        ("ls_files", "--stage", "-v", "-z", "--full-name"),
+        ("update_index", "--show-index-version"),
+        ("reflog", "exists", "--", "HEAD"),
+        ("var", "GIT_COMMITTER_IDENT"),
+    ]
+    for method, *args in queries:
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call: " + method)):
+            native = repo.git._call_process_safe(method, *args, stdout_as_string=False)
+        with patch.object(_backend, "gix", None):
+            assert native == repo.git._call_process_safe(method, *args, stdout_as_string=False)
+
+
+@pytest.mark.parametrize("fields", [("NAME",), ("EMAIL",), ("DATE",), ("NAME", "EMAIL", "DATE")])
+def test_per_command_committer_identity_uses_cli(repo, fields, monkeypatch):
+    monkeypatch.setenv("GIT_COMMITTER_NAME", "Process")
+    monkeypatch.setenv("GIT_COMMITTER_EMAIL", "process@example.invalid")
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "1000000000 +0000")
+    values = {"NAME": "Override", "EMAIL": "override@example.invalid", "DATE": "1100000000 -0430"}
+    env = {"GIT_COMMITTER_" + field: values[field] for field in fields}
+    with patch.object(_backend, "gix", None):
+        expected = repo.git._call_process_safe("var", "GIT_COMMITTER_IDENT", env=env)
+    with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+        assert repo.git._call_process_safe("var", "GIT_COMMITTER_IDENT", env=env) == expected
+        assert cli.call_count == 1
+
+
 def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
     attempts = []
 

@@ -628,6 +628,26 @@ def _signature(env: Dict[str, Any], role: str) -> Any:
     return _checked_signature(gix.Signature(name, email, int(seconds), offset))
 
 
+def _committer(repo: Any, env: Dict[str, Any]) -> Any:
+    for field in ("NAME", "EMAIL", "DATE"):
+        key = "GIT_COMMITTER_" + field
+        if key in env and env[key] != os.environ.get(key):
+            raise _Unsupported("per-command committer identity (GIX-21)")
+        if os.environ.get(key) == "":
+            raise _Unsupported("empty identity")
+    signature = repo.committer()
+    if signature is None:
+        raise _Unsupported("identity resolution")
+    return _checked_signature(signature)
+
+
+def _var(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["GIT_COMMITTER_IDENT"]:
+        raise _Unsupported("Git variable")
+    signature = _committer(repo, kwargs.get("env", {}))
+    return signature.name + b" <" + signature.email + b"> " + _date(signature) + b"\n"
+
+
 def _commit_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) < 2 or args[0] != "--no-gpg-sign" or args[2::2] != ["-p"] * len(args[2::2]):
         raise _Unsupported("commit options")
@@ -667,6 +687,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "read_tree": _read_tree,
     "commit_tree": _commit_tree,
     "reflog": _reflog,
+    "var": _var,
     "config": _config,
     "worktree": _worktree,
 }
