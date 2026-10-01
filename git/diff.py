@@ -9,6 +9,7 @@ import enum
 import re
 import warnings
 
+from git import _backend
 from git.cmd import Git, handle_process_output
 from git.compat import defenc
 from git.objects.base import IndexObject
@@ -261,6 +262,12 @@ class Diffable:
                 clusterable_short_options="46abceflmnpqrstuvwzBCDMNRW",
             )
 
+        if isinstance(other, str):
+            other = self.repo.rev_parse(Git._check_operand(other, "revision")).hexsha
+        native = _backend.tree_diff(self.repo, self, other, paths, create_patch, kwargs)
+        if native is not NotImplemented:
+            return native
+
         args: List[Union[PathLike, Diffable]] = []
         args.append(f"--abbrev={self.repo._oid_size * 2}")
         args.append("--full-index")  # Get full index paths, not only filenames.
@@ -292,8 +299,6 @@ class Diffable:
             args.insert(0, "--root")
             diff_cmd = "diff_tree"
         elif other is not None:
-            if isinstance(other, str):
-                other = self.repo.rev_parse(Git._check_operand(other, "revision")).hexsha
             args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, str(other))
             diff_cmd = "diff_tree"

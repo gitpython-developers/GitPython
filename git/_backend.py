@@ -14,7 +14,7 @@ import logging
 import os
 import re
 from threading import Lock
-from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple, cast
 
 from git.compat import safe_decode
 from git.exc import GitCommandError
@@ -570,6 +570,93 @@ def write_tree(command: Any, entries: Sequence[Tuple[bytes, int, str]]) -> Any:
         _logger.debug("write_tree native preparation: %s", exc)
         return _fallback("IndexFile.write_tree", "native preparation diagnostics")
     record("IndexFile.write_tree", "native")
+    return result
+
+
+def tree_diff(repository: Any, left: Any, right: Any, paths: Any, patch: bool, options: Dict[str, Any]) -> Any:
+    """Build GitPython's raw tree diff directly from native change records."""
+    if gix is None:
+        return NotImplemented
+    from git.diff import Diff, DiffIndex, Lit_change_type
+
+    method = "Diffable.diff"
+    repository.git._require_version()
+    try:
+        if not hasattr(left, "hexsha") or not (hasattr(right, "hexsha") or isinstance(right, str)):
+            raise _Unsupported("index/worktree/root diff")
+        if patch or paths:
+            raise _Unsupported("patch formatting or path filtering")
+        if options.keys() - {"R", "no_renames"} or any(type(value) is not bool for value in options.values()):
+            raise _Unsupported("diff options")
+        if "no_renames" in options and not options["no_renames"]:
+            raise _Unsupported("configured rename detection")
+        repo = _repository(repository.git, {})
+        if not hasattr(repo, "diff_tree_to_tree"):
+            raise _Unsupported("tree-diff feature disabled")
+        before = repo.find_object(_oid(repo, left.hexsha)).peel_to_tree()
+        after = repo.find_object(_oid(repo, getattr(right, "hexsha", right))).peel_to_tree()
+        if options.get("R"):
+            before, after = after, before
+        diff_options = gix.DiffOptions().track_path().track_rewrites(None)
+        changes = repo.diff_tree_to_tree(before, after, diff_options)
+        if not options.get("no_renames"):
+            added = [str(c.id()) for c in changes if c.kind == "Addition" and c.entry_mode() != 0o40000]
+            deleted = [str(c.id()) for c in changes if c.kind == "Deletion" and c.entry_mode() != 0o40000]
+            if added and deleted:
+                if (set(added) - set(deleted) and set(deleted) - set(added)) or (
+                    len(set(added)) != len(added) or len(set(deleted)) != len(deleted)
+                ):
+                    raise _Unsupported("inexact or ambiguous rename detection (GIX-11)")
+                # Exact rewrites need no blob filters, textconv, or external diff drivers.
+                diff_options = diff_options.track_rewrites(gix.Rewrites(percentage=None))
+                changes = repo.diff_tree_to_tree(before, after, diff_options)
+        result: DiffIndex[Diff] = DiffIndex()
+        for change in changes:
+            details = change.details
+            kind, path, mode, oid = change.kind, change.location(), change.entry_mode(), str(change.id())
+            previous_mode = details.get("previous_entry_mode", details.get("source_entry_mode", mode))
+            previous_oid = str(details.get("previous_id", details.get("source_id", change.id())))
+            if mode == 0o40000 or previous_mode == 0o40000:
+                if mode != previous_mode:
+                    raise _Unsupported("directory type change")
+                continue
+            new_file, deleted_file, renamed = kind == "Addition", kind == "Deletion", kind == "Rewrite"
+            change_type = (
+                "A"
+                if new_file
+                else "D"
+                if deleted_file
+                else "R"
+                if renamed
+                else ("T" if mode & 0o170000 != previous_mode & 0o170000 else "M")
+            )
+            source = change.source_location() if renamed else path
+            result.append(
+                Diff(
+                    repository,
+                    source,
+                    path,
+                    None if new_file else previous_oid,
+                    None if deleted_file else oid,
+                    "%06o" % (0 if new_file else previous_mode),
+                    "%06o" % (0 if deleted_file else mode),
+                    new_file,
+                    deleted_file,
+                    False,
+                    source if renamed else None,
+                    path if renamed else None,
+                    "",
+                    cast(Lit_change_type, change_type),
+                    100 if renamed else None,
+                )
+            )
+        result.sort(key=lambda diff: diff.b_rawpath or b"")
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("tree_diff native read: %s", exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
     return result
 
 
