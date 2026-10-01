@@ -542,6 +542,52 @@ def _read_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return b""
 
 
+def _checked_signature(signature: Any) -> Any:
+    # Git strips "crud" at the edges and angle brackets/newlines within identities.
+    crud = bytes(range(33)) + b".,:;<>\"'\\"
+    for value in (signature.name, signature.email):
+        if not value or value != value.strip(crud) or any(char in value for char in b"<>\r\n\0"):
+            raise _Unsupported("identity normalization")
+    return signature
+
+
+def _signature(env: Dict[str, Any], role: str) -> Any:
+    prefix = "GIT_" + role + "_"
+    name, email, date = (env.get(prefix + field) for field in ("NAME", "EMAIL", "DATE"))
+    match = re.fullmatch(r"(-?\d+) ([+-])(\d\d)(\d\d)", date or "")
+    if not name or not email or match is None:
+        raise _Unsupported("identity resolution")
+    seconds, sign, hours, minutes = match.groups()
+    offset = (int(hours) * 60 + int(minutes)) * 60 * (-1 if sign == "-" else 1)
+    return _checked_signature(gix.Signature(name, email, int(seconds), offset))
+
+
+def _commit_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) < 2 or args[0] != "--no-gpg-sign" or args[2::2] != ["-p"] * len(args[2::2]):
+        raise _Unsupported("commit options")
+    if len(args) % 2 or any(setting.lower() != "i18n.commitencoding=utf-8" for setting in kwargs.get("_config", ())):
+        raise _Unsupported("commit encoding (GIX-6)")
+    data = _input(kwargs)
+    try:
+        message = data.decode("utf-8")
+    except UnicodeDecodeError:
+        raise _Unsupported("commit message bytes (GIX-6)") from None
+    parents = args[3::2]
+    if len(set(parents)) != len(parents):
+        raise _Unsupported("duplicate parents")
+    author = _signature(kwargs.get("env", {}), "AUTHOR")
+    committer = _signature(kwargs.get("env", {}), "COMMITTER")
+    tree = _oid(repo, args[1])
+    # Native commit creation accepts literal IDs, whereas commit-tree verifies kinds.
+    if repo.find_header(tree).kind() != "tree" or any(
+        repo.find_header(_oid(repo, p)).kind() != "commit" for p in parents
+    ):
+        raise _Unsupported("commit object kinds")
+    commit = _write("commit_tree", lambda: repo.new_commit_as(committer, author, message, tree, parents))
+    kwargs["istream"].seek(len(data), 1)
+    return str(commit.id).encode("ascii") + b"\n"
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
@@ -553,6 +599,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "hash_object": _hash_object,
     "mktree": _mktree,
     "read_tree": _read_tree,
+    "commit_tree": _commit_tree,
     "config": _config,
     "worktree": _worktree,
 }
