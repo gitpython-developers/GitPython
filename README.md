@@ -40,10 +40,10 @@ The project is open to contributions of all kinds, as well as new maintainers.
 ### REQUIREMENTS
 
 GitPython needs the `git` executable to be installed on the system and available in your
-`PATH` for most operations. If it is not in your `PATH`, you can help GitPython find it
+`PATH` for repository operations. If it is not in your `PATH`, you can help GitPython find it
 by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
-- Git (1.7.x or newer)
+- Git (2.52 or newer)
 - Python >= 3.8
 
 The list of dependencies are listed in [`./requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/requirements.txt) and [`./test-requirements.txt`](https://github.com/gitpython-developers/GitPython/blob/main/test-requirements.txt).

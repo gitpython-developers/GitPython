@@ -3,6 +3,7 @@
 
 from functools import partial
 from pathlib import Path
+import shutil
 from unittest import mock
 
 import pytest
@@ -58,6 +59,8 @@ def uninitialized_submodule(request, local_submodule):
         submodule.deinit()
     else:
         submodule.remove(configuration=False, force=True)
+        # Removal retains recoverable metadata; remove it explicitly for this fixture.
+        shutil.rmtree(metadata)
     assert not submodule.module_exists()
     assert metadata.is_dir() == (request.param == "deinitialized")
     return submodule, metadata

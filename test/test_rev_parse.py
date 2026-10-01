@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from gitdb.exc import BadName
 
-from git import Actor, Commit, Repo
+from git import Actor, Commit, Repo, GitCommandError
 from git.refs import RemoteReference, SymbolicReference
 
 
@@ -71,7 +71,9 @@ def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
     describe_name = "anything-9-g%s" % merge.hexsha[:7]
     assert repo.rev_parse("v1.0-1-g%s" % merge.hexsha[:7]) == merge
     assert repo.rev_parse(describe_name) == merge
-    assert repo.rev_parse("%s-dirty" % merge.hexsha[:7]) == merge
+    # Git does not treat an abbreviated ID with a -dirty suffix as a revision.
+    with pytest.raises(BadName):
+        repo.rev_parse("%s-dirty" % merge.hexsha[:7])
 
     repo.create_tag(describe_name, ref=release)
     assert repo.rev_parse(describe_name) == release
@@ -98,8 +100,7 @@ def test_rev_parse_navigation_and_peeling(rev_parse_repo):
     assert repo.rev_parse("ann^{}") == root
     assert repo.rev_parse("ann^{commit}") == root
     assert repo.rev_parse("HEAD^{tree}") == merge.tree
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{/}")
+    assert repo.rev_parse("HEAD^{/}") == merge
 
 
 def test_rev_parse_tree_and_index_paths(rev_parse_repo):
@@ -126,6 +127,8 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     assert repo.rev_parse("%s@{0}" % main.name) == merge
     assert repo.rev_parse("@{-1}") == side
 
+    # Git's upstream resolution also requires the remote's fetch mapping.
+    repo.create_remote("origin", repo.git_dir)
     SymbolicReference.create(repo, "refs/remotes/origin/%s" % main.name, merge)
     main.set_tracking_branch(RemoteReference(repo, "refs/remotes/origin/%s" % main.name))
     assert repo.rev_parse("%s@{upstream}" % main.name) == merge
@@ -139,6 +142,21 @@ def test_rev_parse_commit_message_search(rev_parse_repo):
     assert repo.rev_parse(":/release") == release
     assert repo.rev_parse("HEAD^{/release}") == release
     assert repo.rev_parse("HEAD^{/!-release}") == merge
+
+
+def test_rev_parse_preserves_path_metadata_with_colons(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    path = "dir/name:with:colons"
+    _write(repo, path, "contents\n")
+    commit = repo.index.commit("message: with colon")
+    for revision in (f"HEAD:{path}", f"HEAD^{{/message: with colon}}:{path}", f":{path}", f":0:{path}"):
+        blob = repo.rev_parse(revision)
+        assert blob == commit.tree[path]
+        assert blob.path == path
+        assert blob.mode == 0o100644
+    tree = repo.rev_parse("HEAD:dir")
+    assert tree.path == "dir"
+    assert tree.mode == 0o40000
 
 
 @pytest.mark.parametrize(
@@ -247,21 +265,22 @@ def test_commit_and_tree_resolve_before_peeling(rev_parse_repo):
 def test_rev_parse_rejects_invalid_object_specs(rev_parse_repo):
     repo = rev_parse_repo["repo"]
 
-    with pytest.raises(ValueError):
-        repo.rev_parse(":")
-    with pytest.raises(ValueError):
-        repo.rev_parse(":/")
-    with pytest.raises(BadName):
-        repo.rev_parse(":/[")
-    with pytest.raises(BadName):
-        repo.rev_parse("HEAD^{/[}")
-    with pytest.raises(ValueError):
-        repo.rev_parse(":/!reserved")
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{/!reserved}")
-    with pytest.raises(ValueError):
-        repo.rev_parse("@{-0}")
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{invalid}")
-    with pytest.raises(BadName):
-        repo.rev_parse(":missing")
+    for revision in (
+        ":",
+        ":/",
+        ":/[",
+        "HEAD^{/[}",
+        ":/!reserved",
+        "HEAD^{/!reserved}",
+        "@{-0}",
+        "HEAD^{invalid}",
+        ":missing",
+    ):
+        # Use the same native grammar, including Git's accepted empty searches.
+        try:
+            expected = repo.git.rev_parse("--verify", "--quiet", "--end-of-options", revision)
+        except GitCommandError:
+            with pytest.raises((BadName, GitCommandError)):
+                repo.rev_parse(revision)
+        else:
+            assert repo.rev_parse(revision).hexsha == expected

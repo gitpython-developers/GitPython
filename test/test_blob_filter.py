@@ -5,7 +5,6 @@
 
 from pathlib import Path
 from typing import Sequence, Tuple
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -27,9 +26,9 @@ def test_blob_filter(paths: Sequence[PathLike], path: PathLike, expected_result:
     """Test the blob filter."""
     blob_filter = BlobFilter(paths)
 
-    binsha = MagicMock(__len__=lambda self: 20)
+    binsha = b"a" * 20
     stage_type: StageType = 0
-    blob: Blob = Blob(repo=MagicMock(), binsha=binsha, path=path)
+    blob: Blob = Blob(repo=None, binsha=binsha, path=path)  # type: ignore[arg-type]
     stage_blob: Tuple[StageType, Blob] = (stage_type, blob)
 
     result = blob_filter(stage_blob)

@@ -16,44 +16,36 @@ import os
 import os.path as osp
 from stat import S_ISLNK, S_ISREG
 import subprocess
-import sys
+import shutil
 import tempfile
 
 from gitdb.base import IStream
-from gitdb.db import MemoryDB
 
 from git.compat import defenc, force_bytes
 from git.cmd import Git
 import git.diff as git_diff
-from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError
+from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError, UnmergedEntriesError
 from git.objects import Blob, Commit, Object, Submodule, Tree
-from git.objects.util import Serializable
 from git.util import (
     Actor,
     LazyMixin,
     LockedFD,
     join_path_native,
-    file_contents_ro,
     _is_path_rooted,
     _to_relative_path,
     _validate_repo_path,
     to_native_path_linux,
     unbare_repo,
-    to_bin_sha,
 )
 
 from .fun import (
     S_IFGITLINK,
-    aggressive_tree_merge,
     entry_key,
-    read_cache,
     run_commit_hook,
     stat_mode_to_index_mode,
-    write_cache,
-    write_tree_from_cache,
 )
-from .typ import BaseIndexEntry, IndexEntry, StageType
-from .util import TemporaryFileSwap, post_clear_cache, default_index, git_working_dir
+from .typ import BaseIndexEntry, IndexEntry, StageType, CE_STAGESHIFT, CE_VALID, CE_EXT_SKIP_WORKTREE
+from .util import post_clear_cache, default_index, git_working_dir
 
 # typing -----------------------------------------------------------------------------
 
@@ -64,12 +56,12 @@ from typing import (
     cast,
     Dict,
     Generator,
-    IO,
     Iterable,
     Iterator,
     List,
     NoReturn,
     Sequence,
+    Set,
     TYPE_CHECKING,
     Tuple,
     Union,
@@ -84,39 +76,15 @@ if TYPE_CHECKING:
     from git.repo import Repo
 
 
-Treeish = Union[Tree, Commit, str, bytes]
+Treeish = Union[Tree, Commit, str, bytes, Sequence[Union[Tree, Commit, str, bytes]]]
 
 # ------------------------------------------------------------------------------------
 
 
-@contextlib.contextmanager
-def _named_temporary_file_for_subprocess(directory: PathLike) -> Generator[str, None, None]:
-    """Create a named temporary file git subprocesses can open, deleting it afterward.
+class IndexFile(LazyMixin, git_diff.Diffable):
+    """An index whose storage and merge operations are implemented by Git.
 
-    :param directory:
-        The directory in which the file is created.
-
-    :return:
-        A context manager object that creates the file and provides its name on entry,
-        and deletes it on exit.
-    """
-    if sys.platform == "win32":
-        fd, name = tempfile.mkstemp(dir=directory)
-        os.close(fd)
-        try:
-            yield name
-        finally:
-            os.remove(name)
-    else:
-        with tempfile.NamedTemporaryFile(dir=directory) as ctx:
-            yield ctx.name
-
-
-class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
-    """An Index that can be manipulated using a native implementation in order to save
-    git command function calls wherever possible.
-
-    This provides custom merging facilities allowing to merge without actually changing
+    This provides merging facilities allowing to merge without actually changing
     your index or your working tree. This way you can perform your own test merges based
     on the index only without having to deal with the working copy. This is useful in
     case of partial working trees.
@@ -137,10 +105,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     unsafe_git_checkout_index_options = ["--prefix"]
     unsafe_git_read_tree_options = ["--index-output"]
 
-    __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
-
-    _VERSION = 2
-    """The latest version we support."""
+    __slots__ = ("repo", "entries", "_file_path", "_dirty_paths")
 
     S_IFGITLINK = S_IFGITLINK
     """Flags for a submodule."""
@@ -154,28 +119,124 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         repository's index on demand.
         """
         self.repo = repo
-        self.version = self._VERSION
-        self._extension_data = b""
+        self._dirty_paths: Set[str] = set()
         self._file_path: PathLike = file_path or self._index_path()
 
     def _set_cache_(self, attr: str) -> None:
         if attr == "entries":
-            try:
-                fd = os.open(self._file_path, os.O_RDONLY)
-            except OSError:
-                # In new repositories, there may be no index, which means we are empty.
-                self.entries: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
-                return
-            # END exception handling
-
-            try:
-                stream = file_contents_ro(fd, stream=True, allow_mmap=True)
-            finally:
-                os.close(fd)
-
-            self._deserialize(stream)
+            self.entries = self._read_entries(self.path)
         else:
             super()._set_cache_(attr)
+
+    def _read_entries(self, path: PathLike) -> Dict[Tuple[PathLike, StageType], IndexEntry]:
+        output = self.repo.git._call_process_safe(
+            "ls_files",
+            "--stage",
+            "-v",
+            "-z",
+            "--full-name",
+            env={"GIT_INDEX_FILE": osp.abspath(path)},
+            stdout_as_string=False,
+        )
+        entries: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
+        for record in output.split(b"\0"):
+            if not record:
+                continue
+            metadata, path_bytes = record.split(b"\t", 1)
+            tag, mode, oid, stage = metadata.split()
+            entry_path = os.fsdecode(path_bytes)
+            _validate_repo_path(entry_path)
+            binsha = bytes.fromhex(oid.decode("ascii"))
+            if len(binsha) != self.repo._oid_size or int(stage) not in range(4):
+                raise ValueError("Invalid index entry returned by Git")
+            flags = int(stage) << CE_STAGESHIFT
+            if tag.islower():
+                flags |= CE_VALID
+            if tag.upper() == b"S":
+                flags |= CE_EXT_SKIP_WORKTREE << 16
+            entry = IndexEntry((int(mode, 8), binsha, flags, entry_path))
+            entries[(entry_path, entry.stage)] = entry
+        return entries
+
+    @property
+    def version(self) -> int:
+        """The index version reported by Git, or 2 for a not-yet-written index."""
+        if not osp.exists(self.path):
+            return 2
+        return int(
+            self.repo.git._call_process_safe(
+                "update_index", "--show-index-version", env={"GIT_INDEX_FILE": osp.abspath(self.path)}
+            )
+        )
+
+    @contextlib.contextmanager
+    def _materialized_index(self) -> Generator[str, None, None]:
+        """Apply the in-memory entries to a private, Git-managed index."""
+        desired: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
+        for key, entry in self.entries.items():
+            path = os.fspath(entry.path)
+            _validate_repo_path(path)
+            if key != (entry.path, entry.stage):
+                raise ValueError("Index key must match the entry path and stage")
+            if len(entry.binsha) != self.repo._oid_size or entry.mode not in (0o100644, 0o100755, 0o120000, 0o160000):
+                raise ValueError("Invalid index object ID or mode")
+            desired[(path, entry.stage)] = entry
+        with tempfile.TemporaryDirectory(prefix="gitpython-index-") as directory:
+            path = osp.join(directory, "index")
+            env = {"GIT_INDEX_FILE": path}
+            if osp.isfile(self.path):
+                shutil.copyfile(self.path, path)
+            else:
+                self.repo.git._call_process_safe("read_tree", "--empty", env=env)
+            current = self._read_entries(path)
+            changed = set(self._dirty_paths)
+            for key in current.keys() | desired.keys():
+                if current.get(key) != desired.get(key):
+                    changed.add(os.fspath(key[0]))
+            if changed:
+                # A zero-mode record clears all conflict stages for this path.
+                records = []
+                for name in sorted(changed):
+                    _validate_repo_path(name)
+                    records.append(b"0 " + self.repo._null_hexsha.encode("ascii") + b"\t" + os.fsencode(name) + b"\0")
+                    for stage in range(4):
+                        desired_entry = desired.get((name, stage))
+                        if desired_entry is not None:
+                            records.append(
+                                ("%o %s %d\t" % (desired_entry.mode, desired_entry.hexsha, stage)).encode("ascii")
+                                + os.fsencode(name)
+                                + b"\0"
+                            )
+                with tempfile.TemporaryFile() as stream:
+                    stream.write(b"".join(records))
+                    stream.seek(0)
+                    self.repo.git._call_process_safe("update_index", "-z", "--index-info", istream=stream, env=env)
+                for option, mask in (("--assume-unchanged", CE_VALID), ("--skip-worktree", CE_EXT_SKIP_WORKTREE << 16)):
+                    names = [
+                        os.fsencode(name) + b"\0"
+                        for name in sorted(changed)
+                        if (name, 0) in desired and desired[(name, 0)].flags & mask
+                    ]
+                    if names:
+                        with tempfile.TemporaryFile() as stream:
+                            stream.write(b"".join(names))
+                            stream.seek(0)
+                            self.repo.git._call_process_safe(
+                                "update_index", option, "-z", "--stdin", istream=stream, env=env
+                            )
+            yield path
+
+    def _tree_oid(self, tree: Treeish) -> str:
+        # The documented merge workflow passes the singleton result of merge_base().
+        if isinstance(tree, (list, tuple)):
+            if len(tree) != 1:
+                raise ValueError("A tree revision sequence must contain exactly one revision")
+            tree = tree[0]
+        if isinstance(tree, bytes):
+            tree = tree.hex() if len(tree) == self.repo._oid_size else tree.decode("ascii")
+        value = str(tree)
+        Git._check_operand(value, "tree revision")
+        return self.repo.git._call_process_safe("rev_parse", "--verify", "--end-of-options", value + "^{tree}")
 
     def _index_path(self) -> PathLike:
         if self.repo.git_dir:
@@ -198,66 +259,29 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             pass
         # END exception handling
 
-    # { Serializable Interface
-
-    def _deserialize(self, stream: IO) -> "IndexFile":
-        """Initialize this instance with index values read from the given stream."""
-        self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)
-        return self
-
     def _entries_sorted(self) -> List[IndexEntry]:
-        """:return: List of entries, in a sorted fashion, first by path, then by stage"""
         return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
-    def _serialize(self, stream: IO, ignore_extension_data: bool = False) -> "IndexFile":
-        entries = self._entries_sorted()
-        extension_data = self._extension_data  # type: Union[None, bytes]
-        if ignore_extension_data:
-            extension_data = None
-        write_cache(entries, stream, extension_data)
-        return self
+    def write(self, file_path: Union[None, PathLike] = None, ignore_extension_data: bool = False) -> None:
+        """Write semantic entries atomically. Git manages index extensions itself.
 
-    # } END serializable interface
-
-    def write(
-        self,
-        file_path: Union[None, PathLike] = None,
-        ignore_extension_data: bool = False,
-    ) -> None:
-        """Write the current state to our file path or to the given one.
-
-        :param file_path:
-            If ``None``, we will write to our stored file path from which we have been
-            initialized. Otherwise we write to the given file path. Please note that
-            this will change the `file_path` of this index to the one you gave.
-
-        :param ignore_extension_data:
-            If ``True``, the TREE type extension data read in the index will not be
-            written to disk. NOTE that no extension data is actually written. Use this
-            if you have altered the index and would like to use
-            :manpage:`git-write-tree(1)` afterwards to create a tree representing your
-            written changes. If this data is present in the written index,
-            :manpage:`git-write-tree(1)` will instead write the stored/cached tree.
-            Alternatively, use :meth:`write_tree` to handle this case automatically.
+        ``ignore_extension_data`` is retained for compatibility and has no effect;
+        Git invalidates its own caches when entries change.
         """
-        # Make sure we have our entries read before getting a write lock.
-        # Otherwise it would be done when streaming.
-        # This can happen if one doesn't change the index, but writes it right away.
-        self.entries  # noqa: B018
-        lfd = LockedFD(file_path or self._file_path)
-        stream = lfd.open(write=True, stream=True)
-
+        self.entries  # noqa: B018 - Load before acquiring the destination lock.
+        target = file_path or self.path
+        lock = LockedFD(target)
+        stream = lock.open(write=True, stream=True)
         try:
-            self._serialize(stream, ignore_extension_data)
+            assert not isinstance(stream, int)
+            with self._materialized_index() as path, open(path, "rb") as source:
+                shutil.copyfileobj(source, stream)
+            lock.commit()
         except BaseException:
-            lfd.rollback()
+            lock.rollback()
             raise
-
-        lfd.commit()
-
-        # Make sure we represent what we have written.
-        if file_path is not None:
-            self._file_path = file_path
+        self._file_path = target
+        self._dirty_paths.clear()
 
     @post_clear_cache
     @default_index
@@ -304,10 +328,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # -m : do an actual merge
         args: List[Union[Treeish, str]] = ["--aggressive", "-i", "-m"]
         if base is not None:
-            args.append(base)
-        args.append(rhs)
+            args.append(self._tree_oid(base))
+        args.append(self._tree_oid(rhs))
 
-        self.repo.git.read_tree(args)
+        self.repo.git._call_process_safe("read_tree", args)
         return self
 
     @classmethod
@@ -320,29 +344,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             The repository treeish are located in.
 
         :param tree_sha:
-            20 byte or 40 byte tree sha or tree objects.
+            Binary or hexadecimal tree object IDs in the repository's object format,
+            or tree objects.
 
         :return:
             New :class:`IndexFile` instance. Its path will be undefined.
             If you intend to write such a merged Index, supply an alternate
             ``file_path`` to its :meth:`write` method.
         """
-        tree_sha_bytes: List[bytes] = [
-            to_bin_sha(t if isinstance(t, bytes) else str(t).encode("ascii")) for t in tree_sha
-        ]
-        base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
-
-        inst = cls(repo)
-        # Convert to entries dict.
-        entries: Dict[Tuple[PathLike, int], IndexEntry] = dict(
-            zip(
-                ((e.path, e.stage) for e in base_entries),
-                (IndexEntry.from_base(e) for e in base_entries),
-            )
-        )
-
-        inst.entries = entries
-        return inst
+        if not 1 <= len(tree_sha) <= 3:
+            raise ValueError("Specify between one and three trees")
+        return cls.from_tree(repo, *(tree_sha[-1:] if len(tree_sha) < 3 else tree_sha))
 
     @classmethod
     def from_tree(
@@ -360,7 +372,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         :param treeish:
             One, two or three :class:`~git.objects.tree.Tree` objects,
-            :class:`~git.objects.commit.Commit`\s or 40 byte hexshas.
+            :class:`~git.objects.commit.Commit`\s or hexadecimal object IDs in the
+            repository's object format.
 
             The result changes according to the amount of trees:
 
@@ -388,9 +401,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             automatically resolve more cases in a commonly correct manner. Specify
             ``trivial=True`` as a keyword argument to override that.
 
-            As the underlying :manpage:`git-read-tree(1)` command takes into account the
-            current index, it will be temporarily moved out of the way to prevent any
-            unexpected interference.
+            Git uses a private index; the repository index and working tree are unchanged.
         """
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
@@ -401,31 +412,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 unsafe_options=cls.unsafe_git_read_tree_options,
             )
 
-        arg_list: List[Union[Treeish, str]] = []
-        # Ignore that the working tree and index possibly are out of date.
-        if len(treeish) > 1:
-            # Drop unmerged entries when reading our index and merging.
-            arg_list.append("--reset")
-            # Handle non-trivial cases the way a real merge does.
-            arg_list.append("--aggressive")
-        # END merge handling
-
-        # Create the temporary file in the .git directory to be sure renaming
-        # works - /tmp/ directories could be on another device.
-        with _named_temporary_file_for_subprocess(repo.git_dir) as tmp_index:
-            arg_list.append("--index-output=%s" % tmp_index)
-            arg_list.extend(treeish)
-
-            # Move the current index out of the way - otherwise the merge may fail as it
-            # considers existing entries. Moving it essentially clears the index.
-            # Unfortunately there is no 'soft' way to do it.
-            # The TemporaryFileSwap ensures the original file gets put back.
-            with TemporaryFileSwap(join_path_native(repo.git_dir, "index")):
-                repo.git.read_tree(*arg_list, **kwargs)
-                index = cls(repo, tmp_index)
-                index.entries  # noqa: B018 # Force it to read the file as we will delete the temp-file.
-                return index
-            # END index merge handling
+        if set(kwargs) - {"trivial", "aggressive", "verbose"}:
+            raise ValueError("Unsupported read-tree options")
+        with tempfile.TemporaryDirectory(prefix="gitpython-merge-") as directory:
+            path = osp.join(directory, "index")
+            index = cls(repo, path)
+            args = [index._tree_oid(tree) for tree in treeish]
+            if len(args) > 1:
+                args[:0] = ["--reset", "--aggressive", "-i"]
+            repo.git._call_process_safe("read_tree", *args, env={"GIT_INDEX_FILE": path}, **kwargs)
+            index.entries  # noqa: B018 - Cache before deleting the temporary index.
+            return index
 
     # UTILITIES
 
@@ -535,7 +532,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         if proc.stdin is not None:
             try:
-                proc.stdin.write(("%s\n" % filepath).encode(defenc))
+                proc.stdin.write(os.fsencode(filepath) + b"\0")
             except OSError as e:
                 # Pipe broke, usually because some error happened.
                 raise fmakeexc() from e
@@ -562,7 +559,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         """
         for entry in self.entries.values():
             blob = entry.to_blob(self.repo)
-            blob.size = entry.size
             output = (entry.stage, blob)
             if predicate(output):
                 yield output
@@ -647,6 +643,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             self
         """
         self._delete_entries_cache()
+        self._dirty_paths.clear()
         # Allows to lazily reread on demand.
         return self
 
@@ -662,25 +659,14 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             not yet exist in the object database. This could happen if you added entries
             to the index directly.
 
-        :raise ValueError:
-            If there are no entries in the cache.
-
         :raise git.exc.UnmergedEntriesError:
         """
-        # We obtain no lock as we just flush our contents to disk as tree.
-        # If we are a new index, the entries access will load our data accordingly.
-        mdb = MemoryDB()
-        entries = self._entries_sorted()
-        binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
-
-        # Copy changed trees only.
-        mdb.stream_copy(mdb.sha_iter(), self.repo.odb)
-
-        # Note: Additional deserialization could be saved if write_tree_from_cache would
-        # return sorted tree entries.
-        root_tree = Tree(self.repo, binsha, path="")
-        root_tree._cache = tree_items
-        return root_tree
+        for entry in self.entries.values():
+            if entry.stage:
+                raise UnmergedEntriesError(entry)
+        with self._materialized_index() as path:
+            oid = self.repo.git._call_process_safe("write_tree", "--missing-ok", env={"GIT_INDEX_FILE": path})
+        return Tree(self.repo, bytes.fromhex(oid), path="")
 
     def _process_diff_args(
         self,
@@ -812,7 +798,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
                 blob = Blob(
                     self.repo,
-                    Blob.NULL_BIN_SHA,
+                    self.repo._null_binsha,
                     stat_mode_to_index_mode(os.lstat(abspath).st_mode),
                     to_native_path_linux(gitrelative_path),
                 )
@@ -877,7 +863,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 The file they refer to may or may not exist in the file system, but must
                 be a path relative to our repository.
 
-                If their sha is null (40*0), their path must exist in the file system
+                If their object ID is all zeroes, their path must exist in the file system
                 relative to the git repository as an object will be created from the
                 data at the path.
 
@@ -932,20 +918,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             changes only exist in memory and are not available to git commands.
 
         :param write_extension_data:
-            If ``True``, extension data will be written back to the index. This can lead
-            to issues in case it is containing the 'TREE' extension, which will cause
-            the :manpage:`git-commit(1)` command to write an old tree, instead of a new
-            one representing the now changed index.
-
-            This doesn't matter if you use :meth:`IndexFile.commit`, which ignores the
-            'TREE' extension altogether. You should set it to ``True`` if you intend to
-            use :meth:`IndexFile.commit` exclusively while maintaining support for
-            third-party extensions. Besides that, you can usually safely ignore the
-            built-in extensions when using GitPython on repositories that are not
-            handled manually at all.
-
-            All current built-in extensions are listed here:
-            https://git-scm.com/docs/index-format
+            Retained for compatibility. Git manages index extensions and invalidates
+            cached trees automatically when entries change.
 
         :return:
             List of :class:`~git.index.typ.BaseIndexEntry`\s representing the entries
@@ -978,7 +952,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             # HANDLE ENTRY OBJECT CREATION
             # Create objects if required, otherwise go with the existing shas.
-            null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
+            null_entries_indices = [i for i, e in enumerate(entries) if not any(e.binsha)]
             if null_entries_indices:
 
                 @git_working_dir
@@ -992,7 +966,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                             (
                                 null_entry.mode,
                                 new_entry.binsha,
-                                null_entry.stage,
+                                null_entry.flags,
                                 null_entry.path,
                             )
                         )
@@ -1008,7 +982,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # object sha's.
             if path_rewriter:
                 for i, e in enumerate(entries):
-                    entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
+                    entries[i] = BaseIndexEntry((e.mode, e.binsha, e.flags, path_rewriter(e)))
                 # END for each entry
             # END handle path rewriting
 
@@ -1028,7 +1002,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         for entry in entries_added:
             _validate_repo_path(entry.path)
         for entry in entries_added:
-            self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
+            self.entries[(entry.path, entry.stage)] = IndexEntry.from_base(entry)
+            self._dirty_paths.add(os.fspath(entry.path))
 
         if write:
             self.write(ignore_extension_data=not write_extension_data)
@@ -1055,6 +1030,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             else:
                 raise TypeError("Invalid item type: %r" % item)
         # END for each item
+        for path in paths:
+            if path not in (".", "./"):
+                _validate_repo_path(os.fspath(path).rstrip("/"))
         return paths
 
     @post_clear_cache
@@ -1121,7 +1099,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # Preprocess paths.
         paths = list(map(os.fspath, self._items_to_rela_paths(items)))  # type: ignore[arg-type]
-        removed_paths = self.repo.git.rm(args, paths, **kwargs).splitlines()
+        removed_paths = self.repo.git._call_process_safe("rm", args, paths, **kwargs).splitlines()
 
         # Process output to gain proper paths.
         # rm 'path'
@@ -1194,7 +1172,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # First execute rename in dry run so the command tells us what it actually does
         # (for later output).
         out = []
-        mvlines = self.repo.git.mv(args, paths, **kwargs).splitlines()
+        mvlines = self.repo.git._call_process_safe("mv", args, paths, **kwargs).splitlines()
 
         # Parse result - first 0:n/2 lines are 'checking ', the remaining ones are the
         # 'renaming' ones which we parse.
@@ -1214,7 +1192,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # Now apply the actual operation.
         kwargs.pop("dry_run")
-        self.repo.git.mv(args, paths, **kwargs)
+        self.repo.git._call_process_safe("mv", args, paths, **kwargs)
 
         return out
 
@@ -1247,13 +1225,27 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :return:
             :class:`~git.objects.commit.Commit` object representing the new commit
         """
+        if not skip_hooks and not osp.isdir(osp.dirname(self.path)):
+            original_path = self.path
+            with self._materialized_index() as path:
+                self._file_path = path
+                try:
+                    return self.commit(
+                        message, parent_commits, head, author, committer, author_date, commit_date, skip_hooks, trailers
+                    )
+                finally:
+                    self._file_path = original_path
         if not skip_hooks:
+            # Hooks must see staged changes and their own updates must remain in the index.
+            self.write()
             run_commit_hook("pre-commit", self)
-
+            self._delete_entries_cache()
             self._write_commit_editmsg(message)
-            run_commit_hook("commit-msg", self, self._commit_editmsg_filepath())
-            message = self._read_commit_editmsg()
-            self._remove_commit_editmsg()
+            try:
+                run_commit_hook("commit-msg", self, self._commit_editmsg_filepath())
+                message = self._read_commit_editmsg()
+            finally:
+                self._remove_commit_editmsg()
         tree = self.write_tree()
         rval = Commit.create_from_tree(
             self.repo,
@@ -1283,7 +1275,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             return commit_editmsg_file.read().decode(defenc)
 
     def _commit_editmsg_filepath(self) -> str:
-        return osp.join(self.repo.common_dir, "COMMIT_EDITMSG")
+        return self.repo.git._call_process_safe("rev_parse", "--path-format=absolute", "--git-path", "COMMIT_EDITMSG")
 
     def _flush_stdin_and_wait(self, proc: "Popen[bytes]", ignore_stdout: bool = False) -> bytes:
         stdin_IO = proc.stdin
@@ -1365,7 +1357,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 unsafe_options=self.unsafe_git_checkout_index_options,
             )
 
-        args = ["--index"]
+        args = ["--index", "-z"]
         if force:
             args.append("--force")
 
@@ -1435,7 +1427,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             args.append("--all")
             kwargs["as_process"] = 1
             fprogress(None, False, None)
-            proc = self.repo.git.checkout_index(*args, **kwargs)
+            proc = self.repo.git._call_process_safe("checkout_index", *args, **kwargs)
             proc.wait()
             fprogress(None, True, None)
             rval_iter = (e.path for e in self.entries.values())
@@ -1444,6 +1436,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         else:
             if isinstance(paths, (str, os.PathLike)):
                 paths = [paths]
+            else:
+                paths = list(paths)
+            for path in paths:
+                _validate_repo_path(os.fspath(self._to_relative_path(path)).rstrip("/"))
 
             # Make sure we have our entries loaded before we start checkout_index, which
             # will hold a lock on it. We try to get the lock as well during our entries
@@ -1453,7 +1449,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             args.append("--stdin")
             kwargs["as_process"] = True
             kwargs["istream"] = subprocess.PIPE
-            proc = self.repo.git.checkout_index(args, **kwargs)
+            proc = self.repo.git._call_process_safe("checkout_index", args, **kwargs)
 
             # FIXME: Reading from GIL!
             def make_exc() -> GitCommandError:
@@ -1634,8 +1630,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if other == git_diff.NULL_TREE or other == git_diff.NULL_TREE_SHA:
             args: List[Union[PathLike, str]] = [
                 "--cached",
-                git_diff.NULL_TREE_SHA,
-                "--abbrev=40",
+                self.repo._empty_tree_hexsha,
+                "--no-abbrev",
                 "--full-index",
             ]
 
@@ -1660,8 +1656,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             kwargs["as_process"] = True
             if create_patch:
-                self.repo.git(c="diff.mnemonicPrefix=false")
-            proc = self.repo.git.diff(*args, **kwargs)
+                kwargs["_config"] = ["diff.mnemonicPrefix=false"]
+            proc = self.repo.git._call_process_safe("diff", *args, **kwargs)
 
             diff_method = (
                 git_diff.Diff._index_from_patch_format if create_patch else git_diff.Diff._index_from_raw_format

@@ -210,7 +210,7 @@ class TestRefs(TestBase):
         # One new log-entry.
         thlog = head.log()
         assert len(thlog) == hlog_len + 1
-        assert thlog[-1].oldhexsha == cur_commit.hexsha
+        assert not hasattr(thlog[-1], "oldhexsha")
         assert thlog[-1].newhexsha == pcommit.hexsha
 
         # The ref didn't change though.
@@ -235,7 +235,7 @@ class TestRefs(TestBase):
         other_head = Head.create(rwrepo, "mynewhead", pcommit, logmsg="new head created")
         log = other_head.log()
         assert len(log) == 1
-        assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
+        assert not hasattr(log[0], "oldhexsha")
         assert log[0].newhexsha == pcommit.hexsha
 
     @with_rw_repo("HEAD", bare=False)
@@ -304,11 +304,11 @@ class TestRefs(TestBase):
                 with Repo.clone_from(source.working_tree_dir, base_dir / "clone") as cloned:
                     (base_dir / "clone" / "pathspecs").write_text("unmatched-private-content\n", encoding="utf-8")
                     assert cloned.active_branch.name == branch.name
-                    with self.assertRaises(UnsafeOptionError):
-                        cloned.active_branch.checkout()
-                    with self.assertRaises(GitCommandError) as error:
-                        cloned.active_branch.checkout(allow_unsafe_options=True)
-                    assert "unmatched-private-content" in str(error.exception)
+                    for allow_unsafe_options in (False, True):
+                        with self.assertRaises(UnsafeOptionError) as error:
+                            cloned.active_branch.checkout(allow_unsafe_options=allow_unsafe_options)
+                        assert "unmatched-private-content" not in str(error.exception)
+                    assert cloned.active_branch.name == branch.name
 
     @with_rw_repo("HEAD")
     def test_head_reset_rejects_pathspec_from_file(self, rw_repo):
@@ -436,11 +436,10 @@ class TestRefs(TestBase):
             tmp_head.rename(new_head, force=True)
             assert tmp_head == new_head and tmp_head.object == new_head.object
 
-            logfile = RefLog.path(tmp_head)
-            assert osp.isfile(logfile)
+            assert tmp_head.log()
             Head.delete(rw_repo, tmp_head)
             # Deletion removes the log as well.
-            assert not osp.isfile(logfile)
+            assert tmp_head.log() == []
             heads = rw_repo.heads
             assert tmp_head not in heads and new_head not in heads
             # Force on deletion testing would be missing here, code looks okay though. ;)
@@ -508,15 +507,12 @@ class TestRefs(TestBase):
         assert head.commit == cur_head.commit
         head.commit = old_commit
 
-        # Setting a non-commit as commit fails, but succeeds as object.
+        # Git enforces commit-only branch targets for either setter.
         head_tree = head.commit.tree
         self.assertRaises(ValueError, setattr, head, "commit", head_tree)
         assert head.commit == old_commit  # And the ref did not change.
-        # We allow heads to point to any object.
-        head.object = head_tree
-        assert head.object == head_tree
-        # Cannot query tree as commit.
-        self.assertRaises(TypeError, getattr, head, "commit")
+        self.assertRaises(TypeError, setattr, head, "object", head_tree)
+        assert head.commit == old_commit
 
         # Set the commit directly using the head. This would never detach the head.
         assert not cur_head.is_detached
@@ -602,7 +598,7 @@ class TestRefs(TestBase):
         assert ref.rename(ref.path).path == ex_ref_path  # rename to same name
 
         # Create symbolic refs.
-        symref_path = "symrefs/sym"
+        symref_path = "refs/symrefs/sym"
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
         assert symref.path == symref_path
         assert symref.reference == cur_head.reference
@@ -633,7 +629,7 @@ class TestRefs(TestBase):
         assert osp.isfile(symbol_ref_abspath)
         assert symref.commit == new_head.commit
 
-        for name in ("absname", "folder/rela_name"):
+        for name in ("ROOT_SYM", "refs/folder/rela_name"):
             symref_new_name = symref.rename(name)
             assert isinstance(symref_new_name, SymbolicReference)
             assert name in symref_new_name.path
@@ -682,7 +678,8 @@ class TestRefs(TestBase):
         # At least the head should still exist.
         assert osp.isfile(osp.join(rw_repo.git_dir, "HEAD"))
         refs = list(SymbolicReference.iter_items(rw_repo))
-        assert len(refs) == 1
+        assert rw_repo.head in refs
+        assert all(not ref.is_detached for ref in refs)
 
         # Test creation of new refs from scratch.
         for path in ("basename", "dir/somename", "dir2/subdir/basename"):
@@ -1016,7 +1013,7 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
             self.assertEqual((Path(self.repo.git_dir) / path).read_text(), "ref: " + target + "\n")
         for path in ("HEAD", paths[-1]):
             entry = SymbolicReference(self.repo, path).log()[-1]
-            self.assertEqual(entry.oldhexsha, self.commit.hexsha)
+            self.assertFalse(hasattr(entry, "oldhexsha"))
             self.assertEqual(entry.newhexsha, self.next_commit.hexsha)
             self.assertEqual(entry.message, "updated through chain")
 
@@ -1042,7 +1039,7 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
         paths = self.chain(5)
         ref = CustomReference(self.repo, "HEAD", check_path=False)
         self.assertIs(ref.set_object(self.next_commit, "custom reference"), ref)
-        self.assertEqual(calls, paths)
+        self.assertEqual(calls, [paths[0]])
         self.assertEqual(self.repo.head.commit, self.next_commit)
         self.assertEqual(self.repo.head.log()[-1].message, "custom reference")
 

@@ -183,7 +183,10 @@ def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
                 remote.fetch("HEAD", verbose=verbose)
             assert raised.value is error
             run.assert_called_once()
-            assert run.call_args[0][0] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "fetch", "-v", "--", "origin", "HEAD"]
+            argv = run.call_args[0][0]
+            assert argv[argv.index("fetch") :] == ["fetch", "-v", "--", "origin", "HEAD"]
+            assert argv[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert run.call_args.kwargs["shell"] is False
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])
@@ -201,7 +204,7 @@ def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
 def test_merge_base_checks_unsafe_options(tmp_path, revs, kwargs, allow_unsafe_options):
     repo = Repo.init(tmp_path)
     with mock.patch.object(Git, "execute", return_value="") as run:
-        if allow_unsafe_options:
+        if allow_unsafe_options and kwargs:
             assert repo.merge_base(*revs, allow_unsafe_options=True, **kwargs) == []
             run.assert_called_once()
             assert "--allow-unsafe-options" not in run.call_args[0][0]

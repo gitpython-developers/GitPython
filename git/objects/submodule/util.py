@@ -36,13 +36,12 @@ if TYPE_CHECKING:
 
 def sm_section(name: str) -> str:
     """:return: Section title used in ``.gitmodules`` configuration file"""
-    return f'submodule "{name}"'
+    return GitConfigParser._public_section("submodule." + name)
 
 
 def sm_name(section: str) -> str:
     """:return: Name of the submodule as parsed from the section name"""
-    section = section.strip()
-    return section[11:-1]
+    return GitConfigParser._section_name(section.strip())[10:]
 
 
 def mkhead(repo: "Repo", path: PathLike) -> "Head":
@@ -110,7 +109,7 @@ class SubmoduleConfigParser(GitConfigParser):
     # } END interface
 
     # { Overridden Methods
-    def write(self) -> None:  # type: ignore[override]
+    def write(self) -> None:
         rval: None = super().write()
         self.flush_to_index()
         return rval

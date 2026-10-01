@@ -99,7 +99,7 @@ class HEAD(SymbolicReference):
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([commit], kwargs),
-                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options + ["--patch", "-p"],
             )
         mode: Union[str, None]
         mode = "--soft"
@@ -121,7 +121,8 @@ class HEAD(SymbolicReference):
         # END working tree handling
 
         try:
-            self.repo.git.reset(mode, commit, "--", paths, **kwargs)
+            oid = self.repo.rev_parse(Git._check_operand(commit, "revision")).hexsha
+            self.repo.git._call_process_safe("reset", mode, oid, "--", paths, **kwargs)
         except GitCommandError as e:
             # git nowadays may use 1 as status to indicate there are still unstaged
             # modifications after the reset.
@@ -152,6 +153,7 @@ class Head(Reference):
     """
 
     _common_path_default = "refs/heads"
+    _points_to_commits_only = True
     k_config_remote = "remote"
     k_config_remote_ref = "merge"  # Branch to merge from remote.
 
@@ -166,7 +168,10 @@ class Head(Reference):
         flag = "-d"
         if force:
             flag = "-D"
-        repo.git.branch(flag, "--", *heads)
+        names = [Git._check_operand(head, "branch") for head in heads]
+        for name in names:
+            cls._get_validated_ref_path(repo, cls.to_full_path(name))
+        repo.git._call_process_safe("branch", flag, "--", *names)
 
     def set_tracking_branch(self, remote_reference: Union["RemoteReference", None]) -> "Head":
         """Configure this branch to track the given remote reference. This will
@@ -188,8 +193,6 @@ class Head(Reference):
             if remote_reference is None:
                 writer.remove_option(self.k_config_remote)
                 writer.remove_option(self.k_config_remote_ref)
-                if len(writer.options()) == 0:
-                    writer.remove_section()
             else:
                 writer.set_value(self.k_config_remote, remote_reference.remote_name)
                 writer.set_value(
@@ -241,8 +244,11 @@ class Head(Reference):
         if force:
             flag = "-M"
 
-        self.repo.git.branch(flag, "--", self, new_path)
-        self.path = "%s/%s" % (self._common_path_default, new_path)
+        new_name = Git._check_operand(new_path, "branch")
+        self._get_validated_ref_path(self.repo, self.path)
+        self._get_validated_ref_path(self.repo, self.to_full_path(new_name))
+        self.repo.git._call_process_safe("branch", flag, "--", self.name, new_name)
+        self.path = str(self.to_full_path(new_name))
         return self
 
     def checkout(
@@ -284,13 +290,18 @@ class Head(Reference):
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([self], kwargs),
-                unsafe_options=Git.unsafe_git_pathspec_from_file_options,
+                unsafe_options=Git.unsafe_git_pathspec_from_file_options + ["--patch", "-p"],
             )
         kwargs["f"] = force
         if kwargs["f"] is False:
             kwargs.pop("f")
 
-        self.repo.git.checkout(self, **kwargs)
+        name = Git._check_operand(self.name, "branch")
+        self._get_validated_ref_path(self.repo, self.path)
+        for option in ("b", "B", "orphan"):
+            if option in kwargs:
+                Git._check_operand(kwargs[option], "branch")
+        self.repo.git._call_process_safe("checkout", name, "--", **kwargs)
         if self.repo.head.is_detached:
             return self.repo.head
         else:
@@ -304,7 +315,7 @@ class Head(Reference):
             parser = self.repo.config_writer()
         # END handle parser instance
 
-        return SectionConstraint(parser, 'branch "%s"' % self.name)
+        return SectionConstraint(parser, GitConfigParser._public_section("branch." + self.name))
 
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """

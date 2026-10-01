@@ -1,101 +1,147 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import os.path as osp
-import tempfile
+import pytest
 
-from git.objects import IndexObject
-from git.refs import RefLog, RefLogEntry
-from git.util import Actor, hex_to_bin, rmtree
-
-from test.lib import TestBase, fixture_path
+from git import Actor, Repo
+from git.exc import GitCommandError, UnsafeOptionError
+from git.refs import RefLog, RefLogEntry, SymbolicReference
 
 
-class TestRefLog(TestBase):
-    def test_reflogentry(self):
-        nullhexsha = IndexObject.NULL_HEX_SHA
-        hexsha = "F" * 40
-        actor = Actor("name", "email")
-        msg = "message"
+@pytest.fixture(params=[("sha1", "files"), ("sha256", "files"), ("sha1", "reftable"), ("sha256", "reftable")])
+def repo(request, tmp_path):
+    object_format, ref_format = request.param
+    with Repo.init(tmp_path, object_format=object_format, ref_format=ref_format) as repo:
+        repo.git.update_environment(
+            GIT_AUTHOR_NAME="Commit Author",
+            GIT_AUTHOR_EMAIL="author@example.invalid",
+            GIT_COMMITTER_NAME="First Committer",
+            GIT_COMMITTER_EMAIL="first@example.invalid",
+            GIT_AUTHOR_DATE="1000000000 +0000",
+            GIT_COMMITTER_DATE="1000000001 +0130",
+        )
+        repo.git.commit("--no-gpg-sign", "--allow-empty", "-m", "initial")
+        yield repo
 
-        self.assertRaises(ValueError, RefLogEntry.new, nullhexsha, hexsha, "noactor", 0, 0, "")
-        e = RefLogEntry.new(nullhexsha, hexsha, actor, 0, 1, msg)
 
-        assert e.oldhexsha == nullhexsha
-        assert e.newhexsha == hexsha
-        assert e.actor == actor
-        assert e.time[0] == 0
-        assert e.time[1] == 1
-        assert e.message == msg
+def test_native_reflog_entry_fields_and_append(repo):
+    commit = repo.head.commit
+    original = repo.head.log()
+    assert isinstance(original, RefLog)
+    assert original[-1].newhexsha == commit.hexsha
+    assert original[-1].actor == Actor("First Committer", "first@example.invalid")
+    assert original[-1].time == (1000000001, -5400)
+    assert not hasattr(original[-1], "oldhexsha")
 
-        # Check representation (roughly).
-        assert repr(e).startswith(nullhexsha)
+    repo.git.update_environment(
+        GIT_COMMITTER_NAME="Reflog Actor",
+        GIT_COMMITTER_EMAIL="log@example.invalid",
+        GIT_COMMITTER_DATE="1100000000 -0430",
+    )
+    entry = repo.head.log_append(repo._null_binsha, "message\twith  spaces\nignored", commit.binsha)
+    assert isinstance(entry, RefLogEntry)
+    assert entry.newhexsha == commit.hexsha
+    assert entry.actor == Actor("Reflog Actor", "log@example.invalid")
+    assert entry.time == (1100000000, 16200)
+    assert entry.message == "message with spaces"
+    assert repo.head.log_entry(-1) == entry
+    assert repo.head.log_entry(0) == original[0]
+    assert len(original) + 1 == len(repo.head.log())
+    with pytest.raises(IndexError):
+        repo.head.log_entry(10000)
 
-    def test_base(self):
-        rlp_head = fixture_path("reflog_HEAD")
-        rlp_master = fixture_path("reflog_master")
-        tdir = tempfile.mkdtemp(suffix="test_reflogs")
 
-        rlp_master_ro = RefLog.path(self.rorepo.head)
-        assert osp.isfile(rlp_master_ro)
+def test_reflog_backend_and_input_safety(repo):
+    before = repo.head.log()
+    with pytest.raises(ValueError):
+        repo.head.log_append(b"short", "invalid", repo.head.commit.binsha)
+    with pytest.raises(ValueError):
+        repo.head.log_append(repo._null_binsha, "bad\0message", repo.head.commit.binsha)
+    with pytest.raises((ValueError, UnsafeOptionError)):
+        SymbolicReference(repo, "--all").log()
+    with pytest.raises(ValueError):
+        SymbolicReference(repo, "../../outside").log_append(repo._null_binsha, "invalid", repo.head.commit.binsha)
+    assert repo.head.log() == before
+    assert SymbolicReference(repo, "refs/heads/no-log").log() == []
+    with pytest.raises(GitCommandError):
+        repo.head.log_append(repo._null_binsha, "missing object", b"\xff" * repo._oid_size)
 
-        # Simple read.
-        reflog = RefLog.from_file(rlp_master_ro)
-        assert reflog._path is not None
-        assert isinstance(reflog, RefLog)
-        assert len(reflog)
 
-        # iter_entries works with path and with stream.
-        assert len(list(RefLog.iter_entries(open(rlp_master, "rb"))))
-        assert len(list(RefLog.iter_entries(rlp_master)))
+def test_reference_transactions_and_discovery(repo, tmp_path):
+    first = repo.head.commit
+    branch = repo.create_head("other", first)
+    repo.head.set_reference(branch)
+    repo.git.commit("--no-gpg-sign", "--allow-empty", "-m", "second")
+    second = repo.head.commit
+    repo.head.set_object(first, "through HEAD")
+    assert branch.commit == first
+    assert repo.head.log_entry(-1).newhexsha == first.hexsha
+    assert branch.log_entry(-1).message == "through HEAD"
 
-        # Raise on invalid revlog.
-        # TODO: Try multiple corrupted ones!
-        pp = "reflog_invalid_"
-        for suffix in ("oldsha", "newsha", "email", "date", "sep"):
-            self.assertRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
-        # END for each invalid file
+    symbol = SymbolicReference.create(repo, "refs/custom/link", branch, logmsg="symbol")
+    assert symbol.reference == branch
+    symbol.rename("refs/custom/renamed")
+    assert symbol.reference == branch
+    SymbolicReference.delete(repo, symbol.path)
+    assert not symbol.is_valid()
+    branch.rename("renamed")
+    assert repo.head.reference == branch
+    assert branch in repo.heads
 
-        # Cannot write an uninitialized reflog.
-        self.assertRaises(ValueError, RefLog().write)
+    worktree = tmp_path / "linked"
+    repo.git.worktree("add", "--detach", str(worktree), second.hexsha)
+    linked = Repo(worktree)
+    try:
+        for location in (repo.working_tree_dir, repo.git_dir, worktree, linked.git_dir):
+            with Repo(location) as reopened:
+                assert reopened.object_format == repo.object_format
+                assert reopened.ref_format == repo.ref_format
+                assert reopened._oid_size == len(first.binsha)
+                assert reopened._null_hexsha == "0" * len(first.hexsha)
+                assert reopened.working_tree_dir is not None
+                assert reopened.head.commit in (first, second)
+    finally:
+        linked.close()
 
-        # Test serialize and deserialize - results must match exactly.
-        binsha = hex_to_bin(("f" * 40).encode("ascii"))
-        msg = "my reflog message"
-        cr = self.rorepo.config_reader()
-        for rlp in (rlp_head, rlp_master):
-            reflog = RefLog.from_file(rlp)
-            tfile = osp.join(tdir, osp.basename(rlp))
-            reflog.to_file(tfile)
-            assert reflog.write() is reflog
 
-            # Parsed result must match...
-            treflog = RefLog.from_file(tfile)
-            assert treflog == reflog
+def test_tag_creation_requires_signing_opt_in(repo, tmp_path):
+    marker = tmp_path / "signed"
+    signer = tmp_path / "signer"
+    signer.write_text("#!/bin/sh\ntouch '" + str(marker) + "'\nexit 1\n")
+    signer.chmod(0o755)
+    repo.git.config("gpg.program", str(signer))
+    repo.git.config("tag.gpgSign", "true")
+    tag = repo.create_tag("unsigned", message="ordinary annotated tag")
+    assert tag.commit == repo.head.commit
+    assert not marker.exists()
+    for option in (
+        {"s": True},
+        {"sign": True},
+        {"u": "identity"},
+        {"verify": True},
+        {"edit": True},
+        {"trailer": "Key: value"},
+    ):
+        with pytest.raises(UnsafeOptionError):
+            repo.create_tag("unsafe", **option)
+    assert not marker.exists()
 
-            # ...as well as each bytes of the written stream.
-            assert open(tfile).read() == open(rlp).read()
 
-            # Append an entry.
-            entry = RefLog.append_entry(cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
-            assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
-            assert entry.newhexsha == "f" * 40
-            assert entry.message == msg
-            assert RefLog.from_file(tfile)[-1] == entry
+def test_checkout_and_reset_reject_interactive_patch_helpers(repo):
+    branch = repo.active_branch
+    before = repo.head.commit
+    for operation in (branch.checkout, repo.head.reset):
+        for option in ({"patch": True}, {"pat": True}, {"p": True}):
+            with pytest.raises(UnsafeOptionError):
+                operation(**option)
+    assert repo.head.commit == before
 
-            # Index entry.
-            # Raises on invalid index.
-            self.assertRaises(IndexError, RefLog.entry_at, rlp, 10000)
 
-            # Indices can be positive...
-            assert isinstance(RefLog.entry_at(rlp, 0), RefLogEntry)
-            RefLog.entry_at(rlp, 23)
-
-            # ...and negative.
-            for idx in (-1, -24):
-                RefLog.entry_at(rlp, idx)
-            # END for each index to read
-        # END for each reflog
-
-        # Finally remove our temporary data.
-        rmtree(tdir)
+def test_quoted_branch_configuration_survives_rename(repo):
+    branch = repo.create_head('quoted"branch')
+    with branch.config_writer() as config:
+        config.set_value("description", "retained")
+    assert branch.config_reader().get_value("description") == "retained"
+    branch.rename('renamed"branch')
+    assert branch.config_reader().get_value("description") == "retained"
+    assert repo.git.config("get", 'branch.renamed"branch.description') == "retained"

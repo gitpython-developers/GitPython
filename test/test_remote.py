@@ -557,90 +557,24 @@ class TestRemote(TestBase):
         bare_rw_repo.create_remote("bogus", "/bogus/path", mirror="push")
 
     def test_fetch_info(self):
-        # Ensure we can handle remote-tracking branches.
-        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
-        fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
-        remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
-
-        self.assertRaises(
-            ValueError,
-            FetchInfo._from_line,
-            self.rorepo,
-            remote_info_line_fmt % "refs/something/branch",
-            "269c498e56feb93e408ed4558c8138d750de8893\t\t/Users/ben/test/foo\n",
-        )
-
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "local/master",
-            fetch_info_line_fmt % "remote-tracking branch",
-        )
-        assert not fi.ref.is_valid()
-        self.assertEqual(fi.ref.name, "local/master")
-
-        # Handles non-default refspecs: One can specify a different path in refs/remotes
-        # or a special path just in refs/something for instance.
-
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "subdir/tagname",
-            fetch_info_line_fmt % "tag",
-        )
-
-        self.assertIsInstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith("refs/tags"), fi.ref.path
-
-        # It could be in a remote directory though.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "remotename/tags/tagname",
-            fetch_info_line_fmt % "tag",
-        )
-
-        self.assertIsInstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith("refs/remotes/"), fi.ref.path
-
-        # It can also be anywhere!
-        tag_path = "refs/something/remotename/tags/tagname"
-        fi = FetchInfo._from_line(self.rorepo, remote_info_line_fmt % tag_path, fetch_info_line_fmt % "tag")
-
-        self.assertIsInstance(fi.ref, TagReference)
-        self.assertEqual(fi.ref.path, tag_path)
-
-        # Branches default to refs/remotes.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "remotename/branch",
-            fetch_info_line_fmt % "branch",
-        )
-
-        self.assertIsInstance(fi.ref, RemoteReference)
-        self.assertEqual(fi.ref.remote_name, "remotename")
-
-        # But you can force it anywhere, in which case we only have a references.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "refs/something/branch",
-            fetch_info_line_fmt % "branch",
-        )
-
-        assert type(fi.ref) is Reference, type(fi.ref)
-        self.assertEqual(fi.ref.path, "refs/something/branch")
+        for source, destination, refspec, ref_type in (
+            ("master", "origin/master", "+refs/heads/*:refs/remotes/origin/*", RemoteReference),
+            ("tag", "subdir/tag", "refs/tags/tag:refs/tags/subdir/tag", TagReference),
+            ("branch", "refs/something/branch", "refs/heads/branch:refs/something/branch", Reference),
+        ):
+            info = FetchInfo._from_line(self.rorepo, "* [new branch]      %s -> %s" % (source, destination), [refspec])
+            self.assertIsInstance(info.ref, ref_type)
+            self.assertEqual(info.remote_ref_path, source)
+            self.assertTrue(info.flags & FetchInfo.NEW_HEAD)
+        with self.assertRaises(ValueError):
+            FetchInfo._from_line(self.rorepo, "= [up to date] master -> ambiguous")
 
     def test_uncommon_branch_names(self):
-        stderr_lines = fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
-        fetch_lines = fixture("uncommon_branch_prefix_FETCH_HEAD").decode("ascii").splitlines()
-
-        # The contents of the files above must be fetched with a custom refspec:
-        # +refs/pull/*:refs/heads/pull/*
-        res = [
-            FetchInfo._from_line("ShouldntMatterRepo", stderr, fetch_line)
-            for stderr, fetch_line in zip(stderr_lines, fetch_lines)
-        ]
-        self.assertGreater(len(res), 0)
-        self.assertEqual(res[0].remote_ref_path, "refs/pull/1/head")
-        self.assertEqual(res[0].ref.path, "refs/heads/pull/1/head")
-        self.assertIsInstance(res[0].ref, Head)
+        lines = fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
+        results = [FetchInfo._from_line(self.rorepo, line, ["+refs/pull/*:refs/heads/pull/*"]) for line in lines]
+        self.assertEqual(results[0].remote_ref_path, "refs/pull/1/head")
+        self.assertEqual(results[0].ref.path, "refs/heads/pull/1/head")
+        self.assertIsInstance(results[0].ref, Head)
 
     @with_rw_repo("HEAD", bare=False)
     def test_multiple_urls(self, rw_repo):
@@ -694,8 +628,9 @@ class TestRemote(TestBase):
 
         assert remote.url == url
 
-    def test_fetch_error(self):
-        rem = self.rorepo.remote("origin")
+    @with_rw_repo("HEAD")
+    def test_fetch_error(self, rw_repo):
+        rem = rw_repo.remote("origin")
         msg = (
             r"[Cc]ouldn't find remote ref __BAD_REF__|"
             r"could not read Username|"
