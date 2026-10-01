@@ -2093,6 +2093,9 @@ class Git(metaclass=_GitMeta):
             instance per thread to be safe!
         """
         request = self._prepare_ref(ref)
+        native = _backend.object_data(self, request[:-1], stream=True)
+        if native is not NotImplemented:
+            return native
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True, Z=True)
         hexsha, typename, size = self.__get_object_header(cmd, request)
         cmd_stdout = cmd.stdout if cmd.stdout is not None else io.BytesIO()
