@@ -9,6 +9,7 @@ from collections import Counter
 from importlib import import_module
 import logging
 import os
+import re
 from threading import Lock
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
@@ -82,6 +83,39 @@ def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False
             workdir = os.path.join(command.working_dir or os.getcwd(), workdir)
         repo.set_workdir(workdir)
     return repo
+
+
+def _oid(repo: Any, ref: Any) -> Any:
+    ref = safe_decode(ref) if isinstance(ref, bytes) else str(ref)
+    if re.fullmatch(r"[a-fA-F0-9]{40}|[a-fA-F0-9]{64}", ref):
+        return gix.ObjectId(ref)
+    if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+", ref):
+        raise _Unsupported("revision grammar differences (GIX-17)")
+    if not hasattr(repo, "rev_parse_single"):
+        raise _Unsupported("revision feature disabled")
+    return repo.rev_parse_single(ref)
+
+
+def object_data(command: Any, ref: bytes) -> Any:
+    """Use native object reads without changing the public cat-file interface."""
+    if gix is None:
+        return NotImplemented
+    method = "get_object_header"
+    command._require_version()
+    try:
+        repo = _repository(command, {})
+        oid = _oid(repo, ref)
+        header = repo.try_find_header(oid)
+        if header is None:
+            raise ValueError("SHA %s could not be resolved" % oid)
+        result: Tuple[Any, ...] = (str(oid), header.kind(), header.size())
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("%s native read: %s", method, exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
+    return result
 
 
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {}
