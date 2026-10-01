@@ -306,12 +306,42 @@ def history(command: Any, rev: str, paths: Any, options: Dict[str, Any], *, coun
     return result
 
 
+def _index(repo: Any, kwargs: Dict[str, Any]) -> Any:
+    if not hasattr(repo, "index_or_empty"):
+        raise _Unsupported("index feature disabled")
+    path = kwargs.get("env", {}).get("GIT_INDEX_FILE", os.environ.get("GIT_INDEX_FILE"))
+    if path and not os.path.isabs(path):
+        raise _Unsupported("relative index path")
+    if path and os.path.abspath(path) != os.path.abspath(repo.index_path()):
+        raise _Unsupported("custom index path (GIX-3)")
+    index = repo.index_or_empty()
+    if index.is_sparse():
+        raise _Unsupported("sparse index (GIX-4)")
+    return index
+
+
+def _ls_files(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["--stage", "-v", "-z", "--full-name"]:
+        raise _Unsupported("index listing options")
+    with _index(repo, kwargs).entries() as entries:
+        output = []
+        for entry in entries:
+            flag = b"S" if entry.flags & (1 << 30) else b"M" if entry.stage() else b"H"
+            if entry.flags & (1 << 15):
+                flag = flag.lower()
+            output.append(
+                b"%s %06o %s %d\t%s\0" % (flag, entry.mode, str(entry.id).encode("ascii"), entry.stage(), entry.path())
+            )
+    return b"".join(output)
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
     "for_each_ref": _for_each_ref,
     "merge_base": _merge_base,
+    "ls_files": _ls_files,
     "config": _config,
     "worktree": _worktree,
 }
