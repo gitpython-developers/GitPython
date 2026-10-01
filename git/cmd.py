@@ -2062,6 +2062,9 @@ class Git(metaclass=_GitMeta):
             (hexsha, type_string, size_as_int)
         """
         request = self._prepare_ref(ref)
+        native = _backend.object_data(self, request[:-1])
+        if native is not NotImplemented:
+            return native
         cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True, Z=True)
         return self.__get_object_header(cmd, request)
 

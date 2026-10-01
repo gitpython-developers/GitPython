@@ -590,6 +590,8 @@ def test_submodule_rejects_checkout_and_gitmodules_symlinks(movable_submodule, t
 
 def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
     """Adding a submodule must not leave a child process holding its checkout open."""
+    # Native reads have no persistent process; keep exercising the CLI fallback.
+    monkeypatch.setattr(git._backend, "object_data", lambda *args, **kwargs: NotImplemented)
     sm = movable_submodule
     checkout = Path(sm.repo.working_tree_dir, "new")
     execute = Git.execute
@@ -620,6 +622,7 @@ def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
 
 @pytest.mark.parametrize("operation", ["update", "error", "recursive", "keep-going"])
 def test_update_closes_checkout_processes_retained_by_logging(movable_submodule, monkeypatch, caplog, operation):
+    monkeypatch.setattr(git._backend, "object_data", lambda *args, **kwargs: NotImplemented)
     sm = movable_submodule
     recursive = operation in ("recursive", "keep-going")
     with sm.module() as module:
