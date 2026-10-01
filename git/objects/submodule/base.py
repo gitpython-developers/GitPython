@@ -1195,6 +1195,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
             # END update to new commit only if needed
         except Exception as err:
+            if mrepo is not None:
+                mrepo.close()
             if not keep_going:
                 raise
             _logger.error(str(err))
@@ -1202,10 +1204,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # HANDLE RECURSION
         ##################
-        if recursive:
+        try:
             # In dry_run mode, the module might not exist.
-            if mrepo is not None:
-                for submodule in self.iter_items(self.module()):
+            if recursive and mrepo is not None:
+                for submodule in self.iter_items(mrepo):
                     submodule.update(
                         recursive,
                         init,
@@ -1218,7 +1220,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                     )
                 # END handle recursive update
             # END handle dry run
-        # END for each submodule
+        finally:
+            # Log records and progress callbacks can retain refs to this repository.
+            # Its cat-file processes must not keep the checkout open on Windows.
+            if mrepo is not None:
+                mrepo.close()
 
         return self
 
