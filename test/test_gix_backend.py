@@ -198,3 +198,21 @@ def test_native_history_and_references(repo):
     with patch.object(_backend, "gix", None):
         assert native_log == repo.head.log()
         assert native_refs == [ref.path for ref in repo.heads]
+
+
+def test_native_raw_diff_matches_cli(repo):
+    for name, content in (("a", b"rename me\n"), ("dir/b", b"old\n"), ("removed", b"gone\n")):
+        path = Path(repo.working_dir, name)
+        path.parent.mkdir(exist_ok=True)
+        path.write_bytes(content)
+    repo.index.add(["a", "dir", "removed"])
+    before = repo.index.commit("before", skip_hooks=True)
+    Path(repo.working_dir, "a").rename(Path(repo.working_dir, "z"))
+    Path(repo.working_dir, "dir/b").write_bytes(b"changed\n")
+    repo.git.add("--all")
+    after = repo.index.commit("after", skip_hooks=True)
+    for options in ({}, {"R": True}, {"no_renames": True}):
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+            native = before.diff(after, **options)
+        with patch.object(_backend, "gix", None):
+            assert native == before.diff(after, **options)
