@@ -648,6 +648,64 @@ def _var(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return signature.name + b" <" + signature.email + b"> " + _date(signature) + b"\n"
 
 
+def _update_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if "--" not in args:
+        raise _Unsupported("reference transactions (GIX-9)")
+    split = args.index("--")
+    options, operands = args[:split], args[split + 1 :]
+    deref, force_log, delete, message = True, False, False, ""
+    cursor = iter(options)
+    for option in cursor:
+        if option == "--no-deref":
+            deref = False
+        elif option == "--create-reflog":
+            force_log = True
+        elif option == "-d":
+            delete = True
+        elif option == "-m":
+            message = next(cursor, "")
+        else:
+            raise _Unsupported("reference options")
+    # LogChange sets each edit's message, but its writer does not normalize it.
+    if re.search(r"[\t\r\n\v\f]|^ | $| {2}", message):
+        raise _Unsupported("reflog message cleanup (GIX-10)")
+    if delete:
+        if len(operands) != 1 or deref:
+            raise _Unsupported("reference deletion options")
+        edit = gix.RefEdit.delete(operands[0], gix.PreviousValue.Any).with_deref(False)
+        _write("update_ref", lambda: repo.edit_references_as([edit]))
+        return b""
+    if len(operands) != 2:
+        raise _Unsupported("strict reference creation / compare-and-swap (GIX-9)")
+    name, target = operands
+    oid = _oid(repo, target)
+    kind = repo.find_header(oid).kind()
+    if (name == "HEAD" or name.startswith("refs/heads/")) and kind != "commit":
+        raise _Unsupported("branch target validation")
+    reference = repo.try_find_reference(name)
+    if reference is not None:
+        if deref and name != "HEAD" and reference.target().try_name() is not None:
+            raise _Unsupported("symbolic reference update (GIX-10)")
+        if not deref and reference.target().try_name() is not None:
+            raise _Unsupported("detaching symbolic ref reflog (GIX-10)")
+        if reference.follow_to_object() == oid:
+            raise _Unsupported("unchanged reference reflog (GIX-10)")
+    head = repo.try_find_reference("HEAD")
+    for _ in range(5):
+        if head is None or head.target().try_name() is None:
+            break
+        if head.target().try_name() == os.fsencode(name):
+            raise _Unsupported("active branch HEAD reflog (GIX-10)")
+        head = head.follow()
+    log = gix.LogChange()
+    log.force_create_reflog = force_log
+    log.message = message
+    edit = gix.RefEdit.update_with_log(name, gix.Target.Object(oid), gix.PreviousValue.Any, log).with_deref(deref)
+    signature = _committer(repo, kwargs.get("env", {}))
+    _write("update_ref", lambda: repo.edit_references_as([edit], signature))
+    return b""
+
+
 def _commit_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) < 2 or args[0] != "--no-gpg-sign" or args[2::2] != ["-p"] * len(args[2::2]):
         raise _Unsupported("commit options")
@@ -688,6 +746,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "commit_tree": _commit_tree,
     "reflog": _reflog,
     "var": _var,
+    "update_ref": _update_ref,
     "config": _config,
     "worktree": _worktree,
 }
