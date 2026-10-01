@@ -110,6 +110,19 @@ def test_native_command_queries_match_cli(repo):
             assert native == repo.git._call_process_safe(method, *args, stdout_as_string=False)
 
 
+def test_reference_enumeration_preserves_aliases_and_skips_dangling_refs(repo):
+    repo.index.commit("initial", skip_hooks=True)
+    repo.git.symbolic_ref("refs/heads/alias", "refs/heads/main")
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        assert repo.git._call_process_safe("for_each_ref", "--format=%(refname)", "--", "refs/heads") == (
+            "refs/heads/alias\nrefs/heads/main"
+        )
+    repo.git.symbolic_ref("refs/heads/dangling", "refs/heads/missing")
+    with patch.object(_backend, "gix", None):
+        expected = [ref.path for ref in repo.heads]
+    assert [ref.path for ref in repo.heads] == expected == ["refs/heads/alias", "refs/heads/main"]
+
+
 def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
     attempts = []
 
