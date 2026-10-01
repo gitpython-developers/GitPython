@@ -22,6 +22,7 @@ from git.cmd import dashify
 from git.objects.util import (
     altz_to_utctz_str,
     from_timestamp,
+    mode_str_to_int,
     parse_actor_and_date,
     parse_date,
     tzoffset,
@@ -760,3 +761,10 @@ class TestUtils(TestBase):
         redacted_cmd_6 = remove_password_if_present(cmd_6)
         assert authorization not in " ".join(redacted_cmd_6)
         assert "http.extraHeader=Authorization: *****" in redacted_cmd_6
+
+
+def test_mode_str_to_int_accepts_bytes():
+    assert mode_str_to_int("100644") == 0o100644
+    assert mode_str_to_int(b"100644") == 0o100644
+    assert mode_str_to_int("644") == 0o644
+    assert mode_str_to_int(b"120000") == 0o120000
