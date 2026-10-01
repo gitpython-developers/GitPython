@@ -235,6 +235,53 @@ def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return b"".join(records)
 
 
+def _worktree_root(command: Any, repo: Any) -> str:
+    root = repo.workdir()
+    if (
+        root is None
+        or repo.prefix() is not None
+        or os.path.realpath(command.working_dir or os.getcwd()) != os.path.realpath(root)
+    ):
+        raise _Unsupported("worktree or command working directory")
+    return os.fspath(root)
+
+
+def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]) -> Any:
+    if gix is None:
+        return NotImplemented
+    method = "Repo.untracked_files"
+    command._require_version()
+    try:
+        if options.keys() - {"ignore_submodules"}:
+            raise _Unsupported("status options")
+        repo = _repository(command, {})
+        _worktree_root(command, repo)
+        if not hasattr(repo, "dirwalk_iter"):
+            raise _Unsupported("dirwalk feature disabled")
+        index = _index(repo, {"env": command.environment()})
+        patterns = command._unpack_args([arg for arg in args if arg is not None])
+        if any("\0" in path for path in patterns):
+            raise _Unsupported("invalid pathspec")
+        walk_options = repo.dirwalk_options().emit_untracked("matching").emit_tracked(False)
+        result = []
+        with repo.dirwalk_iter(index, patterns, walk_options) as entries:
+            for item in entries:
+                entry = item.entry
+                if entry.status == "Untracked":
+                    path = entry.rela_path
+                    if entry.disk_kind in ("Directory", "Repository"):
+                        path += b"/"
+                    result.append(path)
+        result.sort()
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("untracked_files native read: %s", exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
+    return [safe_decode(path) for path in result]
+
+
 def _merge_base(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if not hasattr(repo, "merge_base"):
         raise _Unsupported("revision feature disabled")

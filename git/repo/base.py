@@ -22,6 +22,7 @@ import gitdb.util
 from gitdb.db.loose import LooseObjectDB
 from gitdb.exc import BadObject
 
+from git import _backend
 from git.cmd import Git, handle_process_output
 from git.compat import defenc, safe_decode
 from git.config import GitConfigParser
@@ -1136,6 +1137,9 @@ class Repo:
         return self._get_untracked_files()
 
     def _get_untracked_files(self, *args: Any, **kwargs: Any) -> List[str]:
+        native = _backend.untracked_files(self.git, args, kwargs)
+        if native is not NotImplemented:
+            return native
         # NUL records preserve arbitrary filenames, including newlines and quotes.
         output = self.git._call_process_safe(
             "status", "--porcelain=v1", "-z", "--untracked-files=all", "--", *args, stdout_as_string=False, **kwargs
