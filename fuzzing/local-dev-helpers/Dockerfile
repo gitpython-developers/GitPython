@@ -11,7 +11,10 @@ COPY . .
 
 # Update package managers, install necessary packages, and cleanup unnecessary files in a single RUN to keep the image smaller.
 RUN apt-get update && \
-    apt-get install -y git clang && \
+    apt-get install -y git clang build-essential libssl-dev zlib1g-dev libexpat1-dev libcurl4-openssl-dev && \
+    git clone --depth 1 --branch v2.52.0 -- https://github.com/git/git.git /tmp/git-source && \
+    make -C /tmp/git-source -j2 prefix=/usr/local NO_GETTEXT=YesPlease NO_TCLTK=YesPlease NO_PERL=YesPlease install && \
+    rm -rf /tmp/git-source && \
     python -m pip install --upgrade pip && \
     python -m pip install atheris && \
     python -m pip install -e . && \

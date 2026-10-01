@@ -20,13 +20,10 @@ __all__ = [
 ]
 
 from abc import ABC, abstractmethod
-import calendar
 from collections import deque
 from datetime import datetime, timedelta, tzinfo
 import re
 from string import digits
-import time
-import warnings
 
 from git.util import Actor, IterableList, IterableObj
 
@@ -246,78 +243,25 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
         else:
             raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
 
-    # Git time
+    from git.cmd import Git
+    from git.exc import GitCommandError
+
+    if not isinstance(string_date, str) or not string_date or "\0" in string_date:
+        raise ValueError(f"Unsupported date format or type: {string_date}, type={type(string_date)}")
     try:
-        if string_date.count(" ") == 1 and string_date.rfind(":") == -1:
-            timestamp, offset_str = string_date.split()
-            if timestamp.startswith("@"):
-                timestamp = timestamp[1:]
-            timestamp_int = int(timestamp)
-            return timestamp_int, utctz_to_altz(verify_utctz(offset_str))
-        else:
-            offset_str = "+0000"  # Local time by default.
-            if string_date[-5] in "-+":
-                offset_str = verify_utctz(string_date[-5:])
-                string_date = string_date[:-6]  # skip space as well
-            # END split timezone info
-            offset = utctz_to_altz(offset_str)
-
-            # Now figure out the date and time portion - split time.
-            date_formats = []
-            splitter = -1
-            if "," in string_date:
-                date_formats.append("%a, %d %b %Y")
-                splitter = string_date.rfind(" ")
-            else:
-                # ISO plus additional
-                date_formats.append("%Y-%m-%d")
-                date_formats.append("%Y.%m.%d")
-                date_formats.append("%m/%d/%Y")
-                date_formats.append("%d.%m.%Y")
-
-                splitter = string_date.rfind("T")
-                if splitter == -1:
-                    splitter = string_date.rfind(" ")
-                # END handle 'T' and ' '
-            # END handle RFC or ISO
-
-            assert splitter > -1
-
-            # Split date and time.
-            time_part = string_date[splitter + 1 :]  # Skip space.
-            date_part = string_date[:splitter]
-
-            # Parse time.
-            tstruct = time.strptime(time_part, "%H:%M:%S")
-
-            for fmt in date_formats:
-                try:
-                    dtstruct = time.strptime(date_part, fmt)
-                    utctime = calendar.timegm(
-                        (
-                            dtstruct.tm_year,
-                            dtstruct.tm_mon,
-                            dtstruct.tm_mday,
-                            tstruct.tm_hour,
-                            tstruct.tm_min,
-                            tstruct.tm_sec,
-                            dtstruct.tm_wday,
-                            dtstruct.tm_yday,
-                            tstruct.tm_isdst,
-                        )
-                    )
-                    return int(utctime), offset
-                except ValueError:
-                    continue
-                # END exception handling
-            # END for each fmt
-
-            # Still here ? fail.
-            raise ValueError("no format matched")
-        # END handle format
-    except Exception as e:
-        raise ValueError(f"Unsupported date format or type: {string_date}, type={type(string_date)}") from e
-    # END handle exceptions
+        identity = Git()._call_process_safe(
+            "var",
+            "GIT_AUTHOR_IDENT",
+            env={
+                "GIT_AUTHOR_NAME": "GitPython",
+                "GIT_AUTHOR_EMAIL": "date@example.invalid",
+                "GIT_AUTHOR_DATE": string_date,
+            },
+        )
+    except GitCommandError as exc:
+        raise ValueError(f"Unsupported date format or type: {string_date}, type={type(string_date)}") from exc
+    _, timestamp, offset = identity.rsplit(" ", 2)
+    return int(timestamp), utctz_to_altz(offset)
 
 
 # Check the line ending once, before parsing fields, to avoid repeated backtracking.
@@ -402,19 +346,8 @@ class Traversable(Protocol):
 
     @abstractmethod
     def list_traverse(self, *args: Any, **kwargs: Any) -> Any:
-        """Traverse self and collect all items found.
-
-        Calling this directly on the abstract base class, including via a ``super()``
-        proxy, is deprecated. Only overridden implementations should be called.
-        """
-        warnings.warn(
-            "list_traverse() method should only be called from subclasses."
-            " Calling from Traversable abstract class will raise NotImplementedError in 4.0.0."
-            " The concrete subclasses in GitPython itself are 'Commit', 'RootModule', 'Submodule', and 'Tree'.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._list_traverse(*args, **kwargs)
+        """Implemented by concrete traversable objects."""
+        raise NotImplementedError("To be implemented in subclass")
 
     def _list_traverse(
         self, as_edge: bool = False, *args: Any, **kwargs: Any
@@ -453,19 +386,8 @@ class Traversable(Protocol):
 
     @abstractmethod
     def traverse(self, *args: Any, **kwargs: Any) -> Any:
-        """Iterator yielding items found when traversing self.
-
-        Calling this directly on the abstract base class, including via a ``super()``
-        proxy, is deprecated. Only overridden implementations should be called.
-        """
-        warnings.warn(
-            "traverse() method should only be called from subclasses."
-            " Calling from Traversable abstract class will raise NotImplementedError in 4.0.0."
-            " The concrete subclasses in GitPython itself are 'Commit', 'RootModule', 'Submodule', and 'Tree'.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._traverse(*args, **kwargs)
+        """Implemented by concrete traversable objects."""
+        raise NotImplementedError("To be implemented in subclass")
 
     def _traverse(
         self,

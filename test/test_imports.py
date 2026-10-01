@@ -6,16 +6,8 @@ import sys
 import git
 
 
-def test_git_util_attribute_is_git_index_util():
-    """The top-level module's ``util`` attribute is really :mod:`git.index.util`.
-
-    Although this situation is unintuitive and not a design goal, this has historically
-    been the case, and it should not be changed without considering the effect on
-    backward compatibility. In practice, it cannot be changed at least until the next
-    major version of GitPython. This test checks that it is not accidentally changed,
-    which could happen when refactoring imports.
-    """
-    assert git.util is git.index.util
+def test_git_util_attribute_is_actual_util_module():
+    assert git.util is sys.modules["git.util"]
 
 
 def test_git_index_util_attribute_is_git_index_util():

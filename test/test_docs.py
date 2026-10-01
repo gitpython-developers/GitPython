@@ -9,6 +9,7 @@ import os.path
 
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory, with_rw_repo
+from test.lib.fixtures import writable_fixture
 
 
 class Tutorials(TestBase):
@@ -19,18 +20,19 @@ class Tutorials(TestBase):
     # call to it via git.objects.submodule.base.Submodule.remove
     # (at "handle separate bare repository"), line 1062.
     #
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    # @skipIf(sys.platform == "win32",
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa: E501
+    @with_rw_repo("HEAD")
     @with_rw_directory
-    def test_init_repo_object(self, rw_dir):
+    def test_init_repo_object(self, rw_dir, rw_repo):
         # [1-test_init_repo_object]
         from git import Repo
 
-        # rorepo is a Repo instance pointing to the git-python repository.
+        # rw_repo is an isolated Repo instance pointing to the git-python repository.
         # For all you know, the first argument to Repo is a path to the repository you
         # want to work with.
-        repo = Repo(self.rorepo.working_tree_dir)
+        repo = Repo(rw_repo.working_tree_dir)
         assert not repo.bare
         # ![1-test_init_repo_object]
 
@@ -208,10 +210,13 @@ class Tutorials(TestBase):
 
     @with_rw_directory
     def test_references_and_objects(self, rw_dir):
+        source = writable_fixture("docs.sh", self._small_repo_url())
+        self.addCleanup(source.close)
+        source_url = str(source.path() / "source")
         # [1-test_references_and_objects]
         import git
 
-        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, "repo"), branch="master")
+        repo = git.Repo.clone_from(source_url, os.path.join(rw_dir, "repo"), branch="master")
 
         heads = repo.heads
         master = heads.master  # Lists can be accessed by name for convenience.
@@ -368,7 +373,7 @@ class Tutorials(TestBase):
         # The index contains all blobs in a flat list.
         assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == "blob"])
         # Access blob objects.
-        for (_path, _stage), _entry in index.entries.items():
+        for _entry in index.iter_entries():
             pass
         new_file_path = os.path.join(repo.working_tree_dir, "new-file-name")
         open(new_file_path, "w").close()

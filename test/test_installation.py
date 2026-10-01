@@ -5,30 +5,52 @@ import ast
 import functools
 import os
 import subprocess
+import sys
 
-from test.lib import TestBase, VirtualEnvironment, requires_symlinks, with_rw_directory
+from git import _backend
+from test.lib import TestCase, requires_symlinks
+from test.lib.fixtures import ROOT, writable_fixture
 
 
-class TestInstallation(TestBase):
+class TestInstallation(TestCase):
     @requires_symlinks
-    @with_rw_directory
-    def test_installation(self, rw_dir):
-        venv, run = self._set_up_venv(rw_dir)
+    def test_installation(self):
+        # Virtualenv executables and its source symlink need their final location.
+        with writable_fixture("installation.sh", sys.executable, sys.platform, ROOT, execute=True) as fixture:
+            self._test_installation(fixture.path().resolve() / "env")
 
-        for project in ("./smmap", "./gitdb", "."):
-            result = run([venv.pip, "install", project])
+    def _test_installation(self, environment):
+        executables = environment / ("Scripts" if sys.platform == "win32" else "bin")
+        python = executables / ("python.exe" if sys.platform == "win32" else "python")
+        pip = executables / ("pip.exe" if sys.platform == "win32" else "pip")
+        run = functools.partial(
+            subprocess.run,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            cwd=environment / "src",
+            env={**os.environ, "PYTHONWARNINGS": "error"},
+        )
+
+        gitpython = ".[gix]" if _backend.name == "gix" else "."
+        for project in ("./smmap", "./gitdb", gitpython):
+            result = run([pip, "install", project])
             self._check_result(result, f"Can't install {project}")
 
-        result = run([venv.python, "-c", "import git"])
+        result = run([python, "-c", "import git"])
         self._check_result(result, "Self-test failed")
 
-        result = run([venv.python, "-c", "import gitdb; import smmap"])
+        result = run([python, "-c", "from git import _backend; print(_backend.name)"])
+        self._check_result(result, "Backend selection failed")
+        self.assertEqual(result.stdout.strip(), _backend.name)
+
+        result = run([python, "-c", "import gitdb; import smmap"])
         self._check_result(result, "Dependencies not installed")
 
         # Even IF gitdb or any other dependency is supplied during development by
         # inserting its location into PYTHONPATH or otherwise patched into sys.path,
         # make sure it is not wrongly inserted as the *first* entry.
-        result = run([venv.python, "-c", "import sys; import git; print(sys.path)"])
+        result = run([python, "-c", "import sys; import git; print(sys.path)"])
         syspath = result.stdout.splitlines()[0]
         syspath = ast.literal_eval(syspath)
         self.assertEqual(
@@ -36,30 +58,6 @@ class TestInstallation(TestBase):
             syspath[0],
             msg="Failed to follow the conventions for https://docs.python.org/3/library/sys.html#sys.path",
         )
-
-    @staticmethod
-    def _set_up_venv(rw_dir):
-        # Initialize the virtual environment.
-        venv = VirtualEnvironment(rw_dir, with_pip=True)
-
-        # Make its src directory a symlink to our own top-level source tree.
-        os.symlink(
-            os.path.dirname(os.path.dirname(__file__)),
-            venv.sources,
-            target_is_directory=True,
-        )
-
-        # Create a convenience function to run commands in it.
-        run = functools.partial(
-            subprocess.run,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True,
-            cwd=venv.sources,
-            env={**os.environ, "PYTHONWARNINGS": "error"},
-        )
-
-        return venv, run
 
     def _check_result(self, result, failure_summary):
         self.assertEqual(

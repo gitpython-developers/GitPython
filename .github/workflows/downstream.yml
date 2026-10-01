@@ -1,0 +1,51 @@
+name: Downstream compatibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [langchain, mlflow, bandit, swebench, datahub]
+        backend: [gix, cli]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Ensure Git 2.52 or newer
+        run: |
+          if ! dpkg --compare-versions "$(git version | awk '{print $3}')" ge 2.52; then
+            sudo add-apt-repository --yes ppa:git-core/ppa
+            sudo apt-get update
+            sudo apt-get install --yes git
+          fi
+      - name: Prepare Rust for GixPython fixture tooling
+        run: |
+          rustup update stable
+          rustup default stable
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/gix-target" >> "$GITHUB_ENV"
+      - name: Cache GixPython builds
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ${{ runner.temp }}/gix-target
+          key: downstream-gix-${{ runner.os }}-${{ hashFiles('gix-requirements.txt') }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.13'
+          enable-cache: false
+      - name: Test latest release against this checkout
+        run: uv run test/downstream/run.py "${{ matrix.project }}" --backend "${{ matrix.backend }}"

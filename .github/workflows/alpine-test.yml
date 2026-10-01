@@ -12,6 +12,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GIT_PYTHON_BACKEND: cli
 
     container:
       image: alpine:latest
@@ -23,8 +25,8 @@ jobs:
     steps:
     - name: Prepare Alpine Linux
       run: |
-        apk add sudo git git-daemon python3 py3-pip py3-virtualenv
-        echo 'Defaults env_keep += "CI GITHUB_* RUNNER_*"' >/etc/sudoers.d/ci_env
+        apk add sudo git git-daemon bash rust cargo build-base python3 python3-dev py3-pip py3-virtualenv
+        echo 'Defaults env_keep += "CI GITHUB_* RUNNER_* GIT_PYTHON_BACKEND"' >/etc/sudoers.d/ci_env
         addgroup -g 127 docker
         adduser -D -u 1001 runner  # TODO: Check if this still works on GHA as intended.
         adduser runner docker
@@ -64,6 +66,7 @@ jobs:
       run: |
         . .venv/bin/activate
         pip install ./smmap ./gitdb '.[test]'
+        python -c 'from gix import testtools'
 
     - name: Show POSIX file ownership
       run: |
