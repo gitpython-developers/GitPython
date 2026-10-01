@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [mlflow, bandit]
+        project: [langchain, mlflow, bandit]
     steps:
       - uses: actions/checkout@v7
         with:

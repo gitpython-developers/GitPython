@@ -1,4 +1,19 @@
 {
+  "langchain": {
+    "distribution": "langchain-community",
+    "source": "git",
+    "repository": "https://github.com/langchain-ai/langchain-community.git",
+    "tag": "libs/community/v{version}",
+    "cwd": "libs/community",
+    "install": [
+      "langchain-community=={version}",
+      "pytest>=8.4.1,<9",
+      "pytest-asyncio>=0.20.3,<1",
+      "blockbuster>=1.5.18,<1.6"
+    ],
+    "pytest_args": ["--only-extended"],
+    "tests": ["tests/unit_tests/document_loaders/test_git.py"]
+  },
   "mlflow": {
     "distribution": "mlflow-skinny",
     "source": "git",
