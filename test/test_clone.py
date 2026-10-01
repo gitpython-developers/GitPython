@@ -43,6 +43,29 @@ def test_clone_preserves_literal_separate_git_dir(tmp_path, monkeypatch, caplog,
     assert "sensitive-value" not in caplog.text
 
 
+@pytest.mark.parametrize("clone_method", ["clone", "clone_from"])
+def test_clone_clears_ambient_source_storage_environment(tmp_path, clone_method):
+    source = Repo.init(tmp_path / "source")
+    initial = source.index.commit("initial")
+    environment = {
+        "GIT_DIR": str(source.git_dir),
+        "GIT_COMMON_DIR": str(source.common_dir),
+        "GIT_WORK_TREE": str(source.working_tree_dir),
+        "GIT_OBJECT_DIRECTORY": str(source.odb.root_path()),
+    }
+    destination = tmp_path / "clone"
+    with mock.patch.dict(os.environ, environment):
+        cloned = source.clone(destination) if clone_method == "clone" else Repo.clone_from(source.git_dir, destination)
+        assert os.path.samefile(cloned.working_tree_dir, destination)
+        assert os.path.samefile(cloned.common_dir, destination / ".git")
+        assert os.path.samefile(cloned.git.rev_parse("--show-toplevel"), destination)
+        assert cloned.head.commit == initial
+        created = cloned.index.commit("clone-only commit")
+        assert source.head.commit == initial
+        assert not source.odb.has_object(created.binsha)
+    assert cloned.head.commit == created
+
+
 class TestClone(TestBase):
     @with_rw_directory
     def test_checkout_in_non_empty_dir(self, rw_dir):
@@ -388,7 +411,7 @@ class TestClone(TestBase):
         ]
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             for url in urls:
-                with mock.patch.object(Git, "_call_process", side_effect=RuntimeError) as call_process:
+                with mock.patch.object(Git, "_call_process_safe", side_effect=RuntimeError) as call_process:
                     with self.assertRaises(RuntimeError):
                         Repo.clone_from(url, "unused")
 

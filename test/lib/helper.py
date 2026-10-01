@@ -312,12 +312,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
                 # This thing is just annoying!
                 with rw_daemon_repo.config_writer() as crw:
-                    section = "daemon"
-                    try:
-                        crw.add_section(section)
-                    except Exception:
-                        pass
-                    crw.set(section, "receivepack", True)
+                    crw.set_value("daemon", "receivepack", True)
 
                 # Initialize the remote - first do it as local remote and pull, then
                 # we change the url to point to the daemon.

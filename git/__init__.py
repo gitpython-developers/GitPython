@@ -95,7 +95,7 @@ if TYPE_CHECKING:
 
 import warnings
 
-from gitdb.util import to_hex_sha
+from git.util import to_hex_sha
 
 from git.exc import (
     AmbiguousObjectName,

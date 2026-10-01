@@ -128,6 +128,13 @@ class TestGit(TestBase):
         mangled_value = "Unicode\u20ac\u2122"
         self.assertEqual(args, ["git", "log", "--", mangled_value])
 
+    def test_call_unpack_pathlike_args(self):
+        class CustomPath:
+            def __fspath__(self):
+                return "a path"
+
+        self.assertEqual(Git._unpack_args(["--", [CustomPath()]]), ["--", "a path"])
+
     def test_it_raises_errors(self):
         self.assertRaises(GitCommandError, self.git.this_does_not_exist)
 
@@ -755,9 +762,11 @@ class TestGit(TestBase):
         dirname, basename = osp.split(absolute_path)
 
         with cwd(dirname):
+            # getcwd may resolve directory symlinks, such as Homebrew's opt/git in PATH.
+            expected_path = osp.join(os.getcwd(), basename)
             with _rollback_refresh():
                 refresh(basename)
-                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, expected_path)
 
     def test_version_info_is_cached(self):
         fake_version_info = (123, 456, 789)
@@ -885,14 +894,9 @@ class TestGit(TestBase):
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
 
             if sys.platform == "win32":
-                # On Windows, use a shell so "git" finds "git.cmd". The correct and safe
-                # ways to do this straightforwardly are to set GIT_PYTHON_GIT_EXECUTABLE
-                # to git.cmd in the environment, or call git.refresh with the command's
-                # full path. See the Git.USE_SHELL docstring for deprecation details.
-                # But this tests a "default" scenario where neither is done. The
-                # approach used here, setting USE_SHELL to True so PATHEXT is honored,
-                # should not be used in production code (nor even in most test cases).
-                stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
+                # The fake executable is a batch file. Name its extension explicitly
+                # so PATH lookup works without a shell, including version probes.
+                stack.enter_context(mock.patch.object(Git, "git_exec_name", "git.cmd"))
 
             new_git = Git()
             _rename_with_stem(path2, "git")  # "Install" git, "late" in the PATH.

@@ -9,6 +9,7 @@ import pytest
 
 from git import Git, Remote, Repo, RootModule, Submodule
 from git.exc import GitCommandError
+from git.util import rmtree
 
 
 def _commit_file(repo, content):
@@ -58,6 +59,8 @@ def uninitialized_submodule(request, local_submodule):
         submodule.deinit()
     else:
         submodule.remove(configuration=False, force=True)
+        # Removal retains recoverable metadata; remove it explicitly for this fixture.
+        rmtree(metadata)
     assert not submodule.module_exists()
     assert metadata.is_dir() == (request.param == "deinitialized")
     return submodule, metadata

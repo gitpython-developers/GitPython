@@ -12,8 +12,9 @@ from pathlib import Path
 import ddt
 import pytest
 
+from gitdb import IStream
+
 from git.objects import Blob, Tree
-from git.objects.fun import tree_entries_from_data, tree_to_stream
 from git.objects.tree import TreeModifier
 from git.repo import Repo
 from git.util import cwd
@@ -43,13 +44,11 @@ class TestTree(TestBase):
             assert stream.getvalue() == orig_data
 
             stream.seek(0)
-            testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, "")
-            testtree._deserialize(stream)
+            stored = self.rorepo.odb.store(IStream("tree", len(stream.getvalue()), stream))
+            testtree = Tree(self.rorepo, stored.binsha, 0, "")
             assert testtree._cache == orig_cache
-
-            # Replaces cache, but we make sure of it.
             del testtree._cache
-            testtree._deserialize(stream)
+            assert testtree._cache == orig_cache
         # END for each item in tree
 
     def test_valid_unusual_tree_names_round_trip(self):
@@ -62,8 +61,12 @@ class TestTree(TestBase):
             modifier.add(b"a" * 20, 0o100644, name)
         modifier.set_done()
         data = BytesIO()
-        tree_to_stream(cache, data.write)
-        assert tree_entries_from_data(data.getvalue()) == cache
+        tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+        tree._cache = cache
+        tree._serialize(data)
+        data.seek(0)
+        stored = self.rorepo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert Tree(self.rorepo, stored.binsha, path="")._cache == cache
 
     @with_rw_directory
     def _get_git_ordered_files(self, rw_dir):
@@ -136,7 +139,9 @@ class TestTree(TestBase):
             TreeModifier(cache).add(b"a" * 20, 0o100644, name)
         assert not cache
         with pytest.raises(ValueError):
-            tree_to_stream([(b"a" * 20, 0o100644, name)], BytesIO().write)
+            tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+            tree._cache = [(b"a" * 20, 0o100644, name)]
+            tree._serialize(BytesIO())
 
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")

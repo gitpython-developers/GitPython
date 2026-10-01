@@ -69,7 +69,7 @@ class TagObject(base.Object):
             Repository this object is located in.
 
         :param binsha:
-            20 byte SHA1.
+            Binary object ID in the repository's object format.
 
         :param object:
             :class:`~git.objects.base.Object` instance of object we are pointing to.

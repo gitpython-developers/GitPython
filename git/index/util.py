@@ -9,7 +9,6 @@ import contextlib
 from functools import wraps
 import os
 import os.path as osp
-import struct
 import tempfile
 from types import TracebackType
 
@@ -23,11 +22,6 @@ if TYPE_CHECKING:
     from git.index import IndexFile
 
 # ---------------------------------------------------------------------------------
-
-# { Aliases
-pack = struct.pack
-unpack = struct.unpack
-# } END aliases
 
 
 class TemporaryFileSwap:
