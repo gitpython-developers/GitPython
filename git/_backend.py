@@ -341,6 +341,17 @@ def _update_index(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(_index(repo, kwargs).version()).encode("ascii") + b"\n"
 
 
+def _index_from_tree(repo: Any, tree: Any) -> Any:
+    if not hasattr(repo, "index_from_tree"):
+        raise _Unsupported("index feature disabled")
+    if (
+        repo.config_snapshot().integer("index.version") not in (None, 2)
+        or os.environ.get("GIT_INDEX_VERSION", "2") != "2"
+    ):
+        raise _Unsupported("new index version selection (GIX-13)")
+    return repo.index_from_tree(tree)
+
+
 def _write(method: str, function: Callable[[], Any]) -> Any:
     """Once a write starts, an error must not cause a second attempt through Git."""
     try:
@@ -453,6 +464,19 @@ def _mktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return oid.encode("ascii") + b"\n"
 
 
+def _read_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) != 1 or (args[0] != "--empty" and args[0].startswith("-")):
+        raise _Unsupported("index merge options")
+    path = kwargs.get("env", {}).get("GIT_INDEX_FILE")
+    if not path or os.path.exists(path):
+        raise _Unsupported("existing index metadata")
+    tree = repo.empty_tree() if args == ["--empty"] else repo.find_object(_oid(repo, args[0])).peel_to_tree()
+    index = _index_from_tree(repo, tree)
+    index.set_path(path)
+    _write("read_tree", index.write)
+    return b""
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
@@ -463,6 +487,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "update_index": _update_index,
     "hash_object": _hash_object,
     "mktree": _mktree,
+    "read_tree": _read_tree,
     "config": _config,
     "worktree": _worktree,
 }
