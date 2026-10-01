@@ -8,6 +8,7 @@ import logging
 import ntpath
 import os
 import os.path as osp
+import re
 import shlex
 import stat
 import sys
@@ -47,6 +48,7 @@ from git.util import (
     IterableList,
     RemoteProgress,
     _to_relative_path,
+    _validate_repo_path,
     join_path_native,
     rmtree,
     to_native_path_linux,
@@ -305,20 +307,55 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _validated_name(cls, name: str) -> str:
         if (
             not name
+            or "\0" in name
             or name.startswith(("/", "\\"))
             or ntpath.splitdrive(name)[0]
             or ".." in name.replace("\\", "/").split("/")
         ):
             raise ValueError("Invalid submodule name %r" % name)
+        cls._validate_windows_path(name)
         return name
 
+    @staticmethod
+    def _validate_windows_path(path: PathLike) -> None:
+        """Apply Git for Windows' filename checks before creating directories."""
+        if sys.platform == "win32":
+            for component in ntpath.splitdrive(os.fspath(path))[1].replace("\\", "/").split("/"):
+                if component in (".", ".."):
+                    continue
+                stem = component.split(".", 1)[0].rstrip(" ").upper()
+                if (
+                    component.endswith((" ", "."))
+                    or any(ord(char) < 32 or char in '<>:"|?*' for char in component)
+                    or re.fullmatch(r"CON(?:IN\$|OUT\$)?|PRN|AUX|NUL|COM[1-9]|LPT[1-9]", stem)
+                ):
+                    raise ValueError("Invalid submodule path on Windows: %r" % path)
+
     @classmethod
-    def _module_abspath(cls, parent_repo: "Repo", path: PathLike, name: str) -> PathLike:
+    def _module_abspath(
+        cls, parent_repo: "Repo", path: PathLike, name: str, *, moving_from: Union[PathLike, None] = None
+    ) -> PathLike:
+        """Reject nested Git directories, allowing the source of a pending rename."""
+        from git.repo.fun import is_git_dir
+
         name = cls._validated_name(name)
         if cls._need_gitfile_submodules(parent_repo.git):
+            directory = osp.join(parent_repo.git_dir, "modules")
+            for component in to_native_path_linux(name).split("/")[:-1]:
+                directory = osp.join(directory, component)
+                if is_git_dir(directory) and (
+                    moving_from is None or Path(directory).resolve() != Path(moving_from).resolve()
+                ):
+                    raise ValueError(
+                        "Submodule metadata for %r is inside another Git directory: %r" % (name, directory)
+                    )
             return osp.join(parent_repo.git_dir, "modules", name)
         if parent_repo.working_tree_dir:
-            return cls._checked_abspath(parent_repo.working_tree_dir, cls._to_relative_path(parent_repo, path))
+            return cls._checked_abspath(
+                parent_repo.working_tree_dir,
+                cls._to_relative_path(parent_repo, path),
+                git_dirs=(parent_repo.git_dir, parent_repo.common_dir),
+            )
         raise NotADirectoryError()
 
     @classmethod
@@ -360,7 +397,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         path = cls._to_relative_path(repo, path)
         if repo.working_tree_dir is None:
             raise NotADirectoryError("Submodules require a working tree")
-        module_checkout_path = cls._checked_abspath(repo.working_tree_dir, path)
+        module_checkout_path = cls._checked_abspath(
+            repo.working_tree_dir, path, git_dirs=(repo.git_dir, repo.common_dir)
+        )
         module_abspath = cls._module_abspath(repo, path, name)
         if cls._need_gitfile_submodules(repo.git):
             if not allow_unsafe_options:
@@ -402,6 +441,16 @@ class Submodule(IndexObject, TraversableIterableObj):
             **kwargs,
         )
         if cls._need_gitfile_submodules(repo.git):
+            # A concurrent clone may have turned a leading directory into a repository.
+            try:
+                cls._module_abspath(repo, path, name)
+            except ValueError:
+                clone.close()
+                try:
+                    os.remove(osp.join(clone.git_dir, "HEAD"))
+                except FileNotFoundError:
+                    pass
+                raise
             cls._write_git_file_and_module_config(module_checkout_path, module_abspath)
 
         return clone
@@ -411,8 +460,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         """:return: A path guaranteed to be relative to the given parent repository
 
         :raise ValueError:
-            If path is not contained in the parent repository's working tree.
+            If path is outside the working tree or is unsafe as a submodule checkout.
         """
+        cls._validate_windows_path(path)
         if parent_repo.working_tree_dir:
             path = _to_relative_path(parent_repo.working_tree_dir, path)
         else:
@@ -422,6 +472,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         if not path or path == ".":
             raise ValueError("Submodule checkout path must not be the repository root")
 
+        _validate_repo_path(path)
         return path
 
     @property
@@ -433,22 +484,35 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     def _checkout_abspath(self, relative_path: PathLike, allow_final_symlink: bool = False) -> PathLike:
         """Check a checkout path already normalized by :meth:`_to_relative_path`."""
-        return self._checked_abspath(self.repo.working_tree_dir, relative_path, allow_final_symlink)
+        return self._checked_abspath(
+            self.repo.working_tree_dir,
+            relative_path,
+            allow_final_symlink,
+            git_dirs=(self.repo.git_dir, self.repo.common_dir),
+        )
 
     @classmethod
     def _checked_abspath(
-        cls, root: Union[PathLike, None], relative_path: PathLike, allow_final_symlink: bool = False
+        cls,
+        root: Union[PathLike, None],
+        relative_path: PathLike,
+        allow_final_symlink: bool = False,
+        *,
+        git_dirs: Sequence[PathLike] = (),
     ) -> str:
-        """Reject symlinks below a trusted root before accessing submodule paths."""
+        """Reject symlinks and checkout aliases of Git directories below a trusted root."""
         if root is None:
             raise NotADirectoryError("Submodules require a working tree")
         path = os.fspath(root)
+        metadata_dirs = set(git_dirs)
         components = to_native_path_linux(relative_path).split("/")
         for index, component in enumerate(components):
             path = os.fspath(join_path_native(path, component))
-            if allow_final_symlink and index == len(components) - 1:
-                break
+            if metadata_dirs and osp.exists(path) and any(osp.samefile(path, directory) for directory in metadata_dirs):
+                raise ValueError("Submodule checkout path aliases Git metadata: %r" % relative_path)
             if osp.islink(path):
+                if allow_final_symlink and index == len(components) - 1:
+                    break
                 raise ValueError("Submodule path %r contains a symbolic link" % relative_path)
         return path
 
@@ -1122,6 +1186,11 @@ class Submodule(IndexObject, TraversableIterableObj):
             self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
         # Validate the source before removing the destination.
         cur_path = self.abspath
+        module_abspath = self._module_abspath(self.repo, self.path, self.name)
+        if self.path == self.name:
+            self._module_abspath(
+                self.repo, module_checkout_path, os.fspath(module_checkout_path), moving_from=module_abspath
+            )
         module_checkout_abspath = self._checkout_abspath(module_checkout_path, allow_final_symlink=True)
         if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
@@ -1160,7 +1229,6 @@ class Submodule(IndexObject, TraversableIterableObj):
             renamed_module = True
 
             if osp.isfile(osp.join(module_checkout_abspath, ".git")):
-                module_abspath = self._module_abspath(self.repo, self.path, self.name)
                 self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
             # END handle git file rewrite
         # END move physical module
@@ -1522,8 +1590,8 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         self._validated_name(self.name)
         self._validated_name(new_name)
-        destination_module_abspath = self._module_abspath(self.repo, self.path, new_name)
         mod = self.module()
+        destination_module_abspath = self._module_abspath(self.repo, self.path, new_name, moving_from=mod.git_dir)
         self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
 
         # .git/config
@@ -1573,6 +1641,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         self._validated_name(self.name)
         module_checkout_abspath = self.abspath
+        self._module_abspath(self.repo, self.path, self.name)
         try:
             repo = git.Repo(module_checkout_abspath)
             if repo != self.repo:

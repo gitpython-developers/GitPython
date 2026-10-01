@@ -2,6 +2,19 @@
 Changelog
 =========
 
+3.2.1
+=====
+
+Security fixes for
+
+* https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-83vg-56qc-22m7
+
+If you can, also try and provide feedback on the upcoming v4 branch
+https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.2.1
+
 3.2.0
 =====
 

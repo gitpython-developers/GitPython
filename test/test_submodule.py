@@ -86,6 +86,7 @@ def test_submodule_update_preserves_literal_name(tmp_path, monkeypatch, caplog, 
 def movable_submodule(tmp_path):
     """Create a committed local submodule whose logical name stays fixed when moved."""
     with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
         (tmp_path / "source" / "file").write_text("content", encoding="utf-8")
         source.index.add(["file"])
         source.index.commit("Create source")
@@ -109,6 +110,207 @@ def _move_snapshot(submodule):
         config,
         submodule.path,
     )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".git/child",
+        ".GiT/child",
+        "nested/.git/child",
+        "git~1/child",
+        "GIT~1 . /child",
+        ".git. /child",
+        ".git:stream/child",
+        ".git::$INDEX_ALLOCATION/child",
+        "nested\\.git\\child",
+        "C:relative",
+        "nul\0name",
+    ]
+    + [
+        f".g{chr(codepoint)}it/child"
+        for codepoint in (*range(0x200C, 0x2010), *range(0x202A, 0x202F), *range(0x206A, 0x2070), 0xFEFF)
+    ],
+)
+@pytest.mark.parametrize("operation", ["add", "clone", "update", "move", "move-module", "move-config"])
+def test_submodule_rejects_unsafe_checkout_before_mutation(movable_submodule, tmp_path, path, operation):
+    sm = movable_submodule
+    root = Path(sm.repo.working_tree_dir)
+    before = _move_snapshot(sm)
+    paths = set(root.rglob("*"))
+    # Check the portable metadata aliases against Git's index validation as well.
+    if operation == "clone" and path not in ("C:relative", "nul\0name"):
+        with sm.repo.git.custom_environment(GIT_INDEX_FILE=str(tmp_path / "validation-index")):
+            with _patch_git_config("core.protectHFS", "true"), _patch_git_config("core.protectNTFS", "true"):
+                with pytest.raises(GitCommandError):
+                    sm.repo.git.update_index("--add", "--cacheinfo", f"160000,{sm.hexsha},{path}")
+    with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("clone attempted")):
+        with pytest.raises(ValueError):
+            if operation == "add":
+                sm.repo.create_submodule("new", path, sm.url)
+            elif operation == "clone":
+                Submodule._clone_repo(sm.repo, sm.url, path, "new")
+            elif operation == "update":
+                Submodule(sm.repo, sm.binsha, name="new", path=path, url=sm.url).update(init=True)
+            else:
+                sm.move(path, configuration=operation != "move-module", module=operation != "move-config")
+    assert _move_snapshot(sm) == before
+    assert set(root.rglob("*")) == paths
+
+
+def test_add_rejects_metadata_checkout_without_writing_files(movable_submodule):
+    sm = movable_submodule
+    before = _move_snapshot(sm)
+    with pytest.raises(ValueError, match="Git metadata"):
+        sm.repo.create_submodule("new", ".git/new", sm.url)
+    assert not Path(sm.repo.git_dir, "new").exists()
+    assert not Path(sm.repo.git_dir, "modules/new").exists()
+    assert _move_snapshot(sm) == before
+
+
+@pytest.mark.parametrize("absolute_path", [False, True])
+@pytest.mark.parametrize("metadata_name", ["metadata", "MeTaDaTa"])
+@pytest.mark.parametrize("operation", ["add", "clone", "update", "move"])
+def test_submodule_rejects_checkout_in_separate_metadata(
+    movable_submodule, tmp_path, absolute_path, metadata_name, operation
+):
+    root = tmp_path / "separate"
+    with git.Repo.init(root, separate_git_dir=str(root / "metadata"), allow_unsafe_options=True) as parent:
+        if not (root / metadata_name).is_dir():
+            pytest.skip("Requires a case-insensitive filesystem")
+        sm = parent.create_submodule("module", "module", movable_submodule.url)
+        parent.index.commit("Add submodule")
+        before = _move_snapshot(sm)
+        paths = set(root.rglob("*"))
+        path = root / metadata_name / "new" if absolute_path else f"{metadata_name}/new"
+        with pytest.raises(ValueError, match="Git metadata"):
+            if operation == "add":
+                parent.create_submodule("new", path, sm.url)
+            elif operation == "clone":
+                Submodule._clone_repo(parent, sm.url, path, "new")
+            elif operation == "update":
+                Submodule(parent, sm.binsha, name="new", path=path, url=sm.url).update(init=True)
+            else:
+                sm.move(path)
+        assert _move_snapshot(sm) == before
+        assert set(root.rglob("*")) == paths
+
+
+@pytest.mark.parametrize("operation", ["add", "clone", "update", "rename", "move"])
+def test_submodule_rejects_nested_metadata_before_mutation(movable_submodule, operation):
+    sm = movable_submodule
+    other = sm.repo.create_submodule("other", "other", sm.url)
+    other.module().close()
+    root = Path(sm.repo.working_tree_dir)
+    before = _move_snapshot(sm), _move_snapshot(other)
+    paths = set(root.rglob("*"))
+    name = f"{sm.name}/child"
+    with pytest.raises(ValueError, match="inside.*Git directory"):
+        if operation == "add":
+            sm.repo.create_submodule(name, "new", sm.url)
+        elif operation == "clone":
+            Submodule._clone_repo(sm.repo, sm.url, "new", name)
+        elif operation == "update":
+            Submodule(sm.repo, sm.binsha, name=name, path="new", url=sm.url).update(init=True)
+        elif operation == "rename":
+            other.rename(name)
+        else:
+            other.move(name)
+    assert (_move_snapshot(sm), _move_snapshot(other)) == before
+    assert set(root.rglob("*")) == paths
+
+
+@pytest.mark.parametrize("state", ["retained", "checked-out"])
+def test_update_rejects_existing_nested_metadata(movable_submodule, state):
+    sm = movable_submodule
+    name = f"{sm.name}/child"
+    checkout = Path(sm.repo.working_tree_dir, "new")
+    with git.Repo.clone_from(
+        sm.url, checkout, separate_git_dir=str(Path(sm.repo.git_dir, "modules", name)), allow_unsafe_options=True
+    ):
+        pass
+    if state == "retained":
+        shutil.rmtree(checkout)
+    before = _move_snapshot(sm)
+    paths = set(Path(sm.repo.working_tree_dir).rglob("*"))
+    with pytest.raises(ValueError, match="inside.*Git directory"):
+        Submodule(sm.repo, sm.binsha, name=name, path="new", url=sm.url).update(init=True, no_fetch=True)
+    assert _move_snapshot(sm) == before
+    assert set(Path(sm.repo.working_tree_dir).rglob("*")) == paths
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "CON",
+        "con.txt",
+        "CONIN$",
+        "conout$.txt",
+        "AUX .txt",
+        "PRN",
+        "NUL",
+        "COM9",
+        "LPT1",
+        "name:stream",
+        "space ",
+        "period.",
+        "line\nbreak",
+        "star*",
+        'quote"',
+        "question?",
+        "angle<",
+        "angle>",
+        "pipe|",
+    ],
+)
+def test_submodule_rejects_windows_destination_names_before_mutation(movable_submodule, path):
+    sm = movable_submodule
+    before = _move_snapshot(sm)
+    paths = set(Path(sm.repo.working_tree_dir).rglob("*"))
+    with mock.patch("git.objects.submodule.base.sys", SimpleNamespace(platform="win32")):
+        with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("clone attempted")):
+            with pytest.raises(ValueError):
+                sm.repo.create_submodule("new", f"nested/{path}", sm.url)
+            with pytest.raises(ValueError):
+                sm.repo.create_submodule(f"nested/{path}", "new", sm.url)
+    assert _move_snapshot(sm) == before
+    assert set(Path(sm.repo.working_tree_dir).rglob("*")) == paths
+
+
+@pytest.mark.parametrize("path", ["nested/space ", "nested/period."])
+def test_windows_destination_validation_precedes_normalization(tmp_path, path):
+    parent = SimpleNamespace(working_tree_dir=str(tmp_path))
+    # Windows' GetFullPathName removes trailing spaces and periods.
+    with mock.patch("git.objects.submodule.base._to_relative_path", return_value=path.rstrip(" .")):
+        with mock.patch("git.objects.submodule.base.sys", SimpleNamespace(platform="win32")):
+            with pytest.raises(ValueError, match="Invalid submodule path on Windows"):
+                Submodule._to_relative_path(parent, path)
+
+
+def test_submodule_can_relocate_its_own_metadata(movable_submodule):
+    sm = movable_submodule
+    sm.rename(f"{sm.name}/child")
+    assert Path(sm.abspath, "file").read_text() == "content"
+    with sm.module() as module:
+        assert Path(module.git_dir) == Path(sm.repo.git_dir, "modules", sm.name)
+
+
+def test_clone_disables_metadata_that_becomes_nested(movable_submodule, monkeypatch):
+    sm = movable_submodule
+    clone_from = git.Repo.clone_from
+    ancestor = Path(sm.repo.git_dir, "modules/new")
+
+    def clone_and_create_ancestor(*args, **kwargs):
+        clone = clone_from(*args, **kwargs)
+        with git.Repo.init(ancestor, bare=True):
+            pass
+        return clone
+
+    monkeypatch.setattr(git.Repo, "clone_from", clone_and_create_ancestor)
+    with pytest.raises(ValueError, match="inside.*Git directory"):
+        Submodule._clone_repo(sm.repo, sm.url, "new", "new/child")
+    assert not (ancestor / "child/HEAD").exists()
+    assert (ancestor / "HEAD").is_file()
 
 
 @pytest.mark.parametrize("target_kind", ["relative", "absolute", "internal", "dangling"])
@@ -165,6 +367,28 @@ def test_move_normal_destination(movable_submodule, absolute_path):
     before = _move_snapshot(submodule)
     assert submodule.move(destination) is submodule
     assert _move_snapshot(submodule) == before
+
+
+@pytest.mark.parametrize("metadata_dir", ["git_dir", "common_dir"])
+def test_move_rejects_leaf_symlink_to_metadata(movable_submodule, tmp_path, metadata_dir):
+    root = tmp_path / "worktree"
+    movable_submodule.repo.git.worktree("add", "--detach", str(root))
+    with git.Repo(root) as parent:
+        assert not osp.samefile(parent.git_dir, parent.common_dir)
+        submodule = parent.submodules[0]
+        submodule.update(init=True)
+        target = Path(getattr(parent, metadata_dir))
+        destination = root / "destination"
+        destination.symlink_to(target, target_is_directory=True)
+        before = _move_snapshot(submodule)
+
+        with pytest.raises(ValueError, match="Git metadata"):
+            submodule.move("destination", module=False)
+
+        assert _move_snapshot(submodule) == before
+        assert destination.is_symlink()
+        assert destination.samefile(target)
+        assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
 
 
 @pytest.mark.parametrize("kind", ["empty", "nonempty", "file", "dangling"])
@@ -1410,6 +1634,7 @@ class TestSubmodule(TestBase):
 
         invalid_names = (
             "",
+            "nul\0name",
             "..",
             "../module",
             R"..\module",
