@@ -79,8 +79,11 @@ def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False
             ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false", "core.hooksPath=" + os.devnull]
         )
     repo = gix.open_opts(path, options)
-    if repo.config_snapshot().string("extensions.refStorage") == b"reftable":
+    snapshot = repo.config_snapshot()
+    if snapshot.string("extensions.refStorage") == b"reftable":
         raise _Unsupported("reftable (GIX-1)")
+    if snapshot.string("extensions.compatObjectFormat") is not None:
+        raise _Unsupported("compatibility object format (GIX-19)")
     if effective.get("GIT_WORK_TREE"):
         workdir = effective["GIT_WORK_TREE"]
         if not os.path.isabs(workdir):

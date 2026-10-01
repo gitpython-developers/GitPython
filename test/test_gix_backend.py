@@ -74,6 +74,20 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         assert cli.call_count == 2
 
 
+def test_compatibility_object_format_uses_cli_before_writing(repo):
+    repo.git.config("core.repositoryFormatVersion", "1")
+    repo.git.config("extensions.compatObjectFormat", "sha256" if repo.object_format == "sha1" else "sha1")
+    # Check dispatch without requiring Git's optional compatibility-hash support.
+    with patch.object(_backend, "_write", side_effect=AssertionError("unexpected native mutation")):
+        with patch.object(Git, "execute", return_value="fallback") as cli:
+            assert repo.git._call_process_safe("rev_parse", "--show-object-format") == "fallback"
+            assert (
+                repo.git._call_process_safe("hash_object", "-t", "blob", "-w", "--stdin", istream=BytesIO(b"content"))
+                == "fallback"
+            )
+            assert cli.call_count == 2
+
+
 def test_native_command_queries_match_cli(repo):
     Path(repo.working_dir, "file").write_bytes(b"content")
     repo.index.add(["file"])
