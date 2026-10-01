@@ -762,9 +762,11 @@ class TestGit(TestBase):
         dirname, basename = osp.split(absolute_path)
 
         with cwd(dirname):
+            # getcwd may resolve directory symlinks, such as Homebrew's opt/git in PATH.
+            expected_path = osp.join(os.getcwd(), basename)
             with _rollback_refresh():
                 refresh(basename)
-                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, expected_path)
 
     def test_version_info_is_cached(self):
         fake_version_info = (123, 456, 789)
