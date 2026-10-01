@@ -190,11 +190,24 @@ def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     )
 
 
+def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) == 2 and args[0] == "--get":
+        snapshot = repo.config_snapshot()
+        value = snapshot.string(args[1])
+        if value is None:
+            if snapshot.boolean(args[1]) is None:
+                raise GitCommandError(["git", "config"], 1)
+            value = b""  # An implicit boolean is an empty value in --get output.
+        return value + b"\n"
+    raise _Unsupported("config file parsing, enumeration, or mutation (GIX-12)")
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
     "for_each_ref": _for_each_ref,
+    "config": _config,
 }
 
 
