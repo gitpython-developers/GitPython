@@ -200,12 +200,46 @@ def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     raise _Unsupported("config file parsing, enumeration, or mutation (GIX-12)")
 
 
+def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["list", "--porcelain", "-z"] or not hasattr(repo, "worktrees"):
+        raise _Unsupported("worktree operation or feature disabled")
+    proxies = repo.worktrees()
+    if any(proxy.is_prunable() for proxy in proxies):
+        raise _Unsupported("prunable worktree diagnostics")
+    main = repo.main_repo()
+    if main.is_bare() and proxies:
+        raise _Unsupported("linked worktree of bare repository (GIX-14)")
+
+    def describe(local: Any) -> List[bytes]:
+        fields = [b"worktree " + os.fsencode(local.workdir() or local.git_dir())]
+        if local.is_bare():
+            fields.append(b"bare")
+        else:
+            head = local.head()
+            oid = head.id()
+            fields.append(
+                b"HEAD " + (str(oid).encode("ascii") if oid is not None else b"0" * local.object_hash().len_in_hex())
+            )
+            fields.append(b"detached" if head.is_detached() else b"branch " + head.referent_name())
+        return fields
+
+    records = [b"\0".join(describe(main)) + b"\0\0"]
+    for proxy in sorted(proxies, key=lambda proxy: os.fsencode(proxy.base())):
+        fields = describe(proxy.into_repo())
+        if proxy.is_locked():
+            reason = proxy.lock_reason()
+            fields.append(b"locked" + (b" " + reason if reason else b""))
+        records.append(b"\0".join(fields) + b"\0\0")
+    return b"".join(records)
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
     "for_each_ref": _for_each_ref,
     "config": _config,
+    "worktree": _worktree,
 }
 
 
