@@ -30,6 +30,7 @@ and test-only dependencies are excluded. Downloads are not unique installations.
 
 | Project | Distribution downloads | Last tested release | Selected coverage |
 | --- | ---: | --- | --- |
+| MLflow (`mlflow-skinny`) | 25,850,354 | 3.16.1 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
 | Bandit | 24,935,372 | 1.9.4 | 12 upstream baseline CLI tests: real repository creation, commits, branches, resets, discovery, and dirty state |
 
 Source: [top-pypi-packages](https://hugovk.github.io/top-pypi-packages/top-pypi-packages.min.json),
@@ -40,6 +41,19 @@ distributions was checked, together with known runtime integrations.
 
 Bandit's GitPython dependency belongs to its user-facing `baseline` extra.
 Two selected tests mock error paths; the others use real repositories.
+
+MLflow is counted once, using its largest consuming distribution,
+`mlflow-skinny`, without adding overlapping distribution counts. The tests install
+the matching full `mlflow` release because upstream global fixtures import its
+server and SQLite tracking support. Selected cases cover branches, fetches,
+checkout, invalid versions, Git context, remote URLs, Python subprocesses, dirty
+repositories, and staged/unstaged model-versioning diffs.
+Some tests clone the public `mlflow/mlflow-example` repository or start a localhost
+HTTP server. `CI` and `GITHUB_ACTIONS` are unset only for downstream setup/tests:
+upstream autouse fixtures otherwise build wheels and modify conda environments.
+No model downloads, cloud credentials, or external tracking server are needed.
+CLI examples that train models or need private SSH credentials are excluded.
+
 CI runs the same command against the latest release and fails when no test passes,
 including when all selected tests are skipped. Test dependency ranges only supply
 the upstream test harness; they do not pin the dependent's release.
