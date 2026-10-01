@@ -1,0 +1,8 @@
+{
+  "bandit": {
+    "distribution": "bandit",
+    "source": "sdist",
+    "install": ["{source}[baseline]", "pytest", "fixtures", "testtools"],
+    "tests": ["tests/unit/cli/test_baseline.py"]
+  }
+}
