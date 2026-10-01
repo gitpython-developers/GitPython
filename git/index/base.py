@@ -21,6 +21,7 @@ import tempfile
 
 from gitdb.base import IStream
 
+from git import _backend
 from git.compat import defenc, force_bytes, safe_decode
 from git.cmd import Git
 import git.diff as git_diff
@@ -169,9 +170,8 @@ class IndexFile(LazyMixin, git_diff.Diffable):
             )
         )
 
-    @contextlib.contextmanager
-    def _materialized_index(self) -> Generator[str, None, None]:
-        """Apply the in-memory entries to a private, Git-managed index."""
+    def _validated_entries(self) -> Dict[Tuple[PathLike, StageType], IndexEntry]:
+        """Validate the complete update before either backend can write."""
         desired: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
         for key, entry in self.entries.items():
             path = os.fspath(entry.path)
@@ -181,6 +181,12 @@ class IndexFile(LazyMixin, git_diff.Diffable):
             if len(entry.binsha) != self.repo._oid_size or entry.mode not in (0o100644, 0o100755, 0o120000, 0o160000):
                 raise ValueError("Invalid index object ID or mode")
             desired[(path, entry.stage)] = entry
+        return desired
+
+    @contextlib.contextmanager
+    def _materialized_index(self) -> Generator[str, None, None]:
+        """Apply the in-memory entries to a private, Git-managed index."""
+        desired = self._validated_entries()
         with tempfile.TemporaryDirectory(prefix="gitpython-index-") as directory:
             path = osp.join(directory, "index")
             env = {"GIT_INDEX_FILE": path}
@@ -670,6 +676,12 @@ class IndexFile(LazyMixin, git_diff.Diffable):
         for entry in self.entries.values():
             if entry.stage:
                 raise UnmergedEntriesError(entry)
+        entries = self._validated_entries()
+        native = _backend.write_tree(
+            self.repo.git, [(os.fsencode(entry.path), entry.mode, entry.hexsha) for entry in entries.values()]
+        )
+        if native is not NotImplemented:
+            return Tree(self.repo, bytes.fromhex(native), path="")
         with self._materialized_index() as path:
             oid = self.repo.git._call_process_safe("write_tree", "--missing-ok", env={"GIT_INDEX_FILE": path})
         return Tree(self.repo, bytes.fromhex(oid), path="")
