@@ -6,6 +6,7 @@ CLI implementation. Native failures are never retried as CLI mutations.
 """
 
 from collections import Counter
+from glob import glob
 from importlib import import_module
 import io
 from itertools import islice
@@ -359,6 +360,70 @@ def _index_from_tree(repo: Any, tree: Any) -> Any:
     ):
         raise _Unsupported("new index version selection (GIX-13)")
     return repo.index_from_tree(tree)
+
+
+def materialize_index(command: Any, source: Any, destination: str, desired: Dict[Any, Any], dirty: Any) -> Any:
+    """Write a private index, retaining native metadata for unchanged entries."""
+    if gix is None:
+        return NotImplemented
+    method = "IndexFile.write"
+    command._require_version()
+    try:
+        if any(stage for _path, stage in desired):
+            raise _Unsupported("unmerged index editing")
+        if any(not entry.binsha.strip(b"\0") for entry in desired.values()):
+            raise _Unsupported("null index object IDs")
+        names = {os.fsencode(path) for path, _stage in desired}
+        for path in names:
+            while b"/" in path:
+                path = path.rsplit(b"/", 1)[0]
+                if path in names:
+                    raise _Unsupported("overlapping index paths")
+        repo = _repository(command, {})
+        if os.path.exists(source):
+            if repo.config_snapshot().boolean("core.splitIndex") or glob(
+                os.path.join(os.path.dirname(os.fspath(source)), "sharedindex.*")
+            ):
+                raise _Unsupported("split index preservation (GIX-13)")
+            index = _index(repo, {"env": {"GIT_INDEX_FILE": os.fspath(source)}})
+            if index.version() != 2:
+                raise _Unsupported("index version preservation (GIX-13)")
+        else:
+            index = _index_from_tree(repo, repo.empty_tree())
+        # Keep path-independent flags that GitPython exposes; changed paths get fresh stat data.
+        mask = (3 << 12) | (1 << 15) | (1 << 30)
+        changed = {os.fsencode(path) for path in dirty}
+        with index.entries() as entries:
+            current = list(entries)
+        for entry in current:
+            wanted = desired.get((safe_decode(entry.path()), entry.stage()))
+            if wanted is None or (entry.mode, str(entry.id), entry.flags & mask) != (
+                wanted.mode,
+                wanted.hexsha,
+                wanted.flags & mask,
+            ):
+                changed.add(entry.path())
+        changed.update(names - {entry.path() for entry in current})
+        # ponytail: per-entry removals shift a vector; use a bulk binding for very large edits.
+        for position, entry in reversed(list(enumerate(current))):
+            if entry.path() in changed:
+                index.remove_entry_at_index(position)
+        for (path, _stage), entry in desired.items():
+            if os.fsencode(path) in changed:
+                index.dangerously_push_entry(
+                    gix.IndexStat(), gix.ObjectId(entry.hexsha), entry.flags & mask, entry.mode, os.fsencode(path)
+                )
+        index.sort_entries()
+        index.verify_entries()
+        index.set_path(destination)
+        _write("index", index.write)
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("materialize_index native preparation: %s", exc)
+        return _fallback(method, "native preparation diagnostics")
+    record(method, "native")
+    return None
 
 
 def _write(method: str, function: Callable[[], Any]) -> Any:
