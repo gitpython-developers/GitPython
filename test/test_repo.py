@@ -247,6 +247,20 @@ class TestRepo(TestBase):
 
             reader.assert_not_called()
 
+    def test_relative_gitfile_resolution_uses_gitfile_directory(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            root = Path(tdir)
+            with Repo.init(root / "source") as source, Repo.init(root / "unrelated") as unrelated:
+                checkout = root / "checkout"
+                checkout.mkdir()
+                dotgit = checkout / ".git"
+                dotgit.write_text("gitdir: ../source/.git\n")
+                # In particular, a native Windows operand contains backslashes;
+                # Git still needs forward slashes to resolve a relative target.
+                with cwd(unrelated.working_tree_dir), Repo(checkout) as reopened:
+                    assert osp.samefile(reopened.git_dir, source.git_dir)
+                    assert osp.samefile(find_worktree_git_dir(dotgit), source.git_dir)
+
     def test_repo_discovery_uses_storage_environment(self):
         with tempfile.TemporaryDirectory() as tdir:
             git_dir = Path(tdir) / "git"
@@ -568,7 +582,8 @@ class TestRepo(TestBase):
         assert repo.alternates == []
         objects = osp.join(source.common_dir, "objects")
         with repo.git.custom_environment(GIT_ALTERNATE_OBJECT_DIRECTORIES=objects):
-            assert repo.alternates == [objects]
+            assert len(repo.alternates) == 1
+            assert osp.samefile(repo.alternates[0], objects)
         with pytest.raises(AttributeError):
             repo.alternates = []
 
