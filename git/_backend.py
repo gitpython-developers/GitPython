@@ -124,7 +124,29 @@ def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
     return result
 
 
-_HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {}
+def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args == ["--path-format=absolute", "--git-common-dir"]:
+        return os.fsencode(os.path.abspath(repo.common_dir())) + b"\n"
+    if args == ["--is-bare-repository"]:
+        return b"true\n" if repo.is_bare() else b"false\n"
+    if args == ["--show-object-format"]:
+        return str(repo.object_hash()).encode("ascii") + b"\n"
+    if args == ["--show-ref-format"]:
+        # Config identifies reftable and HEAD reports it as unsupported, but
+        # neither validates unknown repository extensions as Git's query does.
+        raise _Unsupported("reference storage format query (GIX-1)")
+    if args == ["--show-toplevel"] and repo.workdir() is not None:
+        return os.fsencode(os.path.abspath(repo.workdir())) + b"\n"
+    if args[:1] != ["--verify"] or args[-2:-1] != ["--end-of-options"]:
+        raise _Unsupported("discovery or revision options")
+    if args[:-2] not in (["--verify"], ["--verify", "--quiet"]):
+        raise _Unsupported("revision options")
+    return str(_oid(repo, args[-1])).encode("ascii") + b"\n"
+
+
+_HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
+    "rev_parse": _rev_parse,
+}
 
 
 def dispatch(

@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from git import Git, Repo, _backend
+from git.exc import InvalidGitRepositoryError
 from gitdb import IStream
 
 gix = pytest.importorskip("gix")
@@ -16,6 +17,27 @@ gix = pytest.importorskip("gix")
 def repo(request, tmp_path):
     with Repo.init(tmp_path / "repo", object_format=request.param, initial_branch="main") as repo:
         yield repo
+
+
+def test_reftable_head_reports_unsupported_storage(repo, tmp_path):
+    with Repo.init(tmp_path / "reftable", object_format=repo.object_format, ref_format="reftable") as reftable:
+        options = gix.OpenOptions().open_path_as_is(True).bail_if_untrusted(True).strict_config(True)
+        native = gix.open_opts(reftable.git_dir, options)
+        assert native.config_snapshot().string("extensions.refStorage") == b"reftable"
+        # The Rust Unsupported cause is flattened into gix.Error by the bindings.
+        with pytest.raises(gix.Error, match="unsupported storage backend"):
+            native.head()
+        assert reftable.ref_format == "reftable"
+
+
+def test_native_head_does_not_validate_repository_extensions(repo):
+    repo.git.config("core.repositoryFormatVersion", "1")
+    repo.git.config("extensions.unknown", "true")
+    options = gix.OpenOptions().open_path_as_is(True).bail_if_untrusted(True).strict_config(True)
+    assert gix.open_opts(repo.git_dir, options).head().is_unborn()
+    # Git's format query also validates extensions; HEAD alone cannot replace it.
+    with pytest.raises(InvalidGitRepositoryError):
+        Repo(repo.git_dir)
 
 
 def test_unknown_command_and_storage_environment_use_cli(repo):
@@ -30,7 +52,8 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         assert repo.git._call_process_safe("for_each_ref", "--format=%(refname)", "--", "refs/*") == "fallback"
         with repo.git.custom_environment(GIT_INDEX_FILE=".git/index"):
             assert repo.git._call_process_safe("ls_files", "--stage", "-v", "-z", "--full-name") == "fallback"
-        assert cli.call_count == 2
+        assert repo.git._call_process_safe("rev_parse", "--show-ref-format") == "fallback"
+        assert cli.call_count == 3
 
 
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
