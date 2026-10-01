@@ -1161,6 +1161,9 @@ class Repo:
         for path in paths:
             if "\0" in os.fspath(path):
                 raise ValueError("Paths cannot contain NUL")
+        native = _backend.ignored(self.git, paths)
+        if native is not NotImplemented:
+            return native
         with tempfile.TemporaryFile() as stream:
             stream.write(b"\0".join(os.fspath(path).encode(defenc, "surrogateescape") for path in paths) + b"\0")
             stream.seek(0)
