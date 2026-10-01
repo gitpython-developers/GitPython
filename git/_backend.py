@@ -158,9 +158,22 @@ def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         )
 
 
+def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if len(args) != 4 or args[:3] != ["--quiet", "--no-recurse", "--"]:
+        raise _Unsupported("reference mutation or options")
+    reference = repo.try_find_reference(args[-1])
+    if reference is None:
+        raise _Unsupported("missing reference diagnostics")
+    target = reference.target().try_name()
+    if target is None:
+        raise GitCommandError(["git", "symbolic-ref"], 1)
+    return target + b"\n"
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
+    "symbolic_ref": _symbolic_ref,
 }
 
 
