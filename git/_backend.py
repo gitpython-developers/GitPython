@@ -13,8 +13,9 @@ from itertools import islice
 import logging
 import os
 import re
+import stat
 from threading import Lock
-from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple, cast
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, cast
 
 from git.compat import safe_decode
 from git.exc import GitCommandError
@@ -289,6 +290,53 @@ def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]
         return _fallback(method, "native read diagnostics")
     record(method, "native")
     return [safe_decode(path) for path in result]
+
+
+def ignored(command: Any, paths: Sequence[Any]) -> Any:
+    if gix is None:
+        return NotImplemented
+    method = "Repo.ignored"
+    command._require_version()
+    try:
+        repo = _repository(command, {})
+        root = _worktree_root(command, repo)
+        if not hasattr(repo, "excludes"):
+            raise _Unsupported("excludes feature disabled")
+        index = _index(repo, {"env": command.environment()})
+        excludes = repo.excludes(index)
+        with index.entries() as entries:
+            tracked = {entry.path() for entry in entries}
+        result = []
+        for path in paths:
+            path = os.fspath(path)
+            relative = os.path.relpath(path, root) if os.path.isabs(path) else path
+            relative = relative.replace(os.sep, "/")
+            if any(part in (".", "..", ".git") for part in relative.split("/")) or relative.startswith(":"):
+                raise _Unsupported("ignore path normalization")
+            # check-ignore rejects traversal through symlinks and tracked gitlinks.
+            parent = relative.rstrip("/")
+            while "/" in parent:
+                parent = parent.rsplit("/", 1)[0]
+                if os.path.islink(os.path.join(root, parent)) or os.fsencode(parent) in tracked:
+                    raise _Unsupported("ignore path traverses symlink or submodule")
+            if os.fsencode(relative.rstrip("/")) in tracked:
+                continue
+            mode: Optional[int]
+            try:
+                mode = os.lstat(os.path.join(root, relative)).st_mode
+            except FileNotFoundError:
+                mode = stat.S_IFDIR if relative.endswith("/") else None
+            else:
+                mode = 0o40000 if stat.S_ISDIR(mode) else 0o120000 if stat.S_ISLNK(mode) else 0o100644
+            if excludes.at_entry(os.fsencode(relative), mode).is_excluded():
+                result.append(path)
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("ignored native read: %s", exc)
+        return _fallback(method, "native read diagnostics")
+    record(method, "native")
+    return result
 
 
 def _merge_base(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
