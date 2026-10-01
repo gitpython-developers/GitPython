@@ -40,6 +40,19 @@ def test_native_head_does_not_validate_repository_extensions(repo):
         Repo(repo.git_dir)
 
 
+def test_native_worktree_inventory_includes_bare_main(repo, tmp_path):
+    with Repo.init(tmp_path / "bare", bare=True, object_format=repo.object_format) as bare:
+        linked_path = tmp_path / "linked"
+        bare.git.worktree("add", "--orphan", "-b", "linked", str(linked_path))
+        bare.git.worktree("lock", "--reason", "keep", str(linked_path))
+        with Repo(linked_path) as linked:
+            for current in (bare, linked):
+                with patch.object(_backend, "gix", None):
+                    expected = current.git._call_process_safe("worktree", "list", "--porcelain", "-z")
+                with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+                    assert current.git._call_process_safe("worktree", "list", "--porcelain", "-z") == expected
+
+
 def test_unknown_command_and_storage_environment_use_cli(repo):
     before = _backend.statistics()
     assert repo.git._call_process_safe("status", "--porcelain") == ""

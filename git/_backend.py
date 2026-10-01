@@ -86,6 +86,13 @@ def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False
     return repo
 
 
+def _canonical_repository(repo: Any) -> Any:
+    """Have Gix resolve repository metadata again from a canonical input path."""
+    path = os.fspath(repo.git_dir())
+    canonical = os.path.realpath(path)
+    return gix.open_opts(canonical, repo.open_options()) if path != canonical else repo
+
+
 def _oid(repo: Any, ref: Any) -> Any:
     ref = safe_decode(ref) if isinstance(ref, bytes) else str(ref)
     if re.fullmatch(r"[a-fA-F0-9]{40}|[a-fA-F0-9]{64}", ref):
@@ -202,12 +209,46 @@ def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     raise _Unsupported("config file parsing, enumeration, or mutation (GIX-12)")
 
 
+def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["list", "--porcelain", "-z"] or not hasattr(repo, "worktrees"):
+        raise _Unsupported("worktree operation or feature disabled")
+    proxies = repo.worktrees()
+    if any(proxy.is_prunable() for proxy in proxies):
+        raise _Unsupported("prunable worktree diagnostics")
+    main = _canonical_repository(repo.main_repo())
+
+    def describe(local: Any) -> List[bytes]:
+        workdir = local.workdir()
+        fields = [b"worktree " + os.fsencode(workdir or local.git_dir())]
+        # Gix's is_bare() reflects configuration, even for a linked worktree.
+        if local.is_bare() and workdir is None:
+            fields.append(b"bare")
+        else:
+            head = local.head()
+            oid = head.id()
+            fields.append(
+                b"HEAD " + (str(oid).encode("ascii") if oid is not None else b"0" * local.object_hash().len_in_hex())
+            )
+            fields.append(b"detached" if head.is_detached() else b"branch " + head.referent_name())
+        return fields
+
+    records = [b"\0".join(describe(main)) + b"\0\0"]
+    for proxy in sorted(proxies, key=lambda proxy: os.fsencode(proxy.base())):
+        fields = describe(proxy.into_repo())
+        if proxy.is_locked():
+            reason = proxy.lock_reason()
+            fields.append(b"locked" + (b" " + reason if reason else b""))
+        records.append(b"\0".join(fields) + b"\0\0")
+    return b"".join(records)
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
     "for_each_ref": _for_each_ref,
     "config": _config,
+    "worktree": _worktree,
 }
 
 
