@@ -49,5 +49,17 @@
     "no_deps": ["{source}"],
     "pytest_args": ["--confcutdir={checks}", "--import-mode=importlib"],
     "tests": ["{checks}/swebench.py"]
+  },
+  "datahub": {
+    "distribution": "acryl-datahub",
+    "source": "git",
+    "repository": "https://github.com/acryldata/datahub.git",
+    "tag": "v{version}",
+    "cwd": "metadata-ingestion",
+    "install": ["acryl-datahub=={version}", "pytest"],
+    "unset_env": ["DATAHUB_LOOKML_GIT_TEST_SSH_KEY"],
+    "env": {"DATAHUB_TELEMETRY_ENABLED": "false"},
+    "pytest_args": ["--confcutdir=tests/integration/git"],
+    "tests": ["tests/integration/git/test_git_clone.py"]
   }
 }

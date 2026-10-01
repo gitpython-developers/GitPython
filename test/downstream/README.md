@@ -6,6 +6,9 @@ Run released projects' GitPython-related tests against this checkout with
 ```sh
 uv run test/downstream/run.py bandit
 uv run test/downstream/run.py bandit --version 1.9.4
+for project in langchain mlflow bandit swebench datahub; do
+    uv run test/downstream/run.py "$project"
+done
 ```
 
 The default resolves the latest release from PyPI each time. `--version` reproduces
@@ -19,8 +22,9 @@ elsewhere. Delete retained directories when no longer needed. PyPI source archiv
 are verified against their published SHA-256 digest and extracted with Python's
 safe data filter. Each run uses a private Git configuration, including an identity
 and the `master` initial branch expected by upstream fixtures. Inherited Git
-settings and Python import paths are cleared before setup and testing. Select a
-different Git executable by putting its directory first on `PATH`.
+settings, pytest options/plugins, and Python import paths are cleared before
+setup and testing. Select a different Git executable by putting its directory
+first on `PATH`.
 
 ## Selection and coverage
 
@@ -34,12 +38,16 @@ and test-only dependencies are excluded. Downloads are not unique installations.
 | MLflow (`mlflow-skinny`) | 25,850,354 | 3.16.1 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
 | Bandit | 24,935,372 | 1.9.4 | 12 upstream baseline CLI tests: real repository creation, commits, branches, resets, discovery, and dirty state |
 | SWE-bench | 22,942,741 | 5.0.2 | 4 supplemental integration cases for `AutoContextManager`; no upstream tests cover its GitPython callers |
+| DataHub (`acryl-datahub`) | 5,019,402 | 1.7.0.14 | 7 upstream tests passed, 1 credential-dependent skip: public clone/checkout, SSH timeout, exception/redaction contracts, and configuration |
 
 Source: [top-pypi-packages](https://hugovk.github.io/top-pypi-packages/top-pypi-packages.min.json),
 snapshot updated **2026-10-01 12:40:51 UTC**. Its
-[ClickHouse query](https://github.com/hugovk/top-pypi-packages/blob/main/top-pypi-clickhouse.py)
+[ClickHouse query](https://github.com/hugovk/top-pypi-packages/blob/main/clickhouse.py)
 covers the previous calendar month. Current metadata for the top 5,000
 distributions was checked, together with known runtime integrations.
+Streamlit and W&B are excluded because their latest releases removed GitPython.
+The next eligible declared consumer is `dlt` (5,002,981 downloads); LangChain's
+current runtime integration places it in the selected five instead.
 
 LangChain Community's published `GitLoader` integration uses GitPython at runtime
 and asks users to install it manually. It qualifies as a current user even though
@@ -75,6 +83,16 @@ The separate BM25 retrieval helpers require Java/Pyserini and are not covered.
 The supplemental filename is intentionally excluded from GitPython's normal test
 collection; the runner selects it explicitly with importlib mode to avoid
 shadowing the upstream `swebench` package.
+
+DataHub uses GitPython in its `looker`, `lookml`, and `odcs` runtime extras.
+Patch-release tags come from `acryldata/datahub`, although its package metadata
+links to a different repository. The Git integration file runs without unrelated
+SQL/docker conftests; telemetry is disabled explicitly. It clones a public GitLab
+fixture and checks out a fixed commit, exercises a real localhost SSH timeout,
+and checks exception handling, password redaction, and URL/branch configuration.
+The private SSH-clone test retains its upstream skip: the runner removes its
+credential variable and needs no private credentials. `ssh`, public GitLab
+access, and local TCP sockets are needed for the selected tests.
 
 CI runs the same command against the latest release and fails when no test passes,
 including when all selected tests are skipped. Test dependency ranges only supply
