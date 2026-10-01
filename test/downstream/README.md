@@ -33,6 +33,7 @@ and test-only dependencies are excluded. Downloads are not unique installations.
 | LangChain Community | 27,882,881 | 0.4.2 | 2 upstream GitLoader tests: real clones, commits, checkout, tree traversal, ignored paths, and remote validation |
 | MLflow (`mlflow-skinny`) | 25,850,354 | 3.16.1 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
 | Bandit | 24,935,372 | 1.9.4 | 12 upstream baseline CLI tests: real repository creation, commits, branches, resets, discovery, and dirty state |
+| SWE-bench | 22,942,741 | 5.0.2 | 4 supplemental integration cases for `AutoContextManager`; no upstream tests cover its GitPython callers |
 
 Source: [top-pypi-packages](https://hugovk.github.io/top-pypi-packages/top-pypi-packages.min.json),
 snapshot updated **2026-10-01 12:40:51 UTC**. Its
@@ -60,6 +61,20 @@ HTTP server. `CI` and `GITHUB_ACTIONS` are unset only for downstream setup/tests
 upstream autouse fixtures otherwise build wheels and modify conda environments.
 No model downloads, cloud credentials, or external tracking server are needed.
 CLI examples that train models or need private SSH credentials are excluded.
+
+SWE-bench 5.0.2 ships no upstream tests for its GitPython inference helpers and
+has no corresponding Git release tag. Its profile installs the verified PyPI
+source archive without unrelated ML dependencies, then imports the real upstream
+`AutoContextManager` with `chardet` and GitPython. Our explicitly labeled
+[supplemental check](checks/swebench.py) exercises local cloning, commit checkout,
+reset, untracked-file cleanup, directory restoration, and clone reuse across
+SHA-1/SHA-256 and files/reftable. Git URL rewriting routes the ordinary upstream
+URL to a local fixture; `GIT_ALLOW_PROTOCOL=file` prevents network access during
+the test. No upstream code, imported modules, or GitPython calls are mocked.
+The separate BM25 retrieval helpers require Java/Pyserini and are not covered.
+The supplemental filename is intentionally excluded from GitPython's normal test
+collection; the runner selects it explicitly with importlib mode to avoid
+shadowing the upstream `swebench` package.
 
 CI runs the same command against the latest release and fails when no test passes,
 including when all selected tests are skipped. Test dependency ranges only supply

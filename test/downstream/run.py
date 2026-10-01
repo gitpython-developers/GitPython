@@ -157,7 +157,7 @@ def main():
     report = work / "junit.xml"
     # Bandit's CLI tests inspect sys.argv and reserve the short spelling `-o`.
     command = [str(python), "-m", "pytest", "-q", "--override-ini=addopts=", "--tb=short", f"--junitxml={report}"]
-    command += list(map(expand, profile["tests"])) + profile.get("pytest_args", [])
+    command += list(map(expand, profile["tests"] + profile.get("pytest_args", [])))
     completed = run(command, cwd=source / profile.get("cwd", ""), env=env, check=False)
     result["exit_code"] = completed.returncode
     if report.exists():

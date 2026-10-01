@@ -41,5 +41,13 @@
     "source": "sdist",
     "install": ["{source}[baseline]", "pytest", "fixtures", "testtools"],
     "tests": ["tests/unit/cli/test_baseline.py"]
+  },
+  "swebench": {
+    "distribution": "swebench",
+    "source": "sdist",
+    "install": ["chardet", "pytest"],
+    "no_deps": ["{source}"],
+    "pytest_args": ["--confcutdir={checks}", "--import-mode=importlib"],
+    "tests": ["{checks}/swebench.py"]
   }
 }
