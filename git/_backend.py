@@ -619,6 +619,38 @@ def _signature(env: Dict[str, Any], role: str) -> Any:
     return _checked_signature(gix.Signature(name, email, int(seconds), offset))
 
 
+def _committer(repo: Any, env: Dict[str, Any]) -> Any:
+    effective = {**os.environ, **env}
+    fields = [effective.get("GIT_COMMITTER_" + field) for field in ("NAME", "EMAIL", "DATE")]
+    if "" in fields:
+        raise _Unsupported("empty identity")
+    if all(fields):
+        return _signature(effective, "COMMITTER")
+    signature = repo.committer()
+    if signature is None:
+        raise _Unsupported("identity resolution")
+    name, email, date = fields
+    if date:
+        return _signature(
+            {
+                "GIT_COMMITTER_NAME": name or signature.name,
+                "GIT_COMMITTER_EMAIL": email or signature.email,
+                "GIT_COMMITTER_DATE": date,
+            },
+            "COMMITTER",
+        )
+    return _checked_signature(
+        gix.Signature(name or signature.name, email or signature.email, signature.time.seconds, signature.time.offset)
+    )
+
+
+def _var(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args != ["GIT_COMMITTER_IDENT"]:
+        raise _Unsupported("Git variable")
+    signature = _committer(repo, kwargs.get("env", {}))
+    return signature.name + b" <" + signature.email + b"> " + _date(signature) + b"\n"
+
+
 def _commit_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) < 2 or args[0] != "--no-gpg-sign" or args[2::2] != ["-p"] * len(args[2::2]):
         raise _Unsupported("commit options")
@@ -658,6 +690,7 @@ _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "read_tree": _read_tree,
     "commit_tree": _commit_tree,
     "reflog": _reflog,
+    "var": _var,
     "config": _config,
     "worktree": _worktree,
 }

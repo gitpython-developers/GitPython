@@ -74,6 +74,42 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         assert cli.call_count == 2
 
 
+def test_native_command_queries_match_cli(repo):
+    Path(repo.working_dir, "file").write_bytes(b"content")
+    repo.index.add(["file"])
+    commit = repo.index.commit("initial", skip_hooks=True)
+    repo.git.update_environment(
+        GIT_COMMITTER_NAME="Example",
+        GIT_COMMITTER_EMAIL="example@example.invalid",
+        GIT_COMMITTER_DATE="1100000000 -0430",
+    )
+    with repo.config_writer() as writer:
+        writer.set_value("test", "value", "configured")
+    queries = [
+        ("rev_parse", "--verify", "--end-of-options", "HEAD"),
+        ("rev_parse", "--path-format=absolute", "--git-common-dir"),
+        ("rev_parse", "--is-bare-repository"),
+        ("rev_parse", "--show-object-format"),
+        ("rev_parse", "--show-ref-format"),
+        ("rev_parse", "--show-toplevel"),
+        ("ls_tree", "-z", "--full-tree", commit.tree.hexsha),
+        ("symbolic_ref", "--quiet", "--no-recurse", "--", "HEAD"),
+        ("for_each_ref", "--format=%(refname)", "--", "refs/heads"),
+        ("config", "--get", "test.value"),
+        ("worktree", "list", "--porcelain", "-z"),
+        ("merge_base", "--", commit.hexsha, commit.hexsha),
+        ("ls_files", "--stage", "-v", "-z", "--full-name"),
+        ("update_index", "--show-index-version"),
+        ("reflog", "exists", "--", "HEAD"),
+        ("var", "GIT_COMMITTER_IDENT"),
+    ]
+    for method, *args in queries:
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call: " + method)):
+            native = repo.git._call_process_safe(method, *args, stdout_as_string=False)
+        with patch.object(_backend, "gix", None):
+            assert native == repo.git._call_process_safe(method, *args, stdout_as_string=False)
+
+
 def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
     attempts = []
 
