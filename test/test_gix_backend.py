@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from git import Git, Repo, _backend
+from git.exc import GitCommandError
 from gitdb import IStream
 
 gix = pytest.importorskip("gix")
@@ -31,6 +32,23 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         with repo.git.custom_environment(GIT_INDEX_FILE=".git/index"):
             assert repo.git._call_process_safe("ls_files", "--stage", "-v", "-z", "--full-name") == "fallback"
         assert cli.call_count == 2
+
+
+def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
+    attempts = []
+
+    def fail():
+        attempts.append("write")
+        raise gix.Error("write failed after it began")
+
+    def handler(native, args, kwargs):
+        return _backend._write("test_write", fail)
+
+    monkeypatch.setitem(_backend._HANDLERS, "test_write", handler)
+    with patch.object(Git, "execute", side_effect=AssertionError("must not retry through CLI")):
+        with pytest.raises(GitCommandError, match="write failed after it began"):
+            repo.git._call_process_safe("test_write")
+    assert attempts == ["write"]
 
 
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
