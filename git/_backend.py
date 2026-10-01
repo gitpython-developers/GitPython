@@ -192,7 +192,12 @@ def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if any(char in prefix for char in b"*?["):
         raise _Unsupported("reference glob patterns")
     with repo.references().all() as refs:
-        names = [ref.name() for ref in refs]
+        names = []
+        for ref in refs:
+            names.append(ref.name())
+            if ref.target().try_name() is not None:
+                # Git omits dangling symbolic refs; defer their diagnostics to it.
+                ref.follow_to_object()
     return b"".join(
         name + b"\n"
         for name in sorted(names)
