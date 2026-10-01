@@ -713,7 +713,11 @@ def test_submodule_allows_existing_metadata_symlinks(
     target = tmp_path / "outside"
     if kind == "alias":
         target = modules / "nested"
-        (root / "module/.git").write_text("gitdir: ../.git/modules/alias/module")
+        # Git hides .git on Windows; opening that existing file with O_CREAT
+        # fails even when it is writable. Preserve its attributes with r+.
+        with (root / "module/.git").open("r+", encoding="utf-8") as gitfile:
+            gitfile.write("gitdir: ../.git/modules/alias/module")
+            gitfile.truncate()
     else:
         link.rename(target)
     link.symlink_to(target, target_is_directory=target.is_dir())
