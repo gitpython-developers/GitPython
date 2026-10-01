@@ -57,8 +57,11 @@ def test_quoted_remote_and_submodule_names(tmp_path):
         source.index.commit("Initial commit")
         remote = parent.create_remote('quoted"remote', str(tmp_path / "source"))
         assert parent.remote(remote.name).url == remote.url
-        assert remote.config_reader.get_value("url") == str(tmp_path / "source")
-        module = parent.create_submodule('quoted"module', "module", str(tmp_path / "source"))
+        assert remote.config_reader.get_value("url") == (tmp_path / "source").as_posix()
+        # Register an existing checkout so the quoted name only appears in config,
+        # not in a metadata directory name that Windows cannot represent.
+        with Repo.clone_from(str(tmp_path / "source"), tmp_path / "parent" / "module"):
+            module = parent.create_submodule('quoted"module', "module")
         parent.index.commit("Add module")
         assert parent.submodules[0].name == module.name
-        assert module.config_reader().get_value("url") == str(tmp_path / "source")
+        assert module.config_reader().get_value("url") == (tmp_path / "source").as_posix()
