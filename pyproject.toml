@@ -54,6 +54,7 @@ include-package-data = true
 version = {file = "VERSION"}
 dependencies = {file = "requirements.txt"}
 optional-dependencies."test" = {file = "test-requirements.txt"}
+optional-dependencies."gix" = {file = "gix-requirements.txt"}
 
 [tool.setuptools.packages.find]
 include = ["git", "git.*"]
