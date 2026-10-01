@@ -11,7 +11,6 @@ __all__ = [
     "to_native_path_linux",
     "join_path_native",
     "Stats",
-    "IndexFileSHA1Writer",
     "IterableObj",
     "IterableList",
     "BlockingLockFile",
@@ -48,7 +47,6 @@ from pathlib import Path
 
 # typing ---------------------------------------------------------
 from typing import (
-    IO,
     TYPE_CHECKING,
     Any,
     AnyStr,
@@ -81,9 +79,6 @@ from gitdb.util import (
     file_contents_ro,  # noqa: F401
     file_contents_ro_filepath,  # noqa: F401
     hex_to_bin,  # noqa: F401
-    make_sha,
-    to_bin_sha,  # noqa: F401
-    to_hex_sha,  # noqa: F401
 )
 
 if TYPE_CHECKING:
@@ -113,6 +108,25 @@ T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attr
 T_Actor = TypeVar("T_Actor", bound="Actor")
 
 _logger = logging.getLogger(__name__)
+
+
+def to_hex_sha(sha: Union[str, bytes]) -> Union[str, bytes]:
+    """Normalize legacy SHA-1 or SHA-256 IDs; use ``bin_to_hex`` for raw IDs."""
+    if len(sha) in (40, 64):
+        hex_to_bin(sha)  # Validate already hexadecimal input.
+        return sha
+    if isinstance(sha, bytes) and len(sha) in (20, 32):
+        return bin_to_hex(sha)
+    raise ValueError("Expected a binary or hexadecimal SHA-1/SHA-256 object ID")
+
+
+def to_bin_sha(sha: Union[str, bytes]) -> bytes:
+    """Normalize legacy SHA-1 or SHA-256 IDs; use ``hex_to_bin`` for hex IDs."""
+    if isinstance(sha, bytes) and len(sha) in (20, 32):
+        return sha
+    if len(sha) in (40, 64):
+        return hex_to_bin(sha)
+    raise ValueError("Expected a binary or hexadecimal SHA-1/SHA-256 object ID")
 
 
 def _read_env_flag(name: str, default: bool) -> bool:
@@ -1109,41 +1123,6 @@ class Stats:
             }
             hsh["files"][filename.strip()] = files_dict
         return Stats(hsh["total"], hsh["files"])
-
-
-class IndexFileSHA1Writer:
-    """Wrapper around a file-like object that remembers the SHA1 of the data written to
-    it. It will write a sha when the stream is closed or if asked for explicitly using
-    :meth:`write_sha`.
-
-    Only useful to the index file.
-
-    :note:
-        Based on the dulwich project.
-    """
-
-    __slots__ = ("f", "sha1")
-
-    def __init__(self, f: IO[bytes]) -> None:
-        self.f = f
-        self.sha1 = make_sha(b"")
-
-    def write(self, data: bytes) -> int:
-        self.sha1.update(data)
-        return self.f.write(data)
-
-    def write_sha(self) -> bytes:
-        sha = self.sha1.digest()
-        self.f.write(sha)
-        return sha
-
-    def close(self) -> bytes:
-        sha = self.write_sha()
-        self.f.close()
-        return sha
-
-    def tell(self) -> int:
-        return self.f.tell()
 
 
 class LockFile:

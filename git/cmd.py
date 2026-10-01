@@ -50,6 +50,7 @@ from git.exc import (
     GitCommandNotFound,
     UnsafeOptionError,
     UnsafeProtocolError,
+    UnsupportedOperation,
 )
 from git.util import (
     cygpath,
@@ -1129,6 +1130,82 @@ class Git(metaclass=_GitMeta):
                         )
         return options
 
+    @staticmethod
+    def _check_operand(value: Any, label: str = "operand") -> str:
+        """Validate a single name/revision, before Git can interpret it as an option.
+
+        Paths and free-form payloads need their own validation and framing instead.
+        """
+        value = safe_decode(value) if isinstance(value, bytes) else str(value)
+        if value.startswith("-") or any(char in value for char in "\0\r\n"):
+            raise UnsafeOptionError(f"Invalid {label}: {value!r}")
+        return value
+
+    def _require_version(self) -> None:
+        if self.version_info < (2, 52):
+            raise UnsupportedOperation("GitPython requires Git 2.52 or newer for repository operations")
+
+    def _call_process_safe(
+        self,
+        method: str,
+        *args: Any,
+        _allow_hooks: bool = False,
+        _allow_network: bool = False,
+        _config: Sequence[str] = (),
+        **kwargs: Any,
+    ) -> Any:
+        """Run library-owned plumbing without introducing executable configuration.
+
+        Callers validate their operands and any forwarded options using the existing
+        command-specific guards. This does not restrict the public raw Git interface.
+        """
+        self._check_operand(method, "command")
+        if kwargs.get("shell"):
+            raise UnsafeOptionError("Library operations cannot run through a shell")
+        if _allow_hooks and method != "hook":
+            raise UnsafeOptionError("Only explicit hook operations may enable hooks")
+        insertion = kwargs.get("insert_kwargs_after")
+        if insertion is not None and not (
+            method == "remote" and args and args[0] == insertion and insertion in ("add", "set-url", "update")
+        ):
+            raise UnsafeOptionError("Library command options cannot be reordered past safety flags")
+        for setting in _config:
+            key, separator, value = setting.partition("=")
+            if not separator or (
+                key.lower() not in ("i18n.commitencoding", "diff.mnemonicprefix", "fetch.output", "core.abbrev")
+                and not (key == "protocol.file.allow" and value in ("always", "never", "user"))
+                and not (key in ("tar.tgz.command", "tar.tar.gz.command") and value == "git archive gzip")
+            ):
+                raise UnsafeOptionError(f"Unsupported internal Git configuration: {key!r}")
+        for arg in self._unpack_args([arg for arg in args if arg is not None]) + self.transform_kwargs(
+            **{key: value for key, value in kwargs.items() if key not in execute_kwargs}
+        ):
+            if "\0" in arg:
+                raise UnsafeOptionError("Git arguments cannot contain NUL bytes")
+        self._require_version()
+        options = ["--no-pager", "--no-optional-locks"]
+        # These settings would become visible as user configuration in `config`.
+        if method != "config":
+            config = ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false"]
+            if not _allow_hooks:
+                config.append(f"core.hooksPath={os.devnull}")
+            for setting in [*config, *_config]:
+                options.extend(("-c", setting))
+        elif _config:
+            raise ValueError("Configuration queries must not include synthetic settings")
+        env = dict(kwargs.pop("env", {}) or {})
+        env.update(LC_ALL="C", LANGUAGE="C")
+        if not _allow_network:
+            env.update(GIT_NO_LAZY_FETCH="1", GIT_TERMINAL_PROMPT="0")
+        return self._call_process(
+            method,
+            *args,
+            _safe_git_options=options,
+            shell=False,
+            env=env,
+            **{key: value for key, value in kwargs.items() if key != "shell"},
+        )
+
     AutoInterrupt: TypeAlias = _AutoInterrupt
 
     CatFileContentStream: TypeAlias = _CatFileContentStream
@@ -1148,7 +1225,7 @@ class Git(metaclass=_GitMeta):
         self._persistent_git_options: List[str] = []
 
         # Extra environment variables to pass to git commands
-        self._environment: Dict[str, str] = {}
+        self._environment: Dict[str, Optional[str]] = {}
 
         # Cached version slots
         self._version_info: Union[Tuple[int, ...], None] = None
@@ -1232,7 +1309,7 @@ class Git(metaclass=_GitMeta):
             return self._version_info
 
         # Run "git version" and parse it.
-        process_version = self._call_process("version")
+        process_version = cast(str, self._call_process("version", shell=False))
         version_string = process_version.split(" ")[2]
         version_fields = version_string.split(".")[:4]
         leading_numeric_fields = itertools.takewhile(str.isdigit, version_fields)
@@ -1517,16 +1594,18 @@ class Git(metaclass=_GitMeta):
 
         # Start the process.
         inline_env = env
-        env = os.environ.copy()
+        environment: Dict[str, Optional[str]] = dict(os.environ)
         # Attempt to force all output to plain ASCII English, which is what some parsing
         # code may expect.
         # According to https://askubuntu.com/a/311796, we are setting LANGUAGE as well
         # just to be sure.
-        env["LANGUAGE"] = "C"
-        env["LC_ALL"] = "C"
-        env.update(self._environment)
+        environment["LANGUAGE"] = "C"
+        environment["LC_ALL"] = "C"
+        environment.update(self._environment)
         if inline_env is not None:
-            env.update(inline_env)
+            environment.update(inline_env)
+        # Internal or per-call None overrides remove inherited variables.
+        env = {key: value for key, value in environment.items() if value is not None}
 
         if sys.platform == "win32":
             if kill_after_timeout is not None:
@@ -1692,7 +1771,7 @@ class Git(metaclass=_GitMeta):
         else:
             return stdout_value
 
-    def environment(self) -> Dict[str, str]:
+    def environment(self) -> Dict[str, Optional[str]]:
         return self._environment
 
     def update_environment(self, **kwargs: Any) -> Dict[str, Union[str, None]]:
@@ -1776,7 +1855,7 @@ class Git(metaclass=_GitMeta):
             for arg in arg_list:
                 outlist.extend(cls._unpack_args(arg))
         else:
-            outlist.append(str(arg_list))
+            outlist.append(os.fsdecode(arg_list) if isinstance(arg_list, os.PathLike) else str(arg_list))
 
         return outlist
 
@@ -1861,6 +1940,7 @@ class Git(metaclass=_GitMeta):
         """
         # Handle optional arguments prior to calling transform_kwargs.
         # Otherwise these'll end up in args, which is bad.
+        safe_git_options = kwargs.pop("_safe_git_options", ())
         exec_kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
         opts_kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
 
@@ -1894,12 +1974,14 @@ class Git(metaclass=_GitMeta):
         call.extend(self._git_options)
         self._git_options = ()
 
+        call.extend(safe_git_options)
+
         call.append(dashify(method))
         call.extend(args_list)
 
         return self.execute(call, **exec_kwargs)
 
-    def _parse_object_header(self, header_line: str) -> Tuple[str, str, int]:
+    def _parse_object_header(self, header_line: Union[str, bytes]) -> Tuple[str, str, int]:
         """
         :param header_line:
             A line of the form::
@@ -1912,6 +1994,8 @@ class Git(metaclass=_GitMeta):
         :raise ValueError:
             If the header contains indication for an error due to incorrect input sha.
         """
+        if isinstance(header_line, bytes):
+            header_line = header_line.decode("ascii", "replace")
         tokens = header_line.split()
         if len(tokens) != 3:
             if not tokens:
@@ -1926,42 +2010,56 @@ class Git(metaclass=_GitMeta):
             # END handle actual return value
         # END error handling
 
-        if len(tokens[0]) != 40:
+        if (
+            not re.fullmatch(r"[0-9a-fA-F]+", tokens[0])
+            or len(tokens[0]) % 2
+            or tokens[1] not in ("blob", "tree", "commit", "tag")
+            or not tokens[2].isdigit()
+        ):
             raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
     def _prepare_ref(self, ref: object) -> bytes:
-        # Required for command to separate refs on stdin, as bytes.
+        # `cat-file -Z` separates both requests and responses with NUL, so paths
+        # containing newlines cannot inject requests or desynchronize the process.
         if isinstance(ref, bytes):
-            # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text.
-            refstr: str = ref.decode("ascii")
+            refstr: str = ref.decode(defenc, "surrogateescape")
         elif not isinstance(ref, str):
             refstr = str(ref)  # Could be ref-object.
         else:
             refstr = ref
 
-        if not refstr.endswith("\n"):
-            refstr += "\n"
-        return refstr.encode(defenc)
+        if "\0" in refstr or refstr.startswith("-"):
+            raise UnsafeOptionError("Object queries cannot contain NUL or start with '-'")
+        return refstr.encode(defenc, "surrogateescape") + b"\0"
 
     def _get_persistent_cmd(self, attr_name: str, cmd_name: str, *args: Any, **kwargs: Any) -> "Git.AutoInterrupt":
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
 
-        options = {"istream": PIPE, "as_process": True}
+        options: Dict[str, Any] = {"istream": PIPE, "as_process": True}
         options.update(kwargs)
 
-        cmd = self._call_process(cmd_name, *args, **options)
+        cmd = self._call_process_safe(cmd_name, *args, **options)
         setattr(self, attr_name, cmd)
         cmd = cast("Git.AutoInterrupt", cmd)
         return cmd
 
-    def __get_object_header(self, cmd: "Git.AutoInterrupt", ref: Union[str, bytes]) -> Tuple[str, str, int]:
+    def __get_object_header(self, cmd: "Git.AutoInterrupt", request: bytes) -> Tuple[str, str, int]:
         if cmd.stdin and cmd.stdout:
-            cmd.stdin.write(self._prepare_ref(ref))
+            cmd.stdin.write(request)
             cmd.stdin.flush()
-            return self._parse_object_header(cmd.stdout.readline())
+            header = bytearray()
+            while True:
+                char = cmd.stdout.read(1)
+                if not char:
+                    cmd.wait()
+                    raise ValueError("Git closed the object stream before its response")
+                if char == b"\0":
+                    break
+                header.extend(char)
+            return self._parse_object_header(bytes(header))
         else:
             raise ValueError("cmd stdin was empty")
 
@@ -1976,8 +2074,9 @@ class Git(metaclass=_GitMeta):
         :return:
             (hexsha, type_string, size_as_int)
         """
-        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
-        return self.__get_object_header(cmd, ref)
+        request = self._prepare_ref(ref)
+        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True, Z=True)
+        return self.__get_object_header(cmd, request)
 
     def get_object_data(self, ref: Union[str, bytes]) -> Tuple[str, str, int, bytes]:
         """Similar to :meth:`get_object_header`, but returns object data as well.
@@ -2003,8 +2102,9 @@ class Git(metaclass=_GitMeta):
             This method is not threadsafe. You need one independent :class:`Git`
             instance per thread to be safe!
         """
-        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
-        hexsha, typename, size = self.__get_object_header(cmd, ref)
+        request = self._prepare_ref(ref)
+        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True, Z=True)
+        hexsha, typename, size = self.__get_object_header(cmd, request)
         cmd_stdout = cmd.stdout if cmd.stdout is not None else io.BytesIO()
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd_stdout))
 

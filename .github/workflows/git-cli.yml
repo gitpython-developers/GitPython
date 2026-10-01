@@ -1,0 +1,42 @@
+name: Minimum Git CLI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  git-2-52:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: git/git
+          ref: v2.52.0
+          path: .git-source
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build minimum supported Git
+        working-directory: .git-source
+        run: |
+          make -j2 prefix="$RUNNER_TEMP/git" NO_GETTEXT=YesPlease NO_TCLTK=YesPlease NO_PERL=YesPlease NO_CURL=YesPlease install
+          echo "$RUNNER_TEMP/git/bin" >> "$GITHUB_PATH"
+      - name: Install GitPython and test dependencies
+        run: python -m pip install ./smmap ./gitdb '.[test]'
+      - name: Verify native format and safety contracts
+        env:
+          GIT_CONFIG_NOSYSTEM: '1'
+          GIT_CONFIG_GLOBAL: /dev/null
+          GIT_AUTHOR_NAME: GitPython Tests
+          GIT_AUTHOR_EMAIL: tests@example.invalid
+          GIT_COMMITTER_NAME: GitPython Tests
+          GIT_COMMITTER_EMAIL: tests@example.invalid
+        run: |
+          git version
+          python -m pytest --no-cov --tb=short test/test_cli_objects_index.py test/test_cli_safety.py test/test_reflog.py test/test_config.py test/test_remote_cli.py test/test_submodule.py::test_submodule_cli_lifecycle

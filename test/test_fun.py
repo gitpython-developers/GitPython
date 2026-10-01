@@ -12,13 +12,8 @@ from gitdb.typ import str_tree_type
 
 from git import Git
 from git.index import IndexFile
-from git.index.fun import aggressive_tree_merge, stat_mode_to_index_mode
-from git.objects.fun import (
-    traverse_tree_recursive,
-    traverse_trees_recursive,
-    tree_entries_from_data,
-    tree_to_stream,
-)
+from git.index.fun import stat_mode_to_index_mode
+from git.objects import Tree
 from git.repo.fun import find_worktree_git_dir
 from git.util import bin_to_hex, cygpath, join_path_native
 from test.lib import TestBase, with_rw_directory, with_rw_repo
@@ -26,6 +21,10 @@ from test.lib import TestBase, with_rw_directory, with_rw_repo
 
 @ddt.ddt
 class TestFun(TestBase):
+    @staticmethod
+    def merge_trees(repo, trees):
+        return list(IndexFile.new(repo, *(tree.hex() for tree in trees)).entries.values())
+
     def _assert_index_entries(self, entries, trees):
         index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t).decode("ascii")) for t in trees])
         assert entries
@@ -37,18 +36,18 @@ class TestFun(TestBase):
     def test_aggressive_tree_merge(self):
         # Head tree with additions, removals and modification compared to its
         # predecessor.
-        odb = self.rorepo.odb
+        repo = self.rorepo
         HC = self.rorepo.commit("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
         H = HC.tree
         B = HC.parents[0].tree
 
         # Entries from single tree.
         trees = [H.binsha]
-        self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
+        self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
         # From multiple trees.
         trees = [B.binsha, H.binsha]
-        self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
+        self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
         # Three way, no conflict.
         tree = self.rorepo.tree
@@ -56,24 +55,26 @@ class TestFun(TestBase):
         H = tree("4fe5cfa0e063a8d51a1eb6f014e2aaa994e5e7d4")
         M = tree("1f2b19de3301e76ab3a6187a49c9c93ff78bafbd")
         trees = [B.binsha, H.binsha, M.binsha]
-        self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
+        self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
         # Three-way, conflict in at least one file, both modified.
         B = tree("a7a4388eeaa4b6b94192dce67257a34c4a6cbd26")
         H = tree("f9cec00938d9059882bb8eabdaf2f775943e00e5")
         M = tree("44a601a068f4f543f73fd9c49e264c931b1e1652")
         trees = [B.binsha, H.binsha, M.binsha]
-        self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
+        self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
         # Too many trees.
-        self.assertRaises(ValueError, aggressive_tree_merge, odb, trees * 2)
+        self.assertRaises(ValueError, self.merge_trees, repo, trees * 2)
 
-    def mktree(self, odb, entries):
+    def mktree(self, repo, entries):
         """Create a tree from the given tree entries and safe it to the database."""
         sio = BytesIO()
-        tree_to_stream(entries, sio.write)
+        tree = Tree(repo, repo._null_binsha, path="")
+        tree._cache = entries
+        tree._serialize(sio)
         sio.seek(0)
-        istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
+        istream = repo.odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
         return istream.binsha
 
     @with_rw_repo("0.1.6")
@@ -94,114 +95,114 @@ class TestFun(TestBase):
         shab = b"\2" * 20
         shac = b"\3" * 20
 
-        odb = rwrepo.odb
+        repo = rwrepo
 
         # Base tree.
         bfn = "basefile"
         fbase = mkfile(bfn, shaa)
-        tb = mktree(odb, [fbase])
+        tb = mktree(repo, [fbase])
 
         # Non-conflicting new files, same data.
         fa = mkfile("1", shab)
-        th = mktree(odb, [fbase, fa])
+        th = mktree(repo, [fbase, fa])
         fb = mkfile("2", shac)
-        tm = mktree(odb, [fbase, fb])
+        tm = mktree(repo, [fbase, fb])
 
         # Two new files, same base file.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 3)
+        assert_entries(self.merge_trees(repo, trees), 3)
 
         # Both delete same file, add own one.
         fa = mkfile("1", shab)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkfile("2", shac)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Two new files.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 2)
+        assert_entries(self.merge_trees(repo, trees), 2)
 
         # Same file added in both, differently.
         fa = mkfile("1", shab)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkfile("1", shac)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Expect conflict.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+        assert_entries(self.merge_trees(repo, trees), 2, True)
 
         # Same file added, different mode.
         fa = mkfile("1", shab)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkcommit("1", shab)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Expect conflict.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+        assert_entries(self.merge_trees(repo, trees), 2, True)
 
         # Same file added in both.
         fa = mkfile("1", shab)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkfile("1", shab)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Expect conflict.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 1)
+        assert_entries(self.merge_trees(repo, trees), 1)
 
         # Modify same base file, differently.
         fa = mkfile(bfn, shab)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkfile(bfn, shac)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Conflict, 3 versions on 3 stages.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 3, True)
+        assert_entries(self.merge_trees(repo, trees), 3, True)
 
         # Change mode on same base file, by making one a commit, the other executable,
         # no content change (this is totally unlikely to happen in the real world).
         fa = mkcommit(bfn, shaa)
-        th = mktree(odb, [fa])
+        th = mktree(repo, [fa])
         fb = mkfile(bfn, shaa, executable=1)
-        tm = mktree(odb, [fb])
+        tm = mktree(repo, [fb])
 
         # Conflict, 3 versions on 3 stages, because of different mode.
         trees = [tb, th, tm]
-        assert_entries(aggressive_tree_merge(odb, trees), 3, True)
+        assert_entries(self.merge_trees(repo, trees), 3, True)
 
         for is_them in range(2):
             # Only we/they change contents.
             fa = mkfile(bfn, shab)
-            th = mktree(odb, [fa])
+            th = mktree(repo, [fa])
 
             trees = [tb, th, tb]
             if is_them:
                 trees = [tb, tb, th]
-            entries = aggressive_tree_merge(odb, trees)
+            entries = self.merge_trees(repo, trees)
             assert len(entries) == 1 and entries[0].binsha == shab
 
             # Only we/they change the mode.
             fa = mkcommit(bfn, shaa)
-            th = mktree(odb, [fa])
+            th = mktree(repo, [fa])
 
             trees = [tb, th, tb]
             if is_them:
                 trees = [tb, tb, th]
-            entries = aggressive_tree_merge(odb, trees)
+            entries = self.merge_trees(repo, trees)
             assert len(entries) == 1 and entries[0].binsha == shaa and entries[0].mode == fa[1]
 
             # One side deletes, the other changes = conflict.
             fa = mkfile(bfn, shab)
-            th = mktree(odb, [fa])
-            tm = mktree(odb, [])
+            th = mktree(repo, [fa])
+            tm = mktree(repo, [])
             trees = [tb, th, tm]
             if is_them:
                 trees = [tb, tm, th]
             # As one is deleted, there are only 2 entries.
-            assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+            assert_entries(self.merge_trees(repo, trees), 2, True)
         # END handle ours, theirs
 
     def test_stat_mode_to_index_mode(self):
@@ -226,61 +227,6 @@ class TestFun(TestBase):
             assert stat_mode_to_index_mode(mode) == expected_mode
         # END for each mode
 
-    def _assert_tree_entries(self, entries, num_trees):
-        for entry in entries:
-            assert len(entry) == num_trees
-            paths = {e[2] for e in entry if e}
-
-            # Only one path per set of entries.
-            assert len(paths) == 1
-        # END verify entry
-
-    def test_tree_traversal(self):
-        # Low level tree traversal.
-        odb = self.rorepo.odb
-        H = self.rorepo.tree("29eb123beb1c55e5db4aa652d843adccbd09ae18")  # head tree
-        M = self.rorepo.tree("e14e3f143e7260de9581aee27e5a9b2645db72de")  # merge tree
-        B = self.rorepo.tree("f606937a7a21237c866efafcad33675e6539c103")  # base tree
-        B_old = self.rorepo.tree("1f66cfbbce58b4b552b041707a12d437cc5f400a")  # old base tree
-
-        # Two very different trees.
-
-        entries = traverse_trees_recursive(odb, [B_old.binsha, H.binsha], "")
-        self._assert_tree_entries(entries, 2)
-
-        oentries = traverse_trees_recursive(odb, [H.binsha, B_old.binsha], "")
-        assert len(oentries) == len(entries)
-        self._assert_tree_entries(oentries, 2)
-
-        # Single tree.
-
-        def is_no_tree(i, _d):
-            return i.type != "tree"
-
-        entries = traverse_trees_recursive(odb, [B.binsha], "")
-        assert len(entries) == len(list(B.traverse(predicate=is_no_tree)))
-        self._assert_tree_entries(entries, 1)
-
-        # Two trees.
-        entries = traverse_trees_recursive(odb, [B.binsha, H.binsha], "")
-        self._assert_tree_entries(entries, 2)
-
-        # Three trees.
-        entries = traverse_trees_recursive(odb, [B.binsha, H.binsha, M.binsha], "")
-        self._assert_tree_entries(entries, 3)
-
-    def test_tree_traversal_single(self):
-        max_count = 50
-        count = 0
-        odb = self.rorepo.odb
-        for commit in self.rorepo.commit("29eb123beb1c55e5db4aa652d843adccbd09ae18").traverse():
-            if count >= max_count:
-                break
-            count += 1
-            entries = traverse_tree_recursive(odb, commit.tree.binsha, "")
-            assert entries
-        # END for each commit
-
     @with_rw_directory
     def test_linked_worktree_traversal(self, rw_dir):
         """Check that we can identify a linked worktree based on a .git file."""
@@ -304,26 +250,12 @@ class TestFun(TestBase):
         statbuf = stat(gitdir)
         self.assertTrue(statbuf.st_mode & S_IFDIR)
 
-    def test_tree_entries_from_data_with_failing_name_decode(self):
-        r = tree_entries_from_data(b"100644 \x9f\0" + b"a" * 20)
-        assert r == [(b"a" * 20, 33188, "\udc9f")], r
-
-    def test_tree_entries_from_bytearray(self):
-        r = tree_entries_from_data(bytearray(b"100644 name\0abcdefghijklmnopqrst"))
-        assert r == [(b"abcdefghijklmnopqrst", 33188, "name")], r
-        assert isinstance(r[0][0], bytes)
-
-    @ddt.data(b"", b".", b"..", b".git", b"a/b")
-    def test_tree_reader_rejects_paths_that_cannot_be_tree_components(self, name):
-        with self.assertRaises(ValueError):
-            tree_entries_from_data(b"100644 " + name + b"\0" + b"a" * 20)
-
-    @ddt.data(b"100644", b"100644 missing-nul", b"100644 name\0short", b"xyz name\0" + b"a" * 20)
-    def test_malformed_tree_records_fail_cleanly(self, data):
-        with self.assertRaises(ValueError):
-            tree_entries_from_data(data)
-
-    @ddt.data(b"", b"a" * 19, b"a" * 20 + b"100644 extra\0" + b"b" * 20)
-    def test_tree_serializer_rejects_wrong_length_object_ids(self, sha):
-        with self.assertRaises(ValueError):
-            tree_to_stream([(sha, 0o100644, "file")], BytesIO().write)
+    @with_rw_repo("0.1.6")
+    def test_tree_names_from_git_preserve_undecodable_bytes(self, repo):
+        tree = Tree(repo, repo._null_binsha, path="")
+        tree._cache = [(b"a" * repo._oid_size, 0o100644, "\udc9f")]
+        data = BytesIO()
+        tree._serialize(data)
+        data.seek(0)
+        stored = repo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert Tree(repo, stored.binsha, path="")._cache == tree._cache

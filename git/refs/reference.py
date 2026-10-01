@@ -82,38 +82,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         object: Union[AnyGitObject, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "Reference":
-        """Special version which checks if the head-log needs an update as well.
-
-        :return:
-            self
-        """
-        oldbinsha = None
-        if logmsg is not None:
-            head = self.repo.head
-            if not head.is_detached and head.ref == self:
-                oldbinsha = self.commit.binsha
-            # END handle commit retrieval
-        # END handle message is set
-
+        """Update the reference, letting Git maintain the associated HEAD reflog."""
         super().set_object(object, logmsg)
-
-        if oldbinsha is not None:
-            # From refs/files-backend.c in git-source:
-            # /*
-            #  * Special hack: If a branch is updated directly and HEAD
-            #  * points to it (may happen on the remote side of a push
-            #  * for example) then logically the HEAD reflog should be
-            #  * updated too.
-            #  * A generic solution implies reverse symref information,
-            #  * but finding all symrefs pointing to the given branch
-            #  * would be rather costly for this rare event (the direct
-            #  * update of a branch) to be worth it.  So let's cheat and
-            #  * check with HEAD only which should cover 99% of all usage
-            #  * scenarios (even 100% of the default ones).
-            #  */
-            self.repo.head.log_append(oldbinsha, logmsg)
-        # END check if the head
-
         return self
 
     # NOTE: No need to overwrite properties, as the will only work without a the log.

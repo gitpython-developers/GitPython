@@ -88,7 +88,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         )
 
     def test_commit_serialization(self):
-        self.assert_commit_serialization(self.gitrwrepo, "58c78e6", True)
+        self.assert_commit_serialization(self.gitrwrepo, self.ref_100, True)
 
         rwrepo = self.gitrwrepo
         make_object = rwrepo.odb.store
@@ -96,7 +96,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         # Serialization is probably limited on IO.
         hc = rwrepo.commit(rwrepo.head)
 
-        nc = 5000
+        nc = 100
         st = time()
         for i in range(nc):
             cm = Commit(

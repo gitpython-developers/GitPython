@@ -58,6 +58,19 @@ jobs:
       with:
         wsl-version: 1
 
+    - name: Install current Git (Linux)
+      if: matrix.os-type == 'ubuntu'
+      run: |
+        sudo add-apt-repository --yes ppa:git-core/ppa
+        sudo apt-get update
+        sudo apt-get install --yes git
+
+    - name: Install current Git (macOS)
+      if: matrix.os-type == 'macos'
+      run: |
+        brew install git
+        echo "$(brew --prefix git)/bin" >> "$GITHUB_PATH"
+
     - name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
