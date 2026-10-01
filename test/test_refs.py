@@ -925,7 +925,8 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
     def write_ref(self, path, value):
         file = Path(self.repo.git_dir) / path
         file.parent.mkdir(parents=True, exist_ok=True)
-        file.write_text(value + "\n", encoding="utf-8")
+        # Packed references require LF even on Windows.
+        file.write_bytes((value + "\n").encode("utf-8"))
 
     def chain(self, count, terminal=None):
         paths = ["HEAD"] + [f"refs/heads/link-{i}" for i in range(1, count)]

@@ -1069,6 +1069,7 @@ class TestSubmodule(TestBase):
             sm.update(recursive=True, to_latest_revision=True, force=True)
             for repo in smods:
                 assert repo.head.commit == repo.head.ref.tracking_branch().commit
+                repo.close()
             # END for each repo to check
             del smods
 
@@ -1998,7 +1999,7 @@ class TestSubmodule(TestBase):
             modules.write("\tpath = module\n")
             modules.write("\turl = https://example.com/module.git\n")
             modules.write("[include]\n")
-            modules.write("\tpath = %s\n" % secret_path)
+            modules.write("\tpath = %s\n" % to_native_path_linux(secret_path))
 
         parser = Submodule._config_parser(parent, None, read_only=True)
         self.assertEqual(parser.get_value('submodule "module"', "path"), "module")

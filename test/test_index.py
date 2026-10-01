@@ -270,14 +270,45 @@ class TestIndex(TestBase):
             assert index.write_tree()[path].mode == 0o100644
 
     def test_valid_unusual_index_names_round_trip(self):
-        names = ["a b", "a\nb", "a\tb", "name:value", "dir/.gitignore", "café"]
+        names = ["a b", "--option", "dir/.gitignore", "café"]
+        windows_unsupported = ["a\nb", "a\tb", "name:value"]
         if os.name != "nt":
-            names.append("a\\b")
+            names.extend([*windows_unsupported, "a\\b", "\udc9f"])
         with tempfile.TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
             index.entries = {(name, 0): IndexEntry((0o100644, b"a" * 20, 0, name)) for name in names}
             index.write()
             assert sorted(entry.path for entry in index.update().entries.values()) == sorted(names)
+            if os.name == "nt":
+                before = Path(index.path).read_bytes()
+                for name in windows_unsupported:
+                    index.entries[(name, 0)] = IndexEntry((0o100644, b"a" * 20, 0, name))
+                    with pytest.raises(ValueError, match="Git did not retain"):
+                        index.write()
+                    assert Path(index.path).read_bytes() == before
+                    assert not Path(str(index.path) + ".lock").exists()
+                    del index.entries[(name, 0)]
+
+    @ddt.data("write", "write_tree")
+    def test_index_rejects_silently_ignored_entries_atomically(self, operation):
+        call = Git._call_process_safe
+
+        def ignore_index_updates(git, command, *args, **kwargs):
+            if command == "update_index":
+                return ""
+            return call(git, command, *args, **kwargs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            index = IndexFile(self.rorepo, Path(directory, "index"))
+            index.entries = {("before", 0): IndexEntry((0o100644, b"a" * 20, 0, "before"))}
+            index.write()
+            before = Path(index.path).read_bytes()
+            index.entries[("after", 0)] = IndexEntry((0o100644, b"a" * 20, 0, "after"))
+            with mock.patch.object(Git, "_call_process_safe", ignore_index_updates):
+                with pytest.raises(ValueError, match="Git did not retain"):
+                    getattr(index, operation)()
+            assert Path(index.path).read_bytes() == before
+            assert not Path(str(index.path) + ".lock").exists()
 
     def test_long_index_names_are_fully_validated(self):
         prefix = "a/" + "nested/" * 650

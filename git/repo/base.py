@@ -43,6 +43,7 @@ from git.util import (
     finalize_process,
     hex_to_bin,
     remove_password_if_present,
+    to_native_path_linux,
 )
 
 from .fun import (
@@ -326,7 +327,9 @@ class Repo:
             dotgit = osp.join(curpath, ".git")
             candidate = curpath if explicit_git_dir or not osp.lexists(dotgit) else dotgit
             try:
-                git_dir = probe._call_process_safe("rev_parse", "--resolve-git-dir", candidate)
+                # Git resolves relative gitfile targets using the last forward
+                # slash in this operand, including on Windows.
+                git_dir = probe._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(candidate))
                 git_dir = osp.abspath(git_dir)
                 if osp.isfile(candidate):
                     # Git canonicalizes gitfile targets. Retain an equivalent
@@ -381,8 +384,14 @@ class Repo:
                 if not fields or not fields[0].startswith("worktree ") or "bare" in fields:
                     continue
                 worktree = fields[0][9:]
+                # Git only strips a forward-slash /.git suffix from its registry.
+                # A Windows gitdir file can instead contain a native backslash.
+                if osp.basename(worktree) == ".git" and osp.isfile(worktree):
+                    worktree = osp.dirname(worktree)
                 try:
-                    resolved = probe._call_process_safe("rev_parse", "--resolve-git-dir", osp.join(worktree, ".git"))
+                    resolved = probe._call_process_safe(
+                        "rev_parse", "--resolve-git-dir", to_native_path_linux(osp.join(worktree, ".git"))
+                    )
                 except GitCommandError:
                     continue
                 if osp.realpath(resolved) == osp.realpath(git_dir):
@@ -867,7 +876,10 @@ class Repo:
         if rev is None:
             return self.head.commit.tree
         obj = self.rev_parse(str(rev))
-        return obj if obj.type == "tree" else to_commit(obj).tree
+        if obj.type == "tree":
+            obj.path = getattr(obj, "path", "")
+            return obj
+        return to_commit(obj).tree
 
     def iter_commits(
         self,
@@ -1061,7 +1073,7 @@ class Repo:
                 path = line[len(b"alternate: ") :]
                 if path.startswith(b'"') and path.endswith(b'"'):
                     path = _unquote_path(path[1:-1])
-                paths.append(os.fsdecode(path))
+                paths.append(safe_decode(path))
         return paths
 
     def is_dirty(
@@ -1132,7 +1144,7 @@ class Repo:
         paths = []
         for record in records:
             if record.startswith(b"?? "):
-                paths.append(os.fsdecode(record[3:]))
+                paths.append(safe_decode(record[3:]))
             elif record[:1] in (b"R", b"C") or record[1:2] in (b"R", b"C"):
                 next(records, None)  # Renames/copies carry a second path record.
         return paths
@@ -1146,7 +1158,7 @@ class Repo:
             if "\0" in os.fspath(path):
                 raise ValueError("Paths cannot contain NUL")
         with tempfile.TemporaryFile() as stream:
-            stream.write(b"\0".join(os.fsencode(path) for path in paths) + b"\0")
+            stream.write(b"\0".join(os.fspath(path).encode(defenc, "surrogateescape") for path in paths) + b"\0")
             stream.seek(0)
             status, output, stderr = self.git._call_process_safe(
                 "check_ignore",
@@ -1161,7 +1173,7 @@ class Repo:
             return []
         if status:
             raise GitCommandError("git check-ignore", status, stderr, output)
-        return [os.fsdecode(path) for path in output.split(b"\0") if path]
+        return [safe_decode(path) for path in output.split(b"\0") if path]
 
     @property
     def active_branch(self) -> Head:

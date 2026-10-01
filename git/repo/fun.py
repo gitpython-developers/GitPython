@@ -26,12 +26,13 @@ from typing import Optional, TYPE_CHECKING, Union, overload
 from gitdb.exc import BadName, BadObject
 
 from git.cmd import Git
+from git.compat import defenc
 from git.exc import GitCommandError
 from git.objects import Object
 from git.objects.base import IndexObject
 from git.refs import SymbolicReference
 from git.types import AnyGitObject, Literal, PathLike
-from git.util import bin_to_hex, hex_to_bin
+from git.util import bin_to_hex, hex_to_bin, to_native_path_linux
 
 if TYPE_CHECKING:
     from gitdb.db import CompoundDB, LooseObjectDB
@@ -51,7 +52,7 @@ def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     if not osp.exists(path):
         return None
     try:
-        return Git()._call_process_safe("rev_parse", "--resolve-git-dir", path)
+        return Git()._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(path))
     except GitCommandError:
         return None
 
@@ -137,7 +138,7 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
         # Git resolves the mode, including index stages and executable/symlink
         # entries. No object storage or revision grammar is decoded in Python.
         with tempfile.TemporaryFile() as stream:
-            stream.write(os.fsencode(rev) + b"\0")
+            stream.write(rev.encode(defenc, "surrogateescape") + b"\0")
             stream.seek(0)
             mode = repo.git._call_process_safe("cat_file", "--batch-check=%(objectmode)", "-Z", istream=stream).strip(
                 "\0"

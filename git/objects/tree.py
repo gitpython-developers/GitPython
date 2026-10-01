@@ -10,7 +10,7 @@ import tempfile
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
-from git.compat import safe_decode
+from git.compat import defenc, safe_decode
 from git.cmd import Git
 
 from . import util
@@ -416,7 +416,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
                 if len(oid) != self.repo._oid_size or mode >> 12 not in types:
                     raise ValueError("Invalid tree entry object ID or mode")
                 source.write(("%o %s %s\t" % (mode, types[mode >> 12], oid.hex())).encode("ascii"))
-                source.write(os.fsencode(name) + b"\0")
+                source.write(name.encode(defenc, "surrogateescape") + b"\0")
             source.seek(0)
             oid = self.repo.git._call_process_safe("mktree", "-z", "--missing", istream=source)
         Git._check_operand(oid, "tree object ID")

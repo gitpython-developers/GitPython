@@ -3,11 +3,14 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os
 import subprocess
 import sys
+from io import BytesIO
 from pathlib import Path
 
 import pytest
+from gitdb.base import IStream
 from gitdb.exc import BadName
 
 from git import Actor, Commit, Repo, GitCommandError
@@ -114,6 +117,18 @@ def test_rev_parse_tree_and_index_paths(rev_parse_repo):
     assert repo.rev_parse(":0:README.md").binsha == merge.tree["README.md"].binsha
 
 
+def test_tree_revision_paths(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    tree = rev_parse_repo["merge"].tree
+    for revision in (tree.hexsha, "HEAD^{tree}"):
+        root = repo.tree(revision)
+        assert root.path == ""
+        assert root["dir/file.txt"].path == "dir/file.txt"
+    directory = repo.tree("HEAD:dir")
+    assert directory.path == "dir"
+    assert directory["file.txt"].path == "dir/file.txt"
+
+
 def test_rev_parse_reflog_selectors(rev_parse_repo):
     repo = rev_parse_repo["repo"]
     merge = rev_parse_repo["merge"]
@@ -147,9 +162,18 @@ def test_rev_parse_commit_message_search(rev_parse_repo):
 def test_rev_parse_preserves_path_metadata_with_colons(rev_parse_repo):
     repo = rev_parse_repo["repo"]
     path = "dir/name:with:colons"
-    _write(repo, path, "contents\n")
-    commit = repo.index.commit("message: with colon")
-    for revision in (f"HEAD:{path}", f"HEAD^{{/message: with colon}}:{path}", f":{path}", f":0:{path}"):
+    # Build object-only fixtures: Windows cannot create colon-named worktree files.
+    data = b"100644 name:with:colons\0" + repo.head.commit.tree["dir/file.txt"].binsha
+    subtree = repo.odb.store(IStream("tree", len(data), BytesIO(data)))
+    data = b"40000 dir\0" + subtree.binsha
+    tree = repo.odb.store(IStream("tree", len(data), BytesIO(data)))
+    commit = Commit.create_from_tree(repo, tree.hexsha.decode("ascii"), "message: with colon", head=True)
+    revisions = [f"HEAD:{path}", f"HEAD^{{/message: with colon}}:{path}"]
+    if os.name != "nt":
+        # Git for Windows also refuses colon names in its index.
+        repo.git.read_tree(commit)
+        revisions.extend([f":{path}", f":0:{path}"])
+    for revision in revisions:
         blob = repo.rev_parse(revision)
         assert blob == commit.tree[path]
         assert blob.path == path
