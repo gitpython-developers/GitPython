@@ -172,10 +172,29 @@ def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return target + b"\n"
 
 
+def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if not args or args[0] != "--format=%(refname)":
+        raise _Unsupported("reference format/options")
+    split = args.index("--") if "--" in args else len(args)
+    if args[1:split] or len(args[split + 1 :]) > 1:
+        raise _Unsupported("root refs or reference options")
+    prefix = os.fsencode(args[-1]) if len(args) > split + 1 else b""
+    if any(char in prefix for char in b"*?["):
+        raise _Unsupported("reference glob patterns")
+    with repo.references().all() as refs:
+        names = [ref.name() for ref in refs]
+    return b"".join(
+        name + b"\n"
+        for name in sorted(names)
+        if not prefix or name == prefix or name.startswith(prefix.rstrip(b"/") + b"/")
+    )
+
+
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
     "rev_parse": _rev_parse,
     "ls_tree": _ls_tree,
     "symbolic_ref": _symbolic_ref,
+    "for_each_ref": _for_each_ref,
 }
 
 
