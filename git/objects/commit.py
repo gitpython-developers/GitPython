@@ -16,6 +16,7 @@ import warnings
 import tempfile
 
 
+from git import _backend
 from git.cmd import Git
 from git.exc import GitCommandError, UnsafeOptionError
 from git.diff import Diffable
@@ -321,6 +322,9 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
 
         # Yes, it makes a difference whether empty paths are given or not in our case as
         # the empty paths version will ignore merge commits for some reason.
+        native = _backend.history(self.repo.git, self.hexsha, paths, kwargs, count=True)
+        if native is not NotImplemented:
+            return native
         if paths:
             return len(self.repo.git._call_process_safe("rev_list", self.hexsha, "--", paths, **kwargs).splitlines())
         return len(self.repo.git._call_process_safe("rev_list", self.hexsha, **kwargs).splitlines())

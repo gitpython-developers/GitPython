@@ -8,11 +8,12 @@ CLI implementation. Native failures are never retried as CLI mutations.
 from collections import Counter
 from importlib import import_module
 import io
+from itertools import islice
 import logging
 import os
 import re
 from threading import Lock
-from typing import Any, Callable, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Sequence, Tuple
 
 from git.compat import safe_decode
 from git.exc import GitCommandError
@@ -259,6 +260,59 @@ def _merge_base(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if not ids or (ancestor and ids[0] != one):
         raise GitCommandError(["git", "merge-base"], 1)
     return b"" if ancestor else b"".join(str(oid).encode("ascii") + b"\n" for oid in ids)
+
+
+def _walk(repo: Any, rev: str, options: Dict[str, Any]) -> Iterator[str]:
+    if not hasattr(repo, "rev_walk"):
+        raise _Unsupported("revision feature disabled")
+    if options.keys() - {"max_count", "skip", "first_parent"}:
+        raise _Unsupported("history options or ordering (GIX-8)")
+    if options.get("first_parent") not in (None, True, False):
+        raise _Unsupported("history options")
+    start, count = options.get("skip", 0), options.get("max_count")
+    if type(start) is not int or start < 0 or (count is not None and (type(count) is not int or count < 0)):
+        raise _Unsupported("history limits")
+    tip = repo.find_object(_oid(repo, rev)).peel_to_commit().id
+    platform = repo.rev_walk([tip])
+    if options.get("first_parent"):
+        platform = platform.first_parent_only()
+    cursor = platform.all()
+
+    def iterate() -> Iterator[str]:
+        try:
+            with cursor:
+                for item in islice(cursor, start, None if count is None else start + count):
+                    yield str(item.id)
+        except gix.Error as exc:
+            raise GitCommandError(["gix", "rev-list", rev], 128, str(exc)) from exc
+
+    return iterate()
+
+
+def history(command: Any, rev: str, paths: Any, options: Dict[str, Any], *, count: bool = False) -> Any:
+    """Count reachable commits, or lazily walk the first-parent chain."""
+    if gix is None:
+        return NotImplemented
+    method = "Commit.count" if count else "Commit.iter_items"
+    command._require_version()
+    try:
+        if paths:
+            raise _Unsupported("history path filtering")
+        if (
+            not count
+            and not options.get("first_parent")
+            and not (options.get("max_count") == 1 and not options.get("skip"))
+        ):
+            raise _Unsupported("Git history ordering (GIX-8)")
+        iterator = _walk(_repository(command, {}), rev, options)
+        result = sum(1 for _ in iterator) if count else iterator
+    except _Unsupported as exc:
+        return _fallback(method, str(exc))
+    except gix.Error as exc:
+        _logger.debug("%s native preparation: %s", method, exc)
+        return _fallback(method, "native preparation diagnostics")
+    record(method, "native")
+    return result
 
 
 _HANDLERS: Dict[str, Callable[[Any, List[str], Dict[str, Any]], bytes]] = {
