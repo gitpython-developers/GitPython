@@ -885,7 +885,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             if buf[0:10] == b"encoding ":
                 self.encoding = buf[buf.find(b" ") + 1 :].decode(self.encoding, "ignore")
             elif buf[0:7] == b"gpgsig ":
-                sig = buf[buf.find(b" ") + 1 :] + b"\n"
+                sig_lines = [buf[buf.find(b" ") + 1 :] + b"\n"]
                 is_next_header = False
                 while True:
                     sigbuf = readline()
@@ -895,9 +895,9 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                         buf = sigbuf.strip()
                         is_next_header = True
                         break
-                    sig += sigbuf[1:]
+                    sig_lines.append(sigbuf[1:])
                 # END read all signature
-                self.gpgsig = sig.rstrip(b"\n").decode(self.encoding, "ignore")
+                self.gpgsig = b"".join(sig_lines).rstrip(b"\n").decode(self.encoding, "ignore")
                 if is_next_header:
                     continue
             buf = readline().strip()

@@ -607,6 +607,28 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
         # The malformed line yields nothing; the well-formed trailer still parses.
         assert result == [Actor("Real Name", "real@example.com")]
 
+    def test_gpgsig_deserialization_is_linear(self):
+        """A long gpgsig header must not make deserialization run in quadratic time."""
+        num_lines = 600_000
+        # Commit headers are fully attacker-controlled. Accumulating the signature with
+        # bytes concatenation copied it once per continuation line (O(n^2)).
+        data = (
+            b"tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
+            b"author A <a@example.com> 1700000000 +0000\n"
+            b"committer A <a@example.com> 1700000000 +0000\n"
+            b"gpgsig -----BEGIN PGP SIGNATURE-----\n" + b" x\n" * num_lines + b" -----END PGP SIGNATURE-----\n"
+            b"\n"
+            b"message\n"
+        )
+        cmt = copy.copy(self.rorepo.commit())
+        start = time.process_time()
+        cmt._deserialize(BytesIO(data))
+        elapsed = time.process_time() - start
+        # Leave ample CPU time for slow runners, but catch quadratic accumulation.
+        self.assertLess(elapsed, 1.0)
+        self.assertEqual(cmt.gpgsig.count("\n"), num_lines + 1)
+        self.assertEqual(cmt.message, "message\n")
+
     @with_rw_directory
     def test_create_from_tree_with_trailers_dict(self, rw_dir):
         """Test that create_from_tree supports adding trailers via a dict."""
