@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from unittest import SkipTest, mock
 
@@ -418,9 +419,11 @@ class TestUtils(TestBase):
         self.assertEqual("this-is-my-argument", dashify("this_is_my_argument"))
         self.assertEqual("foo", dashify("foo"))
 
-    def test_lock_file(self):
+    @ddt.data("my-lock-file", "my-lock-file-\u0394", "\u0394/my-lock-file", "\U0001f680/my-lock-file")
+    def test_lock_file(self, filename):
         with tempfile.TemporaryDirectory() as tdir:
-            my_file = os.path.join(tdir, "my-lock-file")
+            my_file = os.path.join(tdir, filename)
+            os.makedirs(os.path.dirname(my_file), exist_ok=True)
             lock_file = LockFile(my_file)
             assert not lock_file._has_lock()
             # Release lock we don't have - fine.
@@ -429,6 +432,7 @@ class TestUtils(TestBase):
             # Get lock.
             lock_file._obtain_lock_or_raise()
             assert lock_file._has_lock()
+            assert os.path.isfile(my_file + ".lock")
 
             # Concurrent access.
             other_lock_file = LockFile(my_file)
@@ -437,6 +441,7 @@ class TestUtils(TestBase):
 
             lock_file._release_lock()
             assert not lock_file._has_lock()
+            assert not os.path.exists(my_file + ".lock")
 
             other_lock_file._obtain_lock_or_raise()
             self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
@@ -445,6 +450,67 @@ class TestUtils(TestBase):
             del other_lock_file
             lock_file._obtain_lock_or_raise()
             lock_file._release_lock()
+
+    def test_lock_file_rejects_embedded_nul(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            lock_file = LockFile(my_file + "\0suffix")
+            self.assertRaises(ValueError, lock_file._obtain_lock_or_raise)
+            assert not lock_file._has_lock()
+            assert not os.path.exists(my_file)
+
+    @ddt.data(False, True)
+    @requires_symlinks
+    def test_lock_file_does_not_follow_a_symlink(self, target_exists):
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            outside = os.path.join(tdir, "outside-the-lock")
+            content = b"Do not modify the symlink target."
+            if target_exists:
+                with open(outside, "wb") as stream:
+                    stream.write(content)
+            os.symlink(outside, my_file + ".lock")
+
+            lock_file = LockFile(my_file)
+            self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
+            assert not lock_file._has_lock()
+            lock_file._release_lock()
+            assert os.path.islink(my_file + ".lock")
+            if target_exists:
+                with open(outside, "rb") as stream:
+                    self.assertEqual(stream.read(), content)
+            else:
+                assert not os.path.exists(outside)
+
+    def test_lock_file_is_obtained_by_a_single_holder(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            racers = 8
+            at_the_line = threading.Barrier(racers)
+            holders = []
+            guard = threading.Lock()
+
+            def obtain():
+                lock_file = LockFile(my_file)
+                at_the_line.wait()
+                try:
+                    lock_file._obtain_lock_or_raise()
+                except OSError:
+                    return
+                with guard:
+                    holders.append(lock_file)
+
+            threads = [threading.Thread(target=obtain) for _ in range(racers)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            try:
+                self.assertEqual(1, len(holders))
+            finally:
+                for lock_file in holders:
+                    lock_file._release_lock()
 
     def test_blocking_lock_file(self):
         with tempfile.TemporaryDirectory() as tdir:
