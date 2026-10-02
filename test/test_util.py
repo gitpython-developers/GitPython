@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from unittest import SkipTest, mock
 
@@ -445,6 +446,44 @@ class TestUtils(TestBase):
             del other_lock_file
             lock_file._obtain_lock_or_raise()
             lock_file._release_lock()
+
+    @requires_symlinks
+    def test_lock_file_does_not_follow_a_symlink(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            outside = os.path.join(tdir, "outside-the-lock")
+            os.symlink(outside, my_file + ".lock")
+
+            lock_file = LockFile(my_file)
+            self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
+            assert not lock_file._has_lock()
+            assert not os.path.exists(outside)
+
+    def test_lock_file_is_obtained_by_a_single_holder(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            racers = 8
+            at_the_line = threading.Barrier(racers)
+            holders = []
+            guard = threading.Lock()
+
+            def obtain():
+                lock_file = LockFile(my_file)
+                at_the_line.wait()
+                try:
+                    lock_file._obtain_lock_or_raise()
+                except OSError:
+                    return
+                with guard:
+                    holders.append(lock_file)
+
+            threads = [threading.Thread(target=obtain) for _ in range(racers)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            self.assertEqual(1, len(holders))
 
     def test_blocking_lock_file(self):
         with tempfile.TemporaryDirectory() as tdir:

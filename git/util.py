@@ -1166,17 +1166,20 @@ class LockFile:
         if self._has_lock():
             return
         lock_file = self._lock_file_path()
-        if osp.isfile(lock_file):
+        # Create the lock in one step, the way Git and gitdb's LockedFD do. Testing
+        # for the file first leaves a window in which another holder creates it and
+        # both proceed, and O_CREAT|O_EXCL additionally refuses to follow a symbolic
+        # link planted at the lock path instead of writing through it.
+        try:
+            fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError as e:
             raise OSError(
                 "Lock for file %r did already exist, delete %r in case the lock is illegal"
                 % (self._file_path, lock_file)
-            )
-
-        try:
-            with open(lock_file, mode="w"):
-                pass
+            ) from e
         except OSError as e:
             raise OSError(str(e)) from e
+        os.close(fd)
 
         self._owns_lock = True
 
