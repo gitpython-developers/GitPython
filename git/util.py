@@ -1166,12 +1166,51 @@ class LockFile:
         if self._has_lock():
             return
         lock_file = self._lock_file_path()
-        # Create the lock in one step, the way Git and gitdb's LockedFD do. Testing
-        # for the file first leaves a window in which another holder creates it and
-        # both proceed, and O_CREAT|O_EXCL additionally refuses to follow a symbolic
-        # link planted at the lock path instead of writing through it.
+        # Create the lock in one step. Checking for it first would allow another
+        # holder to create it between the check and the open.
         try:
-            fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            if sys.platform == "win32":
+                if "\0" in lock_file:
+                    raise ValueError("embedded null character")
+
+                import ctypes
+                from ctypes import wintypes
+
+                # Unlike POSIX, Windows follows dangling symlinks even with O_EXCL.
+                # Open the reparse point itself so an existing link is rejected.
+                # Call the Unicode API directly: older _winapi.CreateFile wrappers
+                # use the ANSI API and can create a lock under the wrong filename.
+                kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                create_file = kernel32.CreateFileW
+                create_file.argtypes = (
+                    wintypes.LPCWSTR,
+                    wintypes.DWORD,
+                    wintypes.DWORD,
+                    wintypes.LPVOID,
+                    wintypes.DWORD,
+                    wintypes.DWORD,
+                    wintypes.HANDLE,
+                )
+                create_file.restype = wintypes.HANDLE
+                close_handle = kernel32.CloseHandle
+                close_handle.argtypes = (wintypes.HANDLE,)
+                close_handle.restype = wintypes.BOOL
+                handle = create_file(
+                    lock_file,
+                    0x40000000,  # GENERIC_WRITE
+                    0,
+                    None,
+                    1,  # CREATE_NEW
+                    0x00200000,  # FILE_FLAG_OPEN_REPARSE_POINT
+                    None,
+                )
+                if handle == wintypes.HANDLE(-1).value:
+                    raise ctypes.WinError(ctypes.get_last_error())
+                if not close_handle(handle):
+                    raise ctypes.WinError(ctypes.get_last_error())
+            else:
+                fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(fd)
         except FileExistsError as e:
             raise OSError(
                 "Lock for file %r did already exist, delete %r in case the lock is illegal"
@@ -1179,7 +1218,6 @@ class LockFile:
             ) from e
         except OSError as e:
             raise OSError(str(e)) from e
-        os.close(fd)
 
         self._owns_lock = True
 
