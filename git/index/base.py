@@ -1303,7 +1303,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     @default_index
     def checkout(
         self,
-        paths: Union[None, Iterable[PathLike]] = None,
+        paths: Union[None, PathLike, Iterable[PathLike]] = None,
         force: bool = False,
         fprogress: Callable = lambda *args: None,
         allow_unsafe_options: bool = False,
@@ -1442,7 +1442,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
-            if isinstance(paths, str):
+            if isinstance(paths, (str, os.PathLike)):
                 paths = [paths]
 
             # Make sure we have our entries loaded before we start checkout_index, which

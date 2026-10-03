@@ -1731,6 +1731,32 @@ else:
             assert "A  file2.txt" in status_lines
 
 
+class TestIndexCheckout:
+    @pytest.mark.parametrize("path_type", [str, Path, PathLikeMock])
+    @pytest.mark.parametrize("absolute", [False, True])
+    @pytest.mark.parametrize("directory", [False, True])
+    @pytest.mark.parametrize("container", ["single", "list", "iterator"])
+    def test_checkout_pathlike(self, tmp_path, path_type, absolute, directory, container):
+        with Repo.init(tmp_path) as repo:
+            nested = tmp_path / "nested"
+            nested.mkdir()
+            files = {"nested/first": b"first", "nested/second": b"second", "outside": b"outside"}
+            for name, data in files.items():
+                (tmp_path / name).write_bytes(data)
+            repo.index.add(list(files))
+
+            path_name = "nested" if directory else "nested/first"
+            path = path_type(str(tmp_path / path_name) if absolute else path_name)
+            paths = path if container == "single" else [path] if container == "list" else iter([path])
+            expected = {"nested/first", "nested/second"} if directory else {"nested/first"}
+            for name in expected:
+                (tmp_path / name).unlink()
+
+            assert set(repo.index.checkout(paths)) == expected
+            for name, data in files.items():
+                assert (tmp_path / name).read_bytes() == data
+
+
 class TestIndexUtils:
     @pytest.mark.parametrize("file_path_type", [str, Path])
     def test_temporary_file_swap(self, tmp_path, file_path_type):
