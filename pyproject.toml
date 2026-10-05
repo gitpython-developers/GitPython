@@ -38,6 +38,7 @@ dynamic = ["license", "version", "dependencies", "optional-dependencies"]
 [project.urls]
 "Source code" = "https://github.com/gitpython-developers/GitPython"
 "Documentation" = "https://gitpython.readthedocs.io/en/stable/"
+"Changelog" = "https://github.com/gitpython-developers/GitPython/blob/main/doc/source/changes.rst"
 
 [dependency-groups]
 doc = [
