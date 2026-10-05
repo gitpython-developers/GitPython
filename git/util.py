@@ -658,14 +658,11 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
             if url.password is None and url.username is None:
                 continue
 
-            # Redact the userinfo as a whole rather than substituting the
-            # username/password into the netloc: a substring replace also hits
-            # the host ("git" in "github.com") and an empty username or password
-            # matches at every position.
-            _, at, hostinfo = url.netloc.rpartition("@")
-            if at:
-                redacted = "*****:*****" if url.password is not None else "*****"
-                url = url._replace(netloc=f"{redacted}@{hostinfo}")
+            # Match urllib.parse's userinfo boundary. Keeping the raw hostinfo
+            # preserves hostname case, IPv6 brackets, and port formatting.
+            _, _, hostinfo = url.netloc.rpartition("@")
+            redacted = "*****:*****" if url.password is not None else "*****"
+            url = url._replace(netloc=f"{redacted}@{hostinfo}")
             new_cmdline[index] = urlunsplit(url)
         except ValueError:
             # This is not a valid URL.
