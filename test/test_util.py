@@ -828,6 +828,34 @@ class TestUtils(TestBase):
         assert authorization not in " ".join(redacted_cmd_6)
         assert "http.extraHeader=Authorization: *****" in redacted_cmd_6
 
+    def test_remove_password_keeps_host_intact(self):
+        """Redaction must not touch the host, even when it contains the username."""
+        redacted = remove_password_if_present(["git", "clone", "https://git@github.com/user/repo.git"])
+        assert redacted == ["git", "clone", "https://*****@github.com/user/repo.git"]
+
+        redacted = remove_password_if_present(["git", "clone", "ssh://git@github.com/u/r.git"])
+        assert redacted == ["git", "clone", "ssh://*****@github.com/u/r.git"]
+
+    def test_remove_empty_password_keeps_host_intact(self):
+        """An empty password must not expand into every position of the netloc."""
+        redacted = remove_password_if_present(["git", "clone", "https://:@fakerepo.example.com/testrepo"])
+        assert redacted == ["git", "clone", "https://*****:*****@fakerepo.example.com/testrepo"]
+
+    @ddt.data(
+        (
+            "https://user%40example.com:p%40ss@GitHub.COM:00443/repo@name?q=a@b#c@d",
+            "https://*****:*****@GitHub.COM:00443/repo@name?q=a@b#c@d",
+        ),
+        ("//user:pass@[2001:db8::1]:0080/repo", "//*****:*****@[2001:db8::1]:0080/repo"),
+        ("https://user:p@ss@example.com/repo", "https://*****:*****@example.com/repo"),
+        ("https://user:@example.com/repo", "https://*****:*****@example.com/repo"),
+        ("https://@example.com/repo", "https://*****@example.com/repo"),
+        ("https://example.com/repo@name?q=a@b#c@d", "https://example.com/repo@name?q=a@b#c@d"),
+    )
+    @ddt.unpack
+    def test_remove_password_preserves_url_components(self, url, expected):
+        assert remove_password_if_present([url]) == [expected]
+
 
 def test_mode_str_to_int_accepts_bytes():
     assert mode_str_to_int("100644") == 0o100644
