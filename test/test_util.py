@@ -828,6 +828,19 @@ class TestUtils(TestBase):
         assert authorization not in " ".join(redacted_cmd_6)
         assert "http.extraHeader=Authorization: *****" in redacted_cmd_6
 
+    def test_remove_password_keeps_host_intact(self):
+        """Redaction must not touch the host, even when it contains the username."""
+        redacted = remove_password_if_present(["git", "clone", "https://git@github.com/user/repo.git"])
+        assert redacted == ["git", "clone", "https://*****@github.com/user/repo.git"]
+
+        redacted = remove_password_if_present(["git", "clone", "ssh://git@github.com/u/r.git"])
+        assert redacted == ["git", "clone", "ssh://*****@github.com/u/r.git"]
+
+    def test_remove_empty_password_keeps_host_intact(self):
+        """An empty password must not expand into every position of the netloc."""
+        redacted = remove_password_if_present(["git", "clone", "https://:@fakerepo.example.com/testrepo"])
+        assert redacted == ["git", "clone", "https://*****:*****@fakerepo.example.com/testrepo"]
+
 
 def test_mode_str_to_int_accepts_bytes():
     assert mode_str_to_int("100644") == 0o100644
