@@ -16,11 +16,10 @@ from gitdb import IStream
 
 from git.objects import Blob, Tree
 from git.objects.tree import TreeModifier
-from git.repo import Repo
 from git.util import cwd
 from test.lib import TestBase, with_rw_directory
 
-from .lib.helper import PathLikeMock, with_rw_repo
+from .lib.helper import PathLikeMock
 
 
 @ddt.ddt
@@ -198,56 +197,48 @@ class TestTree(TestBase):
         # END for each item
         assert found_slash
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / ".gitignore"
+    def test_repo_lookup_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / ".gitignore"
         assert isinstance(blob, Blob)
         assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / PathLikeMock(".gitignore")
+    def test_repo_lookup_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / PathLikeMock(".gitignore")
         assert isinstance(blob, Blob)
         assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_invalid_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
+    def test_repo_lookup_invalid_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
         with pytest.raises(KeyError):
-            repo.tree() / "doesnotexist"
+            tree / "doesnotexist"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_invalid_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
+    def test_repo_lookup_invalid_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
         with pytest.raises(KeyError):
-            repo.tree() / PathLikeMock("doesnotexist")
+            tree / PathLikeMock("doesnotexist")
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_nested_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / "git/__init__.py"
+    def test_repo_lookup_nested_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / "git/__init__.py"
         assert isinstance(blob, Blob)
         assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_nested_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / PathLikeMock("git/__init__.py")
+    def test_repo_lookup_nested_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / PathLikeMock("git/__init__.py")
         assert isinstance(blob, Blob)
         assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_folder_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        tree = repo.tree() / "git"
+    def test_repo_lookup_folder_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        tree = tree / "git"
         assert isinstance(tree, Tree)
         assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_folder_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        tree = repo.tree() / PathLikeMock("git")
+    def test_repo_lookup_folder_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        tree = tree / PathLikeMock("git")
         assert isinstance(tree, Tree)
         assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
