@@ -3,6 +3,7 @@
 
 import contextlib
 import gc
+from functools import lru_cache
 import os
 import os.path as osp
 from pathlib import Path
@@ -117,22 +118,49 @@ def test_submodule_cli_lifecycle(tmp_path, monkeypatch, object_format, ref_forma
         assert not parent.submodules
 
 
+@pytest.fixture(scope="module")
+def movable_submodule_baseline(tmp_path_factory):
+    """Prepare each logical-name layout once; only copies are handed to tests."""
+
+    @lru_cache(maxsize=None)
+    def prepare(name):
+        root = tmp_path_factory.mktemp("movable-submodule")
+        with git.Repo.init(root / "source") as source, git.Repo.init(root / "parent") as parent:
+            source.git.symbolic_ref("HEAD", "refs/heads/master")
+            (root / "source/file").write_text("content", encoding="utf-8")
+            source.index.add(["file"])
+            source.index.commit("Create source")
+            with _patch_git_config("protocol.file.allow", "always"):
+                submodule = parent.create_submodule(name, "module", source.working_tree_dir)
+            parent.index.commit("Create submodule")
+            submodule.module().close()
+        return root / "parent"
+
+    return prepare
+
+
 @pytest.fixture
-def movable_submodule(tmp_path, request):
-    """Create a committed local submodule whose logical name stays fixed when moved."""
-    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
-        source.git.symbolic_ref("HEAD", "refs/heads/master")
-        (tmp_path / "source" / "file").write_text("content", encoding="utf-8")
-        source.index.add(["file"])
-        source.index.commit("Create source")
-        with _patch_git_config("protocol.file.allow", "always"):
-            submodule = parent.create_submodule(
-                getattr(request, "param", "logical-name"), "module", source.working_tree_dir
-            )
-        parent.index.commit("Create submodule")
-        # Release clone handles before Windows moves the checkout.
-        submodule.module().close()
-        yield submodule
+def movable_submodule(tmp_path, request, movable_submodule_baseline):
+    """Give each test independent writable metadata and a fresh Python wrapper."""
+    baseline = movable_submodule_baseline(getattr(request, "param", "logical-name"))
+    shutil.copytree(baseline, tmp_path / "parent", symlinks=True)
+    with git.Repo(tmp_path / "parent") as parent:
+        yield parent.submodules[0]
+
+
+def test_movable_submodule_copies_are_isolated(movable_submodule, movable_submodule_baseline):
+    sm = movable_submodule
+    baseline = movable_submodule_baseline(sm.name)
+    for relative in (".git/index", ".git/config", ".git/modules/logical-name/config", "module/file"):
+        copy = Path(sm.repo.working_tree_dir, relative)
+        original = baseline / relative
+        assert copy.read_bytes() == original.read_bytes()
+        assert not copy.samefile(original)
+    Path(sm.abspath, "file").write_text("changed", encoding="utf-8")
+    sm.repo.create_head("copy-only")
+    assert (baseline / "module/file").read_text(encoding="utf-8") == "content"
+    with git.Repo(baseline) as original:
+        assert "copy-only" not in original.heads
 
 
 def _move_snapshot(submodule):
