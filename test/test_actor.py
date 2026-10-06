@@ -6,10 +6,10 @@
 from unittest import mock
 
 from git import Actor
-from test.lib import TestBase
+from test.lib import TestCase
 
 
-class TestActor(TestBase):
+class TestActor(TestCase):
     def test_from_string_should_separate_name_and_email(self):
         a = Actor.from_string("Michael Trier <mtrier@example.com>")
         self.assertEqual("Michael Trier", a.name)
