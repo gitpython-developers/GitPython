@@ -113,11 +113,12 @@ custom storage/environment, global Git options, and unhandled command options
 also retain their CLI contracts. A broken installed extension is reported as
 an import error; only an absent top-level `gix` selects CLI mode.
 
-## Future performance work
+## Performance work
 
-These runtime and fixture optimizations have not been implemented. The local
-measurements use official GixPython 0.1.0 and existing CPython 3.12.14 on macOS
-arm64 at `89c609cf92335e75652d7725682e215a9ea080e5`.
+Native repository reuse remains future work. The fixture optimizations below
+are implemented as separate commits, each validated with GixPython before CLI.
+The original local measurements use official GixPython 0.1.0 and existing
+CPython 3.12.14 on macOS arm64 at `89c609cf92335e75652d7725682e215a9ea080e5`.
 
 The full suite with coverage took 757.85 seconds wall-clock (757.04 seconds
 reported by pytest): 1,649 tests and 38 subtests passed, 79 skipped, and one
@@ -140,9 +141,9 @@ Consider retaining native repository/object-store state per `git.Repo`, with
 explicit ownership, `close()` behavior, thread semantics, and invalidation for
 CLI/native mutations, configuration changes, and environment overrides.
 Preserve the current safety checks and diagnostics. Establish those contracts
-before replacing the fresh-open policy below.
+before replacing the current fresh-open policy.
 
-### Reuse prepared test fixtures
+### Reuse prepared test fixtures (implemented)
 
 A 19-case submodule rejection sample without coverage took 15.62 seconds:
 1,258 `Git.execute()` calls accounted for 11.86 seconds, while 1,995 native
@@ -150,47 +151,75 @@ repository-open/validation attempts accounted for 0.84 seconds. Most work was
 fixture setup. This sample supports prioritizing repeated setup subprocesses;
 it is not a profile of the entire suite.
 
-Collection found 1,729 parameterized cases from 703 distinct source bodies.
+The original collection found 1,729 parameterized cases from 703 distinct source bodies.
 Source inspection identified the following conservative set of 422 cases whose
 assertions do not require changing repository state after preparation. The
 remaining cases have not been exhaustively classified; these are reuse
 candidates, not proof that a shared fixture is safe in every execution order.
 
-| Cases | Current setup | Future opportunity |
+| Original cases | Repeated setup | Implemented change |
 | --- | --- | --- |
-| 166 | `TExc` (157) and `TestActor` (9) inherit repository-building `TestBase`. | Use a base without repository setup; these assertions need no repository. |
-| 182 | Three submodule rejection bodies repeatedly build `movable_submodule`, then check snapshots for no mutation. | Share one committed baseline, with fresh Python wrappers and per-case temporary paths. |
-| 51 | Six submodule rejection bodies prepare nested metadata, separate metadata, intermediate/leaf symlinks, or retained metadata before checking rejection. | Prepare immutable variants once; group by layout rather than repeating setup for every operation or spelling. |
-| 15 | Eight revision-query bodies rebuild the same four-commit graph, refs, index, and reflogs through `rev_parse_repo`. | Share the prepared graph; keep the five mutating cases isolated. |
-| 8 | Tree lookup bodies clone and check out `0.3.2.1` through `with_rw_repo`. | Share one prepared historical repository; the assertions only read trees. |
+| 166 | `TExc` (157) and `TestActor` (9) inherit repository-building `TestBase`. | Use the existing `TestCase` base without repository setup. |
+| 182 | Three submodule rejection bodies repeatedly build `movable_submodule`, then check snapshots for no mutation. | Prepare logical-name baselines once and copy the parent per case, retaining fresh wrappers and independent writable files. |
+| 51 | Six submodule rejection bodies prepare nested metadata, separate metadata, intermediate/leaf symlinks, or retained metadata before checking rejection. | Cache ten prepared layouts and restore complete copies at their original paths, preserving absolute Git links and symlinks. Cleanup removes the active copy even after failure. |
+| 15 | Eight revision-query bodies rebuild the same four-commit graph, refs, index, and reflogs through `rev_parse_repo`. | Prepare the graph once and copy it for every consumer, including mutating cases; recreate repository, branch and commit wrappers. |
+| 8 | Tree lookup bodies clone and check out `0.3.2.1` through `with_rw_repo`. | Read the historical tree directly through the existing class repository, removing clones and checkouts. |
 
-Thus at least 256 repository-using cases are initial sharing candidates,
-alongside 166 cases where repository setup could disappear. They could
-plausibly use about 14 prepared scenarios: one ordinary submodule baseline,
-11 rejection-layout variants, one revision graph and one historical tree
-baseline. That scenario count is an implementation estimate, not validated
-fixture sharing. The full
-`movable_submodule` fixture is constructed for 322 cases and `local_submodule`
-for 68 cases. Even mutating cases could start from prepared filesystem copies,
-with writable refs, index, config, worktree and submodule metadata isolated;
-their shared object data and source repositories must remain immutable.
-Snapshot/copy cost and path relocation need measurement before choosing a
-strategy. Do not hard-link mutable Git metadata or rely on resetting only
-`HEAD` to restore a fixture.
+The `movable_submodule` baseline also serves mutating cases: all writable
+refs, index, config, objects, worktree and module metadata are filesystem copies,
+while the local clone source remains shared and immutable. The original 322
+consumers no longer repeat repository initialization and submodule cloning.
+The original 68 `local_submodule` cases copy both source and parent from one
+prepared two-commit layout because these tests also mutate the source. The
+fixture relocates all source URLs and records the private URL in parent history
+for `RootModule` comparisons. No mutable Git metadata is hard-linked.
 
-Additionally, all 25 collected `TestBase` classes reconstruct both historical
-dependency repositories, including checkouts and `git gc`: 50 constructions.
-Only four classes call the dependency-source helpers. Lazily preparing two
-immutable sources once per session could remove 48 of those constructions,
-independently of whether the consuming tests mutate their own repositories.
+Historical dependency sources are now lazy session fixtures. Originally all
+25 `TestBase` classes reconstructed both sources (50 builds), although only four
+classes called the URL helpers. The suite now prepares each needed source once,
+with consuming tests retaining independent writable clones.
 
-Before widening fixture scope, verify that each candidate preserves refs,
-reflogs, index, configuration, worktree, metadata and source state; distinguish
-harmless cache changes from persistent changes. Keep mutable Python wrappers,
-environment patches and temporary paths isolated. Security rejection tests
-must retain their no-side-effect assertions and pristine starting state, so
-an earlier failure cannot contaminate later results. Profile setup/call/teardown
-and compare warmed runs before claiming a suite-wide improvement.
+Four additional checks exercise isolation: edits and refs in movable copies,
+restoration after deliberate mutation with an absolute symlink, private source
+commits, and revision-graph changes. Existing security no-side-effect snapshots
+remain in place. Native repository ownership, invalidation and thread semantics
+remain deferred as described above.
+
+Per-change affected tests on existing CPython 3.12.14/macOS arm64 with official
+GixPython 0.1.0, without coverage (wall-clock seconds including runner setup):
+
+| Change | Passed cases | GixPython first | CLI second |
+| --- | --- | --- | --- |
+| Repository-free actor/exception tests | 166 | 0.47 s | 0.49 s |
+| Lazy historical sources, all consumers | 206, plus 14 subtests; 6 skipped, 1 xfailed | 90.89 s | 160.82 s |
+| Movable baseline, top-level submodule tests | 333 | 88.63 s | 178.75 s |
+| Prepared rejection variants | 51 | 12.34 s | 26.23 s |
+| Layout restoration check | 1 | 1.33 s | 1.62 s |
+| Prepared revision graph | 23 | 4.39 s | 7.57 s |
+| Historical tree lookups, whole tree module | 22 | 1.66 s | 3.86 s |
+| Prepared no-fetch source and parent | 69 | 56.27 s | 117.52 s |
+
+These selections overlap, and their timings are validation records rather than
+isolated before/after benchmarks. The full-suite measurements below provide the
+broader comparison. Only the existing interpreter was used.
+
+At `c8ee26c7da373e28cc7ede17ef2eaadd763fcdfc`, the full GixPython suite
+with coverage passed in **404.61 seconds wall-clock (6m45s)**, with pytest
+reporting 404.12 seconds: 1,653 passed, 79 skipped, one expected failure,
+and 38 subtests passed. Coverage remains 90%. Compared with the original
+757.85-second run, this saved 353.24 seconds (46.6%, about 1.87 times faster).
+This is one local before/after run per revision, not a statistical benchmark.
+
+The same operation counters now record 102,581 native operations and 21,402
+CLI fallback decisions, down from 114,800 and 39,002 respectively. Raw Git
+calls and child processes remain outside those counters.
+
+The subsequent full CLI run with coverage passed in **755.78 seconds
+wall-clock (12m36s)**, with pytest reporting 755.30 seconds: 1,617 passed,
+80 skipped, one expected failure, and 38 subtests passed. CLI coverage is 82%;
+backend-specific tests account for different collection and coverage. This CLI
+run validates the optimized suite; there is no matching pre-change CLI full-run
+measurement here. Repository-wide Ruff lint/format, mypy and pyright passed.
 
 ## GixPython / Gitoxide follow-up ledger
 
