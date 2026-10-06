@@ -3,6 +3,7 @@
 
 from functools import partial
 from pathlib import Path
+import shutil
 from unittest import mock
 
 import pytest
@@ -22,9 +23,10 @@ def _cached_remote_refs(repo):
     return {ref.path: ref.commit.hexsha for remote in repo.remotes for ref in remote.refs}
 
 
-@pytest.fixture
-def local_submodule(tmp_path):
+@pytest.fixture(scope="module")
+def local_submodule_baseline(tmp_path_factory):
     """Use only local repositories, with two commits already available in the clone."""
+    tmp_path = tmp_path_factory.mktemp("local-submodule")
     with Repo.init(tmp_path / "source") as source, Repo.init(tmp_path / "parent") as parent:
         # RootModule's URL-change handling currently assumes a master branch.
         source.git.symbolic_ref("HEAD", "refs/heads/master")
@@ -34,8 +36,37 @@ def local_submodule(tmp_path):
             "module", "module", source.working_tree_dir, branch=source.head.reference.name
         )
         parent.index.commit("Add submodule")
+        submodule.module().close()
+    return tmp_path
+
+
+@pytest.fixture
+def local_submodule(tmp_path, local_submodule_baseline):
+    shutil.copytree(local_submodule_baseline / "source", tmp_path / "source", symlinks=True)
+    shutil.copytree(local_submodule_baseline / "parent", tmp_path / "parent", symlinks=True)
+    with Repo(tmp_path / "source") as source, Repo(tmp_path / "parent") as parent:
+        submodule = parent.submodules[0]
+        url = Git.polish_url(source.working_tree_dir)
+        with submodule.config_writer() as writer:
+            writer.set_value("url", url)
+        with parent.config_writer() as writer:
+            writer.set_value('submodule "module"', "url", url)
+        # RootModule compares URLs in committed history as well as current config.
+        parent.index.commit("Relocate fixture source")
+        # Re-enumerate after the config writer invalidates the submodule cache.
+        submodule = parent.submodules[0]
         with submodule.module() as module:
+            module.remotes.origin.set_url(url)
             yield submodule, source, module
+
+
+def test_local_submodule_source_is_isolated(local_submodule, local_submodule_baseline):
+    submodule, source, module = local_submodule
+    assert submodule.url == module.remotes.origin.url == Git.polish_url(source.working_tree_dir)
+    remote_only = _commit_file(source, "private")
+    with Repo(local_submodule_baseline / "source") as original:
+        assert original.head.commit != remote_only
+        assert Path(original.working_tree_dir, "file").read_text(encoding="utf-8") == "cached"
 
 
 @pytest.fixture(params=["submodule", "root", "repo"])
