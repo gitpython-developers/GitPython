@@ -28,7 +28,7 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux, rmtree
 
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
@@ -163,6 +163,162 @@ def test_movable_submodule_copies_are_isolated(movable_submodule, movable_submod
         assert "copy-only" not in original.heads
 
 
+def _copy_rejection_layout(source, destination):
+    """Copy files normally, then recreate directory links without symlink metadata."""
+    links = {}
+
+    def ignore_links(directory, names):
+        ignored = []
+        for name in names:
+            path = Path(directory, name)
+            if path.is_symlink():
+                links[path.relative_to(source)] = os.readlink(path)
+                ignored.append(name)
+        return ignored
+
+    shutil.copytree(source, destination, ignore=ignore_links)
+    for relative, target in links.items():
+        Path(destination, relative).symlink_to(target, target_is_directory=True)
+
+
+@pytest.fixture(scope="module")
+def prepared_rejection_layout(tmp_path_factory, movable_submodule_baseline):
+    """Restore private copies at a stable path, preserving absolute Git links."""
+    layouts = {}
+
+    @contextlib.contextmanager
+    def restore(key, prepare):
+        if key not in layouts:
+            directory = tmp_path_factory.mktemp("rejection-layout")
+            root = directory / "active"
+            shutil.copytree(movable_submodule_baseline("logical-name"), root / "parent", symlinks=True)
+            with git.Repo(root / "parent") as parent:
+                prepare(root, parent.submodules[0])
+            baseline = directory / "baseline"
+            _copy_rejection_layout(root, baseline)
+            rmtree(root)
+            layouts[key] = root, baseline
+        root, baseline = layouts[key]
+        _copy_rejection_layout(baseline, root)
+        try:
+            yield root
+        finally:
+            rmtree(root)
+
+    return restore
+
+
+def test_prepared_rejection_layout_restores_private_state(prepared_rejection_layout, monkeypatch):
+    copystat = shutil.copystat
+
+    def reject_symlink_metadata(source, destination, **kwargs):
+        if Path(source).is_symlink():
+            raise PermissionError("Cygwin cannot copy this symlink's metadata")
+        return copystat(source, destination, **kwargs)
+
+    monkeypatch.setattr(shutil, "copystat", reject_symlink_metadata)
+
+    def prepare(root, sm):
+        (root / "link").symlink_to(root / "parent/module", target_is_directory=True)
+
+    with prepared_rejection_layout("restore-check", prepare) as root:
+        (root / "parent/module/file").write_text("changed", encoding="utf-8")
+        (root / "extra").touch()
+    assert not root.exists()
+    with prepared_rejection_layout("restore-check", prepare) as restored:
+        assert restored == root
+        assert (root / "link/file").read_text(encoding="utf-8") == "content"
+        assert not (root / "extra").exists()
+
+
+@pytest.fixture
+def nested_metadata_submodule(prepared_rejection_layout):
+    def prepare(root, sm):
+        sm.repo.create_submodule("other", "other", sm.url).module().close()
+
+    with prepared_rejection_layout("nested", prepare) as root, git.Repo(root / "parent") as parent:
+        yield parent.submodules[0], parent.submodules[1]
+
+
+@pytest.fixture
+def existing_nested_metadata(prepared_rejection_layout, state):
+    def prepare(root, sm):
+        checkout = Path(sm.repo.working_tree_dir, "new")
+        with git.Repo.clone_from(
+            sm.url,
+            checkout,
+            separate_git_dir=str(Path(sm.repo.git_dir, "modules", sm.name, "child")),
+            allow_unsafe_options=True,
+        ):
+            pass
+        if state == "retained":
+            shutil.rmtree(checkout)
+
+    with prepared_rejection_layout(("existing-nested", state), prepare) as root, git.Repo(root / "parent") as parent:
+        yield parent.submodules[0]
+
+
+@pytest.fixture
+def separate_metadata_submodule(prepared_rejection_layout):
+    def prepare(root, sm):
+        checkout = root / "separate"
+        with git.Repo.init(checkout, separate_git_dir=str(checkout / "metadata"), allow_unsafe_options=True) as parent:
+            module = parent.create_submodule("module", "module", sm.url)
+            parent.index.commit("Add submodule")
+            module.module().close()
+
+    with prepared_rejection_layout("separate", prepare) as root, git.Repo(root / "separate") as parent:
+        yield parent.submodules[0]
+
+
+@pytest.fixture
+def intermediate_symlink_submodule(prepared_rejection_layout, target_kind):
+    def prepare(root, sm):
+        checkout = Path(sm.repo.working_tree_dir)
+        target = checkout / "target" if target_kind == "internal" else root / "outside"
+        if target_kind != "dangling":
+            target.mkdir()
+        (checkout / "nested").mkdir()
+        link = checkout / "nested/link"
+        link.symlink_to(
+            target if target_kind == "absolute" else os.path.relpath(target, link.parent), target_is_directory=True
+        )
+        sm.repo.index.add(["nested/link"])
+        sm.repo.index.commit("Record layout")
+
+    with prepared_rejection_layout(("intermediate-link", target_kind), prepare) as root, git.Repo(
+        root / "parent"
+    ) as parent:
+        target = root / "parent/target" if target_kind == "internal" else root / "outside"
+        yield parent.submodules[0], target
+
+
+@pytest.fixture
+def leaf_metadata_submodule(prepared_rejection_layout):
+    def prepare(root, sm):
+        sm.repo.git.worktree("add", "--detach", str(root / "worktree"))
+        with git.Repo(root / "worktree") as parent:
+            module = parent.submodules[0]
+            module.update(init=True)
+            module.module().close()
+
+    with prepared_rejection_layout("leaf-metadata", prepare) as root, git.Repo(root / "worktree") as parent:
+        yield parent.submodules[0]
+
+
+@pytest.fixture
+def retained_metadata_submodule(prepared_rejection_layout):
+    def prepare(root, sm):
+        sm.remove(force=True)
+
+    with prepared_rejection_layout("retained", prepare) as root, git.Repo(root / "parent") as parent:
+        # The submodule is no longer in the index; retain its original identity.
+        with GitConfigParser(Path(parent.git_dir, "modules/logical-name/config")) as reader:
+            url = reader.get_value('remote "origin"', "url")
+        sm = parent.head.commit.tree["module"]
+        yield Submodule(parent, sm.binsha, name="logical-name", path="module", url=url)
+
+
 def _move_snapshot(submodule):
     """Capture index, configuration, and path state to detect side effects of rejected moves."""
     parent = submodule.repo
@@ -237,35 +393,32 @@ def test_add_rejects_metadata_checkout_without_writing_files(movable_submodule):
 @pytest.mark.parametrize("metadata_name", ["metadata", "MeTaDaTa"])
 @pytest.mark.parametrize("operation", ["add", "clone", "update", "move"])
 def test_submodule_rejects_checkout_in_separate_metadata(
-    movable_submodule, tmp_path, absolute_path, metadata_name, operation
+    separate_metadata_submodule, absolute_path, metadata_name, operation
 ):
-    root = tmp_path / "separate"
-    with git.Repo.init(root, separate_git_dir=str(root / "metadata"), allow_unsafe_options=True) as parent:
-        if not (root / metadata_name).is_dir():
-            pytest.skip("Requires a case-insensitive filesystem")
-        sm = parent.create_submodule("module", "module", movable_submodule.url)
-        parent.index.commit("Add submodule")
-        before = _move_snapshot(sm)
-        paths = set(root.rglob("*"))
-        path = root / metadata_name / "new" if absolute_path else f"{metadata_name}/new"
-        with pytest.raises(ValueError, match="Git metadata"):
-            if operation == "add":
-                parent.create_submodule("new", path, sm.url)
-            elif operation == "clone":
-                Submodule._clone_repo(parent, sm.url, path, "new")
-            elif operation == "update":
-                Submodule(parent, sm.binsha, name="new", path=path, url=sm.url).update(init=True)
-            else:
-                sm.move(path)
-        assert _move_snapshot(sm) == before
-        assert set(root.rglob("*")) == paths
+    sm = separate_metadata_submodule
+    parent = sm.repo
+    root = Path(parent.working_tree_dir)
+    if not (root / metadata_name).is_dir():
+        pytest.skip("Requires a case-insensitive filesystem")
+    before = _move_snapshot(sm)
+    paths = set(root.rglob("*"))
+    path = root / metadata_name / "new" if absolute_path else f"{metadata_name}/new"
+    with pytest.raises(ValueError, match="Git metadata"):
+        if operation == "add":
+            parent.create_submodule("new", path, sm.url)
+        elif operation == "clone":
+            Submodule._clone_repo(parent, sm.url, path, "new")
+        elif operation == "update":
+            Submodule(parent, sm.binsha, name="new", path=path, url=sm.url).update(init=True)
+        else:
+            sm.move(path)
+    assert _move_snapshot(sm) == before
+    assert set(root.rglob("*")) == paths
 
 
 @pytest.mark.parametrize("operation", ["add", "clone", "update"])
-def test_submodule_rejects_nested_metadata_before_mutation(movable_submodule, operation):
-    sm = movable_submodule
-    other = sm.repo.create_submodule("other", "other", sm.url)
-    other.module().close()
+def test_submodule_rejects_nested_metadata_before_mutation(nested_metadata_submodule, operation):
+    sm, other = nested_metadata_submodule
     root = Path(sm.repo.working_tree_dir)
     before = _move_snapshot(sm), _move_snapshot(other)
     paths = set(root.rglob("*"))
@@ -282,16 +435,9 @@ def test_submodule_rejects_nested_metadata_before_mutation(movable_submodule, op
 
 
 @pytest.mark.parametrize("state", ["retained", "checked-out"])
-def test_update_rejects_existing_nested_metadata(movable_submodule, state):
-    sm = movable_submodule
+def test_update_rejects_existing_nested_metadata(existing_nested_metadata, state):
+    sm = existing_nested_metadata
     name = f"{sm.name}/child"
-    checkout = Path(sm.repo.working_tree_dir, "new")
-    with git.Repo.clone_from(
-        sm.url, checkout, separate_git_dir=str(Path(sm.repo.git_dir, "modules", name)), allow_unsafe_options=True
-    ):
-        pass
-    if state == "retained":
-        shutil.rmtree(checkout)
     before = _move_snapshot(sm)
     paths = set(Path(sm.repo.working_tree_dir).rglob("*"))
     with pytest.raises(ValueError, match="inside.*Git directory"):
@@ -400,10 +546,9 @@ def test_readd_retained_submodule_without_checkout(movable_submodule, ref_format
 
 
 @pytest.mark.parametrize("change", ["url", "clone-options", "branch", "depth"])
-def test_readd_retained_submodule_rejects_incompatible_options(movable_submodule, change):
-    sm = movable_submodule
+def test_readd_retained_submodule_rejects_incompatible_options(retained_metadata_submodule, change):
+    sm = retained_metadata_submodule
     name, path, url = sm.name, sm.path, sm.url
-    sm.remove(force=True)
     root = Path(sm.repo.working_tree_dir)
 
     def snapshot():
@@ -429,26 +574,16 @@ def test_readd_retained_submodule_rejects_incompatible_options(movable_submodule
 @pytest.mark.parametrize("configuration,module", [(True, True), (False, True), (True, False)])
 @pytest.mark.parametrize("absolute_path", [False, True])
 def test_move_rejects_intermediate_symlink(
-    movable_submodule, tmp_path, target_kind, configuration, module, absolute_path
+    intermediate_symlink_submodule, target_kind, configuration, module, absolute_path
 ):
     """Reject intermediate symlinks before changing repository state or their targets.
 
     Cover relative and absolute destinations in every move mode, including links
     within the repository and dangling links, which must also be rejected.
     """
-    submodule = movable_submodule
+    submodule, target = intermediate_symlink_submodule
     parent = submodule.repo
     root = Path(parent.working_tree_dir)
-    target = root / "target" if target_kind == "internal" else tmp_path / "outside"
-    if target_kind != "dangling":
-        target.mkdir()
-    (root / "nested").mkdir()
-    link = root / "nested" / "link"
-    link.symlink_to(
-        target if target_kind == "absolute" else os.path.relpath(target, link.parent), target_is_directory=True
-    )
-    parent.index.add(["nested/link"])
-    parent.index.commit("Record layout")
     tree = parent.git.write_tree()
     before = _move_snapshot(submodule)
     destination = root / "nested/link/new/moved" if absolute_path else "nested/link/new/moved"
@@ -482,25 +617,23 @@ def test_move_normal_destination(movable_submodule, absolute_path):
 
 
 @pytest.mark.parametrize("metadata_dir", ["git_dir", "common_dir"])
-def test_move_rejects_leaf_symlink_to_metadata(movable_submodule, tmp_path, metadata_dir):
-    root = tmp_path / "worktree"
-    movable_submodule.repo.git.worktree("add", "--detach", str(root))
-    with git.Repo(root) as parent:
-        assert not osp.samefile(parent.git_dir, parent.common_dir)
-        submodule = parent.submodules[0]
-        submodule.update(init=True)
-        target = Path(getattr(parent, metadata_dir))
-        destination = root / "destination"
-        destination.symlink_to(target, target_is_directory=True)
-        before = _move_snapshot(submodule)
+def test_move_rejects_leaf_symlink_to_metadata(leaf_metadata_submodule, metadata_dir):
+    submodule = leaf_metadata_submodule
+    parent = submodule.repo
+    root = Path(parent.working_tree_dir)
+    assert not osp.samefile(parent.git_dir, parent.common_dir)
+    target = Path(getattr(parent, metadata_dir))
+    destination = root / "destination"
+    destination.symlink_to(target, target_is_directory=True)
+    before = _move_snapshot(submodule)
 
-        with pytest.raises(ValueError, match="Git metadata"):
-            submodule.move("destination", module=False)
+    with pytest.raises(ValueError, match="Git metadata"):
+        submodule.move("destination", module=False)
 
-        assert _move_snapshot(submodule) == before
-        assert destination.is_symlink()
-        assert destination.samefile(target)
-        assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
+    assert _move_snapshot(submodule) == before
+    assert destination.is_symlink()
+    assert destination.samefile(target)
+    assert Path(submodule.abspath, "file").read_text(encoding="utf-8") == "content"
 
 
 @pytest.mark.parametrize("kind", ["empty", "nonempty", "file", "dangling"])
