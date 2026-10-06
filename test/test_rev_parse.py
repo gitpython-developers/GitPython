@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import os
+import shutil
 import subprocess
 import sys
 from io import BytesIO
@@ -24,8 +25,9 @@ def _write(repo, path, content):
     repo.index.add([str(full_path)])
 
 
-@pytest.fixture
-def rev_parse_repo(tmp_path):
+@pytest.fixture(scope="module")
+def rev_parse_baseline(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("rev-parse")
     repo = Repo.init(tmp_path)
     with repo.config_writer() as writer:
         writer.set_value("user", "name", "GitPython Tests")
@@ -52,14 +54,30 @@ def rev_parse_repo(tmp_path):
     repo.create_head("aaaaaaaa", merge)
     repo.create_tag("@foo", ref=merge)
 
-    return {
-        "repo": repo,
-        "root": root,
-        "release": release,
-        "side": side_commit,
-        "merge": merge,
-        "main": main,
-    }
+    commits = {"root": root.hexsha, "release": release.hexsha, "side": side_commit.hexsha, "merge": merge.hexsha}
+    branch_name = main.name
+    repo.close()
+    return tmp_path, commits, branch_name
+
+
+@pytest.fixture
+def rev_parse_repo(tmp_path, rev_parse_baseline):
+    path, commits, branch_name = rev_parse_baseline
+    shutil.copytree(path, tmp_path / "repo", symlinks=True)
+    with Repo(tmp_path / "repo") as repo:
+        yield {"repo": repo, "main": repo.heads[branch_name], **{key: repo.commit(sha) for key, sha in commits.items()}}
+
+
+def test_rev_parse_copies_are_isolated(rev_parse_repo, rev_parse_baseline):
+    repo = rev_parse_repo["repo"]
+    path, _, _ = rev_parse_baseline
+    repo.create_tag("private-copy")
+    _write(repo, "README.md", "private")
+    repo.index.commit("private commit")
+    with Repo(path) as baseline:
+        assert "private-copy" not in baseline.tags
+        assert baseline.head.commit == rev_parse_repo["merge"]
+        assert Path(path, "README.md").read_text() == "release\n"
 
 
 def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
