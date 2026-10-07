@@ -17,6 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         project: [langchain, mlflow, bandit, swebench, datahub]
+        backend: [gix, cli]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,4 +35,4 @@ jobs:
           version: '0.12.13'
           enable-cache: false
       - name: Test latest release against this checkout
-        run: uv run test/downstream/run.py "${{ matrix.project }}"
+        run: uv run test/downstream/run.py "${{ matrix.project }}" --backend "${{ matrix.backend }}"

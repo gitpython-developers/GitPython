@@ -5,16 +5,24 @@ Run released projects' GitPython-related tests against this checkout with
 
 ```sh
 uv run test/downstream/run.py bandit
+uv run test/downstream/run.py bandit --backend gix
 uv run test/downstream/run.py bandit --version 1.9.4
-for project in langchain mlflow bandit swebench datahub; do
-    uv run test/downstream/run.py "$project"
+for backend in gix cli; do
+    for project in langchain mlflow bandit swebench datahub; do
+        uv run test/downstream/run.py "$project" --backend "$backend"
+    done
 done
 ```
 
 The default resolves the latest release from PyPI each time. `--version` reproduces
-a release; `--python` selects the test interpreter (default: 3.12). The runner
-creates a fresh environment, replaces GitPython with this editable checkout, and checks
-the imported module before testing. Upstream test files are not modified.
+a release; `--python` selects the test interpreter (default: 3.12), including an
+existing interpreter's path. `--backend` selects `cli` (the default) or `gix`.
+The runner creates a fresh environment and installs this editable checkout,
+adding the official GixPython release through `.[gix]` for Gix runs. It verifies
+both the imported checkout and the selected backend before testing, and records
+the backend in `result.json` and the default work-directory name. Starting the
+runner from a Gix environment alone does not select Gix in the isolated test
+environment. Upstream test files are not modified.
 
 Source, the environment, frozen requirements, JUnit results, and release provenance
 are retained under `.cache/downstream/`. `--work-dir PATH` uses a new directory
@@ -35,7 +43,7 @@ and test-only dependencies are excluded. Downloads are not unique installations.
 | Project | Distribution downloads | Last tested release | Selected coverage |
 | --- | ---: | --- | --- |
 | LangChain Community | 27,882,881 | 0.4.2 | 2 upstream GitLoader tests: real clones, commits, checkout, tree traversal, ignored paths, and remote validation |
-| MLflow (`mlflow-skinny`) | 25,850,354 | 3.16.1 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
+| MLflow (`mlflow-skinny`) | 25,850,354 | 3.17.0 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
 | Bandit | 24,935,372 | 1.9.4 | 12 upstream baseline CLI tests: real repository creation, commits, branches, resets, discovery, and dirty state |
 | SWE-bench | 22,942,741 | 5.0.2 | 4 supplemental integration cases for `AutoContextManager`; no upstream tests cover its GitPython callers |
 | DataHub (`acryl-datahub`) | 5,019,402 | 1.7.0.14 | 7 upstream tests passed, 1 credential-dependent skip: public clone/checkout, SSH timeout, exception/redaction contracts, and configuration |
@@ -94,6 +102,8 @@ The private SSH-clone test retains its upstream skip: the runner removes its
 credential variable and needs no private credentials. `ssh`, public GitLab
 access, and local TCP sockets are needed for the selected tests.
 
-CI runs the same command against the latest release and fails when no test passes,
-including when all selected tests are skipped. Test dependency ranges only supply
-the upstream test harness; they do not pin the dependent's release.
+CI runs all five projects against the latest release with both CLI and Gix
+backends, for ten independent jobs. A backend mismatch or a run in which no
+test passes fails the job, including when all selected tests are skipped.
+Test dependency ranges only supply the upstream test harness; they do not pin
+the dependent's release.

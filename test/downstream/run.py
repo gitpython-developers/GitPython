@@ -88,6 +88,7 @@ def main():
     profiles = json.loads((HERE / "projects.json").read_text())
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project", choices=profiles)
+    parser.add_argument("--backend", choices=("cli", "gix"), default="cli", help="Backend to install and verify")
     parser.add_argument("--version", help="Release to reproduce; defaults to PyPI's latest release")
     parser.add_argument("--python", default="3.12", help="Python used by the isolated test environment")
     parser.add_argument("--work-dir", type=Path, help="New directory for retained source, environment, and results")
@@ -100,8 +101,8 @@ def main():
     else:
         cache = CHECKOUT / ".cache" / "downstream"
         cache.mkdir(parents=True, exist_ok=True)
-        work = Path(tempfile.mkdtemp(prefix=f"{args.project}-{version}-", dir=cache))
-    print(f"Testing {args.project} {version}; retained work directory: {work}", flush=True)
+        work = Path(tempfile.mkdtemp(prefix=f"{args.project}-{version}-{args.backend}-", dir=cache))
+    print(f"Testing {args.project} {version} with {args.backend}; retained work directory: {work}", flush=True)
 
     config = work / "gitconfig"
     config.write_text(
@@ -134,25 +135,35 @@ def main():
     if profile.get("no_deps"):
         run(install + ["--no-deps"] + list(map(expand, profile["no_deps"])), env=env)
     # Replace the released dependency even if the downstream pins another version.
-    run(install + ["--reinstall-package", "gitpython", "-e", str(CHECKOUT)], env=env)
+    requirement = str(CHECKOUT) + ("[gix]" if args.backend == "gix" else "")
+    run(install + ["--reinstall-package", "gitpython", "-e", requirement], env=env)
 
     # Check the import used by tests and by downstream Python subprocesses.
     run(
         [
             str(python),
             "-c",
-            "import os, pathlib, git; "
+            "import os, pathlib, sys, git; from git import _backend; "
             "expected = pathlib.Path(os.environ['GITPYTHON_CHECKOUT']) / 'git' / '__init__.py'; "
             "assert pathlib.Path(git.__file__).resolve() == expected.resolve(), git.__file__; "
+            "print('GitPython backend:', _backend.name); "
+            "assert _backend.name == sys.argv[1], f'Expected {sys.argv[1]} backend, got {_backend.name}'; "
             "print('GitPython:', git.__file__); print(git.Git().version()); "
             "assert git.Git().version_info >= (2, 52), 'Git 2.52 or newer is required'",
+            args.backend,
         ],
         cwd=source,
         env=env,
     )
     with (work / "requirements-frozen.txt").open("w") as output:
         run(["uv", "pip", "freeze", "--python", str(python)], env=env, stdout=output)
-    result = {"project": args.project, "version": version, "source": provenance, "gitpython": str(CHECKOUT)}
+    result = {
+        "project": args.project,
+        "version": version,
+        "backend": args.backend,
+        "source": provenance,
+        "gitpython": str(CHECKOUT),
+    }
     result_path = work / "result.json"
     result_path.write_text(json.dumps(result, indent=2) + "\n")
     report = work / "junit.xml"
