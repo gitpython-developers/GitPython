@@ -11,6 +11,7 @@ import pytest
 
 from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError
+from git.index.typ import BaseIndexEntry
 from git.repo.fun import find_submodule_git_dir, find_worktree_git_dir, is_git_dir
 from gitdb import IStream
 
@@ -303,6 +304,35 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
     with patch.object(_backend, "gix", None):
         assert index.write_tree().hexsha == native_tree.hexsha
         assert commit.replace(message="a changed message").hexsha == native.hexsha
+
+
+def test_native_revision_path_and_mode_match_cli(repo, tmp_path):
+    blob = repo.odb.store(IStream("blob", 4, BytesIO(b"data")))
+    index = repo.index
+    index.add(
+        [
+            BaseIndexEntry((mode, blob.binsha, 0, path))
+            for mode, path in ((0o100644, "dir/file"), (0o100755, "executable"), (0o120000, "link"))
+        ]
+    )
+    index.commit("paths", skip_hooks=True)
+    revisions = ["HEAD:", "HEAD:dir/", "HEAD:dir/file", "HEAD:executable", "HEAD:link", ":executable", ":0:link"]
+
+    def resolve(revision):
+        obj = repo.rev_parse(revision)
+        return obj.hexsha, getattr(obj, "path", None), getattr(obj, "mode", None)
+
+    with patch.object(_backend, "gix", None):
+        expected = [resolve(rev) for rev in revisions]
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected revision metadata CLI call")):
+        assert [resolve(rev) for rev in revisions] == expected
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
+
+    with repo.git.custom_environment(GIT_INDEX_FILE=str(tmp_path / "alternate-index")):
+        repo.git.read_tree("--empty")
+        repo.git.update_index("--add", "--cacheinfo", "100755", blob.binsha.hex(), "alternate")
+        assert resolve(":alternate") == (blob.binsha.hex(), "alternate", 0o100755)
 
 
 def test_native_reference_name_validation_without_repository():

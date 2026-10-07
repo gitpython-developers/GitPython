@@ -129,8 +129,13 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
     revisions and embedded command delimiters are rejected before invoking Git.
     """
     rev = Git._check_operand(rev, "revision")
+    native = _backend.revision_info(repo.git, rev) if ":" in rev else NotImplemented
     try:
-        oid = repo.git._call_process_safe("rev_parse", "--verify", "--quiet", "--end-of-options", rev)
+        oid = (
+            native[0]
+            if native is not NotImplemented
+            else repo.git._call_process_safe("rev_parse", "--verify", "--quiet", "--end-of-options", rev)
+        )
     except GitCommandError as exc:
         if exc.status != 1 and "Invalid regular expression" not in exc.stderr:
             raise
@@ -139,6 +144,12 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
         raise BadName(rev)
     obj = Object.new_from_sha(repo, hex_to_bin(oid))
     if isinstance(obj, IndexObject) and ":" in rev:
+        if native is not NotImplemented:
+            if native[1] is not None:
+                path_bytes, obj.mode = native[1]
+                path = path_bytes.decode(defenc, "surrogateescape")
+                obj.path = posixpath.normpath(path) if path else ""
+            return obj
         # Git resolves the mode, including index stages and executable/symlink
         # entries. No object storage or revision grammar is decoded in Python.
         with tempfile.TemporaryFile() as stream:

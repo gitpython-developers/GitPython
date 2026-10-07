@@ -190,12 +190,18 @@ def _canonical_repository(repo: Any) -> Any:
     return gix.open_opts(canonical, repo.open_options()) if path != canonical else repo
 
 
-def _oid(repo: Any, ref: Any) -> Any:
+def _check_revision_grammar(ref: str) -> None:
+    if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+", ref):
+        raise _Unsupported("revision grammar differences (GIX-17)")
+
+
+def _oid(repo: Any, ref: Any, env: Optional[Dict[str, Any]] = None) -> Any:
     ref = safe_decode(ref) if isinstance(ref, bytes) else str(ref)
     if re.fullmatch(r"[a-fA-F0-9]{40}|[a-fA-F0-9]{64}", ref):
         return gix.ObjectId(ref)
-    if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+", ref):
-        raise _Unsupported("revision grammar differences (GIX-17)")
+    _check_revision_grammar(ref)
+    if ref.startswith(":"):
+        _index(repo, {"env": env or {}})
     if not hasattr(repo, "rev_parse_single"):
         raise _Unsupported("revision feature disabled")
     return repo.rev_parse_single(ref)
@@ -208,7 +214,7 @@ def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
     method = "stream_object_data" if stream else "get_object_header"
     try:
         repo = _repository(command, {})
-        oid = _oid(repo, ref)
+        oid = _oid(repo, ref, command.environment())
         header = repo.try_find_header(oid)
         if header is None:
             raise ValueError("SHA %s could not be resolved" % oid)
@@ -225,6 +231,29 @@ def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
         return _fallback(method, "native read diagnostics")
     record(method, "native")
     return result
+
+
+def revision_info(command: Any, ref: str) -> Any:
+    """Resolve an object and its tree/index path metadata in one native parse."""
+    if gix is None:
+        return NotImplemented
+    try:
+        _check_revision_grammar(ref)
+        repo = _repository(command, {})
+        if ref.startswith(":"):
+            _index(repo, {"env": command.environment()})
+        spec = repo.rev_parse(ref)
+        oid = spec.single()
+        if oid is None:
+            raise _Unsupported("multiple revisions")
+        metadata = spec.path_and_mode()
+    except _Unsupported as exc:
+        return _fallback("Repo.rev_parse", str(exc))
+    except gix.Error as exc:
+        _logger.debug("native revision metadata: %s", exc)
+        return _fallback("Repo.rev_parse", "native read diagnostics")
+    record("Repo.rev_parse", "native")
+    return str(oid), metadata
 
 
 def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
@@ -255,7 +284,7 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         raise _Unsupported("discovery or revision options")
     if args[:-2] not in (["--verify"], ["--verify", "--quiet"]):
         raise _Unsupported("revision options")
-    return str(_oid(repo, args[-1])).encode("ascii") + b"\n"
+    return str(_oid(repo, args[-1], kwargs.get("env"))).encode("ascii") + b"\n"
 
 
 def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:

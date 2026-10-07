@@ -132,6 +132,7 @@ The historical full-suite counts above predate this correction. A constant
 | `Repo` opening/discovery | Native storage, worktree, object format and empty-tree metadata | Repository-format validation, unsupported layouts/environment and native validation gaps; GIX-1/14/19 |
 | Standalone discovery helpers | Native storage directories and gitfiles reopened at their canonical native Git directory | Rejected candidates and the same layout/environment guards as `Repo` opening; GIX-14 |
 | `Repo.rev_parse`, `rev_parse` metadata queries | Revision lookup, common directory, object format, bare flag, worktree root, fixed `modules`/`COMMIT_EDITMSG` locations | Repository-format validation, other metadata paths, symlinked metadata leaves, message searches and describe forms; GIX-1/14/17/22 |
+| Revision path/mode metadata | Native revision specification, including tree paths and index stages | Custom/sparse indexes, unsupported revision grammar or path normalization |
 | Tree enumeration, `ls_tree` | Native tree entries with modes, names, and object IDs | Other command options |
 | Reference object reads | One exact native lookup for direct, symbolic and absent references | Partial names and native decoding errors |
 | Reference-name validation | Native full-name validation without opening a repository | Standalone names outside the native grammar; GIX-20 |
