@@ -416,7 +416,7 @@ below use the supplied `pygix` source and its pinned Gitoxide revision.
 | GIX-9 | `PreviousValue.MustNotExist` accepts an existing ref already at the requested target. Native tests explicitly permit this; Git's strict create/CAS rejects it. | A strict native expectation, enforced under the same ref lock. A Python existence precheck would race. |
 | GIX-10 | `LogChange` already sets the message, log mode and force-create flag for each ref edit. Its native writer preserves message whitespace: the direct regression stores `  keep\t  spaces  ` where Git stores `keep spaces`. Separately, active-branch HEAD logs, symbolic detachment and unchanged-target logging differ; `RefLog.Only` cannot express an independent arbitrary old OID. | A native message-normalization helper or policy for all ref edits, compatible HEAD/log policy and raw reflog append. `core.logAllRefUpdates` controls log creation, not cleanup. Canonical messages pass unchanged; cleanup cases fall back before mutation. Python must not normalize messages to repair native behavior. Symbolic aliases other than HEAD also retain CLI semantics. |
 | GIX-11 | Inexact and ambiguous rename pairing/scores have not been established as Git-compatible. This is a conservative guard, not a claimed native bug. | Verified pairing, scoring, tie-breaking and option parity. Exact unambiguous renames are native. |
-| GIX-12 | Config bindings lack standalone parsing, ordered section/key enumeration, multivars, unset/remove-section and source-scoped queries. | Those operations for `GitConfigParser` and remote/branch configuration. Native merged getters cannot replace repository-only config readers. |
+| GIX-12 | Generic config bindings lack standalone parsing, ordered section/key enumeration, multivars, unset/remove-section and source-scoped queries. Dedicated `.gitmodules` parsing is available and now used for supported submodule reads. | Those operations for `GitConfigParser` and remote/branch configuration. Native merged getters cannot replace repository-only config readers. |
 | GIX-13 | Native index writing normalizes v4 to v2, offers no version setter, and expands split indexes. | Version and split-index preservation. Tests now assert that a split index remains split after an update. |
 | GIX-14 | Gix correctly exposes linked worktree paths, including those of bare main repositories. Its documented `is_bare()` reflects configuration and can be true alongside a worktree; opening and inventory use both pieces of native metadata. Gitfiles are reopened at the canonical native Git directory, which also prevents an arbitrary gitfile location from becoming the worktree. Actual gaps remain: discovery tolerates undecodable HEADs and ignores dangling `commondir` symlinks, while Python flattens native failure kinds into `gix.Error`. | Opening forces native HEAD decoding and retains CLI validation for remaining layout/diagnostic gaps. Strict trust checks do not replace layout validation. Reopening uses the same strict options and returns actual native metadata; no upstream classification fix or Python worktree inference is needed. A native canonical-opening option could avoid the extra open later. |
 | GIX-15 | Native blame disagrees with Git even with Myers and rewrite tracking selected. In the fixture's `README.md`, lines 150 and 158 are attributed to the opposite commits. Incremental order also differs. | Attribution and incremental-output parity before replacing `Repo.blame` / `blame_incremental`. |
@@ -448,6 +448,33 @@ For GIX-18, set `file diff=forced` in `.gitattributes`,
 `diff.forced.binary=true`, and `diff.forced.textconv=false`. Change a NUL-containing
 line in `file`: the native `to_git` cache reports one insertion and one removal,
 while Git with `--no-textconv --numstat` reports `-\t-\tfile` (binary).
+
+### Remaining configuration reads (GIX-12)
+
+The October 7 inventory identified 951 remote-enumeration reads, 674 actor
+lookups, 262 remote-property reads, 202 tracking-branch lookups and 111 fetch
+refspec checks. These are historical call-site counts, not additive savings.
+The dedicated `.gitmodules` parser now covers supported submodule reads;
+the other consumers still need generic config binding additions.
+
+Local probes with official GixPython 0.1.0 and the existing CPython 3.12.14
+confirmed these contracts against both GitPython backends:
+
+| Consumer | GitPython behavior to preserve | Why the existing native API is insufficient |
+| --- | --- | --- |
+| Remote enumeration | Repository-local declaration order: `z-last`, `a-first` | `remote_names()` returned the merged, sorted `a-first`, `global-only`, `z-last`. |
+| Remote URL/properties | The cached raw `url` property returned the last value, `../second`; `urls` yielded both `../first` and `../second`. | Native `Remote.url(Fetch)` selected only `../first`. Generic multivalue enumeration and raw snapshot semantics are still needed. |
+| Actor lookup | A supplied file/stream reader returned `Reader Actor`, independent of the repository's `Repository Actor`. | Repository identity lookup cannot honor arbitrary source lists, reader snapshots, or GitPython's identity fallback rules. |
+| Tracking branch | `branch.main.remote=z-last` and `merge=refs/heads/topic` produced `refs/remotes/z-last/topic`. | Native tracking lookup applied the configured fetch mapping and returned `refs/foreign/topic`. Replacing this API requires the original scalar config values. |
+| Fetch refspec presence | The cached local reader tests whether a value exists before invoking fetch. | Native remote creation/refspec access applies URL/refspec parsing and merged configuration; it does not expose this raw, source-scoped presence check. |
+| General config readers | Explicit files/streams, their order, included files, duplicate values and cached reader state | `ConfigFile` exposes only `boolean`, `integer`, `string`, `set_raw_value` and `to_bstring`. `OpenOptions.isolated()` also disables includes: a local included value read as `yes` through GitPython was absent natively. |
+
+The needed additions are standalone generic parsing, ordered section/key and
+multivalue access, source selection, and mutation/removal primitives. The
+submodule adapter's conservative section guards can be removed once those
+bindings exist. No generic configuration parser is implemented in Python.
+The fixed general-config probe remains **2 CLI launches before and after**
+this investigation; this item does not claim a process reduction.
 
 ## Other remaining operations
 
