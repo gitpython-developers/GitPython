@@ -369,7 +369,21 @@ class Repo:
         self.git_dir = git_dir
         probe.update_environment(GIT_DIR=git_dir)
         try:
-            self.ref_format = probe._call_process_safe("rev_parse", "--show-ref-format")
+            if native is not NotImplemented:
+                self.ref_format = probe._call_process_safe("rev_parse", "--show-ref-format")
+            else:
+                # Query the fixed scalar fields together, leaving the path last so
+                # embedded newlines in the common directory remain unambiguous.
+                metadata = probe._call_process_safe(
+                    "rev_parse",
+                    "--show-ref-format",
+                    "--show-object-format",
+                    "--is-bare-repository",
+                    "--path-format=absolute",
+                    "--git-common-dir",
+                )
+                self.ref_format, self.object_format, bare, self._common_dir = metadata.split("\n", 3)
+                self._bare = bare == "true"
         except GitCommandError as exc:
             raise InvalidGitRepositoryError(epath) from exc
         if native is not NotImplemented:
@@ -379,13 +393,6 @@ class Repo:
             # Gix's configured bare flag also applies to linked worktrees.
             self._bare = native.is_bare() and self._working_tree_dir is None
         else:
-            try:
-                self._common_dir = probe._call_process_safe("rev_parse", "--path-format=absolute", "--git-common-dir")
-                self._bare = probe._call_process_safe("rev_parse", "--is-bare-repository") == "true"
-                self.object_format = probe._call_process_safe("rev_parse", "--show-object-format")
-            except GitCommandError as exc:
-                raise InvalidGitRepositoryError(epath) from exc
-
             self._working_tree_dir = environment.get("GIT_WORK_TREE")
             if self._working_tree_dir is None and not self._bare and environment.get("GIT_COMMON_DIR") is None:
                 try:

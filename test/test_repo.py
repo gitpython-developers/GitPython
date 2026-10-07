@@ -1700,6 +1700,41 @@ class TestRepo(TestBase):
                 temp_repo.ignored(tmp_dir / "symlink/file.txt")
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+@pytest.mark.parametrize("bare", [False, True])
+@pytest.mark.parametrize(
+    "dirname",
+    [
+        "repo with spaces",
+        pytest.param(
+            "repo\nwith\nnewlines",
+            marks=pytest.mark.skipif(sys.platform == "win32", reason="Windows paths cannot contain newlines"),
+        ),
+    ],
+)
+def test_repo_batches_cli_metadata_queries(tmp_path, monkeypatch, object_format, ref_format, bare, dirname):
+    from git import _backend
+
+    monkeypatch.setattr(_backend, "gix", None)
+    with Repo.init(tmp_path / dirname, object_format=object_format, ref_format=ref_format, bare=bare) as original:
+        with mock.patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as execute:
+            with Repo(original.git_dir) as reopened:
+                assert reopened.ref_format == ref_format
+                assert reopened.object_format == object_format
+                assert reopened.bare == bare
+                assert reopened.common_dir == original.common_dir
+                assert reopened.git_dir == original.git_dir
+                assert reopened.working_tree_dir == original.working_tree_dir
+
+        metadata_options = {"--show-ref-format", "--show-object-format", "--is-bare-repository", "--git-common-dir"}
+        metadata_commands = [
+            call.args[1] for call in execute.call_args_list if metadata_options.intersection(call.args[1])
+        ]
+        assert len(metadata_commands) == 1
+        assert metadata_options.issubset(metadata_commands[0])
+
+
 @pytest.mark.parametrize("allow_unsafe_options", (False, True))
 @pytest.mark.parametrize(
     "kwargs",

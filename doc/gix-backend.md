@@ -458,6 +458,57 @@ their focused tests. No full-suite rerun or fresh timed benchmark is claimed
 for this follow-up. Logs, backend reports and the count comparison are under
 `.cache/gix-capability-followup/` (`15-final-*` and `16-benchmark-*`).
 
+### Windows CI process overhead
+
+The Python 3.12 jobs in [PR #2274's Python package run](https://github.com/gitpython-developers/GitPython/actions/runs/37628358853)
+spent 57m 25s in pytest on Windows and 5m 2s on Ubuntu. Their process reports
+counted 85,777 and 82,683 `Git.execute` launches respectively. The Windows
+submodule test modules accounted for approximately 36 minutes, based on the
+timestamps of their test results; the delay was spread across many operations.
+
+A local Windows profile of `test_file_handle_leaks` and
+`test_update_no_fetch_is_recursive[root-no-fetch]`, with CI's coverage and
+pytest options, counted 2,447 launches. About 65 of 77 seconds were spent in
+Git command execution, including 44 seconds in repository construction;
+forced garbage collection accounted for about three seconds. Combining
+`--show-ref-format`, `--show-object-format`, `--is-bare-repository` and
+`--git-common-dir` in one `rev-parse` invocation reduced the same selection to
+2,009 launches: three saved for each of 146 repository opens. Git still
+computes all four values. The common-directory path is last and split only
+after the three scalar fields, preserving paths containing newlines.
+
+Three paired measurements of 20 ordinary repository opens on Windows gave
+median times of 300.74 ms before and 221.18 ms after, with matching metadata
+and 11 versus eight launches per open. These use CPython 3.12.13 and Git
+2.55.0.windows.3; timing is observational, while the launch reduction is
+checked by the regression tests.
+
+A 50-call `git version` probe on the same host measured median times of
+17.49 ms per call on Windows and 1.27 ms in Ubuntu WSL, which uses CPython
+3.14.4 and Git 2.53.0. Even trivial Git commands carry appreciable startup
+cost on Windows.
+
+This optimizes the CLI backend's construction path. Supported Gix discovery
+still uses its native metadata and the separate Git format-validation query;
+the Gix launch ceilings and open compatibility bugs remain unchanged.
+CI now includes `--durations=30` so subsequent slow tests are visible directly.
+Local Windows reproduction must retain CI's `core.autocrlf=true` setting and
+place pytest's temporary directories outside a Git checkout. Isolating all
+Git configuration without restoring that setting changes the newline test;
+placing `--basetemp` under this checkout lets empty-directory Git probes
+discover the parent repository instead.
+
+The full local baseline at `105114db` recorded 86,032 launches in 3,990.28s;
+the two submodule modules accounted for 2,421.59s. It had 1,652 passing tests
+and the two harness failures described above, both of which passed unchanged
+after correcting the setup. The patched run exited successfully with 1,662
+passed, 60 skipped, nine expected failures, two unexpected passes and 40
+passing subtests. It recorded 77,732 launches in 3,715.16s. These runs
+overlapped, so their wall times are not a controlled comparison. The paired
+repository-open benchmark above measures the affected operation separately.
+Logs, profiles, JUnit results and backend reports are retained locally under
+`.cache/ci-performance/`.
+
 ### Test-suite setup measurements
 
 The fixture optimizations below are implemented as separate commits, each
@@ -619,7 +670,7 @@ identify the historical fixture where needed.
 | GIX-11 | Unverified | Inexact and ambiguous rename pairing/scores have not been established as Git-compatible. This is a conservative guard, not a claimed native bug. | Verified pairing, scoring, tie-breaking and option parity. Exact unambiguous renames are native. |
 | GIX-12 | Missing API | Generic config bindings lack standalone parsing, ordered section/key enumeration, multivars, unset/remove-section and source-scoped queries. Dedicated `.gitmodules` parsing is available and now used for supported submodule reads. | Those operations for `GitConfigParser` and remote/branch configuration. Native merged getters cannot replace repository-only config readers. |
 | GIX-13 | Bug; missing API | Native index writing normalizes v4 to v2, offers no version setter, and expands split indexes. | Version and split-index preservation. Tests now assert that a split index remains split after an update. |
-| GIX-14 | Bug; missing API | For a linked worktree of a bare main repository, `is_bare()` returns true while `git rev-parse --is-bare-repository` returns false; `workdir()` does expose the worktree. Initial gitfile opening can retain a noncanonical target and use an arbitrary gitfile's location as the worktree, unlike Git. Discovery accepts undecodable HEADs until explicit `head()` decoding and ignores dangling `commondir` symlinks that Git rejects. Bindings flatten failure kinds into `gix.Error`. | Provide Git-compatible classification, canonical gitfile locations and layout validation, plus typed errors. The adapter combines Gix metadata, reopens through Gix and forces HEAD decoding, retaining CLI for remaining validation/diagnostic gaps. Those workarounds do not close these compatibility bugs. A Git-strict mode must cover these cases; strict config and trust settings alone do not. |
+| GIX-14 | Bug; missing API | For a linked worktree of a bare main repository, `is_bare()` returns true while `git rev-parse --is-bare-repository` returns false; `workdir()` does expose the worktree. Initial gitfile opening can retain a noncanonical target and use an arbitrary gitfile's location as the worktree, unlike Git. Discovery accepts undecodable HEADs until explicit `head()` decoding and ignores dangling `commondir` symlinks that Git rejects. Bindings flatten failure kinds into `gix.Error`. Windows also exposes adapter path-formatting differences and a worker panic on an undecodable `commondir`; see the Windows reproduction below. | Provide Git-compatible classification, canonical gitfile locations and layout validation, plus typed errors instead of panics. Format native locations compatibly with Git's command output. The adapter combines Gix metadata, reopens through Gix and forces HEAD decoding, retaining CLI for remaining validation/diagnostic gaps. Those workarounds do not close these compatibility bugs. A Git-strict mode must cover these cases; strict config and trust settings alone do not. |
 | GIX-15 | Bug | Native blame disagrees with Git even with Myers and rewrite tracking selected. In the fixture's `README.md`, lines 150 and 158 are attributed to the opposite commits. Incremental order also differs. | Attribution and incremental-output parity before replacing `Repo.blame` / `blame_incremental`. |
 | GIX-16 | Bug; missing API | Native archive streaming takes a tree rather than a commit. Its TAR omits Git's global PAX commit comment, leaves `export-subst` placeholders literal, and writes ordinary modes as `0644` where Git uses `0664`. | Commit-aware export substitution, metadata and permission parity. Both engines respected `export-ignore` in the probe. |
 | GIX-17 | Bug | Revision parsing accepts abbreviated IDs with `-dirty`, prefers the OID suffix over an exact describe-shaped tag, and treats escaped braces in message searches differently. | Git-compatible revision grammar and regex semantics. Existing `test_rev_parse.py` cases reproduce all three. |
@@ -631,6 +682,29 @@ identify the historical fixture where needed.
 | GIX-23 | Missing API | No hook lookup or execution API is bound in GixPython 0.1.0. The removed absence fast path read config through Gix but used Python `os.stat()` to declare success. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops. A Python filesystem check is not a Gix implementation. |
 | GIX-24 | Bug | In both object formats, `new_commit_as()` accepts a blob as the tree or a parent where `git commit-tree` rejects it. Tree-editor `upsert()`/`write()` accepts object IDs whose actual kinds disagree with blob/tree/gitlink modes; `git mktree --missing` rejects all three tested mismatches. `edit_references_as()` accepts a blob target under `refs/heads/`, rejected by `git update-ref`. | Provide checked commit/tree construction and reference edits, at least in Git-strict mode. Validate kinds and branch targets, including symbolic aliases, before writing and under the required ref locks. Existing `_commit_tree`, `_write_tree` and `_update_ref` guards query Gix headers and select CLI on invalid inputs; they do not replace Gix writes with Python. |
 | GIX-25 | Bug; missing API | After `git symbolic-ref refs/heads/dangling refs/heads/missing`, `Repository.references().all()` enumerates the dangling name, while `git for-each-ref --format=%(refname)` omits it. Valid symbolic aliases must remain present. Both SHA-1 and SHA-256 probes reproduce this difference. | Expose Git-compatible enumeration with the same dangling-reference and diagnostic behavior, retaining the raw iterator for callers that need it. `_for_each_ref` forces Gix to resolve symbolic targets and falls back to Git on failure; keep that fallback until a compatible Gix API/mode is verified. |
+
+Windows reproduction for GIX-14 uses CPython 3.12.13, Git
+2.55.0.windows.3 and the released GixPython 0.1.0 source distribution with
+the same pinned Gitoxide revision above. Both `105114db` and the CLI metadata
+batching change reproduce the following existing failures:
+
+- `test_native_command_queries_match_cli` and
+  `test_native_worktree_inventory_includes_bare_main` return backslashes in
+  the adapter's native path text where Git returns forward slashes, in both
+  object formats. The locations agree; the command-output formatting does not.
+- The `commondir=b"\xff"` subtest of
+  `test_repo_discovery_rejects_invalid_metadata` raises
+  `RuntimeError: native worker panicked` instead of the CLI backend's
+  `InvalidGitRepositoryError`. The binding must reject this input through its
+  normal native error contract so discovery can take the existing fallback.
+
+These remain open compatibility bugs. The optional Windows selection also
+has tests that fail before a native/Git comparison: newline-containing
+filenames, a raw backslash gitfile operand, and a POSIX-specific symlink
+canonicalization assertion. Its symbolic-alias blob assertion is not evidence
+of a Gix mismatch on this Git version: direct Git controls in both object
+formats also accept the alias update and leave the branch pointing to a blob.
+This does not invalidate GIX-24's separate direct-branch validation comparison.
 
 For GIX-8, at fixture commit `44e0a8ec55c42559dfcdf5117710b26261a7c937`,
 compare `git rev-list HEAD` with
