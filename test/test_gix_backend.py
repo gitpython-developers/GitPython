@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from git import Actor, Commit, Git, Reference, Repo, _backend
+from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError
 from gitdb import IStream
 
@@ -251,6 +251,26 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
     with patch.object(_backend, "gix", None):
         assert index.write_tree().hexsha == native_tree.hexsha
         assert commit.replace(message="a changed message").hexsha == native.hexsha
+
+
+def test_native_reference_reads_include_missing_and_dangling_targets(repo):
+    repo.index.commit("initial", skip_hooks=True)
+    repo.git.pack_refs("--all", "--prune")
+    repo.git.symbolic_ref("refs/heads/alias", "refs/heads/absent")
+    paths = ["HEAD", "refs/heads/main", "refs/heads/alias"]
+    with patch.object(_backend, "gix", None):
+        expected = [SymbolicReference._get_ref_info(repo, path) for path in paths]
+        SymbolicReference._check_ref_name_valid("refs/heads/absent")
+        with pytest.raises(ValueError) as missing:
+            SymbolicReference._get_ref_info(repo, "refs/heads/absent")
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected reference CLI call")):
+        assert [SymbolicReference._get_ref_info(repo, path) for path in paths] == expected
+        with pytest.raises(ValueError) as native_missing:
+            SymbolicReference._get_ref_info(repo, "refs/heads/absent")
+        assert str(native_missing.value) == str(missing.value)
+        assert not Reference(repo, "refs/heads/alias").is_valid()
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
 
 
 def test_unknown_command_and_storage_environment_use_cli(repo):

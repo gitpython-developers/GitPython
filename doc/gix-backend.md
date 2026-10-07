@@ -132,7 +132,8 @@ The historical full-suite counts above predate this correction. A constant
 | `Repo` opening/discovery | Native storage, worktree, object format and empty-tree metadata | Repository-format validation, unsupported layouts/environment and native validation gaps; GIX-1/14/19 |
 | `Repo.rev_parse`, `rev_parse` metadata queries | Revision lookup, common directory, object format, bare flag, worktree root, fixed `modules`/`COMMIT_EDITMSG` locations | Repository-format validation, other metadata paths, symlinked metadata leaves, message searches and describe forms; GIX-1/14/17/22 |
 | Tree enumeration, `ls_tree` | Native tree entries with modes, names, and object IDs | Other command options |
-| Symbolic reference lookup, `symbolic_ref` | Nonrecursive target lookup | Mutation, missing-reference diagnostics |
+| Reference object reads | One exact native lookup for direct, symbolic and absent references | Partial names and native decoding errors |
+| Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics |
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |

@@ -9,6 +9,7 @@ import tempfile
 
 from gitdb.exc import BadName, BadObject
 
+from git import _backend
 from git.cmd import Git
 from git.exc import GitCommandError, UnsafeOptionError
 from git.objects.base import Object
@@ -179,6 +180,13 @@ class SymbolicReference:
             raise ValueError("Reference does not exist")
         cls._get_validated_ref_path(repo, ref_path)
         path = os.fspath(ref_path)
+        info = _backend.reference_info(repo.git, path)
+        if info is None:
+            raise ValueError("Reference at %r does not exist or is invalid" % path)
+        if info is not NotImplemented:
+            if info[1] is not None:
+                cls._get_validated_ref_path(repo, info[1])
+            return info
         try:
             target = repo.git._call_process_safe("symbolic_ref", "--quiet", "--no-recurse", "--", path)
             cls._get_validated_ref_path(repo, target)

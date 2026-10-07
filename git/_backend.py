@@ -270,6 +270,31 @@ def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         )
 
 
+def reference_info(command: Any, path: str) -> Any:
+    """Read an exact reference target, including an absent reference, in one lookup."""
+    if gix is None:
+        return NotImplemented
+    try:
+        if path != "HEAD" and not path.startswith("refs/"):
+            raise _Unsupported("partial reference names")
+        repo = _repository(command, {})
+        reference = repo.try_find_reference(path)
+        result = None
+        if reference is not None:
+            if reference.name() != os.fsencode(path):
+                raise _Unsupported("partial reference lookup")
+            target = reference.target()
+            name = target.try_name()
+            result = (None, safe_decode(name)) if name is not None else (str(target.try_id()), None)
+    except _Unsupported as exc:
+        return _fallback("Reference.read", str(exc))
+    except gix.Error as exc:
+        _logger.debug("native reference read: %s", exc)
+        return _fallback("Reference.read", "native read diagnostics")
+    record("Reference.read", "native")
+    return result
+
+
 def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 4 or args[:3] != ["--quiet", "--no-recurse", "--"]:
         raise _Unsupported("reference mutation or options")
