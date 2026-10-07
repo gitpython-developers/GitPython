@@ -688,6 +688,7 @@ class Git(metaclass=_GitMeta):
         "_git_options",
         "_persistent_git_options",
         "_environment",
+        "_repo",
     )
 
     _excluded_ = (
@@ -695,6 +696,7 @@ class Git(metaclass=_GitMeta):
         "cat_file_header",
         "_version_info",
         "_version_info_token",
+        "_repo",
     )
 
     # Match Git's leading transport selector, including an empty helper name.
@@ -1230,6 +1232,7 @@ class Git(metaclass=_GitMeta):
 
         # Extra environment variables to pass to git commands
         self._environment: Dict[str, Optional[str]] = {}
+        self._repo: Any = None  # Weak reference; the Repo owns native resources.
 
         # Cached version slots
         self._version_info: Union[Tuple[int, ...], None] = None
@@ -1656,6 +1659,9 @@ class Git(metaclass=_GitMeta):
             raise GitCommandNotFound(redacted_command, err) from err
         else:
             _backend.record("Git.execute", "CLI process")
+            owner = self._repo() if self._repo is not None else None
+            if owner is not None:
+                owner._gix_state = None
             # Replace with a typeguard for Popen[bytes]?
             proc.stdout = cast(BinaryIO, proc.stdout)
             proc.stderr = cast(BinaryIO, proc.stderr)

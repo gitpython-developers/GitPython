@@ -169,9 +169,8 @@ an import error; only an absent top-level `gix` selects CLI mode.
 operations and their complete journey on one already-open `git.Repo`, plus
 separate direct opening and discovery from `git/objects`. Fresh high-level
 wrappers preserve the cost of actual operations; imports, fixture preparation
-and parity preflight are outside timing. Native repository reopening remains
-inside operation timing, so retaining native state in the future can improve
-these measurements without changing the workload.
+and parity preflight are outside timing. Native repository refresh remains inside operation timing, so these
+measurements include the cost of keeping retained state current.
 
 At `244e418da6cc43de129cbe2908d11be4c5ad457a`, using official GixPython
 0.1.0 and the same existing CPython 3.12.14/macOS arm64 interpreter for both
@@ -210,8 +209,8 @@ ratios are observational on shared runners.
 
 ### Test-suite setup measurements
 
-Native repository reuse remains future work. The fixture optimizations below
-are implemented as separate commits, each validated with GixPython before CLI.
+The fixture optimizations below are implemented as separate commits, each
+validated with GixPython before CLI.
 The original local measurements use official GixPython 0.1.0 and existing
 CPython 3.12.14 on macOS arm64 at `89c609cf92335e75652d7725682e215a9ea080e5`.
 
@@ -221,22 +220,26 @@ expected failure. Operation reporting counted 114,800 native operations and
 39,002 CLI fallback decisions. Those decisions are not a complete subprocess
 count: raw `repo.git` calls and subprocesses started by Git are not all counted.
 
-### Retain native repository state
+### Retain native repository state (implemented)
 
-`git._backend._repository()` calls `gix.open_opts()` for every operation;
-`git.Repo` does not retain a native repository. This deliberately avoids stale
-configuration and storage views after CLI mutations, but also loses native
-state reuse. In a 1,000-call benchmark without coverage, an object read using
-one native handle took 0.046 ms per call, compared with 0.635 ms through the
-current stream adapter. Opening and validating a native repository alone took
-0.418 ms per call. These are small repeated-read measurements, not an estimate
-of whole-suite speedup.
+Each `git.Repo` owns a native `gix.Repository`. Managed operations reuse it;
+`close()` releases it, and a later operation can reopen it. Pickling excludes
+native resources and restores the command's weak owner reference. Gix provides
+thread-safe handle access and automatic index/ODB snapshot refresh. A per-Repo
+lock serializes handle refresh, without serializing read operations.
 
-Consider retaining native repository/object-store state per `git.Repo`, with
-explicit ownership, `close()` behavior, thread semantics, and invalidation for
-CLI/native mutations, configuration changes, and environment overrides.
-Preserve the current safety checks and diagnostics. Establish those contracts
-before replacing the current fresh-open policy.
+Configuration and storage metadata changes, environment changes and raw CLI
+launches cause `reload()` before reuse. Configuration queries use a separate
+fresh handle so synthetic safety settings never appear as user settings.
+Configurations with includes conservatively reload on each operation because
+the binding does not expose all included source paths. Storage overrides,
+reftable and compatibility object formats retain their existing CLI guards.
+
+An earlier 1,000-call benchmark without coverage measured an object read using
+one native handle at 0.046 ms per call, compared with 0.635 ms through the
+fresh-open stream adapter. Opening and validating a native repository alone
+took 0.418 ms per call. These small repeated-read measurements do not estimate
+whole-suite speedup.
 
 ### Reuse prepared test fixtures (implemented)
 

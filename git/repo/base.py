@@ -15,7 +15,9 @@ import re
 import shlex
 import sys
 import tempfile
+from threading import RLock
 import warnings
+import weakref
 
 import gitdb
 import gitdb.util
@@ -124,6 +126,8 @@ class Repo:
 
     # Must exist, or  __del__  will fail in case we raise on `__init__()`.
     git = cast("Git", None)
+    _gix_repository: Any = None
+    _gix_state: Any = None
 
     working_dir: PathLike
     """The working directory of the git command."""
@@ -421,7 +425,9 @@ class Repo:
                     break
 
         self.working_dir = self._working_tree_dir or self.common_dir
+        self._gix_lock = RLock()
         self.git = self.GitCommandWrapperType(self.working_dir)
+        self.git._repo = weakref.ref(self)
         self.git._environment.update(GIT_DIR=git_dir, **environment)
         if self._working_tree_dir is not None:
             self.git.update_environment(GIT_WORK_TREE=os.fspath(self._working_tree_dir))
@@ -447,6 +453,18 @@ class Repo:
                 )
             self.odb = odbt(rootpath)
 
+    def __getstate__(self) -> Dict[str, Any]:
+        return {
+            key: value
+            for key, value in self.__dict__.items()
+            if key not in ("_gix_repository", "_gix_state", "_gix_lock")
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.__dict__.update(state)
+        self._gix_lock = RLock()
+        self.git._repo = weakref.ref(self)
+
     def __enter__(self) -> "Repo":
         return self
 
@@ -460,6 +478,7 @@ class Repo:
             pass
 
     def close(self) -> None:
+        self._gix_repository = self._gix_state = None
         if self.git:
             self.git.clear_cache()
             # Tempfiles objects on Windows are holding references to open files until

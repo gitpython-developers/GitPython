@@ -2,6 +2,8 @@
 
 from io import BytesIO
 from pathlib import Path
+import pickle
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 from unittest.mock import patch
 
@@ -52,6 +54,49 @@ def test_native_worktree_inventory_includes_bare_main(repo, tmp_path):
                     expected = current.git._call_process_safe("worktree", "list", "--porcelain", "-z")
                 with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
                     assert current.git._call_process_safe("worktree", "list", "--porcelain", "-z") == expected
+
+
+def test_native_repository_lifetime_and_refresh(repo, tmp_path):
+    handle = repo._gix_repository
+    assert isinstance(handle, gix.Repository)
+    with patch.object(gix, "open_opts", side_effect=AssertionError("unexpected reopen")):
+        assert repo.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
+        assert repo._gix_repository is handle
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            assert list(
+                pool.map(lambda _: repo.git._call_process_safe("rev_parse", "--show-object-format"), range(2))
+            ) == [
+                repo.object_format,
+                repo.object_format,
+            ]
+    Path(repo.working_dir, "file").write_text("payload")
+    repo.index.add(["file"])
+    first = repo.index.commit("native", skip_hooks=True)
+    assert repo.commit().hexsha == first.hexsha
+    repo.git.commit("--allow-empty", "-m", "CLI", "--no-verify")
+    assert repo.commit().message == "CLI\n"
+    assert repo._gix_repository is handle
+    assert set(repo.index.entries) == {("file", 0)}
+
+    with repo.config_writer() as writer:
+        writer.set_value("core", "abbrev", "9")
+    assert _backend._repository(repo.git, {}).config_snapshot().integer("core.abbrev") == 9
+    assert repo._gix_repository is handle
+    include = tmp_path / "included"
+    include.write_text("[test]\nvalue = first\n")
+    repo.git.config("include.path", str(include))
+    assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"first"
+    include.write_text("[test]\nvalue = second\n")
+    assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"second"
+
+    with pickle.loads(pickle.dumps(repo)) as restored:
+        assert restored._gix_repository is None
+        assert restored.commit().hexsha == repo.commit().hexsha
+        assert restored._gix_repository is not None
+    repo.close()
+    assert repo._gix_repository is None
+    assert repo.commit().message == "CLI\n"
+    assert repo._gix_repository is not handle
 
 
 def test_native_objects_trees_commits_and_index_reads(repo):
