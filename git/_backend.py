@@ -54,6 +54,47 @@ def _fallback(method: str, reason: str) -> Any:
     return NotImplemented
 
 
+def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
+    """Open one discovery candidate; the caller controls parent traversal."""
+    if gix is None:
+        return NotImplemented
+    effective = {**os.environ, **environment}
+    if any(
+        effective.get(key)
+        for key in ("GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE")
+    ) or any(value != os.environ.get(key) for key, value in environment.items() if key != "GIT_WORK_TREE"):
+        return _fallback("Repo.open", "storage or command environment")
+    options = gix.OpenOptions().open_path_as_is(True).bail_if_untrusted(True).strict_config(True)
+    options = options.config_overrides(
+        ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false", "core.hooksPath=" + os.devnull]
+    )
+    try:
+        repo = gix.open_opts(path, options)
+        snapshot = repo.config_snapshot()
+        if snapshot.string("extensions.refStorage") == b"reftable":
+            return _fallback("Repo.open", "reftable (GIX-1)")
+        if snapshot.string("extensions.compatObjectFormat") is not None:
+            return _fallback("Repo.open", "compatibility object format (GIX-19)")
+        # Discovery accepts undecodable HEADs; force the native reference decoder.
+        repo.head()
+        if not repo.is_bare() and repo.workdir() is None and not effective.get("GIT_WORK_TREE"):
+            return _fallback("Repo.open", "missing native worktree metadata (GIX-14)")
+        commondir = os.path.join(repo.git_dir(), "commondir")
+        if os.path.lexists(commondir):
+            # Gix ignores invalid commondir files on common repositories. A common
+            # directory must have been resolved and contain actual shared storage.
+            if os.path.realpath(repo.common_dir()) == os.path.realpath(repo.git_dir()) or not all(
+                os.path.isdir(os.path.join(repo.common_dir(), entry)) for entry in ("objects", "refs")
+            ):
+                return _fallback("Repo.open", "common-directory validation (GIX-14)")
+        record("Repo.open", "native")
+        return repo
+    except gix.Error as exc:
+        # Retain Git's rejection/diagnostics for layouts Gix cannot open yet.
+        _logger.debug("native discovery: %s", exc)
+        return _fallback("Repo.open", "native discovery diagnostics")
+
+
 def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False) -> Any:
     owner = command._repo() if command._repo is not None else None
     if owner is not None:
@@ -114,7 +155,7 @@ def _open_repository(command: Any, env: Dict[str, Any], *, query_config: bool = 
                 stamps.append(None)
         state = (path, tuple(sorted(effective.items())), tuple(stamps))
         repo = owner._gix_repository
-        if repo is not None and os.path.abspath(repo.git_dir()) != os.path.abspath(path):
+        if repo is not None and os.path.realpath(repo.git_dir()) != os.path.realpath(path):
             repo = None
         if repo is not None and state != owner._gix_state:
             repo.reload()
@@ -162,7 +203,6 @@ def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
     if gix is None:
         return NotImplemented
     method = "stream_object_data" if stream else "get_object_header"
-    command._require_version()
     try:
         repo = _repository(command, {})
         oid = _oid(repo, ref)
@@ -188,7 +228,7 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if args == ["--path-format=absolute", "--git-common-dir"]:
         return os.fsencode(os.path.abspath(repo.common_dir())) + b"\n"
     if args == ["--is-bare-repository"]:
-        return b"true\n" if repo.is_bare() else b"false\n"
+        return b"true\n" if repo.is_bare() and repo.workdir() is None else b"false\n"
     if args == ["--show-object-format"]:
         return str(repo.object_hash()).encode("ascii") + b"\n"
     if args == ["--show-ref-format"]:
@@ -315,7 +355,6 @@ def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, sub
     if gix is None:
         return NotImplemented
     method = "Repo.is_dirty"
-    command._require_version()
     try:
         repo = _repository(command, {})
         _worktree_root(command, repo)
@@ -361,7 +400,6 @@ def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]
     if gix is None:
         return NotImplemented
     method = "Repo.untracked_files"
-    command._require_version()
     try:
         if options.keys() - {"ignore_submodules"}:
             raise _Unsupported("status options")
@@ -397,7 +435,6 @@ def ignored(command: Any, paths: Sequence[Any]) -> Any:
     if gix is None:
         return NotImplemented
     method = "Repo.ignored"
-    command._require_version()
     try:
         repo = _repository(command, {})
         root = _worktree_root(command, repo)
@@ -491,7 +528,6 @@ def history(command: Any, rev: str, paths: Any, options: Dict[str, Any], *, coun
     if gix is None:
         return NotImplemented
     method = "Commit.count" if count else "Commit.iter_items"
-    command._require_version()
     try:
         if paths:
             raise _Unsupported("history path filtering")
@@ -620,7 +656,6 @@ def materialize_index(command: Any, source: Any, destination: str, desired: Dict
     if gix is None:
         return NotImplemented
     method = "IndexFile.write"
-    command._require_version()
     try:
         if any(stage for _path, stage in desired):
             raise _Unsupported("unmerged index editing")
@@ -757,7 +792,6 @@ def _write_tree(repo: Any, entries: Sequence[Tuple[bytes, int, str]]) -> str:
 def write_tree(command: Any, entries: Sequence[Tuple[bytes, int, str]]) -> Any:
     if gix is None:
         return NotImplemented
-    command._require_version()
     try:
         result = _write_tree(_repository(command, {}), entries)
     except _Unsupported as exc:
@@ -776,7 +810,6 @@ def tree_diff(repository: Any, left: Any, right: Any, paths: Any, patch: bool, o
     from git.diff import Diff, DiffIndex, Lit_change_type
 
     method = "Diffable.diff"
-    repository.git._require_version()
     try:
         if not hasattr(left, "hexsha") or not (hasattr(right, "hexsha") or isinstance(right, str)):
             raise _Unsupported("index/worktree/root diff")
@@ -863,7 +896,6 @@ def commit_stats(commit: Any) -> Any:
     from git.util import Stats
 
     method = "Commit.stats"
-    commit.repo.git._require_version()
     try:
         repo = _repository(commit.repo.git, {})
         if not hasattr(repo, "diff_tree_to_tree") or not hasattr(repo, "attributes_only"):

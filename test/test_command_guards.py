@@ -139,6 +139,7 @@ def test_remote_protocol_guards_check_rendered_operands(tmp_path, method, allow_
 )
 def test_remote_protocol_guards_preserve_safe_rendered_arguments(tmp_path, method, kwargs, token):
     with Repo.init(tmp_path) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         error = GitCommandError("captured command", 128)
         with mock.patch.object(Git, "execute", side_effect=error) as run:
@@ -154,6 +155,7 @@ def test_remote_protocol_guards_preserve_safe_rendered_arguments(tmp_path, metho
 @pytest.mark.parametrize("method", ["fetch", "pull", "push"])
 def test_remote_protocol_and_option_opt_ins_are_independent(tmp_path, method):
     with Repo.init(tmp_path) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         kwargs = {"q": "ext::helper"}
         option = "receive_pack" if method == "push" else "upload_pack"
@@ -176,6 +178,7 @@ def test_remote_protocol_and_option_opt_ins_are_independent(tmp_path, method):
 @pytest.mark.parametrize("verbose", ["ext::helper", "--upload-pack=helper"])
 def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
     with Repo.init(tmp_path) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         error = GitCommandError("captured command", 128)
         with mock.patch.object(Git, "execute", side_effect=error) as run:
@@ -203,6 +206,7 @@ def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
 )
 def test_merge_base_checks_unsafe_options(tmp_path, revs, kwargs, allow_unsafe_options):
     repo = Repo.init(tmp_path)
+    repo.git.version_info
     with mock.patch.object(Git, "execute", return_value="") as run:
         if allow_unsafe_options and kwargs:
             assert repo.merge_base(*revs, allow_unsafe_options=True, **kwargs) == []
@@ -217,6 +221,7 @@ def test_merge_base_checks_unsafe_options(tmp_path, revs, kwargs, allow_unsafe_o
 @pytest.mark.parametrize("status", [-9, 2, 128, 129])
 def test_merge_base_propagates_errors(tmp_path, status):
     repo = Repo.init(tmp_path)
+    repo.git.version_info
     error = GitCommandError("git merge-base", status)
     with mock.patch.object(Git, "execute", side_effect=error):
         with pytest.raises(GitCommandError) as raised:
@@ -241,6 +246,7 @@ def test_merge_base_distinguishes_unrelated_history_from_invalid_options(tmp_pat
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_move_checks_unsafe_options(tmp_path, option, dry_run, allow_unsafe_options):
     repo = Repo.init(tmp_path)
+    repo.git.version_info
     with mock.patch.object(Git, "execute", return_value="Renaming source to destination\n") as run:
         kwargs = {option: "unused", "dry_run": dry_run}
         if allow_unsafe_options:

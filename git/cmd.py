@@ -1185,7 +1185,6 @@ class Git(metaclass=_GitMeta):
         ):
             if "\0" in arg:
                 raise UnsafeOptionError("Git arguments cannot contain NUL bytes")
-        self._require_version()
         options = ["--no-pager", "--no-optional-locks"]
         # These settings would become visible as user configuration in `config`.
         if method != "config":
@@ -1199,6 +1198,7 @@ class Git(metaclass=_GitMeta):
         native = _backend.dispatch(self, method, args, kwargs, _config)
         if native is not NotImplemented:
             return native
+        self._require_version()
         env = dict(kwargs.pop("env", {}) or {})
         env.update(LC_ALL="C", LANGUAGE="C")
         if not _allow_network:

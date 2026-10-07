@@ -19,6 +19,7 @@ gix = pytest.importorskip("gix")
 @pytest.fixture(params=["sha1", "sha256"])
 def repo(request, tmp_path):
     with Repo.init(tmp_path / "repo", object_format=request.param, initial_branch="main") as repo:
+        repo.git.version_info  # Mocked CLI fallbacks below need an already-validated executable.
         yield repo
 
 
@@ -97,6 +98,63 @@ def test_native_repository_lifetime_and_refresh(repo, tmp_path):
     assert repo._gix_repository is None
     assert repo.commit().message == "CLI\n"
     assert repo._gix_repository is not handle
+
+
+def test_opening_and_discovery_use_gix_with_explicit_fallbacks(repo, tmp_path):
+    root = Path(repo.working_dir)
+    nested = root / "nested" / "directory"
+    nested.mkdir(parents=True)
+    bare = Repo.init(tmp_path / "bare", bare=True, object_format=repo.object_format)
+    repo.index.commit("initial", skip_hooks=True)
+    linked = tmp_path / "linked"
+    repo.git.worktree("add", "--detach", str(linked))
+    linked_admin = gix.open(linked).git_dir()
+    bare_linked = tmp_path / "bare-linked"
+    bare.git.worktree("add", "--orphan", "-b", "main", str(bare_linked))
+    bare_linked_native = gix.open(bare_linked)
+    assert bare_linked_native.is_bare()
+    assert bare_linked_native.workdir() == bare_linked
+    for path, search, expected_bare, rejected_candidates in [
+        (root, False, False, 0),
+        (repo.git_dir, False, False, 0),
+        (nested, True, False, 2),
+        (bare.git_dir, False, True, 0),
+        (linked, False, False, 0),
+        (linked_admin, False, False, 0),
+        (bare_linked, False, False, 0),
+        (bare_linked / ".git", False, False, 0),
+        (bare_linked_native.git_dir(), False, False, 0),
+    ]:
+        with patch.object(gix, "open_opts", wraps=gix.open_opts) as native_open:
+            with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+                with Repo(path, search_parent_directories=search) as opened:
+                    assert opened.object_format == repo.object_format
+                    assert opened.ref_format == "files"
+                    assert opened.bare is expected_bare
+                    assert isinstance(opened._gix_repository, gix.Repository)
+                    assert opened._empty_tree_hexsha == repo._empty_tree_hexsha
+                    assert opened.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
+                    assert (
+                        opened.git._call_process_safe("rev_parse", "--is-bare-repository") == str(expected_bare).lower()
+                    )
+                assert native_open.called
+                commands = [call.args[1] for call in cli.call_args_list]
+                assert sum("--show-ref-format" in command for command in commands) == 1
+                assert sum("--resolve-git-dir" in command for command in commands) == rejected_candidates
+                assert all(
+                    "version" in command or "--show-ref-format" in command or "--resolve-git-dir" in command
+                    for command in commands
+                )
+    with patch.dict("os.environ", GIT_DIR=str(repo.git_dir)):
+        with Repo() as opened:
+            assert opened.git_dir == repo.git_dir
+    bare.close()
+
+
+def test_discovery_asks_gix_before_falling_back(tmp_path):
+    with patch.object(gix, "open_opts", side_effect=gix.Error("native rejection")) as native_open:
+        assert _backend.discover_repository(str(tmp_path), {}) is NotImplemented
+        native_open.assert_called_once()
 
 
 def test_native_objects_trees_commits_and_index_reads(repo):

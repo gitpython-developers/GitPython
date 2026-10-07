@@ -33,6 +33,7 @@ def test_pull_rejects_option_shaped_remote(tmp_path):
 
 def test_pull_preserves_operand_and_explicit_option_values(tmp_path):
     repo = Repo.init(tmp_path)
+    repo.git.version_info
     remote = Remote(repo, "origin")
     with mock.patch.object(Git, "_call_process") as run, mock.patch.object(
         Remote, "_get_fetch_info_from_stderr", return_value=[]

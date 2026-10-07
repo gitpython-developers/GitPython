@@ -7,8 +7,9 @@ instance open per worker, but creates fresh commit/tree/index wrappers per
 invocation so their cached properties cannot turn the measurement into a no-op.
 The CLI's persistent `cat-file` processes and the filesystem cache are warmed.
 Repository creation, imports, preflight and result hashing are outside timing.
-Native repository reopening and compatibility checks remain inside timing.
-This exposes any future benefit of retaining a native Gix repository handle.
+Native handle refresh and compatibility checks remain inside timing, exposing
+the benefit of retaining a Gix repository across operations. Opening and
+discovery retain explicit CLI fallbacks tracked in `cli-budget.json`.
 `open_repository` and `discover_repository` instead create and close a new
 `Repo` in each timed invocation; they do not join the already-open journey.
 
@@ -87,13 +88,15 @@ Direct subprocesses in the harness and Git's own child processes are excluded.
 The checked-in `cli-budget.json` sets maximum Gix launch counts for this pinned
 fixture. CI enforces the ceilings: reductions pass, increases fail with the
 measurement and counts. Lower ceilings when an optimization lands to retain
-the gain. The initial warm ceilings are journey/patch 1, opening 5, discovery 7,
+the gain. Warm ceilings are journey/patch 1, opening 2, discovery 4,
 and zero for the other operations. New measurements need an explicit ceiling;
 do not automatically raise an existing ceiling to accept a regression.
 
 The opening/discovery ceilings include a real CLI reference-format query
-(`GIX-1`). GixPython must expose the format before that call can disappear;
-Python inference does not count as a native implementation.
+(`GIX-1`) and version validation. Nested candidates rejected by Gix also use
+Git for compatible discovery diagnostics (`GIX-14`). GixPython must expose
+the missing capabilities before those calls can disappear; Python inference
+does not count as a native implementation.
 
 Timing is observational: shared CI runners and local activity introduce noise.
 The CI job publishes all means, standard deviations and ratios, retains raw

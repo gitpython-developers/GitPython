@@ -1724,35 +1724,45 @@ def test_archive_protocol_guard_checks_emitted_remote_options(tmp_path, kwargs, 
 
 def test_archive_preserves_safe_repeated_remote_options(tmp_path):
     urls = ["https://[::1]/repo.git", "ssh://git@[2001:db8::1]/repo.git"]
-    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
-        output = BytesIO()
-        repo.archive(output, "HEAD", rem=urls)
-        execute.assert_called_once()
-        command = execute.call_args.args[0]
-        assert command[command.index("archive") :] == ["archive", *(f"--rem={url}" for url in urls), "--", "HEAD"]
-        assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
-        assert execute.call_args.kwargs["output_stream"] is output
-        assert execute.call_args.kwargs["shell"] is False
+    with Repo.init(tmp_path) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute") as execute:
+            output = BytesIO()
+            repo.archive(output, "HEAD", rem=urls)
+            execute.assert_called_once()
+            command = execute.call_args.args[0]
+            assert command[command.index("archive") :] == ["archive", *(f"--rem={url}" for url in urls), "--", "HEAD"]
+            assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert execute.call_args.kwargs["output_stream"] is output
+            assert execute.call_args.kwargs["shell"] is False
 
 
 def test_archive_protocol_and_option_opt_ins_are_independent(tmp_path):
-    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
-        with pytest.raises(UnsafeOptionError):
-            repo.archive(BytesIO(), "HEAD", rem=["ext::helper"], exec="helper", allow_unsafe_protocols=True)
-        execute.assert_not_called()
+    with Repo.init(tmp_path) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute") as execute:
+            with pytest.raises(UnsafeOptionError):
+                repo.archive(BytesIO(), "HEAD", rem=["ext::helper"], exec="helper", allow_unsafe_protocols=True)
+            execute.assert_not_called()
 
-        output = BytesIO()
-        repo.archive(
-            output,
-            "HEAD",
-            rem=["ext::helper"],
-            exec="helper",
-            allow_unsafe_options=True,
-            allow_unsafe_protocols=True,
-        )
-        execute.assert_called_once()
-        command = execute.call_args.args[0]
-        assert command[command.index("archive") :] == ["archive", "--rem=ext::helper", "--exec=helper", "--", "HEAD"]
-        assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
-        assert execute.call_args.kwargs["output_stream"] is output
-        assert execute.call_args.kwargs["shell"] is False
+            output = BytesIO()
+            repo.archive(
+                output,
+                "HEAD",
+                rem=["ext::helper"],
+                exec="helper",
+                allow_unsafe_options=True,
+                allow_unsafe_protocols=True,
+            )
+            execute.assert_called_once()
+            command = execute.call_args.args[0]
+            assert command[command.index("archive") :] == [
+                "archive",
+                "--rem=ext::helper",
+                "--exec=helper",
+                "--",
+                "HEAD",
+            ]
+            assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert execute.call_args.kwargs["output_stream"] is output
+            assert execute.call_args.kwargs["shell"] is False

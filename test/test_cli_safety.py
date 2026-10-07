@@ -74,6 +74,7 @@ def test_library_calls_reject_shell_and_executable_configuration(repo):
 
 
 def test_managed_commands_disable_implicit_execution(repo):
+    repo.git.version_info
     with patch.object(Git, "execute", return_value="") as execute:
         repo.git._call_process_safe("status")
     command = execute.call_args.args[0]

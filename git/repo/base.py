@@ -248,7 +248,7 @@ class Repo:
 
         .. note::
             Repository storage, object formats, and reference backends are interpreted
-            by Git (version 2.52 or newer).
+            by GixPython when supported, otherwise Git (version 2.52 or newer).
 
         :param path:
             The path to either the worktree directory or the .git directory itself::
@@ -328,13 +328,19 @@ class Repo:
         assert epath is not None
         curpath = osp.abspath(os.fspath(epath))
         git_dir = None
+        native = NotImplemented
         while curpath:
             dotgit = osp.join(curpath, ".git")
             candidate = curpath if explicit_git_dir or not osp.lexists(dotgit) else dotgit
             try:
                 # Git resolves relative gitfile targets using the last forward
                 # slash in this operand, including on Windows.
-                git_dir = probe._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(candidate))
+                native = _backend.discover_repository(candidate, environment)
+                git_dir = (
+                    probe._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(candidate))
+                    if native is NotImplemented
+                    else os.fspath(native.git_dir())
+                )
                 git_dir = osp.abspath(git_dir)
                 if osp.isfile(candidate):
                     # Git canonicalizes gitfile targets. Retain an equivalent
@@ -363,57 +369,67 @@ class Repo:
         self.git_dir = git_dir
         probe.update_environment(GIT_DIR=git_dir)
         try:
-            self._common_dir = probe._call_process_safe("rev_parse", "--path-format=absolute", "--git-common-dir")
-            self._bare = probe._call_process_safe("rev_parse", "--is-bare-repository") == "true"
-            self.object_format = probe._call_process_safe("rev_parse", "--show-object-format")
             self.ref_format = probe._call_process_safe("rev_parse", "--show-ref-format")
         except GitCommandError as exc:
             raise InvalidGitRepositoryError(epath) from exc
-
-        self._working_tree_dir = environment.get("GIT_WORK_TREE")
-        if self._working_tree_dir is None and not self._bare and environment.get("GIT_COMMON_DIR") is None:
+        if native is not NotImplemented:
+            self._common_dir = osp.abspath(native.common_dir())
+            self.object_format = str(native.object_hash())
+            self._working_tree_dir = environment.get("GIT_WORK_TREE") or native.workdir()
+            # Gix's configured bare flag also applies to linked worktrees.
+            self._bare = native.is_bare() and self._working_tree_dir is None
+        else:
             try:
-                probe._call_process_safe("config", "--get", "core.worktree")
+                self._common_dir = probe._call_process_safe("rev_parse", "--path-format=absolute", "--git-common-dir")
+                self._bare = probe._call_process_safe("rev_parse", "--is-bare-repository") == "true"
+                self.object_format = probe._call_process_safe("rev_parse", "--show-object-format")
             except GitCommandError as exc:
-                if exc.status != 1:
-                    raise
-            else:
-                # Let Git resolve relative paths and per-worktree configuration.
-                self._working_tree_dir = probe._call_process_safe("rev_parse", "--show-toplevel")
-        if self._working_tree_dir is None:
-            # The worktree registry also resolves administrative directories and
-            # relative worktree metadata without interpreting gitdir/commondir files.
-            listing = probe._call_process_safe("worktree", "list", "--porcelain", "-z")
-            for record in listing.split("\0\0"):
-                fields = record.split("\0")
-                if not fields or not fields[0].startswith("worktree ") or "bare" in fields:
-                    continue
-                worktree = fields[0][9:]
-                # Git only strips a forward-slash /.git suffix from its registry.
-                # A Windows gitdir file can instead contain a native backslash.
-                if osp.basename(worktree) == ".git" and osp.isfile(worktree):
-                    worktree = osp.dirname(worktree)
+                raise InvalidGitRepositoryError(epath) from exc
+
+            self._working_tree_dir = environment.get("GIT_WORK_TREE")
+            if self._working_tree_dir is None and not self._bare and environment.get("GIT_COMMON_DIR") is None:
                 try:
-                    resolved = probe._call_process_safe(
-                        "rev_parse", "--resolve-git-dir", to_native_path_linux(osp.join(worktree, ".git"))
-                    )
-                except GitCommandError:
-                    continue
-                if osp.realpath(resolved) == osp.realpath(git_dir):
-                    self._working_tree_dir = worktree
-                    self._bare = False
-                    break
-            if self._working_tree_dir is None:
-                try:
-                    configured_bare = probe._call_process_safe(
-                        "config", "--file", osp.join(self.common_dir, "config"), "--bool", "--get", "core.bare"
-                    )
-                    self._bare = configured_bare == "true"
+                    probe._call_process_safe("config", "--get", "core.worktree")
                 except GitCommandError as exc:
                     if exc.status != 1:
                         raise
-            if self._working_tree_dir is None and not self._bare:
-                self._working_tree_dir = osp.dirname(git_dir)
+                else:
+                    # Let Git resolve relative paths and per-worktree configuration.
+                    self._working_tree_dir = probe._call_process_safe("rev_parse", "--show-toplevel")
+            if self._working_tree_dir is None:
+                # The worktree registry also resolves administrative directories and
+                # relative worktree metadata without interpreting gitdir/commondir files.
+                listing = probe._call_process_safe("worktree", "list", "--porcelain", "-z")
+                for record in listing.split("\0\0"):
+                    fields = record.split("\0")
+                    if not fields or not fields[0].startswith("worktree ") or "bare" in fields:
+                        continue
+                    worktree = fields[0][9:]
+                    # Git only strips a forward-slash /.git suffix from its registry.
+                    # A Windows gitdir file can instead contain a native backslash.
+                    if osp.basename(worktree) == ".git" and osp.isfile(worktree):
+                        worktree = osp.dirname(worktree)
+                    try:
+                        resolved = probe._call_process_safe(
+                            "rev_parse", "--resolve-git-dir", to_native_path_linux(osp.join(worktree, ".git"))
+                        )
+                    except GitCommandError:
+                        continue
+                    if osp.realpath(resolved) == osp.realpath(git_dir):
+                        self._working_tree_dir = worktree
+                        self._bare = False
+                        break
+                if self._working_tree_dir is None:
+                    try:
+                        configured_bare = probe._call_process_safe(
+                            "config", "--file", osp.join(self.common_dir, "config"), "--bool", "--get", "core.bare"
+                        )
+                        self._bare = configured_bare == "true"
+                    except GitCommandError as exc:
+                        if exc.status != 1:
+                            raise
+                if self._working_tree_dir is None and not self._bare:
+                    self._working_tree_dir = osp.dirname(git_dir)
         if self._bare:
             self._working_tree_dir = None
         elif self._working_tree_dir is not None:
@@ -431,8 +447,14 @@ class Repo:
         self.git._environment.update(GIT_DIR=git_dir, **environment)
         if self._working_tree_dir is not None:
             self.git.update_environment(GIT_WORK_TREE=os.fspath(self._working_tree_dir))
-        with tempfile.TemporaryFile() as empty:
-            self._empty_tree_hexsha = self.git._call_process_safe("hash_object", "-t", "tree", "--stdin", istream=empty)
+        if native is not NotImplemented:
+            self._gix_repository = native
+            self._empty_tree_hexsha = str(native.empty_tree().id)
+        else:
+            with tempfile.TemporaryFile() as empty:
+                self._empty_tree_hexsha = self.git._call_process_safe(
+                    "hash_object", "-t", "tree", "--stdin", istream=empty
+                )
         self._oid_size = len(self._empty_tree_hexsha) // 2
         self._null_binsha = bytes(self._oid_size)
         self._null_hexsha = "0" * (self._oid_size * 2)
