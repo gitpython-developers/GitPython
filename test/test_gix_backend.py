@@ -1,5 +1,6 @@
 """Exercise the installed backend, including proof that converted calls avoid Git."""
 
+from configparser import NoOptionError
 from io import BytesIO
 from pathlib import Path
 import pickle
@@ -304,6 +305,46 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
     with patch.object(_backend, "gix", None):
         assert index.write_tree().hexsha == native_tree.hexsha
         assert commit.replace(message="a changed message").hexsha == native.hexsha
+
+
+def test_native_submodule_inventory_and_cached_fields_match_cli(repo):
+    first = repo.index.commit("initial", skip_hooks=True)
+    config = Path(repo.working_dir, ".gitmodules")
+    data = (
+        '[submodule "z-last"]\npath = z\nurl = ../source z\n'
+        '[submodule "a.first"]\npath = a\nurl = ../old\nurl = ../source-a\nbranch = topic\n'
+    )
+    config.write_text(data)
+    index = repo.index
+    index.add([".gitmodules", *(BaseIndexEntry((0o160000, first.binsha, 0, path)) for path in ("z", "a"))])
+    index.commit("modules", skip_hooks=True)
+
+    def snapshot():
+        modules = repo.submodules
+        listed = [(m.name, m.path, m.url, m.branch_path) for m in modules]
+        for module in modules:
+            module._clear_cache()
+        refreshed = [(m.name, m.path, m.url, m.branch_path) for m in modules]
+        return listed, refreshed
+
+    with patch.object(_backend, "gix", None):
+        expected = snapshot()
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected submodule config CLI call")):
+        assert snapshot() == expected
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
+    assert [entry[0] for entry in expected[0]] == ["z-last", "a.first"]
+
+    # Empty/duplicate sections can change first-declaration order; use Git's parser.
+    config.write_text('[submodule "a.first"]\n' + data)
+    with patch.object(_backend, "gix", None):
+        expected = snapshot()
+    assert snapshot() == expected
+    config.write_text(data + "[include]\npath = not-read\n")
+    for native in (False, True):
+        with patch.object(_backend, "gix", gix if native else None):
+            with pytest.raises(NoOptionError, match="url"):
+                snapshot()
 
 
 def test_native_revision_path_and_mode_match_cli(repo, tmp_path):

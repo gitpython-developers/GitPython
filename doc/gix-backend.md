@@ -139,6 +139,7 @@ The historical full-suite counts above predate this correction. A constant
 | Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics |
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
+| Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |
 | `Repo.merge_base`, `Repo.is_ancestor` | Native graph queries for two revisions | Octopus/fork-point and other options |
 | `Commit.count` | Reachable commit count, skip/limit/first-parent | Path filters and other revision options |
@@ -160,7 +161,7 @@ The historical full-suite counts above predate this correction. A constant
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal and unsupported path normalization |
 
-All native operations currently fall back for reftable (GIX-1) and repositories
+Repository-backed native operations fall back for reftable (GIX-1) and repositories
 with `extensions.compatObjectFormat` (GIX-19). Process-returning calls, timeouts,
 custom storage/environment, global Git options, and unhandled command options
 also retain their CLI contracts. A broken installed extension is reported as

@@ -17,7 +17,7 @@ import stat
 from threading import Lock
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, cast
 
-from git.compat import safe_decode
+from git.compat import defenc, safe_decode
 from git.exc import GitCommandError
 
 try:
@@ -376,6 +376,48 @@ def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         for name in sorted(names)
         if not prefix or name == prefix or name.startswith(prefix.rstrip(b"/") + b"/")
     )
+
+
+def submodule_config(source: Any) -> Any:
+    """Read the fields used by submodule objects from their selected config source."""
+    if gix is None:
+        return NotImplemented
+    try:
+        if isinstance(source, io.BytesIO):
+            data = source.getvalue()
+        else:
+            with open(source, "rb") as stream:
+                data = stream.read()
+        # ponytail: no bound section enumeration; conservatively reject other '['
+        # occurrences and duplicate sections until GIX-12 can preserve their order.
+        if b"\0" in data or re.search(rb"\[(?!submodule[ \t])", data, re.I):
+            raise _Unsupported("non-submodule configuration sections (GIX-12)")
+        modules = gix.ModulesFile.from_bytes(data)
+        with modules.names() as cursor:
+            names = list(cursor)
+        if data.count(b"[") != len(names):
+            raise _Unsupported("duplicate or ambiguous configuration sections (GIX-12)")
+        config = modules.config()
+        result = {}
+        for raw_name in names:
+            name = raw_name.decode(defenc)
+            values = {}
+            for option in ("path", "url", "branch"):
+                key = "submodule." + name + "." + option
+                value = config.string(key)
+                if value is None:
+                    if option != "branch" or config.boolean(key) is not None:
+                        raise _Unsupported("missing or implicit submodule fields")
+                else:
+                    values[option] = value.decode(defenc)
+            result[name] = values
+    except _Unsupported as exc:
+        return _fallback("Submodule.config", str(exc))
+    except (gix.Error, OSError, UnicodeError) as exc:
+        _logger.debug("native submodule configuration: %s", exc)
+        return _fallback("Submodule.config", "native parse diagnostics")
+    record("Submodule.config", "native")
+    return result
 
 
 def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:

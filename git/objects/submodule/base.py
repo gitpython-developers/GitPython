@@ -32,6 +32,7 @@ from typing import (
 )
 
 import git
+from git import _backend
 from git.cmd import Git
 from git.config import GitConfigParser, SectionConstraint, cp
 from git.exc import (
@@ -170,6 +171,16 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _set_cache_(self, attr: str) -> None:
         if attr in ("path", "_url", "_branch_path"):
             reader: SectionConstraint = self.config_reader()
+            native = _backend.submodule_config(reader.config._file_or_files)
+            if native is not NotImplemented and self.name in native:
+                values = native[self.name]
+                self.path, self._url = values["path"], values["url"]
+                self._branch_path = (
+                    GitConfigParser._string_to_value(values[self.k_head_option])
+                    if self.k_head_option in values
+                    else git.Head.to_full_path(self.k_head_default)
+                )
+                return
             # Default submodule values.
             try:
                 self.path = reader.get("path")
@@ -1889,14 +1900,19 @@ class Submodule(IndexObject, TraversableIterableObj):
             raise ValueError("Commit %r could not be resolved" % parent_commit) from error
         # END handle empty iterator
 
-        for sms in parser.sections():
+        native = _backend.submodule_config(parser._file_or_files)
+        sections = parser.sections() if native is NotImplemented else [sm_section(name) for name in native]
+        for sms in sections:
             n = sm_name(sms)
-            p = parser.get(sms, "path")
-            u = parser.get(sms, "url")
-            b = cls.k_head_default
-            if parser.has_option(sms, cls.k_head_option):
-                b = str(parser.get(sms, cls.k_head_option))
-            # END handle optional information
+            if native is NotImplemented:
+                p = parser.get(sms, "path")
+                u = parser.get(sms, "url")
+                b = cls.k_head_default
+                if parser.has_option(sms, cls.k_head_option):
+                    b = str(parser.get(sms, cls.k_head_option))
+            else:
+                p, u = native[n]["path"], native[n]["url"]
+                b = native[n].get(cls.k_head_option, cls.k_head_default)
 
             # Get the binsha.
             index = repo.index
