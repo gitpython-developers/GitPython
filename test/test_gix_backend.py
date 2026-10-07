@@ -58,7 +58,7 @@ def test_native_worktree_inventory_includes_bare_main(repo, tmp_path):
 
 
 def test_native_repository_lifetime_and_refresh(repo, tmp_path):
-    handle = repo._gix_repository
+    handle = repo._get_gix_repository()
     assert isinstance(handle, gix.Repository)
     with patch.object(gix, "open_opts", side_effect=AssertionError("unexpected reopen")):
         assert repo.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
@@ -89,6 +89,14 @@ def test_native_repository_lifetime_and_refresh(repo, tmp_path):
     assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"first"
     include.write_text("[test]\nvalue = second\n")
     assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"second"
+
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(gix, "open_opts", wraps=gix.open_opts) as opened:
+        replacement = repo._get_gix_repository(recreate=True)
+        assert replacement is not handle
+        assert repo._get_gix_repository() is replacement
+        opened.assert_called_once()
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
 
     with pickle.loads(pickle.dumps(repo)) as restored:
         assert restored._gix_repository is None
@@ -210,6 +218,13 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
             assert repo.git._call_process_safe("ls_files", "--stage", "-v", "-z", "--full-name") == "fallback"
         assert repo.git._call_process_safe("rev_parse", "--show-ref-format") == "fallback"
         assert cli.call_count == 3
+
+    command = Git(repo.working_dir)
+    command._repo = repo.git._repo
+    command._environment.update(repo.git.environment())
+    command._persistent_git_options = ["--no-replace-objects"]
+    with pytest.raises(_backend._Unsupported, match="global command options"):
+        _backend._repository(command, {})
 
 
 def test_compatibility_object_format_uses_cli_before_writing(repo):

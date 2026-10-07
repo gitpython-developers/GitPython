@@ -281,11 +281,24 @@ count: raw `repo.git` calls and subprocesses started by Git are not all counted.
 
 ### Retain native repository state (implemented)
 
-Each `git.Repo` owns a native `gix.Repository`. Managed operations reuse it;
+Each `git.Repo` owns a native `gix.Repository`. Managed operations access it through
+`Repo._get_gix_repository()`, which reuses the instance by default.
+`Repo._get_gix_repository(recreate=True)` replaces it explicitly; this method is
+the control point for a future configurable reuse policy. Managed operations reuse it;
 `close()` releases it, and a later operation can reopen it. Pickling excludes
 native resources and restores the command's weak owner reference. Gix provides
 thread-safe handle access and automatic index/ODB snapshot refresh. A per-Repo
 lock serializes handle refresh, without serializing read operations.
+
+Retaining native state is an intentional deviation from Git's fresh process per
+command. Configuration/environment and observed CLI changes trigger best-effort
+refresh, but this is not a promise that every external filesystem change is
+immediately visible in every native cache. Explicit recreation or closing and
+reopening the `Repo` provides fresh native state. Configuration queries currently
+use a separate fresh handle because the retained execution handle overrides
+hooks, fsmonitor and automatic maintenance; those overrides must not leak into
+configuration results. The accessor itself removes no CLI calls: ten supported
+metadata queries launch zero processes before and after this refactor.
 
 Configuration and storage metadata changes, environment changes and raw CLI
 launches cause `reload()` before reuse. Configuration queries use a separate
@@ -455,8 +468,10 @@ unclear capabilities here and retain the CLI path until Gix provides them.
 Decide whether to fall back before mutating anything. Read/preparation failures
 can use Git to preserve its public diagnostics. Once `_write()` begins, native
 errors become `GitCommandError` and must never trigger a second CLI mutation.
-Open a fresh native repository for each operation so CLI fallback cannot leave
-a cached native view stale. Close native iterators when partially consumed.
+Access native repository state through `Repo._get_gix_repository()` for bound
+commands. Reuse is the default, with explicit recreation available; keep the
+snapshot deviation and refresh behavior above documented. Close native iterators
+when partially consumed.
 
 Add each conversion with a no-subprocess check and a Git parity check where
 practical, in its own commit. Update this ledger when a limitation changes;

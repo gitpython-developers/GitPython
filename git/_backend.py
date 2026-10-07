@@ -98,8 +98,7 @@ def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
 def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False) -> Any:
     owner = command._repo() if command._repo is not None else None
     if owner is not None:
-        with owner._gix_lock:
-            return _open_repository(command, env, query_config=query_config)
+        return owner._get_gix_repository(command=command, env=env, query_config=query_config)
     return _open_repository(command, env, query_config=query_config)
 
 

@@ -475,6 +475,28 @@ class Repo:
                 )
             self.odb = odbt(rootpath)
 
+    def _get_gix_repository(
+        self,
+        *,
+        command: Optional[Git] = None,
+        env: Optional[Dict[str, Any]] = None,
+        query_config: bool = False,
+        recreate: bool = False,
+    ) -> Any:
+        """Access native state, reusing the repository unless recreation is requested.
+
+        This method owns the reuse policy so it can later become configurable.
+        Configuration queries currently open a separate handle without the execution
+        restrictions applied to the retained handle. Other operations retain the
+        existing best-effort refresh of configuration, environment and CLI changes.
+        """
+        with self._gix_lock:
+            if recreate:
+                self._gix_repository = self._gix_state = None
+            return _backend._open_repository(
+                command if command is not None else self.git, env or {}, query_config=query_config
+            )
+
     def __getstate__(self) -> Dict[str, Any]:
         return {
             key: value
