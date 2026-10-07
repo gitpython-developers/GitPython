@@ -224,6 +224,17 @@ def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
 
 
 def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args[:2] == ["--path-format=absolute", "--git-path"]:
+        from git.util import to_native_path_linux
+
+        if len(args) != 3 or args[2] not in ("modules", "COMMIT_EDITMSG"):
+            raise _Unsupported("Git metadata path resolution (GIX-22)")
+        # Git keeps these fixed leaves in the private Git directory, including
+        # linked worktrees. Other names have their own config/environment rules.
+        path = os.path.join(_canonical_repository(repo).git_dir(), args[2])
+        if os.path.islink(path):
+            raise _Unsupported("symlinked metadata path (GIX-22)")
+        return os.fsencode(to_native_path_linux(path)) + b"\n"
     if args == ["--path-format=absolute", "--git-common-dir"]:
         return os.fsencode(os.path.abspath(repo.common_dir())) + b"\n"
     if args == ["--is-bare-repository"]:

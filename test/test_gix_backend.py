@@ -191,6 +191,44 @@ def test_native_objects_trees_commits_and_index_reads(repo):
         assert commit.replace(message="changed").message == "changed"
 
 
+def test_native_metadata_paths_match_git_in_each_worktree(repo, tmp_path):
+    repo.index.commit("initial", skip_hooks=True)
+    linked_path = tmp_path / "linked"
+    repo.git.worktree("add", "--detach", str(linked_path))
+    with Repo(linked_path) as linked, Repo.init(tmp_path / "bare", bare=True, object_format=repo.object_format) as bare:
+        bare_linked_path = tmp_path / "bare-linked"
+        bare.git.worktree("add", "--orphan", "-b", "main", str(bare_linked_path))
+        with Repo(bare_linked_path) as bare_linked:
+            for current in (repo, linked, bare, bare_linked):
+                queries = [
+                    ("rev_parse", "--path-format=absolute", "--git-path", name)
+                    for name in ("modules", "COMMIT_EDITMSG")
+                ]
+                with patch.object(_backend, "gix", None):
+                    expected = [current.git._call_process_safe(*query) for query in queries]
+                count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+                with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+                    assert [current.git._call_process_safe(*query) for query in queries] == expected
+                assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
+        assert Path(linked.git_dir, "modules") != Path(repo.common_dir, "modules")
+
+
+def test_metadata_symlinks_retain_git_canonicalization(repo, tmp_path):
+    for name in ("modules", "COMMIT_EDITMSG"):
+        target = tmp_path / name
+        try:
+            Path(repo.git_dir, name).symlink_to(target, target_is_directory=name == "modules")
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+        query = ("rev_parse", "--path-format=absolute", "--git-path", name)
+        with patch.object(_backend, "gix", None):
+            expected = repo.git._call_process_safe(*query)
+        assert Path(expected) == target
+        with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+            assert repo.git._call_process_safe(*query) == expected
+            cli.assert_called_once()
+
+
 def test_native_tree_and_commit_bytes_match_cli(repo):
     actor = Actor("Example", "example@example.invalid")
     Path(repo.working_dir, "file").write_bytes(b"payload\n")
@@ -217,7 +255,8 @@ def test_unknown_command_and_storage_environment_use_cli(repo):
         with repo.git.custom_environment(GIT_INDEX_FILE=".git/index"):
             assert repo.git._call_process_safe("ls_files", "--stage", "-v", "-z", "--full-name") == "fallback"
         assert repo.git._call_process_safe("rev_parse", "--show-ref-format") == "fallback"
-        assert cli.call_count == 3
+        assert repo.git._call_process_safe("rev_parse", "--path-format=absolute", "--git-path", "objects") == "fallback"
+        assert cli.call_count == 4
 
     command = Git(repo.working_dir)
     command._repo = repo.git._repo
