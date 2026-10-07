@@ -209,6 +209,63 @@ individual timings and parity checks together. Opening/discovery remain
 separate lifecycle measurements. CI fails on execution/parity errors; timing
 ratios are observational on shared runners.
 
+### Historical retained-handle and opening measurements
+
+These results predate the Gix-only audit. The measured implementation inferred
+reference format, repaired linked-worktree metadata and rejected some discovery
+candidates in Python. Its zero-CLI counts and associated opening speedups do
+not establish Gix coverage and are superseded by the corrected implementation.
+Keep the raw observations below only as a historical record.
+
+At `c49bbec0afb806df66a33fa9c5d76e21ac8f0314`, the same pinned fixture,
+official GixPython 0.1.0 and existing CPython 3.12.14/macOS arm64 interpreter
+were measured sequentially, Gix first and CLI second, after tests finished.
+Each backend used three worker processes, three values per worker, four loops
+per value and one warmup. All eleven result digests matched and the checked-in
+CLI ceilings passed. Raw local results are
+`/private/tmp/gitpython-retained-final-{gix,cli}.json`; this table is a journal
+snapshot, while CI continues to publish fresh measurements.
+
+| Measurement | CLI mean ± stdev (ms) | GixPython mean ± stdev (ms) | CLI / Gix | Native / fallback | CLI launches: CLI / Gix |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| journey | 209.44 ± 17.65 | 263.25 ± 5.52 | 0.80× | 55 / 2 | 23 / 1 |
+| inventory | 19.76 ± 0.78 | 0.89 ± 0.03 | 22.30× | 3 / 0 | 3 / 0 |
+| history_25 | 7.49 ± 0.17 | 79.02 ± 9.67 | 0.09× | 26 / 0 | 1 / 0 |
+| browse_tree_and_blob | 13.55 ± 0.39 | 2.06 ± 0.41 | 6.59× | 5 / 0 | 2 / 0 |
+| read_index | 6.96 ± 0.08 | 2.59 ± 0.47 | 2.69× | 1 / 0 | 1 / 0 |
+| revision_graph | 63.27 ± 2.57 | 32.72 ± 0.22 | 1.93× | 9 / 0 | 6 / 0 |
+| diff_and_stats | 20.78 ± 0.37 | 65.33 ± 1.25 | 0.32× | 5 / 0 | 3 / 0 |
+| patch_diff | 14.06 ± 0.39 | 8.61 ± 0.08 | 1.63× | 3 / 2 | 2 / 1 |
+| worktree_status | 56.61 ± 1.43 | 70.68 ± 2.18 | 0.80× | 3 / 0 | 5 / 0 |
+| open_repository | 69.28 ± 0.59 | 1.00 ± 0.07 | 69.20× | 1 / 0 | 11 / 0 |
+| discover_repository | 81.68 ± 0.68 | 0.90 ± 0.19 | 90.52× | 1 / 0 | 13 / 0 |
+
+The pre-audit implementation launched no CLI processes for these opening and
+discovery probes. It measured about 69× and 91× faster lifecycle operations,
+while the complete already-open journey was about 26% slower with Gix. These
+lifecycle ratios include the shortcuts removed by the audit. Retaining a Python
+handle alone does not resolve the existing history/statistics costs. Several
+rows have `pyperf` sample-size or variability warnings, so timings describe
+this machine and workload rather than a general speed guarantee.
+
+The full Gix suite without coverage passed **1,678 tests and 38 subtests**,
+with 79 skips and one expected failure, in **337.51 seconds (5m 37.51s)**.
+One expected path-expansion deprecation warning was reported. It recorded
+**22,319 `Git.execute` launches**: 3,833 setup, 18,486 call, zero teardown or
+collection/session. The process-lifetime count is 22,320 including the import
+probe. Against the preceding 408.81-second/30,898-launch baseline, this local
+run took 17.4% less time and launched 27.8% fewer CLI processes; the suite has
+four additional regressions, and the timing comparison is observational.
+
+Affected tests ran with Gix before CLI: 304/264 repository, command, backend
+and safety tests; 136 command-guard tests per backend; 31 positional tests per
+backend; 13 process-count/budget tests per backend. Repository suites also
+passed 14 subtests, with three skips. Ruff lint/format, mypy and basedpyright
+passed. Both code changes are separate Tix commits: `02e2cc44` retains native
+handles and the original `c49bbec0` attempted zero-launch opening/discovery.
+The rewritten opening commit restores real format queries and native metadata
+fallbacks; the current coverage table and ceilings reflect those requirements.
+
 ### Test-suite setup measurements
 
 The fixture optimizations below are implemented as separate commits, each
