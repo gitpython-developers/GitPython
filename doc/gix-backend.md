@@ -118,8 +118,8 @@ counter is 30,899 because the import-time Git probe precedes pytest session
 accounting. The same run recorded 21,409 fallback decisions. These totals
 include explicit CLI tests and fixture commands, including non-Git commands
 passed directly to `Git.execute`; they are a local baseline, not a count of
-only fallback calls. The fixed warm benchmark instead isolates a user journey:
-23 CLI launches versus one Gix launch, opening nine versus one, and nested
+only fallback calls. The expanded warm benchmark instead isolates a user journey:
+43 CLI launches versus one Gix launch, opening nine versus one, and nested
 discovery eleven versus three after restoring the reference-format fallback
 and sharing successful version checks.
 The historical full-suite counts above predate this correction. A constant
@@ -195,13 +195,18 @@ environment metadata.
 ### Existing-repository benchmark
 
 [`test/performance/README.md`](../test/performance/README.md) describes the
-`pyperf` harness and fixed GitPython 3.1.45 fixture. It measures eight public-API
+`pyperf` harness and fixed GitPython 3.1.45 fixture. It measures eleven public-API
 operations and their complete journey on one already-open `git.Repo`, plus
 separate direct opening and discovery from `git/objects`. Fresh high-level
 wrappers preserve the cost of actual operations; imports, fixture preparation
 and parity preflight are outside timing. Native repository refresh remains
 inside operation timing, so these measurements include the cost of keeping
 retained state current.
+
+Submodule inventory, revision path/mode lookup and raw commit/tree readback
+extend the already-open journey, each with a zero-CLI ceiling. The readback
+measurement reads existing bytes, including the signed fixture commit, without
+rewriting objects. Historical tables below retain their original workloads.
 
 At `244e418da6cc43de129cbe2908d11be4c5ad457a`, using official GixPython
 0.1.0 and the same existing CPython 3.12.14/macOS arm64 interpreter for both

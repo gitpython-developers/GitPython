@@ -44,6 +44,21 @@ def index(repo):
     return sorted([path, stage, entry.mode, entry.hexsha] for (path, stage), entry in repo.index.entries.items())
 
 
+def submodules(repo):
+    return [[module.name, module.path, module.hexsha, module.url, module.branch_path] for module in repo.submodules]
+
+
+def revision_paths(repo):
+    objects = [repo.rev_parse(revision) for revision in ("HEAD:README.md", "HEAD:git", ":README.md")]
+    return [[obj.hexsha, obj.path, obj.mode] for obj in objects]
+
+
+def object_readback(repo):
+    commit = repo.commit("HEAD")
+    # Read the same bytes used by serialization, without writing objects or stripping signatures.
+    return [sha256(obj.data_stream.read()).hexdigest() for obj in (commit, commit.tree)]
+
+
 def graph(repo):
     tip, parent = repo.commit("HEAD"), repo.commit("HEAD~1")
     return {
@@ -81,6 +96,9 @@ MEASUREMENTS = {
     "history_25": history,
     "browse_tree_and_blob": browse,
     "read_index": index,
+    "submodule_inventory": submodules,
+    "revision_paths": revision_paths,
+    "object_readback": object_readback,
     "revision_graph": graph,
     "diff_and_stats": changes,
     "patch_diff": patch,

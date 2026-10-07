@@ -1,7 +1,7 @@
 # Backend benchmark
 
 `bench_repository.py` uses `pyperf` to measure a complete read-only journey and
-eight named operations against an existing repository, plus separate direct
+eleven named operations against an existing repository, plus separate direct
 opening and nested-directory discovery measurements. It keeps one `Repo`
 instance open per worker, but creates fresh commit/tree/index wrappers per
 invocation so their cached properties cannot turn the measurement into a no-op.
@@ -71,6 +71,12 @@ checks dirty/untracked/ignored paths. An alternative `--repo` must have `HEAD`,
 at least one parent, a root `README.md` and a `git/objects` directory for the
 nested discovery measurement. The harness never prepares or
 mutates that worktree, and ignores ambient Git environment/config overrides.
+
+The journey also enumerates submodules, resolves tree/index revisions with
+their paths and modes, and reads raw commit/tree bytes through the object
+database. The last operation covers serialization readback without rewriting
+objects; the pinned fixture's signed commit remains intact. These three
+measurements have zero-CLI ceilings and join the existing CI job automatically.
 
 Add a function returning JSON-compatible results to `MEASUREMENTS` in
 `bench_repository.py`. It automatically becomes a separate benchmark and part
