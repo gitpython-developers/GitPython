@@ -97,6 +97,13 @@ def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
         # Retain Git's rejection/diagnostics for layouts Gix cannot open yet.
         _logger.debug("native discovery: %s", exc)
         return _fallback("Repo.open", "native discovery diagnostics")
+    except RuntimeError as exc:
+        if str(exc) != "native worker panicked":
+            raise
+        # Undecodable Windows commondir paths panic in GixPython 0.1.0.
+        # Discovery is read-only; keep Git's validation and error contract.
+        _logger.debug("native discovery: %s", exc)
+        return _fallback("Repo.open", "native discovery worker panic (GIX-14)")
 
 
 def _repository(command: Any, env: Dict[str, Any], *, query_config: bool = False) -> Any:
@@ -257,9 +264,9 @@ def revision_info(command: Any, ref: str) -> Any:
 
 
 def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
-    if args[:2] == ["--path-format=absolute", "--git-path"]:
-        from git.util import to_native_path_linux
+    from git.util import to_native_path_linux
 
+    if args[:2] == ["--path-format=absolute", "--git-path"]:
         if len(args) != 3 or args[2] not in ("modules", "COMMIT_EDITMSG"):
             raise _Unsupported("Git metadata path resolution (GIX-22)")
         # Git keeps these fixed leaves in the private Git directory, including
@@ -269,7 +276,7 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
             raise _Unsupported("symlinked metadata path (GIX-22)")
         return os.fsencode(to_native_path_linux(path)) + b"\n"
     if args == ["--path-format=absolute", "--git-common-dir"]:
-        return os.fsencode(os.path.abspath(repo.common_dir())) + b"\n"
+        return os.fsencode(to_native_path_linux(os.path.abspath(repo.common_dir()))) + b"\n"
     if args == ["--is-bare-repository"]:
         return b"true\n" if repo.is_bare() and repo.workdir() is None else b"false\n"
     if args == ["--show-object-format"]:
@@ -279,7 +286,7 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         # neither validates unknown repository extensions as Git's query does.
         raise _Unsupported("reference storage format query (GIX-1)")
     if args == ["--show-toplevel"] and repo.workdir() is not None:
-        return os.fsencode(os.path.abspath(repo.workdir())) + b"\n"
+        return os.fsencode(to_native_path_linux(os.path.abspath(repo.workdir()))) + b"\n"
     if args[:1] != ["--verify"] or args[-2:-1] != ["--end-of-options"]:
         raise _Unsupported("discovery or revision options")
     if args[:-2] not in (["--verify"], ["--verify", "--quiet"]):
@@ -433,6 +440,8 @@ def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
 
 
 def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    from git.util import to_native_path_linux
+
     if args != ["list", "--porcelain", "-z"] or not hasattr(repo, "worktrees"):
         raise _Unsupported("worktree operation or feature disabled")
     proxies = repo.worktrees()
@@ -442,7 +451,7 @@ def _worktree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
 
     def describe(local: Any) -> List[bytes]:
         workdir = local.workdir()
-        fields = [b"worktree " + os.fsencode(workdir or local.git_dir())]
+        fields = [b"worktree " + os.fsencode(to_native_path_linux(os.fspath(workdir or local.git_dir())))]
         # Gix's is_bare() reflects configuration, even for a linked worktree.
         if local.is_bare() and workdir is None:
             fields.append(b"bare")

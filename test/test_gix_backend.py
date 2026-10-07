@@ -2,6 +2,7 @@
 
 from configparser import NoOptionError
 from io import BytesIO
+import os
 from pathlib import Path
 import pickle
 from concurrent.futures import ThreadPoolExecutor
@@ -175,10 +176,17 @@ def test_opening_and_discovery_use_gix_with_explicit_fallbacks(repo, tmp_path):
     bare.close()
 
 
-def test_discovery_asks_gix_before_falling_back(tmp_path):
-    with patch.object(gix, "open_opts", side_effect=gix.Error("native rejection")) as native_open:
+@pytest.mark.parametrize("error", [gix.Error("native rejection"), RuntimeError("native worker panicked")])
+def test_discovery_asks_gix_before_falling_back(tmp_path, error):
+    with patch.object(gix, "open_opts", side_effect=error) as native_open:
         assert _backend.discover_repository(str(tmp_path), {}) is NotImplemented
         native_open.assert_called_once()
+
+
+def test_discovery_propagates_unrelated_runtime_errors(tmp_path):
+    with patch.object(gix, "open_opts", side_effect=RuntimeError("unrelated failure")):
+        with pytest.raises(RuntimeError, match="unrelated failure"):
+            _backend.discover_repository(str(tmp_path), {})
 
 
 @pytest.mark.parametrize("target", ["repo/.git", "repo/../repo/.git", "alias/.git"])
@@ -192,11 +200,15 @@ def test_gitfile_reopens_canonical_native_repository(repo, tmp_path, target):
     gitfile.write_text(f"gitdir: {target}\n")
     with patch.object(_backend, "gix", None), Repo(gitfile) as control:
         expected = (control.git_dir, control.working_tree_dir, control.bare)
-        expected_git_path = repo.git.rev_parse("--resolve-git-dir", str(gitfile))
+        expected_git_path = repo.git.rev_parse("--resolve-git-dir", gitfile.as_posix())
     with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
         with patch.object(gix, "open_opts", wraps=gix.open_opts) as native_open:
             native = _backend.discover_repository(str(gitfile), {})
-            assert (str(native.git_dir()), str(native.workdir()), native.is_bare()) == expected
+            assert (native.git_dir(), native.workdir(), native.is_bare()) == (
+                Path(expected[0]),
+                Path(expected[1]),
+                expected[2],
+            )
             assert native_open.call_count == 2
             assert native_open.call_args.args[0] == expected[0]
             assert native_open.call_args.args[1] is native_open.call_args_list[0].args[1]
@@ -259,8 +271,13 @@ def test_native_metadata_paths_match_git_in_each_worktree(repo, tmp_path):
                     ("rev_parse", "--path-format=absolute", "--git-path", name)
                     for name in ("modules", "COMMIT_EDITMSG")
                 ]
-                with patch.object(_backend, "gix", None):
+                queries.append(("rev_parse", "--path-format=absolute", "--git-common-dir"))
+                if not current.bare:
+                    queries.append(("rev_parse", "--show-toplevel"))
+                with patch.object(_backend, "gix", None), Repo(current.git_dir) as control:
                     expected = [current.git._call_process_safe(*query) for query in queries]
+                    expected_common_dir = control.common_dir
+                assert current.common_dir == expected_common_dir
                 count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
                 with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
                     assert [current.git._call_process_safe(*query) for query in queries] == expected
@@ -278,7 +295,7 @@ def test_metadata_symlinks_retain_git_canonicalization(repo, tmp_path):
         query = ("rev_parse", "--path-format=absolute", "--git-path", name)
         with patch.object(_backend, "gix", None):
             expected = repo.git._call_process_safe(*query)
-        assert Path(expected) == target
+        assert Path(repo.git_dir, name).is_symlink()
         with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
             assert repo.git._call_process_safe(*query) == expected
             cli.assert_called_once()
@@ -539,19 +556,26 @@ def test_reference_enumeration_preserves_aliases_and_skips_dangling_refs(repo):
     assert [ref.path for ref in repo.heads] == expected == ["refs/heads/alias", "refs/heads/main"]
 
 
-def test_a_native_write_failure_is_not_retried(repo, monkeypatch):
+@pytest.mark.parametrize(
+    "error,expected",
+    [
+        (gix.Error("write failed after it began"), GitCommandError),
+        (RuntimeError("native worker panicked"), RuntimeError),
+    ],
+)
+def test_a_native_write_failure_is_not_retried(repo, monkeypatch, error, expected):
     attempts = []
 
     def fail():
         attempts.append("write")
-        raise gix.Error("write failed after it began")
+        raise error
 
     def handler(native, args, kwargs):
         return _backend._write("test_write", fail)
 
     monkeypatch.setitem(_backend._HANDLERS, "test_write", handler)
     with patch.object(Git, "execute", side_effect=AssertionError("must not retry through CLI")):
-        with pytest.raises(GitCommandError, match="write failed after it began"):
+        with pytest.raises(expected, match=str(error)):
             repo.git._call_process_safe("test_write")
     assert attempts == ["write"]
 
@@ -583,14 +607,32 @@ def test_commit_identity_cleanup_matches_git(repo):
         assert commit == Commit.create_from_tree(repo, tree, "message", **kwargs)
 
 
-def test_symbolic_alias_cannot_point_a_branch_at_a_blob(repo):
+@pytest.mark.parametrize("refname", ["refs/heads/main", "refs/aliases/main"])
+def test_branch_blob_updates_match_git(repo, refname):
     commit = repo.index.commit("initial", skip_hooks=True)
     blob = repo.odb.store(IStream("blob", 1, BytesIO(b"x")))
     repo.git.symbolic_ref("refs/aliases/main", "refs/heads/main")
-    alias = Reference(repo, "refs/aliases/main")
-    with pytest.raises(GitCommandError):
-        alias.set_object(blob.hexsha.decode())
-    assert repo.head.commit == commit
+    reference = Reference(repo, refname)
+    with patch.object(_backend, "gix", None):
+        try:
+            reference.set_object(blob.hexsha.decode())
+        except GitCommandError as exc:
+            expected_status = exc.status
+        else:
+            expected_status = 0
+        expected_target = repo.git.rev_parse("--verify", "refs/heads/main")
+        repo.git.update_ref("refs/heads/main", commit.hexsha)
+    if refname == "refs/heads/main":
+        assert expected_status != 0
+        assert expected_target == commit.hexsha
+    with patch.object(_backend, "_write", side_effect=AssertionError("must fall back before mutation")):
+        if expected_status:
+            with pytest.raises(GitCommandError) as error:
+                reference.set_object(blob.hexsha.decode())
+            assert error.value.status == expected_status
+        else:
+            reference.set_object(blob.hexsha.decode())
+    assert repo.git.rev_parse("--verify", "refs/heads/main") == expected_target
 
 
 def test_partial_native_stream_does_not_corrupt_next_read(repo):
@@ -683,7 +725,17 @@ def test_native_raw_diff_matches_cli(repo):
             assert native == before.diff(after, **options)
 
 
-def test_native_status_and_ignore_match_cli_without_writing_index(repo):
+@pytest.mark.parametrize(
+    "untracked_name",
+    [
+        "untracked file",
+        pytest.param(
+            "untracked\nfile",
+            marks=pytest.mark.skipif(os.name == "nt", reason="Windows filenames cannot contain newlines"),
+        ),
+    ],
+)
+def test_native_status_and_ignore_match_cli_without_writing_index(repo, untracked_name):
     root = Path(repo.working_dir)
     (root / ".gitignore").write_text("*.log\nignored/\n")
     (root / "tracked.log").write_text("tracked even though ignored\n")
@@ -691,10 +743,10 @@ def test_native_status_and_ignore_match_cli_without_writing_index(repo):
     repo.index.commit("initial", skip_hooks=True)
     (root / "ignored").mkdir()
     (root / "ignored/file").write_text("ignored")
-    (root / "untracked\nfile").write_text("untracked")
+    (root / untracked_name).write_text("untracked")
     (root / "tracked.log").write_text("changed")
     Repo.init(root / "nested").close()
-    paths = ["ignored", "ignored/file", "new.log", "tracked.log", "untracked\nfile"]
+    paths = ["ignored", "ignored/file", "new.log", "tracked.log", untracked_name]
     index_before = Path(repo.index.path).read_bytes()
     options = [{}, {"working_tree": False}, {"index": False, "untracked_files": True}, {"path": "ignored"}]
     with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):

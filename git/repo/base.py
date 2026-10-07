@@ -387,9 +387,12 @@ class Repo:
         except GitCommandError as exc:
             raise InvalidGitRepositoryError(epath) from exc
         if native is not NotImplemented:
-            self._common_dir = osp.abspath(native.common_dir())
+            self._common_dir = to_native_path_linux(osp.abspath(native.common_dir()))
             self.object_format = str(native.object_hash())
-            self._working_tree_dir = environment.get("GIT_WORK_TREE") or native.workdir()
+            workdir = native.workdir()
+            self._working_tree_dir = environment.get("GIT_WORK_TREE") or (
+                to_native_path_linux(os.fspath(workdir)) if workdir is not None else None
+            )
             # Gix's configured bare flag also applies to linked worktrees.
             self._bare = native.is_bare() and self._working_tree_dir is None
         else:

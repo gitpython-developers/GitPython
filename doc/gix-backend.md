@@ -16,6 +16,11 @@ uv pip install --python .tox/gix/bin/python --editable '.[test,gix]'
 
 `tox -e gix` also resolves the published release from the package index.
 
+GixPython 0.1.0 publishes macOS wheels. On Windows and Linux, installation
+builds the released source distribution and requires Rust 1.89 or newer and
+a platform C/C++ toolchain. Windows CI uses the runner's MSVC tools and a
+stable Rust toolchain, with pip's built-wheel cache enabled.
+
 Python extras add dependencies; they do not leave a runtime feature bit.
 GitPython selects this backend when `gix` can be imported. Installing GixPython
 separately therefore has the same effect. Use separate virtual environments to
@@ -68,7 +73,8 @@ uv --cache-dir .cache/uv pip install --offline --no-index \
 For another machine, populate that directory from PyPI or its package cache
 before running the offline installation tests. Select wheels compatible with
 the interpreter and platform; ordinary and free-threaded CPython use different
-wheels. A local GixPython source build is no longer required.
+wheels. On platforms without a published wheel, first build one from the
+released source distribution and retain it in the wheelhouse.
 
 ## Conversion coverage
 
@@ -680,13 +686,13 @@ identify the historical fixture where needed.
 | GIX-21 | Bug; missing API | `Repository.committer()` preserves a process identity of ` Name. ` / ` email@example.invalid ` while `git var GIT_COMMITTER_IDENT` returns `Name.` / `email@example.invalid`. Native snapshot overrides for name, email and date work, but modifying the retained snapshot would leak per-command identity across threads. GixPython 0.1.0 has no general independent repository clone: Python copying fails and internal `RepoHandle::clone()` shares its `Arc` state. | Expose Git-compatible identity cleanup and a cheap independent native clone with isolated config, including per-command removal semantics. Reopening isolates state but repeats setup; `with_object_memory()` changes object-write behavior and is not a general clone. Keep `_checked_signature` validation and CLI fallback for cleanup/overrides. Never clean identity fields in Python or mutate shared snapshots/process environment to handle a command. |
 | GIX-22 | Missing API | The native Git directory is sufficient for the two fixed metadata leaves used here: `modules` and `COMMIT_EDITMSG`. Git's `path.c` applies no special relocation to either, including in linked worktrees. The adapter appends only these names to the canonical native Git directory. | No new binding is needed for these ordinary paths. Other `--git-path` names and symlinked metadata leaves retain CLI resolution; a general resolver must handle config/environment overrides, common/private storage and canonical targets. `Repository.modules_path()` means `.gitmodules`, not the `modules` storage directory. |
 | GIX-23 | Missing API | No hook lookup or execution API is bound in GixPython 0.1.0. The removed absence fast path read config through Gix but used Python `os.stat()` to declare success. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops. A Python filesystem check is not a Gix implementation. |
-| GIX-24 | Bug | In both object formats, `new_commit_as()` accepts a blob as the tree or a parent where `git commit-tree` rejects it. Tree-editor `upsert()`/`write()` accepts object IDs whose actual kinds disagree with blob/tree/gitlink modes; `git mktree --missing` rejects all three tested mismatches. `edit_references_as()` accepts a blob target under `refs/heads/`, rejected by `git update-ref`. | Provide checked commit/tree construction and reference edits, at least in Git-strict mode. Validate kinds and branch targets, including symbolic aliases, before writing and under the required ref locks. Existing `_commit_tree`, `_write_tree` and `_update_ref` guards query Gix headers and select CLI on invalid inputs; they do not replace Gix writes with Python. |
+| GIX-24 | Bug | In both object formats, `new_commit_as()` accepts a blob as the tree or a parent where `git commit-tree` rejects it. Tree-editor `upsert()`/`write()` accepts object IDs whose actual kinds disagree with blob/tree/gitlink modes; `git mktree --missing` rejects all three tested mismatches. `edit_references_as()` accepts a blob target under `refs/heads/`, rejected by `git update-ref`. | Provide checked commit/tree construction and reference edits, at least in Git-strict mode. Match Git's kind and direct-branch target validation before writing and under the required ref locks, including its distinct handling of symbolic aliases. Existing `_commit_tree`, `_write_tree` and `_update_ref` guards query Gix headers and select CLI on invalid inputs; they do not replace Gix writes with Python. |
 | GIX-25 | Bug; missing API | After `git symbolic-ref refs/heads/dangling refs/heads/missing`, `Repository.references().all()` enumerates the dangling name, while `git for-each-ref --format=%(refname)` omits it. Valid symbolic aliases must remain present. Both SHA-1 and SHA-256 probes reproduce this difference. | Expose Git-compatible enumeration with the same dangling-reference and diagnostic behavior, retaining the raw iterator for callers that need it. `_for_each_ref` forces Gix to resolve symbolic targets and falls back to Git on failure; keep that fallback until a compatible Gix API/mode is verified. |
 
 Windows reproduction for GIX-14 uses CPython 3.12.13, Git
 2.55.0.windows.3 and the released GixPython 0.1.0 source distribution with
 the same pinned Gitoxide revision above. Both `105114db` and the CLI metadata
-batching change reproduce the following existing failures:
+batching change (`f6779dbb`) reproduce the following existing failures:
 
 - `test_native_command_queries_match_cli` and
   `test_native_worktree_inventory_includes_bare_main` return backslashes in
@@ -698,13 +704,30 @@ batching change reproduce the following existing failures:
   `InvalidGitRepositoryError`. The binding must reject this input through its
   normal native error contract so discovery can take the existing fallback.
 
-These remain open compatibility bugs. The optional Windows selection also
-has tests that fail before a native/Git comparison: newline-containing
-filenames, a raw backslash gitfile operand, and a POSIX-specific symlink
-canonicalization assertion. Its symbolic-alias blob assertion is not evidence
-of a Gix mismatch on this Git version: direct Git controls in both object
-formats also accept the alias update and leave the branch pointing to a blob.
-This does not invalidate GIX-24's separate direct-branch validation comparison.
+The adapters now format locations returned by `Repository.common_dir()`,
+`workdir()` and `git_dir()` with the existing Windows-only path separator
+conversion, including `Repo.common_dir` and gitfile worktree paths. Gix still
+resolves every location. Ordinary, bare and linked repository metadata and
+worktree-list queries compare exactly against Git without additional CLI
+calls. POSIX filenames containing literal backslashes are unaffected.
+
+Discovery catches only the binding's exact
+`RuntimeError("native worker panicked")` and selects Git's existing validation
+path. The malformed metadata regression then raises `InvalidGitRepositoryError`.
+Unrelated runtime
+errors still propagate. Both normal native write errors and worker panics
+after a mutation begins are tested to ensure they never trigger a CLI retry.
+GIX-14 remains open: these adapter changes do not fix the upstream panic or
+the other discovery compatibility bugs.
+
+The tests now pass gitfile operands in Git's Windows-compatible spelling and
+compare symlink resolution against the current platform's Git output. Status
+and ignore parity runs with a portable filename everywhere; only the extra
+newline-filename variant is skipped on Windows. Blob-reference updates also
+compare against Git: a direct branch rejects the blob, while a symbolic alias
+outside `refs/heads/` accepts it on Git 2.55.0.windows.3, in both object
+formats. That alias behavior is not evidence of a Gix mismatch and does not
+invalidate GIX-24's separate direct-branch comparison.
 
 For GIX-8, at fixture commit `44e0a8ec55c42559dfcdf5117710b26261a7c937`,
 compare `git rev-list HEAD` with
@@ -751,7 +774,7 @@ probe and captured results are in
 `.cache/gix-compatibility-ledger/{probe-contracts.py,contracts.json}`.
 Existing [backend regressions](../test/test_gix_backend.py) protect the adapter
 fallbacks, including `test_tree_writes_validate_child_object_kinds`,
-`test_symbolic_alias_cannot_point_a_branch_at_a_blob`,
+`test_branch_blob_updates_match_git`,
 `test_commit_identity_cleanup_matches_git` and
 `test_reference_enumeration_preserves_aliases_and_skips_dangling_refs`.
 This ledger update changes no runtime code or CLI budgets; the earlier
@@ -813,8 +836,9 @@ reproduction or regression. A Gix-based workaround does not resolve that bug;
 require an upstream fix or a verified mode as strict as Git before closing it.
 
 Decide whether to fall back before mutating anything. Read/preparation failures
-can use Git to preserve its public diagnostics. Once `_write()` begins, native
-errors become `GitCommandError` and must never trigger a second CLI mutation.
+can use Git to preserve its public diagnostics. Once `_write()` begins,
+`gix.Error` failures become `GitCommandError`; other exceptions propagate.
+Neither may trigger a second CLI mutation.
 Access native repository state through `Repo._get_gix_repository()` for bound
 commands. Reuse is the default, with explicit recreation available; keep the
 snapshot deviation and refresh behavior above documented. Close native iterators
@@ -823,6 +847,43 @@ when partially consumed.
 Add each conversion with a no-subprocess check and a Git parity check where
 practical, in its own commit. Update this ledger when a limitation changes;
 the runtime report's reason should point to the corresponding entry.
+
+## Windows validation
+
+The [Python package workflow](../.github/workflows/pythonpackage.yml) adds a
+Windows/Python 3.12 Gix job while preserving all 28 CLI combinations and their
+existing check names. It installs `.[test,gix]`, verifies the selected backend
+and runs the full suite
+with the same coverage and pytest options. Every job retains JUnit results
+and `--backend-report` operation counts under its `tests-OS-PYTHON-BACKEND`
+artifact, and prints the 30 slowest test durations. The extra Gix job does not
+duplicate the documentation build.
+
+Local Windows checks use CPython 3.12.13, Git 2.55.0.windows.3 and GixPython
+0.1.0 built from the released source distribution. The installed extension
+matches the cached Windows ABI3 wheel byte-for-byte; that wheel's SHA-256 is
+`1a0addd5f569e2ff7fb2b45c38be1093f6cabbead176c779533b983b86307dc2`.
+
+The full baseline at `f6779dbb` reproduced all 17 failures described above:
+16 ordinary failures and the subtest with malformed `commondir`. The full
+patched suite passed with **1,760 tests and 40 subtests**, 58 skipped, nine
+expected failures and three unexpected passes in 2,242.66 seconds. The three
+unexpected passes and the path-deprecation warning also appeared in the
+baseline. Ruff, mypy, basedpyright and the pinned pre-commit checks passed.
+
+The baseline recorded 21,598 CLI launches in 2,279.10 seconds; the patched
+run recorded 21,826 CLI launches and 86,936 native operations. Totals include the additional
+regressions and tests that previously stopped at failing assertions. No CLI
+ceilings were lowered. Both runs used isolated snapshots and CI's coverage,
+Git configuration and pytest options. They overlapped, so the elapsed times
+are not a controlled speed comparison. Logs, JUnit results and operation
+reports are retained locally in `.cache/gix-windows/`.
+
+The CLI repository/discovery regressions passed with 138 tests, 14 subtests,
+nine skips and one expected failure. The changed native path, discovery,
+reference and mutation-error cases also passed under Ubuntu WSL: 43 tests
+and 14 subtests, using CPython 3.14.4, Git 2.53.0 and a separate released-source
+GixPython build. This includes the POSIX newline-filename cases.
 
 ## Published release validation
 

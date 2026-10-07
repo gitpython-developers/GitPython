@@ -14,10 +14,12 @@ permissions:
 
 jobs:
   test:
+    name: test (${{ matrix.os-type }}, ${{ matrix.python-version }}${{ matrix.backend == 'gix' && ', gix' || '' }})
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t", "3.15", "3.15t"]
+        backend: [cli]
         exclude:
         - os-type: macos
           python-version: "3.14t"
@@ -32,6 +34,11 @@ jobs:
           experimental: true
         - python-version: "3.15t"
           experimental: true
+        - os-type: windows
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
 
       fail-fast: false
 
@@ -51,6 +58,20 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
+        cache: ${{ matrix.backend == 'gix' && 'pip' || '' }}
+        cache-dependency-path: |
+          pyproject.toml
+          requirements.txt
+          test-requirements.txt
+          gix-requirements.txt
+
+    - name: Prepare Rust for GixPython's Windows source build
+      if: matrix.backend == 'gix'
+      run: |
+        # GixPython 0.1.0 publishes macOS wheels only and needs Rust >= 1.89.
+        rustup toolchain install stable --profile minimal
+        rustup default stable
+        rustc --version
 
     - name: Set up WSL (Windows)
       if: matrix.os-type == 'windows'
@@ -89,7 +110,11 @@ jobs:
 
     - name: Install project and test dependencies
       run: |
-        pip install ./smmap ./gitdb '.[test]'
+        pip install ./smmap ./gitdb ".[${EXTRAS}]"
+        python -c 'import os; from git import _backend; print("Backend:", _backend.name); assert _backend.name == os.environ["EXPECTED_BACKEND"]'
+      env:
+        EXTRAS: ${{ matrix.backend == 'gix' && 'test,gix' || 'test' }}
+        EXPECTED_BACKEND: ${{ matrix.backend }}
 
     - name: Show POSIX file ownership
       # Linux and macOS only. On Windows, Git Bash's `ls -ld` reports a
@@ -172,8 +197,16 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv --durations=30
+        pytest --color=yes -p no:sugar --instafail -vv --durations=30 \
+          --junitxml=test-results/pytest.xml --backend-report=test-results/backend.json
       continue-on-error: false
+
+    - name: Retain test results and backend operation counts
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: tests-${{ matrix.os-type }}-${{ matrix.python-version }}-${{ matrix.backend }}
+        path: test-results/
 
     - name: Documentation
       if: matrix.build-docs
