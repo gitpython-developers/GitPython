@@ -253,6 +253,23 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
         assert commit.replace(message="a changed message").hexsha == native.hexsha
 
 
+def test_native_reference_name_validation_without_repository():
+    SymbolicReference._check_ref_name_native.cache_clear()
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected validation CLI call")):
+        for name in ("HEAD", "FOO", "_", "refs/heads/native-é", "valid/ref/name"):
+            SymbolicReference._check_ref_name_valid(name)
+        for name in ("refs/heads/.hidden", "refs/heads/a..b", "refs/heads/end.lock", "--help"):
+            with pytest.raises(ValueError, match="Invalid reference"):
+                SymbolicReference._check_ref_name_valid(name)
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
+    for name in ("refs", "hellothere", "valid_one_level_refname", "1", "123", "A1", "1A", "HEAD_1", "A-B", "A.B", "Ä"):
+        SymbolicReference._check_ref_name_valid(name)
+    with pytest.raises(ValueError, match="Invalid reference"):
+        SymbolicReference._check_ref_name_valid("@")
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) > count
+
+
 def test_native_reference_reads_include_missing_and_dangling_targets(repo):
     repo.index.commit("initial", skip_hooks=True)
     repo.git.pack_refs("--all", "--prune")

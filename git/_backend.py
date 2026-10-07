@@ -270,6 +270,21 @@ def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         )
 
 
+def check_ref_name(name: str) -> Any:
+    """Validate a full reference name without opening a repository."""
+    if gix is None:
+        return NotImplemented
+    try:
+        gix.Target.Symbolic(name)
+    except gix.Error as exc:
+        if "/" not in name:
+            return _fallback("Reference.validate", "standalone reference names (GIX-20)")
+        record("Reference.validate", "native")
+        raise ValueError("Invalid reference %r" % name) from exc
+    record("Reference.validate", "native")
+    return None
+
+
 def reference_info(command: Any, path: str) -> Any:
     """Read an exact reference target, including an absent reference, in one lookup."""
     if gix is None:

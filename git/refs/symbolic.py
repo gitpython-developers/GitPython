@@ -155,7 +155,7 @@ class SymbolicReference:
 
     @staticmethod
     def _check_ref_name_valid(ref_path: PathLike) -> None:
-        """Validate reference names with Git, rejecting CLI control input first."""
+        """Validate reference names, rejecting CLI control input first."""
         try:
             name = Git._check_operand(os.fspath(ref_path), "reference")
         except UnsafeOptionError as exc:
@@ -167,6 +167,8 @@ class SymbolicReference:
     def _check_ref_name_native(name: str, _refresh_token: object) -> None:
         # The grammar depends on Git's executable, not repository contents.
         # Filesystem containment remains checked separately on every operation.
+        if _backend.check_ref_name(name) is not NotImplemented:
+            return
         try:
             Git()._call_process_safe("check_ref_format", "--allow-onelevel", name)
         except GitCommandError as exc:
