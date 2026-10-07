@@ -64,7 +64,8 @@ jobs:
       - name: Check parity and publish comparison
         run: |
           .bench-gix/bin/python -m test.performance.compare_backends \
-            benchmark-results/cli.json benchmark-results/gix.json > benchmark-results/comparison.md
+            benchmark-results/cli.json benchmark-results/gix.json \
+            --cli-budget test/performance/cli-budget.json > benchmark-results/comparison.md
           cat benchmark-results/comparison.md >> "$GITHUB_STEP_SUMMARY"
           .bench-gix/bin/python -m pyperf compare_to \
             benchmark-results/cli.json benchmark-results/gix.json --table --table-format md \

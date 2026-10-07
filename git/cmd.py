@@ -1655,6 +1655,7 @@ class Git(metaclass=_GitMeta):
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
         else:
+            _backend.record("Git.execute", "CLI process")
             # Replace with a typeguard for Popen[bytes]?
             proc.stdout = cast(BinaryIO, proc.stdout)
             proc.stderr = cast(BinaryIO, proc.stderr)

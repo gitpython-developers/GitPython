@@ -149,6 +149,7 @@ def main():
             ]
         )
         for name, operation, target in measurements:
+            operation(target)  # Warm persistent CLI processes before counting.
             # Untimed preflight validates parity and records native/fallback
             # decisions for ONE invocation, rather than calibrated loop counts.
             before = _backend.statistics()
@@ -161,6 +162,11 @@ def main():
             metadata = {
                 "result_digest": sha256(json.dumps(result, sort_keys=True).encode()).hexdigest(),
                 "backend_decisions": json.dumps(decisions, sort_keys=True),
+                "cli_processes": sum(
+                    item["count"]
+                    for item in decisions
+                    if (item["method"], item["outcome"]) == ("Git.execute", "CLI process")
+                ),
             }
             runner.bench_func(name, operation, target, metadata=metadata)
 

@@ -49,7 +49,8 @@ Run from the source root, sequentially to avoid competing for CPU and disk:
     --repo "$BENCH_REPO" --expect-backend gix -o /tmp/gix.json
 .venv/bin/python -m test.performance.bench_repository \
     --repo "$BENCH_REPO" --expect-backend cli -o /tmp/cli.json
-.tox/gix/bin/python -m test.performance.compare_backends /tmp/cli.json /tmp/gix.json
+.tox/gix/bin/python -m test.performance.compare_backends /tmp/cli.json /tmp/gix.json \
+    --cli-budget test/performance/cli-budget.json
 .tox/gix/bin/python -m pyperf compare_to /tmp/cli.json /tmp/gix.json --table --table-format md
 ```
 
@@ -75,6 +76,24 @@ Add a function returning JSON-compatible results to `MEASUREMENTS` in
 of the journey and parity checks. Include supported and fallback operations;
 the current patch measurement intentionally exercises fallback. Backend
 decisions are adapter events, not complete subprocess counts.
+
+`cli_processes` counts successful launches through `Git.execute` during one
+warm invocation, including raw calls and the launch of persistent `cat-file`
+processes. Sending another request to an existing process does not increment
+it. Native/fallback decisions remain separate: the current warm Gix journey has
+two fallback decisions but launches only one process (the patch diff).
+Direct subprocesses in the harness and Git's own child processes are excluded.
+
+The checked-in `cli-budget.json` sets maximum Gix launch counts for this pinned
+fixture. CI enforces the ceilings: reductions pass, increases fail with the
+measurement and counts. Lower ceilings when an optimization lands to retain
+the gain. The initial warm ceilings are journey/patch 1, opening 5, discovery 7,
+and zero for the other operations. New measurements need an explicit ceiling;
+do not automatically raise an existing ceiling to accept a regression.
+
+The opening/discovery ceilings include a real CLI reference-format query
+(`GIX-1`). GixPython must expose the format before that call can disappear;
+Python inference does not count as a native implementation.
 
 Timing is observational: shared CI runners and local activity introduce noise.
 The CI job publishes all means, standard deviations and ratios, retains raw

@@ -77,6 +77,53 @@ The `git.backend` DEBUG logger reports these decisions outside pytest.
 `git._backend.statistics()` returns a snapshot of the process-local counters.
 Zero observed calls means untested in that run, not unsupported.
 
+Successful `Git.execute` launches also appear as `CLI process` records. This
+includes raw `repo.git` calls and failed Git commands that started a process,
+but excludes failed process creation, direct subprocesses in test helpers,
+other Python processes and Git's own child processes. A persistent `cat-file`
+launch counts once; subsequent requests through it do not. These counts apply
+to both installations and are separate from native/fallback decisions.
+
+Pytest prints session launch totals split into setup, call, teardown and
+collection/session work. `--backend-report` keeps its existing record-list
+format and adds `pytest.*` phase records. The `Git.execute` record is
+process-lifetime cumulative (including import-time probes); `pytest.session_total`
+is the current session's total. Optional ceilings fail the test session on an
+increase while allowing reductions:
+
+```sh
+.tox/gix/bin/python test/run-local.py --no-cov -q \
+    --backend-report=.cache/gix-processes.json \
+    --max-cli-processes=TOTAL --max-cli-test-processes=CALLS
+```
+
+Replace `TOTAL`/`CALLS` with baselines for the same selected tests and platform.
+Setup is deliberately counted separately because fixture improvements and
+test additions can change it independently of native backend capability.
+These are pytest phases: `unittest.TestCase.setUp()`/`tearDown()` run inside
+the call phase, so that column can still include their fixture work. Counts
+cover the current Python process; they are not aggregated across xdist workers.
+For a stable CI assertion, the pinned repository benchmark uses per-measurement
+ceilings in `test/performance/cli-budget.json`: the warm Gix journey launches
+one CLI process, opening launches five, and nested discovery launches seven.
+Reduce these ceilings as conversions land. The other operation rows have zero
+ceilings except the one-process patch diff.
+
+Before the Gix-only audit, this instrumentation on CPython 3.12.14/macOS arm64 and official
+GixPython 0.1.0 recorded a full suite without coverage passing 1,674 tests and 38
+subtests (79 skipped, one xfailed) in 408.81 seconds. It recorded **30,898
+`Git.execute` launches**: 6,523 in pytest setup and 24,375 in call phases,
+with zero in teardown or collection/session phases. The process-lifetime
+counter is 30,899 because the import-time Git probe precedes pytest session
+accounting. The same run recorded 21,409 fallback decisions. These totals
+include explicit CLI tests and fixture commands, including non-Git commands
+passed directly to `Git.execute`; they are a local baseline, not a count of
+only fallback calls. The fixed warm benchmark instead isolates a user journey:
+23 CLI launches versus one Gix launch, opening 11 versus five, and nested
+discovery 13 versus seven after restoring the reference-format fallback.
+The historical full-suite counts above predate this correction. A constant
+`files` answer was not a Gix query; `GIX-1` records the missing binding.
+
 | GitPython entry point / managed command | Native implementation | Remaining CLI cases |
 | --- | --- | --- |
 | `Git.get_object_header`, ODB `info` | Object resolution and native header lookup | Custom storage, unsupported revision grammar |

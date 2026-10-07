@@ -1,5 +1,6 @@
 """Report native coverage when the optional backend is installed."""
 
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -11,6 +12,57 @@ from test.lib import GIT_REPO, TestBase
 
 def pytest_addoption(parser):
     parser.addoption("--backend-report", help="Write native/CLI operation counts as JSON")
+    parser.addoption("--max-cli-processes", type=int, help="Maximum Git.execute launches in the pytest session")
+    parser.addoption("--max-cli-test-processes", type=int, help="Maximum Git.execute launches in test call phases")
+
+
+def cli_processes():
+    return _backend.statistics().get(("Git.execute", "CLI process"), 0)
+
+
+def pytest_configure(config):
+    for option in ("--max-cli-processes", "--max-cli-test-processes"):
+        limit = config.getoption(option)
+        if limit is not None and limit < 0:
+            raise pytest.UsageError(option + " must be nonnegative")
+    config._cli_process_start = cli_processes()
+    config._cli_process_phases = Counter()
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_setup(item):
+    before = cli_processes()
+    yield
+    item.config._cli_process_phases["setup"] += cli_processes() - before
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    before = cli_processes()
+    yield
+    item.config._cli_process_phases["call"] += cli_processes() - before
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown(item):
+    before = cli_processes()
+    yield
+    item.config._cli_process_phases["teardown"] += cli_processes() - before
+
+
+def pytest_sessionfinish(session, exitstatus):
+    config = session.config
+    actual = {
+        "--max-cli-processes": cli_processes() - config._cli_process_start,
+        "--max-cli-test-processes": config._cli_process_phases["call"],
+    }
+    config._cli_process_failures = [
+        f"{option}: {count} launches exceed ceiling {config.getoption(option)}"
+        for option, count in actual.items()
+        if config.getoption(option) is not None and count > config.getoption(option)
+    ]
+    if config._cli_process_failures:
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 def pytest_report_header(config):
@@ -18,15 +70,27 @@ def pytest_report_header(config):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    if _backend.name != "gix":
-        return
+    total = cli_processes() - config._cli_process_start
+    phases = config._cli_process_phases
+    terminalreporter.section("Git CLI process launches")
+    terminalreporter.write_line(
+        f"{total} total: {phases['setup']} setup, {phases['call']} call, "
+        f"{phases['teardown']} teardown, {total - sum(phases.values())} collection/session"
+    )
+    for failure in config._cli_process_failures:
+        terminalreporter.write_line(failure, red=True)
     records = [
         {"method": method, "outcome": outcome, "count": count}
         for (method, outcome), count in sorted(_backend.statistics().items())
     ]
-    terminalreporter.section("GixPython operation coverage")
-    for item in records:
-        terminalreporter.write_line("{method}: {outcome} ({count})".format(**item))
+    if _backend.name == "gix":
+        terminalreporter.section("GixPython operation coverage")
+        for item in records:
+            terminalreporter.write_line("{method}: {outcome} ({count})".format(**item))
+    records.extend(
+        {"method": "pytest." + phase, "outcome": "CLI process", "count": count}
+        for phase, count in sorted({**phases, "session_total": total}.items())
+    )
     path = config.getoption("--backend-report")
     if path:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
