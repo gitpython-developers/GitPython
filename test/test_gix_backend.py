@@ -237,6 +237,17 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
     native_tree = index.write_tree()
     commit = index.commit("message", author=actor, committer=actor, skip_hooks=True)
     native = commit.replace(message="a changed message")
+    expected = [
+        repo.git.cat_file(obj.type, obj.hexsha, stdout_as_string=False, strip_newline_in_stdout=False)
+        for obj in (commit, native_tree)
+    ]
+    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected serialization CLI call")):
+        for obj, content in zip((commit, native_tree), expected):
+            stream = BytesIO()
+            obj._serialize(stream)
+            assert stream.getvalue() == content
+    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
     with patch.object(_backend, "gix", None):
         assert index.write_tree().hexsha == native_tree.hexsha
         assert commit.replace(message="a changed message").hexsha == native.hexsha

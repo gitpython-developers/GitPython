@@ -420,11 +420,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
             source.seek(0)
             oid = self.repo.git._call_process_safe("mktree", "-z", "--missing", istream=source)
         Git._check_operand(oid, "tree object ID")
-        stream.write(
-            self.repo.git._call_process_safe(
-                "cat_file", "tree", oid, stdout_as_string=False, strip_newline_in_stdout=False
-            )
-        )
+        stream.write(self.repo.odb.stream(to_bin_sha(oid)).read())
         return self
 
 

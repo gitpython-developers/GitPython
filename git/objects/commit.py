@@ -854,13 +854,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
             signature = self.gpgsig if any(self.binsha) else ""
         if signature:
             raise ValueError("Writing an existing commit signature is unsupported")
-        oid = self._calculate_sha_(self.repo, self).hex()
-        Git._check_operand(oid, "commit object ID")
-        stream.write(
-            self.repo.git._call_process_safe(
-                "cat_file", "commit", oid, stdout_as_string=False, strip_newline_in_stdout=False
-            )
-        )
+        oid = self._calculate_sha_(self.repo, self)
+        stream.write(self.repo.odb.stream(oid).read())
         return self
 
     def _deserialize(self, stream: BytesIO) -> "Commit":

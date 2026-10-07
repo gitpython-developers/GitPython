@@ -128,6 +128,7 @@ The historical full-suite counts above predate this correction. A constant
 | --- | --- | --- |
 | `Git.get_object_header`, ODB `info` | Object resolution and native header lookup | Custom storage, unsupported revision grammar |
 | `Git.stream_object_data`, ODB `stream` | Object bytes in an independent stream | Objects larger than 8 MiB; GIX-2 |
+| Commit/tree serialization readback | Existing ODB stream; no separate `cat-file` process | The same storage and large-object fallbacks as ODB reads |
 | `Repo` opening/discovery | Native storage, worktree, object format and empty-tree metadata | Repository-format validation, unsupported layouts/environment and native validation gaps; GIX-1/14/19 |
 | `Repo.rev_parse`, `rev_parse` metadata queries | Revision lookup, common directory, object format, bare flag, worktree root, fixed `modules`/`COMMIT_EDITMSG` locations | Repository-format validation, other metadata paths, symlinked metadata leaves, message searches and describe forms; GIX-1/14/17/22 |
 | Tree enumeration, `ls_tree` | Native tree entries with modes, names, and object IDs | Other command options |
