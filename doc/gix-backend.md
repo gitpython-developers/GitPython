@@ -141,6 +141,7 @@ The historical full-suite counts above predate this correction. A constant
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
 | Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
+| Commit hooks | No bound native lookup/execution API | All hooks, including absent hooks; GIX-23 |
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |
 | `Repo.merge_base`, `Repo.is_ancestor` | Native graph queries for two revisions | Octopus/fork-point and other options |
 | `Commit.count` | Reachable commit count, skip/limit/first-parent | Path filters and other revision options |
@@ -449,6 +450,7 @@ below use the supplied `pygix` source and its pinned Gitoxide revision.
 | GIX-20 | `Target.Symbolic(name)` validates full names but rejects standalone names accepted by `git check-ref-format --allow-onelevel`. Four of 430 audited calls differed: `refs` twice, `hellothere`, and `valid_one_level_refname`. Further probes include digits, punctuation and Unicode (`1`, `A1`, `HEAD_1`, `A-B`, `A.B`, `Ä`). | Expose Git-compatible partial/one-level name validation, or correct the native restriction where appropriate. This is a binding/behavior shortcoming to revisit upstream; standalone names rejected natively retain CLI validation. |
 | GIX-21 | Native snapshot overrides for `committer.name`, `committer.email` and `gitoxide.commit.committerDate` resolve correctly. Applying them to the retained repository would expose command-specific identity to other threads. GixPython 0.1.0 has no general independent repository clone: Python `copy`/`deepcopy` fail, while the binding's internal `RepoHandle::clone()` shares its `Arc` state. | Bind a cheap independent native clone with isolated config so native identity resolution can apply per-command overrides, including removal semantics. Reopening isolates state but repeats setup; `with_object_memory()` also changes object-write behavior and is not a general clone API. Keep native process/config identity and CLI for differing command overrides. Do not mutate process environment/shared snapshots or resolve identity fields in Python. Explicit canonical commit inputs may still be adapted to `gix.Signature`. |
 | GIX-22 | The native Git directory is sufficient for the two fixed metadata leaves used here: `modules` and `COMMIT_EDITMSG`. Git's `path.c` applies no special relocation to either, including in linked worktrees. The adapter appends only these names to the canonical native Git directory. | No new binding is needed for these ordinary paths. Other `--git-path` names and symlinked metadata leaves retain CLI resolution; a general resolver must handle config/environment overrides, common/private storage and canonical targets. `Repository.modules_path()` means `.gitmodules`, not the `modules` storage directory. |
+| GIX-23 | No hook lookup or execution API is bound in GixPython 0.1.0. The removed absence fast path read config through Gix but used Python `os.stat()` to declare success. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops. A Python filesystem check is not a Gix implementation. |
 
 For GIX-8, at fixture commit `44e0a8ec55c42559dfcdf5117710b26261a7c937`,
 compare `git rev-list HEAD` with
@@ -509,7 +511,7 @@ this investigation; this item does not claim a process reduction.
 | Object enumeration and alternate-directory listing | No binding for complete ODB object iteration or alternate-store enumeration; `cat-file --batch-all-objects` / `count-objects` remain. |
 | Name-rev, trailer parsing, cherry | No equivalent bound operation. Native describe is not name-rev. |
 | Config-backed remote/submodule maintenance | Missing config enumeration/multivar/removal operations (GIX-12), plus filesystem and worktree lifecycle requirements. |
-| Hook execution | Explicitly requested hooks retain the existing Git-managed behavior. Native operations retain GitPython's default hook/fsmonitor/maintenance restrictions. |
+| Hook execution | Every explicit hook request, including an absent hook, retains Git-managed lookup, execution and diagnostics until GIX-23 is addressed. Native operations retain GitPython's default hook/fsmonitor/maintenance restrictions. |
 
 ## Maintaining the adapters
 

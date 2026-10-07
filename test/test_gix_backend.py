@@ -11,7 +11,8 @@ from unittest.mock import patch
 import pytest
 
 from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
-from git.exc import GitCommandError, InvalidGitRepositoryError
+from git.exc import GitCommandError, InvalidGitRepositoryError, UnsafeOptionError
+from git.index.fun import run_commit_hook
 from git.index.typ import BaseIndexEntry
 from git.repo.fun import find_submodule_git_dir, find_worktree_git_dir, is_git_dir
 from gitdb import IStream
@@ -305,6 +306,33 @@ def test_native_tree_and_commit_bytes_match_cli(repo):
     with patch.object(_backend, "gix", None):
         assert index.write_tree().hexsha == native_tree.hexsha
         assert commit.replace(message="a changed message").hexsha == native.hexsha
+
+
+def test_hooks_retain_cli_even_when_missing(repo, tmp_path):
+    repo.index.commit("initial", skip_hooks=True)
+    linked_path = tmp_path / "linked"
+    repo.git.worktree("add", "--detach", str(linked_path))
+    with Repo(linked_path) as linked:
+        linked.git.version_info
+        count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
+        with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+            for current in (repo, linked):
+                for name in ("pre-commit", "commit-msg", "post-commit"):
+                    run_commit_hook(name, current.index)
+            with pytest.raises(UnsafeOptionError, match="NUL"):
+                run_commit_hook("commit-msg", repo.index, "message\0path")
+            assert cli.call_count == 6
+        assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count + 6
+        hook = Path(repo.common_dir, "hooks", "pre-commit")
+        hook.parent.mkdir(exist_ok=True)
+        hook.write_text("present, even without executable permission")
+        with patch.object(Git, "execute", return_value="") as cli:
+            run_commit_hook("pre-commit", linked.index)
+            cli.assert_called_once()
+        repo.git.config("core.hooksPath", "custom-hooks")
+        with patch.object(Git, "execute", return_value="") as cli:
+            run_commit_hook("post-commit", repo.index)
+            cli.assert_called_once()
 
 
 def test_native_submodule_inventory_and_cached_fields_match_cli(repo):
