@@ -13,6 +13,7 @@ import itertools
 import logging
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -699,6 +700,9 @@ class Git(metaclass=_GitMeta):
         "_repo",
     )
 
+    _version_info: Optional[Tuple[int, ...]]
+    _version_info_token: object
+
     # Match Git's leading transport selector, including an empty helper name.
     # Git also selects the command-executing ext helper for an ext:// URL.
     re_unsafe_protocol = re.compile(r"([A-Za-z0-9][A-Za-z0-9+.-]*|)::|ext://")
@@ -791,6 +795,7 @@ class Git(metaclass=_GitMeta):
     """
 
     _refresh_token = object()  # Since None would match an initial _version_info_token.
+    _version_check_cache: Dict[Tuple[Any, ...], Tuple[int, ...]] = {}
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
@@ -1145,8 +1150,61 @@ class Git(metaclass=_GitMeta):
         return value
 
     def _require_version(self) -> None:
-        if self.version_info < (2, 52):
+        key = None
+        if self._version_info_token is not self._refresh_token:
+            key = self._version_check_key()
+            if key is not None:
+                version = self._version_check_cache.get(key)
+                if version is not None:
+                    self._version_info = version
+                    self._version_info_token = key[0]
+        version = self.version_info
+        if version < (2, 52):
             raise UnsupportedOperation("GitPython requires Git 2.52 or newer for repository operations")
+        if key is not None and key not in self._version_check_cache:
+            # ponytail: clear at 128 contexts; use LRU if diverse environments churn.
+            if len(self._version_check_cache) >= 128:
+                self._version_check_cache.clear()
+            self._version_check_cache[key] = version
+
+    def _version_check_key(self) -> Optional[Tuple[Any, ...]]:
+        """Identify the executable and context of a minimum-version probe."""
+        executable = self.GIT_PYTHON_GIT_EXECUTABLE
+        if not executable or self._git_options or self._persistent_git_options:
+            return None
+        environment = {**os.environ, "LANGUAGE": "C", "LC_ALL": "C", **self._environment}
+        try:
+            cwd = os.path.realpath(self._working_dir or os.getcwd())
+            if not os.access(cwd, os.X_OK):
+                return None
+            resolved: Optional[str]
+            if os.path.isabs(executable):
+                resolved = executable
+            elif sys.platform == "win32":
+                # CreateProcess searches in the parent context, unlike execvpe.
+                return None
+            elif os.path.dirname(executable):
+                resolved = os.path.join(cwd, executable)
+            else:
+                path = environment.get("PATH")
+                path = os.defpath if path is None else path
+                resolved = shutil.which(
+                    executable, path=os.pathsep.join(os.path.join(cwd, p) for p in path.split(os.pathsep))
+                )
+                if resolved is None:
+                    return None
+            info = os.stat(resolved)
+        except OSError:
+            return None
+        return (
+            self._refresh_token,
+            type(self),
+            executable,
+            resolved,
+            cwd,
+            tuple(sorted(environment.items())),
+            (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns),
+        )
 
     def _call_process_safe(
         self,
@@ -1235,8 +1293,8 @@ class Git(metaclass=_GitMeta):
         self._repo: Any = None  # Weak reference; the Repo owns native resources.
 
         # Cached version slots
-        self._version_info: Union[Tuple[int, ...], None] = None
-        self._version_info_token: object = None
+        self._version_info = None
+        self._version_info_token = None
 
         # Cached command slots
         self.cat_file_header: Union[None, TBD] = None

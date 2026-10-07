@@ -105,7 +105,7 @@ the call phase, so that column can still include their fixture work. Counts
 cover the current Python process; they are not aggregated across xdist workers.
 For a stable CI assertion, the pinned repository benchmark uses per-measurement
 ceilings in `test/performance/cli-budget.json`: the warm Gix journey launches
-one CLI process, opening launches two, and nested discovery launches four.
+one CLI process, opening launches one, and nested discovery launches three.
 Reduce these ceilings as conversions land. The other operation rows have zero
 ceilings except the one-process patch diff.
 
@@ -119,8 +119,9 @@ accounting. The same run recorded 21,409 fallback decisions. These totals
 include explicit CLI tests and fixture commands, including non-Git commands
 passed directly to `Git.execute`; they are a local baseline, not a count of
 only fallback calls. The fixed warm benchmark instead isolates a user journey:
-23 CLI launches versus one Gix launch, opening 11 versus two, and nested
-discovery 13 versus four after restoring the reference-format fallback.
+23 CLI launches versus one Gix launch, opening nine versus one, and nested
+discovery eleven versus three after restoring the reference-format fallback
+and sharing successful version checks.
 The historical full-suite counts above predate this correction. A constant
 `files` answer was not a Gix query; `GIX-1` records the missing binding.
 
@@ -168,6 +169,27 @@ also retain their CLI contracts. A broken installed extension is reported as
 an import error; only an absent top-level `gix` selects CLI mode.
 
 ## Performance work
+
+### Shared minimum-version checks
+
+Both installations reuse successful minimum-Git-version checks across fresh
+`Git` wrappers with the same resolved executable, executable metadata, working
+directory, effective environment and `Git.refresh()` generation. Two extra
+checks in the fixed warm probe now launch zero processes instead of two;
+two equivalent cold wrappers launch one probe. Public `version_info` caching
+remains per instance, and old versions still fail before repository creation.
+
+This is shared CLI housekeeping: it caches an actual Git answer and records
+no native success. It is not a Gix implementation of a missing capability.
+The pinned warm Gix opening/discovery ceilings fall from 2/4 to 1/3 here;
+the reference-format query and rejected-candidate diagnostics remain real CLI
+calls. Cold contexts can still require a version probe.
+
+Global Git options and ambiguous Windows executable search retain per-instance
+probes; explicit absolute executables can share checks on Windows. The shared
+cache is bounded to 128 contexts. Call `Git.refresh()` if a launcher's reported
+version changes through external state without changing its executable or
+environment metadata.
 
 ### Existing-repository benchmark
 

@@ -24,8 +24,8 @@ from unittest import mock, skipUnless
 
 import ddt
 
-from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
-from git.exc import UnsafeOptionError
+from git import Git, GitCommandError, GitCommandNotFound, Repo, _backend, cmd, refresh
+from git.exc import UnsafeOptionError, UnsupportedOperation
 from git.util import cwd, finalize_process
 
 from test.lib import TestBase, fixture_path, with_rw_directory
@@ -824,6 +824,43 @@ class TestGit(TestBase):
                 with self.assertRaises(GitCommandNotFound):
                     git2.version_info
                 git1.version_info
+
+    def test_minimum_version_shares_context_and_detects_replacement(self):
+        def calls():
+            return _backend.statistics().get(("Git.execute", "CLI process"), 0)
+
+        with _rollback_refresh(), _fake_git(2, 54, 0) as path:
+            refresh(path)
+            count = calls()
+            Git()._require_version()
+            Git()._require_version()
+            self.assertEqual(calls() - count, 1)
+            custom = Git()
+            custom.update_environment(GITPYTHON_VERSION_CONTEXT="different")
+            for command in (Git(Path(path).parent), custom):
+                count = calls()
+                command._require_version()
+                self.assertEqual(calls() - count, 1)
+            with _fake_git(2, 51, 0) as older:
+                shutil.copy(older, path)
+                with self.assertRaises(UnsupportedOperation):
+                    Git()._require_version()
+
+    def test_minimum_version_detects_new_executable_earlier_in_path(self):
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_rollback_refresh())
+            older = Path(stack.enter_context(_fake_git(2, 51, 0)))
+            newer = Path(stack.enter_context(_fake_git(2, 54, 0)))
+            stack.enter_context(mock.patch.dict(os.environ, {"PATH": f"{older.parent}{os.pathsep}{newer.parent}"}))
+            stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
+            if sys.platform == "win32":
+                stack.enter_context(mock.patch.object(Git, "git_exec_name", "git.cmd"))
+            _rename_with_stem(newer, "git")
+            refresh()
+            Git()._require_version()
+            _rename_with_stem(older, "git")
+            with self.assertRaises(UnsupportedOperation):
+                Git()._require_version()
 
     def test_version_info_cache_is_not_pickled(self):
         with _rollback_refresh():

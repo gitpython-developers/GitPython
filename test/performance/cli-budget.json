@@ -10,7 +10,7 @@
     "diff_and_stats": 0,
     "patch_diff": 1,
     "worktree_status": 0,
-    "open_repository": 2,
-    "discover_repository": 4
+    "open_repository": 1,
+    "discover_repository": 3
   }
 }

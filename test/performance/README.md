@@ -88,15 +88,16 @@ Direct subprocesses in the harness and Git's own child processes are excluded.
 The checked-in `cli-budget.json` sets maximum Gix launch counts for this pinned
 fixture. CI enforces the ceilings: reductions pass, increases fail with the
 measurement and counts. Lower ceilings when an optimization lands to retain
-the gain. Warm ceilings are journey/patch 1, opening 2, discovery 4,
+the gain. Warm ceilings are journey/patch 1, opening 1, discovery 3,
 and zero for the other operations. New measurements need an explicit ceiling;
 do not automatically raise an existing ceiling to accept a regression.
 
 The opening/discovery ceilings include a real CLI reference-format query
-(`GIX-1`) and version validation. Nested candidates rejected by Gix also use
+(`GIX-1`). Nested candidates rejected by Gix also use
 Git for compatible discovery diagnostics (`GIX-14`). GixPython must expose
 the missing capabilities before those calls can disappear; Python inference
 does not count as a native implementation.
+Warm version checks reuse real CLI answers; cold contexts can add a version probe.
 
 Timing is observational: shared CI runners and local activity introduce noise.
 The CI job publishes all means, standard deviations and ratios, retains raw
