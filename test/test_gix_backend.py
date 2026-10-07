@@ -11,6 +11,7 @@ import pytest
 
 from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError
+from git.repo.fun import find_submodule_git_dir, find_worktree_git_dir, is_git_dir
 from gitdb import IStream
 
 gix = pytest.importorskip("gix")
@@ -122,6 +123,18 @@ def test_opening_and_discovery_use_gix_with_explicit_fallbacks(repo, tmp_path):
     bare_linked_native = gix.open(bare_linked)
     assert bare_linked_native.is_bare()
     assert bare_linked_native.workdir() == bare_linked
+    gitfile = tmp_path / "gitfile"
+    gitfile.write_text("gitdir: repo/.git\n")
+    candidates = [repo.git_dir, bare.git_dir, linked / ".git", linked_admin, gitfile]
+    with patch.object(_backend, "gix", None):
+        expected = [find_submodule_git_dir(path) for path in candidates]
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        assert [find_submodule_git_dir(path) for path in candidates] == expected
+        assert find_worktree_git_dir(gitfile) == expected[-1]
+        assert is_git_dir(repo.git_dir)
+    with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+        assert find_submodule_git_dir(nested) is None
+        assert sum("--resolve-git-dir" in call.args[1] for call in cli.call_args_list) == 1
     for path, search, expected_bare, rejected_candidates in [
         (root, False, False, 0),
         (repo.git_dir, False, False, 0),
@@ -163,6 +176,45 @@ def test_discovery_asks_gix_before_falling_back(tmp_path):
     with patch.object(gix, "open_opts", side_effect=gix.Error("native rejection")) as native_open:
         assert _backend.discover_repository(str(tmp_path), {}) is NotImplemented
         native_open.assert_called_once()
+
+
+@pytest.mark.parametrize("target", ["repo/.git", "repo/../repo/.git", "alias/.git"])
+def test_gitfile_reopens_canonical_native_repository(repo, tmp_path, target):
+    if target == "alias/.git":
+        try:
+            (tmp_path / "alias").symlink_to(repo.working_dir, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+    gitfile = tmp_path / "gitfile"
+    gitfile.write_text(f"gitdir: {target}\n")
+    with patch.object(_backend, "gix", None), Repo(gitfile) as control:
+        expected = (control.git_dir, control.working_tree_dir, control.bare)
+        expected_git_path = repo.git.rev_parse("--resolve-git-dir", str(gitfile))
+    with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+        with patch.object(gix, "open_opts", wraps=gix.open_opts) as native_open:
+            native = _backend.discover_repository(str(gitfile), {})
+            assert (str(native.git_dir()), str(native.workdir()), native.is_bare()) == expected
+            assert native_open.call_count == 2
+            assert native_open.call_args.args[0] == expected[0]
+            assert native_open.call_args.args[1] is native_open.call_args_list[0].args[1]
+        assert find_submodule_git_dir(gitfile) == expected_git_path
+        assert find_worktree_git_dir(gitfile) == expected_git_path
+    with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
+        with Repo(gitfile) as opened:
+            assert (opened.git_dir, str(opened.working_tree_dir), opened.bare) == expected
+            assert isinstance(opened._gix_repository, gix.Repository)
+        assert all("version" in call.args[1] or "--show-ref-format" in call.args[1] for call in cli.call_args_list)
+
+
+def test_gitfile_reopen_failure_selects_fallback(repo, tmp_path):
+    gitfile = tmp_path / "gitfile"
+    gitfile.write_text("gitdir: repo/.git\n")
+    outcomes = [gix.open(repo.git_dir), gix.Error("canonical reopen failed")]
+    before = _backend.statistics().get(("Repo.open", "native"), 0)
+    with patch.object(gix, "open_opts", side_effect=outcomes) as native_open:
+        assert _backend.discover_repository(str(gitfile), {}) is NotImplemented
+        assert native_open.call_count == 2
+    assert _backend.statistics().get(("Repo.open", "native"), 0) == before
 
 
 def test_native_objects_trees_commits_and_index_reads(repo):

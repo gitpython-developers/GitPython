@@ -25,6 +25,7 @@ from typing import Optional, TYPE_CHECKING, Union, overload
 
 from gitdb.exc import BadName, BadObject
 
+from git import _backend
 from git.cmd import Git
 from git.compat import defenc
 from git.exc import GitCommandError
@@ -47,11 +48,14 @@ def touch(filename: str) -> str:
 
 
 def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
-    """Resolve a repository directory or gitfile using Git."""
+    """Resolve a repository directory or gitfile using the selected backend."""
     path = osp.abspath(os.fspath(d))
     if not osp.exists(path):
         return None
     try:
+        native = _backend.discover_repository(path, {})
+        if native is not NotImplemented:
+            return to_native_path_linux(os.fspath(native.git_dir()))
         return Git()._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(path))
     except GitCommandError:
         return None

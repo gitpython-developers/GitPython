@@ -70,6 +70,10 @@ def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
     )
     try:
         repo = gix.open_opts(path, options)
+        if os.path.isfile(path):
+            # Reopening also makes Gix derive the worktree from its Git directory,
+            # rather than retaining an arbitrary gitfile's location as a worktree.
+            repo = gix.open_opts(os.path.realpath(repo.git_dir()), options)
         snapshot = repo.config_snapshot()
         if snapshot.string("extensions.refStorage") == b"reftable":
             return _fallback("Repo.open", "reftable (GIX-1)")
