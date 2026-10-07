@@ -115,6 +115,54 @@ an import error; only an absent top-level `gix` selects CLI mode.
 
 ## Performance work
 
+### Existing-repository benchmark
+
+[`test/performance/README.md`](../test/performance/README.md) describes the
+`pyperf` harness and fixed GitPython 3.1.45 fixture. It measures eight public-API
+operations and their complete journey on one already-open `git.Repo`, plus
+separate direct opening and discovery from `git/objects`. Fresh high-level
+wrappers preserve the cost of actual operations; imports, fixture preparation
+and parity preflight are outside timing. Native repository reopening remains
+inside operation timing, so retaining native state in the future can improve
+these measurements without changing the workload.
+
+At `244e418da6cc43de129cbe2908d11be4c5ad457a`, using official GixPython
+0.1.0 and the same existing CPython 3.12.14/macOS arm64 interpreter for both
+installations, with Git 2.54.0 (Apple Git-157), six worker processes with three values each produced the
+following means and standard deviations. GixPython ran first, then CLI;
+all eleven result digests matched. The fixture has one branch, one untracked
+file and an ignored directory, with ambient Git configuration disabled.
+
+| Measurement | CLI (ms) | GixPython (ms) | CLI / Gix |
+| --- | ---: | ---: | ---: |
+| Already-open journey | 230.90 ± 6.87 | 260.14 ± 13.37 | 0.89× |
+| Reference inventory | 22.77 ± 1.15 | 1.17 ± 0.26 | 19.52× |
+| 25 first-parent commits with metadata | 9.24 ± 0.46 | 73.61 ± 7.24 | 0.13× |
+| Root tree and README blob | 16.02 ± 1.07 | 2.40 ± 0.46 | 6.66× |
+| Index entries | 8.43 ± 0.57 | 2.00 ± 0.38 | 4.21× |
+| Commit count and ancestry queries | 82.28 ± 2.27 | 36.19 ± 0.84 | 2.27× |
+| Latest diff and commit statistics | 29.98 ± 1.66 | 60.98 ± 2.45 | 0.49× |
+| Patch diff (includes CLI fallback) | 17.87 ± 1.28 | 10.86 ± 1.01 | 1.64× |
+| Dirty/untracked/ignored paths | 68.56 ± 3.18 | 64.74 ± 2.00 | 1.06× |
+| Direct opening and close | 95.08 ± 4.64 | 35.84 ± 2.02 | 2.65× |
+| Nested discovery and close | 112.58 ± 5.38 | 49.20 ± 4.16 | 2.29× |
+
+Ratios above one favor GixPython. This workload's complete journey is about
+13% slower with GixPython: metadata reads and commit statistics offset gains
+elsewhere. These are warm-cache measurements on one machine, with `pyperf`
+stability warnings for several samples; they do not establish a general
+speedup. Full-suite times below also include setup and coverage.
+
+The separate `Backend benchmark` CI job runs both installations on one runner,
+publishes every measurement and `pyperf` significance reporting, and retains
+raw JSON and comparison artifacts. Results include revisions and per-operation
+native/fallback decisions. Adding a `MEASUREMENTS` entry extends the journey,
+individual timings and parity checks together. Opening/discovery remain
+separate lifecycle measurements. CI fails on execution/parity errors; timing
+ratios are observational on shared runners.
+
+### Test-suite setup measurements
+
 Native repository reuse remains future work. The fixture optimizations below
 are implemented as separate commits, each validated with GixPython before CLI.
 The original local measurements use official GixPython 0.1.0 and existing
