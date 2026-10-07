@@ -15,11 +15,33 @@ import os
 import re
 import signal
 import subprocess
-from subprocess import DEVNULL, PIPE, Popen
 import sys
-from textwrap import dedent
 import threading
+import time
 import warnings
+from subprocess import DEVNULL, PIPE, Popen
+from textwrap import dedent
+
+# typing ---------------------------------------------------------------------------
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    AnyStr,
+    BinaryIO,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    TextIO,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 from git.compat import defenc, force_bytes, safe_decode
 from git.exc import (
@@ -38,34 +60,12 @@ from git.util import (
     stream_copy,
 )
 
-# typing ---------------------------------------------------------------------------
-
-from typing import (
-    Any,
-    AnyStr,
-    BinaryIO,
-    Callable,
-    Dict,
-    IO,
-    Iterator,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    TYPE_CHECKING,
-    TextIO,
-    Tuple,
-    Union,
-    cast,
-    overload,
-)
-
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
 else:
     from typing_extensions import TypeAlias
 
-from git.types import Literal, PathLike, TBD
+from git.types import TBD, Literal, PathLike
 
 if TYPE_CHECKING:
     from git.diff import DiffIndex
@@ -97,6 +97,45 @@ _logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------------------
 # Documentation
 ## @{
+
+
+def _kill_process(pid: int) -> bool:
+    """Kill a POSIX process and its descendants, returning whether it was killed."""
+    # Collect descendants before signalling, while their parent PIDs still identify them.
+    pids = [pid]
+    for parent_pid in pids:
+        try:
+            try:
+                p = Popen(["pgrep", "-P", str(parent_pid)], stdout=PIPE)
+            except FileNotFoundError:
+                # POSIX ps does not support selecting by parent PID.
+                ps_args = ["ps", "-ef"] if sys.platform == "cygwin" else ["ps", "-A", "-o", "pid=", "-o", "ppid="]
+                with Popen(ps_args, stdout=PIPE) as p:
+                    if p.stdout is not None:
+                        for line in p.stdout:
+                            fields = line.split()
+                            if sys.platform == "cygwin":
+                                fields = fields[1:3]  # ps -ef starts with UID, PID, PPID.
+                            if len(fields) == 2 and all(field.isdigit() for field in fields):
+                                if int(fields[1]) == parent_pid:
+                                    pids.append(int(fields[0]))
+            else:
+                with p:
+                    if p.stdout is not None:
+                        for line in p.stdout:
+                            if line.strip().isdigit():
+                                pids.append(int(line))
+        except OSError as ex:
+            _logger.info("Unable to enumerate child processes: %r", ex)
+    killed = False
+    if sys.platform != "win32":
+        for process_pid in pids:
+            try:
+                os.kill(process_pid, signal.SIGKILL)
+                killed = killed or process_pid == pid
+            except OSError:
+                pass
+    return killed
 
 
 def handle_process_output(
@@ -165,7 +204,7 @@ def handle_process_output(
 
         except Exception as ex:
             _logger.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
-            if "I/O operation on closed file" not in str(ex):
+            if not (isinstance(ex, ValueError) and stream.closed):
                 # Only reraise if the error was not due to the stream closing.
                 raise CommandError([f"<{name}-pump>"] + remove_password_if_present(cmdline), ex) from ex
         finally:
@@ -199,28 +238,26 @@ def handle_process_output(
         t.start()
         threads.append(t)
 
-    # FIXME: Why join? Will block if stdin needs feeding...
+    # Wait for output handlers to finish before finalizing.
+    # If the child needs stdin, the caller must arrange to feed/close it
+    # before this call or concurrently; this function only drains output.
+    deadline = None if kill_after_timeout is None else time.monotonic() + kill_after_timeout
     for t in threads:
-        t.join(timeout=kill_after_timeout)
+        t.join(timeout=None if deadline is None else max(0, deadline - time.monotonic()))
         if t.is_alive():
             if isinstance(process, Git.AutoInterrupt):
+                if sys.platform != "win32" and process.proc is not None and process.proc.poll() is None:
+                    _kill_process(process.proc.pid)
                 process._terminate()
             else:  # Don't want to deal with the other case.
                 raise RuntimeError(
                     "Thread join() timed out in cmd.handle_process_output()."
                     f" kill_after_timeout={kill_after_timeout} seconds"
                 )
-            if stderr_handler:
-                error_str: Union[str, bytes] = (
-                    f"error: process killed because it timed out. kill_after_timeout={kill_after_timeout} seconds"
-                )
-                if not decode_streams and isinstance(p_stderr, BinaryIO):
-                    # Assume stderr_handler needs binary input.
-                    error_str = cast(str, error_str)
-                    error_str = error_str.encode()
-                # We ignore typing on the next line because mypy does not like the way
-                # we inferred that stderr takes str or bytes.
-                stderr_handler(error_str)  # type: ignore[arg-type]
+            process._timeout_error = (
+                f"error: process killed because it timed out. kill_after_timeout={kill_after_timeout} seconds"
+            )
+            break
 
     if finalizer:
         finalizer(process)
@@ -326,7 +363,7 @@ class _AutoInterrupt:
     raise.
     """
 
-    __slots__ = ("proc", "args", "status")
+    __slots__ = ("proc", "args", "status", "_timeout_error")
 
     # If this is non-zero it will override any status code during _terminate, used
     # to prevent race conditions in testing.
@@ -336,6 +373,7 @@ class _AutoInterrupt:
         self.proc = proc
         self.args = args
         self.status: Union[int, None] = None
+        self._timeout_error: Optional[str] = None
 
     def _terminate(self) -> None:
         """Terminate the underlying process."""
@@ -344,37 +382,45 @@ class _AutoInterrupt:
 
         proc = self.proc
         self.proc = None
-        if proc.stdin:
-            proc.stdin.close()
-        if proc.stdout:
-            proc.stdout.close()
-        if proc.stderr:
-            proc.stderr.close()
-        # Did the process finish already so we have a return code?
         try:
-            if proc.poll() is not None:
-                self.status = self._status_code_if_terminate or proc.poll()
+            if proc.stdin:
+                # A timed-out process may already have exited before input is flushed.
+                with contextlib.suppress(BrokenPipeError):
+                    proc.stdin.close()
+            # Did the process finish already so we have a return code?
+            try:
+                if proc.poll() is not None:
+                    self.status = self._status_code_if_terminate or proc.poll()
+                    return
+            except OSError as ex:
+                _logger.info("Ignored error after process had died: %r", ex)
+
+            # It can be that nothing really exists anymore...
+            if getattr(os, "kill", None) is None:
                 return
-        except OSError as ex:
-            _logger.info("Ignored error after process had died: %r", ex)
 
-        # It can be that nothing really exists anymore...
-        if os is None or getattr(os, "kill", None) is None:
-            return
+            # Try to kill it.
+            try:
+                proc.terminate()
+            except (OSError, AttributeError) as ex:
+                # On interpreter shutdown (notably on Windows), parts of the stdlib used by
+                # subprocess can already be torn down (e.g. `subprocess._winapi` becomes None),
+                # which can cause AttributeError during terminate(). In that case, we prefer
+                # to silently ignore to avoid noisy "Exception ignored in: __del__" messages.
+                _logger.info("Ignored error while terminating process: %r", ex)
+                return
+            # END exception handling
+        finally:
+            if proc.stdout:
+                proc.stdout.close()
+            if proc.stderr:
+                proc.stderr.close()
 
-        # Try to kill it.
         try:
-            proc.terminate()
-            status = proc.wait()  # Ensure the process goes away.
-
+            status = proc.wait()
             self.status = self._status_code_if_terminate or status
         except (OSError, AttributeError) as ex:
-            # On interpreter shutdown (notably on Windows), parts of the stdlib used by
-            # subprocess can already be torn down (e.g. `subprocess._winapi` becomes None),
-            # which can cause AttributeError during terminate(). In that case, we prefer
-            # to silently ignore to avoid noisy "Exception ignored in: __del__" messages.
-            _logger.info("Ignored error while terminating process: %r", ex)
-        # END exception handling
+            _logger.info("Ignored error while waiting for terminated process: %r", ex)
 
     def __del__(self) -> None:
         self._terminate()
@@ -393,9 +439,8 @@ class _AutoInterrupt:
             May deadlock if output or error pipes are used and not handled separately.
 
         :raise git.exc.GitCommandError:
-            If the return status is not 0.
+            If the return status is not 0 or output handling timed out.
         """
-        stderr_b = force_bytes(data=stderr, encoding="utf-8") or b""
         status: Union[int, None]
         if self.proc is not None:
             status = self.proc.wait()
@@ -403,6 +448,11 @@ class _AutoInterrupt:
         else:  # Assume the underlying proc was killed earlier or never existed.
             status = self.status
             p_stderr = None
+
+        stderr_b = force_bytes(data=stderr, encoding="utf-8") or b""
+        if self._timeout_error is not None:
+            stderr_b += (b"\n" if stderr_b else b"") + self._timeout_error.encode("utf-8")
+            status = status or 1
 
         def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
             if stream:
@@ -1381,9 +1431,10 @@ class Git(metaclass=_GitMeta):
             1. This feature is not supported at all on Windows.
             2. Enumerating child processes requires ``pgrep -P``, or a ``ps`` command
                supporting the POSIX ``-A`` and ``-o`` options if ``pgrep`` is not
-               installed. Effectiveness may vary on systems without these commands.
-            3. Deeper descendants do not receive signals, though they may sometimes
-               terminate as a consequence of their parent processes being killed.
+               installed (``ps -ef`` on Cygwin). Effectiveness may vary on systems
+               without these commands.
+            3. Descendants are enumerated before signalling. Processes that detach
+               or spawn after enumeration may not receive signals.
             4. `kill_after_timeout` uses ``SIGKILL``, which can have negative side
                effects on a repository. For example, stale locks in case of
                :manpage:`git-gc(1)` could render the repository incapable of accepting
@@ -1537,43 +1588,9 @@ class Git(metaclass=_GitMeta):
             timeout = kill_after_timeout
 
             def kill_process(pid: int) -> None:
-                """Callback to kill a process.
-
-                This callback implementation would be ineffective and unsafe on Windows.
-                """
-                child_pids = []
-                try:
-                    p = Popen(["pgrep", "-P", str(pid)], stdout=PIPE)
-                except FileNotFoundError:
-                    # POSIX ps does not support selecting by parent PID.
-                    with Popen(["ps", "-A", "-o", "pid=", "-o", "ppid="], stdout=PIPE) as p:
-                        if p.stdout is not None:
-                            for line in p.stdout:
-                                fields = line.split()
-                                if len(fields) == 2 and all(field.isdigit() for field in fields):
-                                    if int(fields[1]) == pid:
-                                        child_pids.append(int(fields[0]))
-                else:
-                    with p:
-                        if p.stdout is not None:
-                            for line in p.stdout:
-                                if line.strip().isdigit():
-                                    child_pids.append(int(line))
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                    for child_pid in child_pids:
-                        try:
-                            os.kill(child_pid, signal.SIGKILL)
-                        except OSError:
-                            pass
-                    # Tell the main routine that the process was killed.
+                if _kill_process(pid):
                     assert kill_check is not None
                     kill_check.set()
-                except OSError:
-                    # It is possible that the process gets completed in the duration
-                    # after timeout happens and before we try to kill the process.
-                    pass
-                return
 
             def make_timeout_error() -> Union[str, bytes]:
                 err = f'Timeout: the command "{" ".join(redacted_command)}" did not complete in {timeout:g} secs.'

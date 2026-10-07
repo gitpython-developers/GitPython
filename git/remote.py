@@ -988,8 +988,9 @@ class Remote(LazyMixin, IterableObj):
             # even if there is an output).
             if not output:
                 raise
-            elif stderr_text:
-                _logger.warning("Error lines received while fetching: %s", stderr_text)
+            elif stderr_text or proc._timeout_error:
+                if stderr_text:
+                    _logger.warning("Error lines received while pushing: %s", stderr_text)
                 output.error = e
 
         return output

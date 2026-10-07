@@ -8,8 +8,11 @@ import os
 import os.path as osp
 from pathlib import Path
 import random
+import socket
 import sys
 import tempfile
+import threading
+import time
 from unittest import mock, skipIf
 
 import pytest
@@ -24,6 +27,7 @@ from git import (
     Remote,
     RemoteProgress,
     RemoteReference,
+    Repo,
     SymbolicReference,
     TagReference,
 )
@@ -1087,7 +1091,67 @@ class TestRemote(TestBase):
         Head.delete(remote_repo, bad_branch_name)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="kill_after_timeout is not supported on Windows")
+@pytest.mark.parametrize("protocol", ["git", "http", "https"])
+@pytest.mark.parametrize("operation", ["fetch", "pull", "push"])
+def test_timeout_stalled_remote(tmp_path, protocol, operation):
+    repo = Repo.init(tmp_path)
+    repo.git.symbolic_ref("HEAD", "refs/heads/main")
+    with repo.config_writer() as config:
+        config.set_value("user", "name", "Timeout Test")
+        config.set_value("user", "email", "timeout@example.com")
+        config.set_value("commit", "gpgSign", False)
+    repo.git.commit(allow_empty=True, message="initial commit")
+
+    with socket.socket() as server:
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        server.settimeout(10)
+        finished = threading.Event()
+        connected = threading.Event()
+
+        def stall():
+            with server.accept()[0]:
+                connected.set()
+                # Release the connection even if the timeout cleanup deadlocks.
+                finished.wait(5)
+
+        thread = threading.Thread(target=stall)
+        thread.start()
+        remote = repo.create_remote("origin", f"{protocol}://127.0.0.1:{server.getsockname()[1]}/stalled.git")
+        started = time.monotonic()
+        try:
+            with pytest.raises(GitCommandError, match="process killed because it timed out"):
+                getattr(remote, operation)("main", kill_after_timeout=0.5)
+            assert connected.is_set(), "the command did not reach the stalled remote"
+            assert time.monotonic() - started < 3, "timeout cleanup blocked on a pipe reader"
+        finally:
+            finished.set()
+            thread.join(10)
+            repo.close()
+        assert not thread.is_alive()
+
+
 class TestTimeouts(TestBase):
+    @skipIf(sys.platform == "win32", "requires POSIX timeout signalling")
+    @with_rw_repo("HEAD", bare=False)
+    def test_timeout_partial_push(self, repo):
+        process = repo.git.execute(
+            [
+                sys.executable,
+                "-c",
+                "import time; print('=\\trefs/heads/main:refs/heads/main\\t[up to date]', flush=True); time.sleep(30)",
+            ],
+            as_process=True,
+            universal_newlines=True,
+        )
+        with mock.patch("git.remote._logger.warning") as warning:
+            result = repo.remote("origin")._get_push_info(process, None, kill_after_timeout=0.5)
+        warning.assert_not_called()
+        assert len(result) == 1
+        with pytest.raises(GitCommandError, match="process killed because it timed out"):
+            result.raise_if_error()
+
     @with_rw_repo("HEAD", bare=False)
     def test_timeout_funcs(self, repo):
         # Maintenance may outlive a timed-out fetch and race with fixture cleanup.
