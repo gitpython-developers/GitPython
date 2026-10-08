@@ -16,7 +16,7 @@ from git.util import rmtree
 def _commit_file(repo, content):
     Path(repo.working_tree_dir, "file").write_text(content, encoding="utf-8")
     repo.index.add(["file"])
-    return repo.index.commit("Write " + content)
+    return repo.index.commit("Write " + content, skip_hooks=True)
 
 
 def _cached_remote_refs(repo):
@@ -35,7 +35,7 @@ def local_submodule_baseline(tmp_path_factory):
         submodule = parent.create_submodule(
             "module", "module", source.working_tree_dir, branch=source.head.reference.name
         )
-        parent.index.commit("Add submodule")
+        parent.index.commit("Add submodule", skip_hooks=True)
         submodule.module().close()
     return tmp_path
 
@@ -52,7 +52,7 @@ def local_submodule(tmp_path, local_submodule_baseline):
         with parent.config_writer() as writer:
             writer.set_value('submodule "module"', "url", url)
         # RootModule compares URLs in committed history as well as current config.
-        parent.index.commit("Relocate fixture source")
+        parent.index.commit("Relocate fixture source", skip_hooks=True)
         # Re-enumerate after the config writer invalidates the submodule cache.
         submodule = parent.submodules[0]
         with submodule.module() as module:
@@ -120,7 +120,7 @@ def test_update_no_fetch_to_latest_revision_uses_cached_tip(local_submodule, upd
     module.head.reset("HEAD~1", index=True, working_tree=True)
     submodule.binsha = module.head.commit.binsha
     submodule.repo.index.add([submodule])
-    submodule.repo.index.commit("Pin submodule to initial commit")
+    submodule.repo.index.commit("Pin submodule to initial commit", skip_hooks=True)
     remote_tip = _commit_file(source, "remote-only")
     assert submodule.binsha != cached_tip.binsha != remote_tip.binsha
 
@@ -138,7 +138,7 @@ def test_update_no_fetch_cannot_check_out_missing_commit(local_submodule, update
     cached_tip = module.head.commit
     submodule.binsha = _commit_file(source, "remote-only").binsha
     submodule.repo.index.add([submodule])
-    submodule.repo.index.commit("Pin submodule to uncached commit")
+    submodule.repo.index.commit("Pin submodule to uncached commit", skip_hooks=True)
 
     with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
         with pytest.raises(GitCommandError, match="merge-base"):
@@ -210,7 +210,7 @@ def test_update_no_fetch_restores_deinitialized_submodule(
     if to_latest_revision:
         submodule.binsha = module.head.commit.binsha
         submodule.repo.index.add([submodule])
-        submodule.repo.index.commit("Pin submodule to initial commit")
+        submodule.repo.index.commit("Pin submodule to initial commit", skip_hooks=True)
         assert submodule.binsha != cached_tip.binsha
 
     metadata = Path(module.git_dir)
@@ -293,13 +293,13 @@ def test_update_no_fetch_is_recursive(local_submodule, update_submodule, no_fetc
         nested.head.reset("HEAD~1", index=True, working_tree=True)
         child.binsha = nested.head.commit.binsha
         module.index.add([child])
-        previous = module.index.commit("Add nested submodule at initial commit")
+        previous = module.index.commit("Add nested submodule at initial commit", skip_hooks=True)
         child.binsha = cached_tip.binsha
         module.index.add([child])
-        target = module.index.commit("Advance nested submodule")
+        target = module.index.commit("Advance nested submodule", skip_hooks=True)
         submodule.binsha = target.binsha
         submodule.repo.index.add([submodule])
-        submodule.repo.index.commit("Record nested submodule update")
+        submodule.repo.index.commit("Record nested submodule update", skip_hooks=True)
         module.head.reset(previous, index=True, working_tree=True)
 
         with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
@@ -324,7 +324,7 @@ def test_root_update_no_fetch_on_branch_change(local_submodule, no_fetch):
     previous = submodule.repo.head.commit
     with submodule.config_writer() as writer:
         writer.set_value("branch", branch_name)
-    submodule.repo.index.commit("Change submodule branch")
+    submodule.repo.index.commit("Change submodule branch", skip_hooks=True)
     module.head.reset("HEAD~1", index=True, working_tree=True)
 
     with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
@@ -352,7 +352,7 @@ def test_root_update_no_fetch_on_url_change(local_submodule, tmp_path, no_fetch)
         mirror_url = Git.polish_url(mirror.working_tree_dir)
         with submodule.config_writer() as writer:
             writer.set_value("url", mirror_url)
-        submodule.repo.index.commit("Change submodule URL")
+        submodule.repo.index.commit("Change submodule URL", skip_hooks=True)
 
         with mock.patch.object(Remote, "fetch", autospec=True, side_effect=Remote.fetch) as fetch:
             RootModule(submodule.repo).update(previous_commit=previous, recursive=False, no_fetch=no_fetch)
@@ -386,7 +386,7 @@ def test_root_update_no_fetch_url_change_uses_cached_tip(local_submodule, tmp_pa
     module.head.reset("HEAD~1", index=True, working_tree=True)
     submodule.binsha = module.head.commit.binsha
     submodule.repo.index.add([submodule])
-    previous = submodule.repo.index.commit("Pin submodule to initial commit")
+    previous = submodule.repo.index.commit("Pin submodule to initial commit", skip_hooks=True)
     assert submodule.binsha != cached_tip.binsha
 
     with source.clone(tmp_path / "mirror") as mirror:
@@ -398,7 +398,7 @@ def test_root_update_no_fetch_url_change_uses_cached_tip(local_submodule, tmp_pa
         with submodule.config_writer() as writer:
             writer.set_value("url", mirror_url)
             writer.set_value("branch", branch_name)
-        submodule.repo.index.commit("Change submodule URL and tracking branch")
+        submodule.repo.index.commit("Change submodule URL and tracking branch", skip_hooks=True)
 
         with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
             RootModule(submodule.repo).update(
@@ -438,7 +438,7 @@ def test_root_update_no_fetch_selects_url_change_remote(local_submodule, tmp_pat
         expected_urls["upstream"] = mirror_url
         with submodule.config_writer() as writer:
             writer.set_value("url", mirror_url)
-        submodule.repo.index.commit("Change submodule URL")
+        submodule.repo.index.commit("Change submodule URL", skip_hooks=True)
 
         with mock.patch.object(Remote, "fetch", side_effect=AssertionError("Unexpected fetch")) as fetch:
             RootModule(submodule.repo).update(previous_commit=previous, recursive=False, no_fetch=True)

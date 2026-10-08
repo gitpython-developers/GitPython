@@ -223,6 +223,11 @@ jobs:
 
     - name: Test with pytest
       run: |
+        if [[ "$RUNNER_OS" == "Windows" && -z "${GIT_PYTHON_GIT_EXECUTABLE+x}" ]]; then
+          # Absolute paths let Windows share minimum-version probes.
+          git_executable="$(python -c 'import os, shutil; print(os.path.abspath(shutil.which("git")))')"
+          export GIT_PYTHON_GIT_EXECUTABLE="$git_executable"
+        fi
         pytest --color=yes -p no:sugar --instafail -vv --durations=30 \
           --junitxml=test-results/pytest.xml --backend-report=test-results/backend.json
       continue-on-error: false

@@ -118,7 +118,7 @@ class TestGit(TestBase):
         git.return_value = ""
         self.git.version()
         self.assertTrue(git.called)
-        self.assertEqual(git.call_args, ((["git", "version"],), {}))
+        self.assertEqual(git.call_args, (([Git.GIT_PYTHON_GIT_EXECUTABLE, "version"],), {}))
 
     def test_call_unpack_args_unicode(self):
         args = Git._unpack_args("Unicode€™")

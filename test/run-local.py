@@ -6,6 +6,7 @@ Use the Python interpreter from the installation to test, for example:
 
 import os
 from pathlib import Path
+import shutil
 import socket
 import subprocess
 import sys
@@ -18,7 +19,14 @@ def main():
     with TemporaryDirectory(prefix="gitpython-local-tests-") as directory:
         temporary = Path(directory)
         config = temporary / "gitconfig"
-        config.write_text("[user]\nname = GitPython Tests\nemail = tests@example.invalid\n", encoding="utf-8")
+        text = "[user]\nname = GitPython Tests\nemail = tests@example.invalid\n"
+        if sys.platform == "win32":
+            # Match CI's Git for Windows setting despite disabling system config.
+            text += "[core]\nautocrlf = true\n"
+        # CI appends these aliases directly. An include forces Gix to reload its
+        # configuration before every operation because included files can change.
+        text += (root / "test/fixtures/.gitconfig").read_text(encoding="utf-8")
+        config.write_text(text, encoding="utf-8")
         env = {
             **os.environ,
             "GIT_CONFIG_NOSYSTEM": "1",
@@ -28,11 +36,17 @@ def main():
             "PIP_FIND_LINKS": os.environ.get("PIP_FIND_LINKS", str(root / ".cache/gix-wheels")),
             "UV_OFFLINE": "1",
         }
+        if sys.platform == "win32" and "GIT_PYTHON_GIT_EXECUTABLE" not in env:
+            executable = shutil.which("git")
+            if executable is None:
+                raise RuntimeError("Git executable not found in PATH")
+            # Windows can share minimum-version checks for an absolute path.
+            env["GIT_PYTHON_GIT_EXECUTABLE"] = os.path.abspath(executable)
+        git_executable = env.get("GIT_PYTHON_GIT_EXECUTABLE", "git")
 
         def git(*args, cwd=root):
-            return subprocess.check_output(["git", *map(str, args)], cwd=cwd, env=env, text=True).strip()
+            return subprocess.check_output([git_executable, *map(str, args)], cwd=cwd, env=env, text=True).strip()
 
-        git("config", "--file", config, "include.path", root / "test/fixtures/.gitconfig")
         fixture = temporary / "repo"
         git("clone", "--shared", "--no-checkout", root, fixture)
         git("checkout", "--detach", git("rev-parse", "HEAD"), cwd=fixture)

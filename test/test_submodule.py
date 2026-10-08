@@ -61,10 +61,10 @@ def test_submodule_update_preserves_literal_name(tmp_path, monkeypatch, caplog, 
     caplog.set_level("DEBUG", logger="git.cmd")
     with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
         source.git.symbolic_ref("HEAD", "refs/heads/master")
-        source.index.commit("Initial commit")
+        source.index.commit("Initial commit", skip_hooks=True)
         with _patch_git_config("protocol.file.allow", "always"):
             parent.git.submodule("add", "--name", name, source.working_tree_dir, "module")
-        parent.index.commit("Add submodule")
+        parent.index.commit("Add submodule", skip_hooks=True)
 
         with git.Repo.clone_from(parent.working_tree_dir, tmp_path / "clone") as clone:
             clone.submodule_update(init=True, recursive=True)
@@ -137,14 +137,14 @@ def test_submodule_cli_lifecycle(tmp_path, monkeypatch, object_format, ref_forma
     ) as parent:
         (tmp_path / "source/file").write_text("content", encoding="utf-8")
         source.index.add(["file"])
-        commit = source.index.commit("Initial commit")
+        commit = source.index.commit("Initial commit", skip_hooks=True)
         module = parent.create_submodule("logical-name", "module", source.working_tree_dir)
         with module.module() as child:
             if child.git.rev_parse("--show-ref-format") != ref_format:
                 child.git.refs("migrate", "--ref-format=" + ref_format)
-        parent.index.commit("Add submodule")
+        parent.index.commit("Add submodule", skip_hooks=True)
         module.move("moved")
-        parent.index.commit("Move submodule")
+        parent.index.commit("Move submodule", skip_hooks=True)
         assert module.name == "logical-name"
         module.deinit(force=True)
         module.update(init=True, no_fetch=True)
@@ -199,10 +199,10 @@ def movable_submodule_baseline(tmp_path_factory):
             source.git.symbolic_ref("HEAD", "refs/heads/master")
             (root / "source/file").write_text("content", encoding="utf-8")
             source.index.add(["file"])
-            source.index.commit("Create source")
+            source.index.commit("Create source", skip_hooks=True)
             with _patch_git_config("protocol.file.allow", "always"):
                 submodule = parent.create_submodule(name, "module", source.working_tree_dir)
-            parent.index.commit("Create submodule")
+            parent.index.commit("Create submodule", skip_hooks=True)
             submodule.module().close()
         return root / "parent"
 
@@ -361,7 +361,7 @@ def separate_metadata_submodule(prepared_rejection_layout):
         checkout = root / "separate"
         with git.Repo.init(checkout, separate_git_dir=str(checkout / "metadata"), allow_unsafe_options=True) as parent:
             module = parent.create_submodule("module", "module", sm.url)
-            parent.index.commit("Add submodule")
+            parent.index.commit("Add submodule", skip_hooks=True)
             module.module().close()
 
     with prepared_rejection_layout("separate", prepare) as root, git.Repo(root / "separate") as parent:
@@ -381,7 +381,7 @@ def intermediate_symlink_submodule(prepared_rejection_layout, target_kind):
             target if target_kind == "absolute" else os.path.relpath(target, link.parent), target_is_directory=True
         )
         sm.repo.index.add(["nested/link"])
-        sm.repo.index.commit("Record layout")
+        sm.repo.index.commit("Record layout", skip_hooks=True)
 
     with prepared_rejection_layout(("intermediate-link", target_kind), prepare) as root, git.Repo(
         root / "parent"
@@ -887,7 +887,7 @@ def test_update_closes_checkout_processes_retained_by_logging(movable_submodule,
         module.head.reference.set_tracking_branch(None)
         if recursive:
             child = module.create_submodule("child", "child", sm.url)
-            module.index.commit("Add child")
+            module.index.commit("Add child", skip_hooks=True)
             sm.binsha = module.head.commit.binsha
             with child.module() as nested:
                 nested.head.reference.set_tracking_branch(None)
@@ -983,7 +983,7 @@ def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_p
     link.symlink_to(outside, target_is_directory=True)
     sm = Submodule.add(sm.repo, "link/new", "new", sm.url)
     if operation == "reconnect":
-        sm.repo.index.commit("Add linked metadata submodule")
+        sm.repo.index.commit("Add linked metadata submodule", skip_hooks=True)
         sm.repo.git.submodule("deinit", "--force", "new")
         sm.update(init=True)
     assert link.is_symlink()
@@ -1067,7 +1067,7 @@ def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(
 ):
     sm = movable_submodule
     sibling = Submodule.add(sm.repo, "nested/sibling", "sibling", sm.url)
-    sm.repo.index.commit("Add sibling")
+    sm.repo.index.commit("Add sibling", skip_hooks=True)
     modules = Path(sm.repo.git_dir) / "modules"
     link = {"modules": modules, "intermediate": modules / "nested", "leaf": modules / "nested/module"}[kind]
     target = tmp_path / "outside"
@@ -1371,7 +1371,7 @@ class TestSubmodule(TestBase):
             csm.set_parent_commit(csm.repo.head.commit)
             with csm.config_writer() as cw:
                 cw.set_value("url", self._small_repo_url())
-            csm.repo.index.commit("adjusted URL to point to local source, instead of the internet")
+            csm.repo.index.commit("adjusted URL to point to local source, instead of the internet", skip_hooks=True)
 
             # We have modified the configuration, hence the index is dirty, and the
             # deletion will fail.
@@ -1463,7 +1463,7 @@ class TestSubmodule(TestBase):
             assert len(rwrepo.submodules) == 2
 
             # Commit the changes, just to finalize the operation.
-            rwrepo.index.commit("my submod commit")
+            rwrepo.index.commit("my submod commit", skip_hooks=True)
             assert len(rwrepo.submodules) == 2
 
             # Needs update, as the head changed.
@@ -1612,7 +1612,7 @@ class TestSubmodule(TestBase):
         sm.move(fp, module=False)  # Leave it at the old location.
 
         assert not sm.module_exists()
-        cpathchange = rwrepo.index.commit("changed sm path")  # Finally we can commit.
+        cpathchange = rwrepo.index.commit("changed sm path", skip_hooks=True)  # Finally we can commit.
 
         # Update puts the module into place.
         rm.update(recursive=False, progress=prog)
@@ -1625,7 +1625,9 @@ class TestSubmodule(TestBase):
         nsmp = "submrepo"
         subrepo_url = self._small_repo_url()
         nsm = Submodule.add(rwrepo, nsmn, nsmp, url=subrepo_url)
-        csmadded = rwrepo.index.commit("Added submodule").hexsha  # Make sure we don't keep the repo reference.
+        csmadded = rwrepo.index.commit(
+            "Added submodule", skip_hooks=True
+        ).hexsha  # Make sure we don't keep the repo reference.
         nsm.set_parent_commit(csmadded)
         assert nsm.module_exists()
         # In our case, the module should not exist, which happens if we update a parent
@@ -1646,7 +1648,7 @@ class TestSubmodule(TestBase):
         smp = sm.abspath
         assert not sm.remove(module=False).exists()
         assert osp.isdir(smp)  # Module still exists.
-        csmremoved = rwrepo.index.commit("Removed submodule")
+        csmremoved = rwrepo.index.commit("Removed submodule", skip_hooks=True)
 
         # An update will remove the module.
         # Not in dry_run.
@@ -1669,7 +1671,7 @@ class TestSubmodule(TestBase):
         # location.
         assert nsm.module().head.commit.hexsha == nsm.hexsha
         nsm.module().index.add([nsm])
-        nsm.module().index.commit("added new file")
+        nsm.module().index.commit("added new file", skip_hooks=True)
         rm.update(recursive=False, dry_run=True, progress=prog)  # Would not change head, and thus doesn't fail.
         # Everything we can do from now on will trigger the 'future' check, so no
         # is_dirty() check will even run. This would only run if our local branch is in
@@ -1691,7 +1693,7 @@ class TestSubmodule(TestBase):
         nsmurl = self._gitdb_repo_url()
         with nsm.config_writer() as writer:
             writer.set_value("url", nsmurl)
-        csmpathchange = rwrepo.index.commit("changed url")
+        csmpathchange = rwrepo.index.commit("changed url", skip_hooks=True)
         nsm.set_parent_commit(csmpathchange)
 
         # Now nsm head is in the future of the tracked remote branch.
@@ -1721,7 +1723,7 @@ class TestSubmodule(TestBase):
         for branch in ("some_virtual_branch", cur_branch.name):
             with nsm.config_writer() as writer:
                 writer.set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
-            csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch)
+            csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch, skip_hooks=True)
             nsm.set_parent_commit(csmbranchchange)
         # END for each branch to change
 
@@ -1793,12 +1795,12 @@ class TestSubmodule(TestBase):
         source_repo = git.Repo.init(source_path)
         touch(osp.join(source_path, "file"))
         source_repo.index.add(["file"])
-        source_repo.index.commit("initial commit")
+        source_repo.index.commit("initial commit", skip_hooks=True)
 
         parent_path = osp.join(rwdir, "parent")
         parent_repo = git.Repo.init(parent_path)
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
 
         submodule.deinit()
         assert not submodule.module_exists()
@@ -1818,12 +1820,12 @@ class TestSubmodule(TestBase):
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
         submodule.deinit()
 
         touch(osp.join(source_path, "new-file"))
         source_repo.index.add(["new-file"])
-        source_repo.index.commit("advance remote")
+        source_repo.index.commit("advance remote", skip_hooks=True)
 
         submodule.update(to_latest_revision=True)
 
@@ -1838,17 +1840,17 @@ class TestSubmodule(TestBase):
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
         submodule.deinit()
 
         touch(osp.join(source_path, "new-file"))
         source_repo.index.add(["new-file"])
-        source_repo.index.commit("advance remote")
+        source_repo.index.commit("advance remote", skip_hooks=True)
         parent_repo.git.update_index(
             "--cacheinfo",
             f"160000,{source_repo.head.commit.hexsha},{submodule.path}",
         )
-        parent_repo.index.commit("advance submodule")
+        parent_repo.index.commit("advance submodule", skip_hooks=True)
 
         submodule = parent_repo.submodule(submodule.name)
         submodule.update()
@@ -1864,11 +1866,11 @@ class TestSubmodule(TestBase):
         with open(tracked_file, "w") as fp:
             fp.write("submodule content")
         source_repo.index.add(["file"])
-        source_repo.index.commit("initial commit")
+        source_repo.index.commit("initial commit", skip_hooks=True)
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
         submodule.deinit()
 
         checkout_file = osp.join(submodule.abspath, "file")
@@ -1890,7 +1892,7 @@ class TestSubmodule(TestBase):
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
         submodule.deinit()
 
         assert submodule.update(init=False) is submodule
@@ -1905,7 +1907,7 @@ class TestSubmodule(TestBase):
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("module", "module", source_path)
-        parent_repo.index.commit("add submodule")
+        parent_repo.index.commit("add submodule", skip_hooks=True)
         submodule.deinit()
 
         assert submodule.update(dry_run=True) is submodule
@@ -1918,11 +1920,11 @@ class TestSubmodule(TestBase):
         source_repo = git.Repo.init(source_path)
         touch(osp.join(source_path, "file"))
         source_repo.index.add(["file"])
-        source_repo.index.commit("initial commit")
+        source_repo.index.commit("initial commit", skip_hooks=True)
 
         parent_repo = git.Repo.init(osp.join(rwdir, "parent"))
         submodule = parent_repo.create_submodule("nested/module", "deps/module", source_path)
-        parent_repo.index.commit("add nested submodule")
+        parent_repo.index.commit("add nested submodule", skip_hooks=True)
         submodule.deinit()
 
         submodule.update()
@@ -1942,7 +1944,7 @@ class TestSubmodule(TestBase):
         ):
             sm = rwrepo.create_submodule(sm_name, sm_path, rwrepo.git_dir, no_checkout=True)
             assert sm.exists() and sm.module_exists()
-            rwrepo.index.commit("Added submodule " + sm_name)
+            rwrepo.index.commit("Added submodule " + sm_name, skip_hooks=True)
         # END for each submodule path to add
 
         self.assertRaises(ValueError, rwrepo.create_submodule, "fail", osp.expanduser("~"))
@@ -1981,7 +1983,7 @@ class TestSubmodule(TestBase):
         module_repo = git.Repo.init(module_repo_path)
         module_repo.git.commit(m="test", allow_empty=True)
         repo.git.submodule("add", "../module", "module")
-        repo.index.commit("add submodule")
+        repo.index.commit("add submodule", skip_hooks=True)
 
         cloned_repo_path = osp.join(rwdir, "cloned_repo")
         cloned_repo = git.Repo.clone_from(repo_path, cloned_repo_path)
@@ -1996,13 +1998,13 @@ class TestSubmodule(TestBase):
 
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         parent.git.submodule("add", source.working_tree_dir, "module")
-        parent.index.commit("add submodule")
+        parent.index.commit("add submodule", skip_hooks=True)
         modules_file = Path(parent.working_tree_dir) / ".gitmodules"
         modules_file.write_text(
             modules_file.read_text().replace('submodule "module"', 'submodule "../../../escaped/module"')
         )
         parent.index.add([".gitmodules"])
-        parent.index.commit("change submodule name")
+        parent.index.commit("change submodule name", skip_hooks=True)
 
         clone = git.Repo.clone_from(parent.working_tree_dir, osp.join(rwdir, "clone"))
         with pytest.raises(ValueError, match="submodule name"):
@@ -2052,7 +2054,7 @@ class TestSubmodule(TestBase):
         modules_file = Path(parent.working_tree_dir) / ".gitmodules"
         modules_file.write_text(modules_file.read_text().replace('submodule "invalid"', 'submodule "../invalid"'))
         parent.index.add([".gitmodules"])
-        parent.index.commit("add submodules")
+        parent.index.commit("add submodules", skip_hooks=True)
 
         clone = git.Repo.clone_from(parent.working_tree_dir, osp.join(rwdir, "clone"))
         assert [sm.name for sm in clone.submodules] == ["../invalid", "valid"]
@@ -2071,7 +2073,7 @@ class TestSubmodule(TestBase):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
         repo.git.submodule("add", self._small_repo_url(), "module")
-        repo.index.commit("add submodule")
+        repo.index.commit("add submodule", skip_hooks=True)
 
         assert len(repo.submodules) == 1
 
@@ -2079,7 +2081,7 @@ class TestSubmodule(TestBase):
         submodule_path = osp.join(repo_path, "module")
         shutil.rmtree(submodule_path)
         repo.git.add([submodule_path])
-        repo.index.commit("remove submodule")
+        repo.index.commit("remove submodule", skip_hooks=True)
 
         repo = git.Repo(repo_path)
         assert len(repo.submodules) == 0
@@ -2097,7 +2099,7 @@ class TestSubmodule(TestBase):
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         parent.git.submodule("add", self._small_repo_url(), "module")
-        parent.index.commit("added submodule")
+        parent.index.commit("added submodule", skip_hooks=True)
 
         assert len(parent.submodules) == 1
         sm = parent.submodules[0]
@@ -2121,7 +2123,7 @@ class TestSubmodule(TestBase):
         sm.move(sm.path + "_moved")
         sm2.move(sm2.path + "_moved")
 
-        parent.index.commit("moved submodules")
+        parent.index.commit("moved submodules", skip_hooks=True)
 
         smm = sm.module()
         with smm.config_writer() as writer:
@@ -2141,7 +2143,7 @@ class TestSubmodule(TestBase):
 
         added_bies = parent.index.add([sm])  # Added base-index-entries.
         assert len(added_bies) == 1
-        parent.index.commit("add same submodule entry")
+        parent.index.commit("add same submodule entry", skip_hooks=True)
         commit_sm = parent.head.commit.tree[sm.path]
         assert commit_sm.binsha == added_bies[0].binsha
         assert commit_sm.binsha == sm.binsha
@@ -2149,7 +2151,7 @@ class TestSubmodule(TestBase):
         sm_too.binsha = sm_too.module().head.commit.binsha
         added_bies = parent.index.add([sm_too])
         assert len(added_bies) == 1
-        parent.index.commit("add new submodule entry")
+        parent.index.commit("add new submodule entry", skip_hooks=True)
         commit_sm = parent.head.commit.tree[sm.path]
         assert commit_sm.binsha == added_bies[0].binsha
         assert commit_sm.binsha == sm_too.binsha
@@ -2165,7 +2167,7 @@ class TestSubmodule(TestBase):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         sm_path = join_path_native("submodules", "intermediate", "one")
         sm = parent.create_submodule("mymodules/myname", sm_path, url=self._small_repo_url())
-        parent.index.commit("added submodule")
+        parent.index.commit("added submodule", skip_hooks=True)
 
         def assert_exists(sm, value=True):
             assert sm.exists() == value
@@ -2201,7 +2203,7 @@ class TestSubmodule(TestBase):
                 join_path_native("nested-submodule", "working-tree"),
                 url=self._small_repo_url(),
             )
-            module.index.commit("added nested submodule")
+            module.index.commit("added nested submodule", skip_hooks=True)
             sm_head_commit = module.commit()
         assert_exists(csm)
 
@@ -2217,7 +2219,7 @@ class TestSubmodule(TestBase):
         assert_exists(csm)
         with csm.config_writer().set_value("url", "bar"):
             pass
-        csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
+        csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up", skip_hooks=True)
         assert csm.url == "bar"
 
         self.assertRaises(  # noqa: B017
@@ -2285,7 +2287,7 @@ class TestSubmodule(TestBase):
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
         assert sm.exists()
 
-        parent.index.commit("Added submodule")
+        parent.index.commit("Added submodule", skip_hooks=True)
 
         assert sm.repo is parent  # yoh was surprised since expected sm repo!!
         # So created a new instance for submodule.
@@ -2301,7 +2303,7 @@ class TestSubmodule(TestBase):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         name = "mymodules/myname"
         sm = parent.create_submodule(name, name, url=self._small_repo_url())
-        parent.index.commit("Added submodule")
+        parent.index.commit("Added submodule", skip_hooks=True)
         assert sm.move("renamed/myname").name == name
         assert sm.exists() and sm.module_exists()
         assert not hasattr(sm, "rename")
@@ -2319,7 +2321,7 @@ class TestSubmodule(TestBase):
             sm_source_repo.working_tree_dir,
             branch="master",
         )
-        parent_repo.index.commit("added submodule")
+        parent_repo.index.commit("added submodule", skip_hooks=True)
         assert sm.exists()
 
         # Create feature branch with one new commit in submodule source.
@@ -2327,14 +2329,14 @@ class TestSubmodule(TestBase):
         sm_fb.checkout()
         new_file = touch(osp.join(sm_source_repo.working_tree_dir, "new-file"))
         sm_source_repo.index.add([new_file])
-        sm.repo.index.commit("added new file")
+        sm.repo.index.commit("added new file", skip_hooks=True)
 
         # Change designated submodule checkout branch to the new upstream feature
         # branch.
         with sm.config_writer() as smcw:
             smcw.set_value("branch", sm_fb.name)
         assert sm.repo.is_dirty(index=True, working_tree=False)
-        sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb)
+        sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb, skip_hooks=True)
 
         # Verify submodule update with feature branch that leaves currently checked out
         # branch in it's past.
@@ -2355,12 +2357,12 @@ class TestSubmodule(TestBase):
         sm_pfb = sm_source_repo.create_head("past-feature", commit="HEAD~20")
         sm_pfb.checkout()
         sm_source_repo.index.add([touch(osp.join(sm_source_repo.working_tree_dir, "new-file"))])
-        sm_source_repo.index.commit("new file added, to past of '%r'" % sm_fb)
+        sm_source_repo.index.commit("new file added, to past of '%r'" % sm_fb, skip_hooks=True)
 
         # Change designated submodule checkout branch to a new commit in its own past.
         with sm.config_writer() as smcw:
             smcw.set_value("branch", sm_pfb.path)
-        sm.repo.index.commit("changed submodule branch to '%s'" % sm_pfb)
+        sm.repo.index.commit("changed submodule branch to '%s'" % sm_pfb, skip_hooks=True)
 
         # Test submodule updates - must fail if submodule is dirty.
         touch(osp.join(sm_mod.working_tree_dir, "unstaged file"))
@@ -2583,7 +2585,7 @@ class TestSubmodule(TestBase):
         source = git.Repo.init(url)
         Path(source.working_tree_dir, "file").write_text("content")
         source.index.add(["file"])
-        source.index.commit("initial")
+        source.index.commit("initial", skip_hooks=True)
 
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             sm = Submodule.add(parent, "new", "new", url)
@@ -2768,7 +2770,7 @@ class TestSubmodule(TestBase):
         submodule_repo.git.commit(m="initial commit", allow_empty=True)
 
         parent_repo.git.submodule("add", "../module", "module")
-        parent_repo.index.commit("add submodule with relative URL")
+        parent_repo.index.commit("add submodule with relative URL", skip_hooks=True)
 
         cloned_path = osp.join(rwdir, "cloned_repo")
         cloned_repo = git.Repo.clone_from(parent_path, cloned_path)

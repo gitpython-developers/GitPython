@@ -198,8 +198,9 @@ def test_git_daemon_releases_port_and_can_restart(tmp_path):
                 with suppress(ConnectionResetError):  # Git for Windows resets rejected requests.
                     assert connection.recv(1) == b""
 
+        # Windows can take just over two seconds to refuse a closed loopback port.
         with pytest.raises(ConnectionRefusedError):
-            with socket.create_connection(address, timeout=2):
+            with socket.create_connection(address, timeout=5):
                 pass
 
 

@@ -53,6 +53,24 @@ The prepared environments in this checkout are `.venv` (CLI) and `.tox/gix`
     --backend-report=.cache/gix-coverage.json
 ```
 
+On Windows, use Git Bash, as CI does, and the environments' `Scripts`
+directories. To retain CI's coverage and pytest options:
+
+```sh
+.venv/Scripts/python.exe test/run-local.py --color=yes -p no:sugar --instafail -vv --durations=30 \
+    --junitxml=.cache/windows-cli.xml --backend-report=.cache/windows-cli.json
+.tox/gix/Scripts/python.exe test/run-local.py --color=yes -p no:sugar --instafail -vv --durations=30 \
+    --junitxml=.cache/windows-gix.xml --backend-report=.cache/windows-gix.json
+```
+
+The Windows runner resolves `git.exe` from `PATH` to an absolute path so
+GitPython can share minimum-version checks. An explicit
+`GIT_PYTHON_GIT_EXECUTABLE` override is preserved and also used for the runner's
+direct Git commands. Git Bash normally selects `mingw64/bin/git.exe`; the
+`cmd/git.exe` and `bin/git.exe` launchers add overhead to local measurements.
+The private config retains CI's `core.autocrlf=true` on Windows and appends
+the test aliases directly, matching CI without introducing config includes.
+
 The runner uses local version tags, creates an isolated Git configuration,
 prepares the historical test fixture inside a temporary shared clone, gives
 pytest a separate temporary root for each run, and disables package-index
@@ -517,6 +535,35 @@ overlapped, so their wall times are not a controlled comparison. The paired
 repository-open benchmark above measures the affected operation separately.
 Logs, profiles, JUnit results and backend reports are retained locally under
 `.cache/ci-performance/`.
+
+### Submodule fixture process overhead on Windows
+
+Windows CI and the local runner now resolve `git.exe` from `PATH` to an
+absolute `GIT_PYTHON_GIT_EXECUTABLE` when no override was supplied. This enables
+the existing minimum-version cache without changing the library's executable
+lookup or cache invalidation. Submodule fixtures also pass `skip_hooks=True`
+when committing their test history; the library default and dedicated hook
+tests continue to run hooks.
+
+A serial Windows comparison on CPython 3.12.13, Git 2.55.0.windows.5 and
+GixPython 0.1.0 selected the Windows destination-name rejection tests,
+`test_update_no_fetch_restores_deinitialized_submodule`, and
+`test_update_no_fetch_is_recursive`. Both runs used the direct Git executable
+on `PATH`, CI's flat alias config and `core.autocrlf=true`, with profiling
+enabled and coverage disabled. All 37 cases passed in both runs.
+
+| Test invocation and fixtures | Pytest time | Git launches | Version probes | Hook launches |
+| --- | ---: | ---: | ---: | ---: |
+| `GIT_PYTHON_GIT_EXECUTABLE=git`, fixture hooks enabled | 87.10s | 1,437 | 403 | 177 |
+| Absolute executable, fixture hooks skipped | 77.20s | 1,128 | 271 | 0 |
+
+The 309 eliminated launches comprise 132 redundant version probes and three
+hook checks for each of 59 fixture commits. This sample was about 11% faster;
+it is not a full-suite speedup estimate. Git Bash CI already selects
+`mingw64/bin/git.exe` and appends the alias config directly, so correcting the
+local runner's launcher/config differences is not an additional CI gain.
+Logs, profiles, JUnit results and operation reports are retained locally under
+`.cache/test-cleanup/windows-submodule-{baseline,optimized}*`.
 
 ### Test-suite setup measurements
 
