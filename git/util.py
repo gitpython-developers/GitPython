@@ -385,12 +385,25 @@ _HFS_IGNORABLES = str.maketrans(
     "", "", "\u200c\u200d\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u206a\u206b\u206c\u206d\u206e\u206f\ufeff"
 )
 
+# Windows derives an 8.3 short name for ".gitmodules" from its first six
+# characters followed by "~1" through "~4", and from a hashed stem once those
+# are taken. Git recognizes both spellings (is_ntfs_dotgitmodules in path.c).
+_NTFS_DOTGITMODULES_SHORT_NAMES = frozenset(
+    ["gitmod~%d" % index for index in range(1, 5)] + ["gi7eba~%d" % index for index in range(1, 10)]
+)
 
-def _validate_repo_path(path: PathLike) -> None:
+
+def _validate_repo_path(path: PathLike, mode: Union[int, None] = None) -> None:
     """Reject unsafe tree/index paths without normalizing away their components.
 
     Protect Git metadata aliases on NTFS and HFS even when writing on another
     platform. Other POSIX filename characters, including newlines, remain valid.
+
+    :param mode:
+        Mode of the index or tree entry the path belongs to, where one is known.
+        Git refuses a symbolic link that aliases ``.gitmodules``, since the
+        submodule configuration would then be read through the link, so that
+        name is only rejected once the mode says the entry is a link.
     """
     name = os.fspath(path)
     if not name or "\0" in name or ntpath.splitdrive(name)[0] or name.startswith("/"):
@@ -406,6 +419,11 @@ def _validate_repo_path(path: PathLike) -> None:
             hfs_name = part.translate(_HFS_IGNORABLES).lower()
             if ntfs_name in (".git", "git~1") or hfs_name == ".git":
                 raise ValueError("Repository path aliases Git metadata: %r" % name)
+            aliases_gitmodules = (
+                ntfs_name == ".gitmodules" or hfs_name == ".gitmodules" or ntfs_name in _NTFS_DOTGITMODULES_SHORT_NAMES
+            )
+            if aliases_gitmodules and mode is not None and stat.S_ISLNK(mode):
+                raise ValueError("Symbolic link aliases the submodule configuration: %r" % name)
 
 
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:

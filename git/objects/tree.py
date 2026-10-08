@@ -110,7 +110,7 @@ class TreeModifier:
         :return:
             self
         """
-        _validate_tree_entry_name(name)
+        _validate_tree_entry_name(name, mode)
         if (mode >> 12) not in Tree._map_id_to_type:
             raise ValueError("Invalid object type according to mode %o" % mode)
 

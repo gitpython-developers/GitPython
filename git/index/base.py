@@ -729,7 +729,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 raise TypeError("Invalid Type: %r" % item)
         # END for each item
         for entry in entries:
-            _validate_repo_path(entry.path)
+            _validate_repo_path(entry.path, entry.mode)
         return paths, entries
 
     def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
@@ -1026,7 +1026,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # FINALIZE
         # Add the new entries to this instance.
         for entry in entries_added:
-            _validate_repo_path(entry.path)
+            _validate_repo_path(entry.path, entry.mode)
         for entry in entries_added:
             self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
 

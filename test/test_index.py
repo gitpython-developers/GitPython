@@ -189,10 +189,10 @@ def _make_hook(git_dir, name, content, make_exec=True):
     return hp
 
 
-def _raw_index(path):
+def _raw_index(path, mode=0o100644):
     """Build an index without using the writer under test."""
     name = path.encode("utf-8")
-    entry = struct.pack(">10L20sH", 0, 0, 0, 0, 0, 0, 0o100644, 0, 0, 0, b"a" * 20, min(len(name), 0xFFF)) + name
+    entry = struct.pack(">10L20sH", 0, 0, 0, 0, 0, 0, mode, 0, 0, 0, b"a" * 20, min(len(name), 0xFFF)) + name
     entry += b"\0" * (8 - len(entry) % 8)
     data = b"DIRC" + struct.pack(">LL", 2, 1) + entry
     return data + sha1(data).digest()
@@ -339,6 +339,33 @@ class TestIndex(TestBase):
         entry = IndexEntry((0o100644, b"a" * 20, 0, path))
         with pytest.raises(ValueError):
             write_cache([entry], BytesIO())
+
+    @ddt.data(
+        ".gitmodules",
+        ".GITMODULES",
+        ".gitmodules.",
+        ".gitmodules ",
+        ".gi\u200ctmodules",
+        "gitmod~1",
+        "gitmod~4",
+        "gi7eba~1",
+        "gi7eba~9",
+        "sub/.gitmodules",
+    )
+    def test_index_reader_and_writer_reject_gitmodules_symlinks(self, path):
+        """An entry that turns .gitmodules into a symbolic link is rejected, while the
+        same name stays valid for a regular file. The spellings are those
+        `git update-index --add --cacheinfo 120000,<sha>,<path>` refuses on git 2.52.0."""
+        with pytest.raises(ValueError):
+            read_cache(BytesIO(_raw_index(path, mode=0o120000)))
+        with pytest.raises(ValueError):
+            write_cache([IndexEntry((0o120000, b"a" * 20, 0, path))], BytesIO())
+
+        assert next(iter(read_cache(BytesIO(_raw_index(path)))[1])) == (path, 0)
+        stream = BytesIO()
+        write_cache([IndexEntry((0o100644, b"a" * 20, 0, path))], stream)
+        stream.seek(0)
+        assert next(iter(read_cache(stream)[1])) == (path, 0)
 
     def test_valid_unusual_index_names_round_trip(self):
         names = ["a b", "a\nb", "a\tb", "name:value", "dir/.gitignore", "café"]

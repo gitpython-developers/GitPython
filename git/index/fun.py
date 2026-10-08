@@ -279,7 +279,7 @@ def write_cache(
 
     # Body
     for entry in entries:
-        _validate_repo_path(entry.path)
+        _validate_repo_path(entry.path, entry.mode)
         beginoffset = tell()
         write(entry.ctime_bytes)  # ctime
         write(entry.mtime_bytes)  # mtime
@@ -394,7 +394,7 @@ def read_cache(
         if terminator != b"\0":
             raise ValueError("Unterminated index entry path")
         path = path_bytes.decode(defenc)
-        _validate_repo_path(path)
+        _validate_repo_path(path, mode)
 
         real_size = (tell() - beginoffset + 7) & ~7
         padding_size = beginoffset + real_size - tell()
@@ -462,7 +462,7 @@ def write_tree_from_cache(
     """
     if si == 0:
         for entry in entries[sl]:
-            _validate_repo_path(entry.path)
+            _validate_repo_path(entry.path, entry.mode)
     tree_items: List["TreeCacheTup"] = []
 
     ci = sl.start
@@ -510,7 +510,7 @@ def write_tree_from_cache(
 
 
 def _tree_entry_to_baseindexentry(tree_entry: "TreeCacheTup", stage: int) -> BaseIndexEntry:
-    _validate_repo_path(tree_entry[2])
+    _validate_repo_path(tree_entry[2], tree_entry[1])
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 

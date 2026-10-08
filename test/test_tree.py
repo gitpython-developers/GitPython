@@ -138,6 +138,28 @@ class TestTree(TestBase):
         with pytest.raises(ValueError):
             tree_to_stream([(b"a" * 20, 0o100644, name)], BytesIO().write)
 
+    @ddt.data(".gitmodules", ".GITMODULES", ".gitmodules ", ".gi\u200ctmodules", "gitmod~1", "gi7eba~1")
+    def test_gitmodules_symlink_entries_are_rejected(self, name):
+        """A symbolic link named like the submodule configuration would make Git read
+        it from outside the repository, so such an entry is refused in both
+        directions. A regular file with the same name is the normal case."""
+        symlink_mode = 0o120000
+        cache = []
+        with pytest.raises(ValueError):
+            TreeModifier(cache).add(b"a" * 20, symlink_mode, name)
+        assert not cache
+        with pytest.raises(ValueError):
+            tree_to_stream([(b"a" * 20, symlink_mode, name)], BytesIO().write)
+        raw = b"120000 " + name.encode() + b"\0" + b"a" * 20
+        with pytest.raises(ValueError):
+            tree_entries_from_data(raw)
+
+        TreeModifier(cache).add(b"a" * 20, 0o100644, name)
+        assert cache == [(b"a" * 20, 0o100644, name)]
+        data = BytesIO()
+        tree_to_stream(cache, data.write)
+        assert tree_entries_from_data(data.getvalue()) == cache
+
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")
         num_recursive = 0
