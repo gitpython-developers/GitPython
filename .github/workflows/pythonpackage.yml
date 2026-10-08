@@ -34,6 +34,16 @@ jobs:
           experimental: true
         - python-version: "3.15t"
           experimental: true
+        - os-type: ubuntu
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
+        - os-type: macos
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
         - os-type: windows
           python-version: "3.12"
           backend: gix
@@ -65,13 +75,27 @@ jobs:
           test-requirements.txt
           gix-requirements.txt
 
-    - name: Prepare Rust for GixPython's Windows source build
+    - name: Prepare Rust for GixPython source builds
       if: matrix.backend == 'gix'
+      id: rust
       run: |
         # GixPython 0.1.0 publishes macOS wheels only and needs Rust >= 1.89.
         rustup toolchain install stable --profile minimal
         rustup default stable
         rustc --version
+        echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache GixPython Cargo dependencies and build output
+      if: matrix.backend == 'gix'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ${{ runner.temp }}/gix-target
+        key: gix-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.rust.outputs.version }}-${{ hashFiles('gix-requirements.txt') }}
+        restore-keys: |
+          gix-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.rust.outputs.version }}-
 
     - name: Set up WSL (Windows)
       if: matrix.os-type == 'windows'
@@ -115,6 +139,8 @@ jobs:
       env:
         EXTRAS: ${{ matrix.backend == 'gix' && 'test,gix' || 'test' }}
         EXPECTED_BACKEND: ${{ matrix.backend }}
+        # Keep Cargo output when pip removes its temporary source directory.
+        CARGO_TARGET_DIR: ${{ runner.temp }}/gix-target
 
     - name: Show POSIX file ownership
       # Linux and macOS only. On Windows, Git Bash's `ls -ld` reports a

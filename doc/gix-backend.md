@@ -18,8 +18,9 @@ uv pip install --python .tox/gix/bin/python --editable '.[test,gix]'
 
 GixPython 0.1.0 publishes macOS wheels. On Windows and Linux, installation
 builds the released source distribution and requires Rust 1.89 or newer and
-a platform C/C++ toolchain. Windows CI uses the runner's MSVC tools and a
-stable Rust toolchain, with pip's built-wheel cache enabled.
+a platform C/C++ toolchain. The full-suite Gix CI jobs prepare a stable Rust
+toolchain and cache pip's built wheels, Cargo dependencies and compilation
+output.
 
 Python extras add dependencies; they do not leave a runtime feature bit.
 GitPython selects this backend when `gix` can be imported. Installing GixPython
@@ -848,16 +849,25 @@ Add each conversion with a no-subprocess check and a Git parity check where
 practical, in its own commit. Update this ledger when a limitation changes;
 the runtime report's reason should point to the corresponding entry.
 
-## Windows validation
+## CI coverage
 
-The [Python package workflow](../.github/workflows/pythonpackage.yml) adds a
-Windows/Python 3.12 Gix job while preserving all 28 CLI combinations and their
-existing check names. It installs `.[test,gix]`, verifies the selected backend
-and runs the full suite
-with the same coverage and pytest options. Every job retains JUnit results
+The [Python package workflow](../.github/workflows/pythonpackage.yml) adds one
+Python 3.12 Gix job each on Ubuntu, macOS and Windows, preserving all 28 CLI
+combinations and their existing check names. It installs `.[test,gix]`, verifies
+the selected backend and runs the full suite with the same coverage and pytest
+options. Every job retains JUnit results
 and `--backend-report` operation counts under its `tests-OS-PYTHON-BACKEND`
-artifact, and prints the 30 slowest test durations. The extra Gix job does not
-duplicate the documentation build.
+artifact, and prints the 30 slowest test durations. The extra Gix jobs do not
+duplicate the documentation build. Their check names include `gix`, such as
+`test (ubuntu, 3.12, gix)`.
+
+On platforms without a matching wheel, pip builds the official source release.
+`CARGO_TARGET_DIR` keeps compilation output outside pip's temporary source
+directory. The Cargo cache distinguishes OS, architecture, Python and Rust
+versions and `gix-requirements.txt`; a release change can reuse dependencies
+from the same platform and toolchain.
+
+## Windows validation
 
 Local Windows checks use CPython 3.12.13, Git 2.55.0.windows.3 and GixPython
 0.1.0 built from the released source distribution. The installed extension
