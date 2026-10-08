@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import ast
+import contextlib
 from datetime import datetime
 import os
 import pathlib
@@ -11,7 +12,6 @@ import pickle
 import stat
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from unittest import SkipTest, mock
@@ -43,6 +43,7 @@ from git.util import (
     rmtree,
 )
 
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import TestBase, requires_symlinks, with_rw_repo
 
 
@@ -143,15 +144,16 @@ class TestRmtree:
             rwx = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
             if not dir2.exists():
                 return
-            if symlink.exists():
-                try:
-                    # Try lchmod first, if the platform supports it.
-                    symlink.lchmod(rwx)
-                except NotImplementedError:
-                    # The platform (probably win32) doesn't support lchmod; fall back to chmod.
-                    symlink.chmod(rwx)
-            dir2.chmod(rwx)
-            rmtree(dir2)
+            with contextlib.suppress(OSError):
+                if symlink.exists():
+                    try:
+                        # Try lchmod first, if the platform supports it.
+                        symlink.lchmod(rwx)
+                    except NotImplementedError:
+                        # The platform (probably win32) doesn't support lchmod; fall back to chmod.
+                        symlink.chmod(rwx)
+                dir2.chmod(rwx)
+            cleanup_directory(dir2)
 
         request.addfinalizer(preen_dir2)
 
@@ -421,7 +423,7 @@ class TestUtils(TestBase):
 
     @ddt.data("my-lock-file", "my-lock-file-\u0394", "\u0394/my-lock-file", "\U0001f680/my-lock-file")
     def test_lock_file(self, filename):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, filename)
             os.makedirs(os.path.dirname(my_file), exist_ok=True)
             lock_file = LockFile(my_file)
@@ -452,7 +454,7 @@ class TestUtils(TestBase):
             lock_file._release_lock()
 
     def test_lock_file_rejects_embedded_nul(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = LockFile(my_file + "\0suffix")
             self.assertRaises(ValueError, lock_file._obtain_lock_or_raise)
@@ -462,7 +464,7 @@ class TestUtils(TestBase):
     @ddt.data(False, True)
     @requires_symlinks
     def test_lock_file_does_not_follow_a_symlink(self, target_exists):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             outside = os.path.join(tdir, "outside-the-lock")
             content = b"Do not modify the symlink target."
@@ -483,7 +485,7 @@ class TestUtils(TestBase):
                 assert not os.path.exists(outside)
 
     def test_lock_file_is_obtained_by_a_single_holder(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             racers = 8
             at_the_line = threading.Barrier(racers)
@@ -513,7 +515,7 @@ class TestUtils(TestBase):
                     lock_file._release_lock()
 
     def test_blocking_lock_file(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = BlockingLockFile(my_file)
             lock_file._obtain_lock()

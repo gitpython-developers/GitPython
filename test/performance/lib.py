@@ -10,8 +10,8 @@ import tempfile
 
 from git import Repo
 from git.db import GitCmdObjectDB, GitDB
-from git.util import rmtree
 
+from test.cleanup import cleanup_directory
 from test.lib import TestBase
 
 # { Invariants
@@ -51,9 +51,9 @@ class TestBigRepoR(TestBase):
         self.puregitrorepo = Repo(repo_path, odbt=GitDB, search_parent_directories=True)
 
     def tearDown(self):
-        self.gitrorepo.git.clear_cache()
+        self.gitrorepo.close()
         self.gitrorepo = None
-        self.puregitrorepo.git.clear_cache()
+        self.puregitrorepo.close()
         self.puregitrorepo = None
 
 
@@ -72,12 +72,15 @@ class TestBigRepoRW(TestBigRepoR):
 
     def tearDown(self):
         super().tearDown()
+        dirname = None
         if self.gitrwrepo is not None:
-            rmtree(self.gitrwrepo.working_dir)
-            self.gitrwrepo.git.clear_cache()
+            dirname = self.gitrwrepo.working_dir
+            self.gitrwrepo.close()
         self.gitrwrepo = None
-        self.puregitrwrepo.git.clear_cache()
+        self.puregitrwrepo.close()
         self.puregitrwrepo = None
+        if dirname is not None:
+            cleanup_directory(dirname)
 
 
 # } END base classes

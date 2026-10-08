@@ -3,8 +3,8 @@
 
 import gc
 from pathlib import Path
-import tempfile
 
+from test.cleanup import TemporaryDirectory
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
@@ -33,7 +33,7 @@ class QuickDoc(TestBase):
     def test_cloned_repo_object(self, local_dir):
         from git import Repo
 
-        source = tempfile.TemporaryDirectory(prefix="gitpython-quickstart-")
+        source = TemporaryDirectory(prefix="gitpython-quickstart-")
         self.addCleanup(source.cleanup)
         with Repo.init(source.name) as fixture:
             for path in ("dir1/file1.txt", "dir1/file2.txt", "Downloads/file3.txt", "file4.txt"):

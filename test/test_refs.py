@@ -28,7 +28,8 @@ from git import (
 )
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
-from git.util import Actor, rmtree
+from git.util import Actor
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 
 
@@ -43,8 +44,8 @@ class TestRefs(TestBase):
         try:
             yield repo
         finally:
-            repo.git.clear_cache()
-            rmtree(repo_dir)
+            repo.close()
+            cleanup_directory(repo_dir)
 
     def test_from_path(self):
         # Should be able to create any reference directly.
@@ -281,7 +282,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD")
     def test_head_checkout_rejects_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
             for option_name in ("pathspec_from_file", "pathspec_from"):
@@ -296,7 +297,7 @@ class TestRefs(TestBase):
                     branch.checkout()
 
     def test_cloned_head_checkout_rejects_pathspec_from_file(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             base_dir = Path(tdir)
             with self._repo_with_initial_commit(base_dir) as source:
                 branch = source.create_head("--pathspec-from-file=pathspecs")
@@ -312,7 +313,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD")
     def test_head_reset_rejects_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
             for option_name in ("pathspec_from_file", "pathspec_from"):
@@ -330,7 +331,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD")
     def test_head_commands_allow_explicit_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"CHANGES\0")
             options = {
@@ -754,7 +755,7 @@ class TestRefs(TestBase):
             self.assertRaises(BadName, self.rorepo.commit, f"../../{ref_file_name}")
 
     def test_reference_create_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -763,7 +764,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_create_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -772,7 +773,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_set_reference_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -781,7 +782,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_rename_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_move.txt"
@@ -792,7 +793,7 @@ class TestRefs(TestBase):
                 assert Path(ref.abspath).is_file()
 
     def test_symbolic_reference_delete_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_delete.txt"
@@ -802,7 +803,7 @@ class TestRefs(TestBase):
                 assert outside_path.read_text(encoding="utf-8") == "do not delete\n"
 
     def test_symbolic_reference_log_append_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_reflog.txt"
@@ -815,7 +816,7 @@ class TestRefs(TestBase):
 
     @requires_symlinks
     def test_symbolic_reference_set_reference_rejects_symlink_escape(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_dir = base_dir / "outside_refs"
@@ -834,7 +835,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_remote_reference_delete_cleanup_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             git_dir = base_dir / "repo" / ".git"
             git_dir.mkdir(parents=True)
@@ -914,7 +915,7 @@ class TestRefs(TestBase):
 
 class TestSymbolicReferenceSecurity(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo = Repo.init(Path(self.tmp.name) / "repo")
         self.addCleanup(self.repo.close)

@@ -9,7 +9,6 @@ import os.path as osp
 from pathlib import Path
 import shutil
 import sys
-import tempfile
 from types import SimpleNamespace
 from unittest import mock, skipUnless
 
@@ -30,6 +29,7 @@ from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux, rmtree
 
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
 
@@ -158,6 +158,36 @@ def test_submodule_cli_lifecycle(tmp_path, monkeypatch, object_format, ref_forma
         assert not parent.submodules
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows locks files against directory renames")
+@pytest.mark.parametrize("use_short_path", [False, True])
+def test_submodule_reconnect_with_open_metadata_file(tmp_path, use_short_path):
+    root = tmp_path
+    if use_short_path:
+        import ctypes
+
+        buffer = ctypes.create_unicode_buffer(32768)
+        if not ctypes.windll.kernel32.GetShortPathNameW(str(root), buffer, len(buffer)):
+            raise ctypes.WinError()
+        if buffer.value == str(root):
+            pytest.skip("This filesystem does not provide Windows 8.3 path aliases")
+        root = Path(buffer.value)
+        assert root.samefile(tmp_path)
+
+    checkout = root / "checkout"
+    metadata = tmp_path / "metadata"
+    with git.Repo.init(checkout, separate_git_dir=metadata, allow_unsafe_options=True) as repo:
+        # Like a retained pack mapping, this open file prevents renaming metadata.
+        object_file = metadata / "objects" / "held-open"
+        object_file.touch()
+        with object_file.open("rb"):
+            Submodule._connect_module(checkout, metadata)
+
+        assert Path(repo.git.rev_parse("--absolute-git-dir")).samefile(metadata)
+        with git.Repo(checkout) as reopened:
+            assert Path(reopened.working_tree_dir).samefile(checkout)
+            assert Path(reopened.git_dir).samefile(metadata)
+
+
 @pytest.fixture(scope="module")
 def movable_submodule_baseline(tmp_path_factory):
     """Prepare each logical-name layout once; only copies are handed to tests."""
@@ -243,7 +273,10 @@ def prepared_rejection_layout(tmp_path_factory, movable_submodule_baseline):
         try:
             yield root
         finally:
-            rmtree(root)
+            if not cleanup_directory(root):
+                # A locked leftover cannot be reused by the next test. Rebuild at
+                # a fresh path instead of failing this test or contaminating another.
+                del layouts[key]
 
     return restore
 
@@ -269,6 +302,30 @@ def test_prepared_rejection_layout_restores_private_state(prepared_rejection_lay
         assert restored == root
         assert (root / "link/file").read_text(encoding="utf-8") == "content"
         assert not (root / "extra").exists()
+
+
+def test_prepared_rejection_layout_discards_locked_copy(prepared_rejection_layout, monkeypatch):
+    def prepare(root, sm):
+        pass
+
+    unlink = os.unlink
+
+    def unlink_unless_locked(path, *args, **kwargs):
+        if Path(path).name == "locked-copy":
+            raise PermissionError("temporary fixture is in use")
+        return unlink(path, *args, **kwargs)
+
+    with monkeypatch.context() as patcher:
+        patcher.setattr(os, "unlink", unlink_unless_locked)
+        with prepared_rejection_layout("locked-copy", prepare) as old_root:
+            (old_root / "locked-copy").touch()
+            (old_root / "parent/module/file").write_text("changed", encoding="utf-8")
+
+    assert old_root.exists()
+    with prepared_rejection_layout("locked-copy", prepare) as root:
+        assert root != old_root
+        assert not (root / "locked-copy").exists()
+        assert (root / "parent/module/file").read_text(encoding="utf-8") == "content"
 
 
 @pytest.fixture
@@ -2535,7 +2592,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -2549,7 +2606,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -2565,7 +2622,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -2581,7 +2638,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -2618,7 +2675,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -2633,7 +2690,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -2650,7 +2707,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -2667,7 +2724,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             payload = "--single-branch --config protocol.ext.allow=always"
             submodule = Submodule(rw_repo, b"\0" * 20, name="new", path="new", url=str(tmp_dir))
@@ -2678,7 +2735,7 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [

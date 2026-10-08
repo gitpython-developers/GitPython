@@ -40,6 +40,7 @@ from git import (
 from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError
 from git.repo.fun import find_worktree_git_dir, touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
+from test.cleanup import TemporaryDirectory
 from test.lib import PathLikeMock, TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo
 
 
@@ -75,11 +76,11 @@ class TestRepo(TestBase):
         # Ideally this tests a directory that is outside of any repository. In the rare
         # case tempfile.gettempdir() is inside a repo, this still passes, but tests the
         # same scenario as test_new_should_raise_on_invalid_repo_location_within_repo.
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
 
     def test_init_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             template_dir = osp.join(tdir, "template")
             os.mkdir(template_dir)
             unsafe_options = [
@@ -95,7 +96,7 @@ class TestRepo(TestBase):
                 assert not osp.exists(repo_dir)
 
     def test_init_allows_explicitly_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             template_dir = osp.join(tdir, "template")
             os.mkdir(template_dir)
             repo = Repo.init(
@@ -114,7 +115,7 @@ class TestRepo(TestBase):
         self.assertRaises(InvalidGitRepositoryError, Repo, subdir)
 
     def test_new_should_raise_on_non_existent_path(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             nonexistent = osp.join(tdir, "foobar")
             self.assertRaises(NoSuchPathError, Repo, nonexistent)
 
@@ -128,7 +129,7 @@ class TestRepo(TestBase):
             "bare": {"objects": None, "refs": None, "HEAD": "ref: refs/heads/main\n"},
         }
 
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             for name, entries in layouts.items():
                 path = Path(tdir) / name
                 Repo.init(path).close()
@@ -144,7 +145,7 @@ class TestRepo(TestBase):
                     assert osp.samefile(Repo(path).git_dir, expected_git_dir)
 
     def test_repo_discovery_honors_explicit_git_dir(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             git_dir = Path(tdir) / "repo.git"
             Repo.init(git_dir, bare=True).close()
             Repo.init(git_dir / ".git", bare=True).close()
@@ -161,7 +162,7 @@ class TestRepo(TestBase):
                     assert osp.samefile(repo.git_dir, worktree / ".git")
 
     def test_repo_discovery_uses_native_worktree_configuration(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             root = Path(tdir)
             repo = Repo.init(root / "main")
             configured = root / "configured"
@@ -181,7 +182,7 @@ class TestRepo(TestBase):
                     assert osp.samefile(reopened.working_tree_dir, root / "main")
 
     def test_repo_discovery_rejects_invalid_metadata(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             (path / "objects").mkdir()
             (path / "refs").mkdir()
@@ -215,7 +216,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_repo_discovery_rejects_dangling_commondir(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             (path / "objects").mkdir()
             (path / "refs").mkdir()
@@ -226,7 +227,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_repo_discovery_rejects_dotgit_stat_errors(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             Repo.init(path).close()
             child = path / "child"
@@ -236,7 +237,7 @@ class TestRepo(TestBase):
             self.assertRaises(InvalidGitRepositoryError, Repo, child, search_parent_directories=True)
 
     def test_gitfile_resolution_does_not_read_storage_in_python(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             dotgit = Path(tdir) / ".git"
             content = b"gitdir: target\n"
             dotgit.write_bytes(content)
@@ -248,7 +249,7 @@ class TestRepo(TestBase):
             reader.assert_not_called()
 
     def test_relative_gitfile_resolution_uses_gitfile_directory(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             root = Path(tdir)
             with Repo.init(root / "source") as source, Repo.init(root / "unrelated") as unrelated:
                 checkout = root / "checkout"
@@ -262,7 +263,7 @@ class TestRepo(TestBase):
                     assert osp.samefile(find_worktree_git_dir(dotgit), source.git_dir)
 
     def test_repo_discovery_uses_storage_environment(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             git_dir = Path(tdir) / "git"
             common_dir = Path(tdir) / "common"
             git_dir.mkdir()
@@ -509,7 +510,7 @@ class TestRepo(TestBase):
         repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE))
 
     def test_init(self):
-        with tempfile.TemporaryDirectory() as tdir, cwd(tdir):
+        with TemporaryDirectory() as tdir, cwd(tdir):
             git_dir_rela = "repos/foo/bar.git"
             git_dir_abs = osp.abspath(git_dir_rela)
 
@@ -688,7 +689,7 @@ class TestRepo(TestBase):
         os.remove(stream.name)  # Do it this way so we can inspect the file on failure.
 
     def test_archive_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.archive(io.BytesIO(), "0.1.6", exec=f"touch {output_marker}")
@@ -702,7 +703,7 @@ class TestRepo(TestBase):
                 self.rorepo.archive(io.BytesIO(), "0.1.6", add_virtual_file="file:content")
 
     def test_archive_rejects_unsafe_remote_protocol(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeProtocolError):
                 self.rorepo.archive(io.BytesIO(), "HEAD", remote=f"ext::sh -c touch% {output_marker}")
@@ -734,7 +735,7 @@ class TestRepo(TestBase):
             self.rorepo.archive(io.BytesIO(), "HEAD", remote=FalseyRemote())
 
     def test_iter_commits_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             target = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 list(self.rorepo.iter_commits(f"--output={target}", max_count=1))
@@ -789,7 +790,7 @@ class TestRepo(TestBase):
         assert nml, "There should at least be one blame commit that contains multiple lines"
 
     def test_blame_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             for option in ("--output", "--contents", "-S", "-wS", "--ignore-revs-file"):
                 with self.assertRaises(UnsafeOptionError):
@@ -799,14 +800,14 @@ class TestRepo(TestBase):
             assert not osp.exists(output_marker)
 
     def test_blame_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.blame("HEAD", "README.md", output=output_marker)
             assert not osp.exists(output_marker)
 
     def test_blame_rejects_unsafe_rev_opts(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.blame("HEAD", "README.md", rev_opts=(f"--output={output_marker}",))
@@ -1643,7 +1644,7 @@ class TestRepo(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_command_injection(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             unexpected_file = tmp_dir / "pwn"
             assert not unexpected_file.exists()
@@ -1657,7 +1658,7 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_command_injection(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
             unexpected_file = tmp_dir / "pwn"
@@ -1670,7 +1671,7 @@ class TestRepo(TestBase):
             assert not unexpected_file.exists()
 
     def test_ignored_items_reported(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
 
@@ -1689,7 +1690,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_ignored_raises_error_w_symlink(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
 

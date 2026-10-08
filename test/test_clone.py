@@ -5,13 +5,13 @@ import os
 import os.path as osp
 import pathlib
 import sys
-import tempfile
 from unittest import skip
 from unittest import mock
 
 from git import Git, GitCommandError, Repo
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 
+from test.cleanup import TemporaryDirectory
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
 from pathlib import Path
@@ -123,7 +123,7 @@ class TestClone(TestBase):
         )
 
     def test_clone_from_with_path_contains_unicode(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with TemporaryDirectory() as tmpdir:
             unicode_dir_name = "\u0394"
             path_with_unicode = os.path.join(tmpdir, unicode_dir_name)
             os.makedirs(path_with_unicode)
@@ -161,7 +161,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -204,7 +204,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_abbreviated(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -229,7 +229,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             payload = "--single-branch --config protocol.ext.allow=always"
 
@@ -247,7 +247,7 @@ class TestClone(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -275,7 +275,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_safe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             options = [
                 "--depth=1",
@@ -292,7 +292,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -327,7 +327,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             payload = "--single-branch --config protocol.ext.allow=always"
 
@@ -345,7 +345,7 @@ class TestClone(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -377,7 +377,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_safe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             options = [
                 "--depth=1",
@@ -391,7 +391,7 @@ class TestClone(TestBase):
                 assert destination.exists()
 
     def test_clone_from_unsafe_protocol(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -442,7 +442,7 @@ class TestClone(TestBase):
                 assert Git.polish_url(url, is_cygwin=True, expand_vars=False) == url
 
     def test_clone_from_unsafe_protocol_allowed(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -457,7 +457,7 @@ class TestClone(TestBase):
                 assert not tmp_file.exists()
 
     def test_clone_from_unsafe_protocol_allowed_and_enabled(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [

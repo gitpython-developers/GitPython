@@ -21,6 +21,7 @@ from test.test_commit import TestCommitSerialization
 class TestPerformance(TestBigRepoRW, TestCommitSerialization):
     def tearDown(self):
         gc.collect()
+        super().tearDown()
 
     # ref with about 100 commits in its history.
     ref_100 = "0.1.6"

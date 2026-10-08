@@ -37,6 +37,7 @@ from git.index.typ import BaseIndexEntry, IndexEntry
 from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
+from test.cleanup import TemporaryDirectory
 from test.lib import PathLikeMock, TestBase, VirtualEnvironment, fixture, fixture_path, with_rw_directory, with_rw_repo
 from test.lib.helper import symlinks_supported, xfail_if_raises
 
@@ -71,7 +72,7 @@ def _raw_index(path, mode=0o100644):
 class TestIndex(TestBase):
     @with_rw_repo("HEAD")
     def test_checkout_rejects_unsafe_prefix(self, rw_repo):
-        with tempfile.TemporaryDirectory() as target:
+        with TemporaryDirectory() as target:
             with self.assertRaises(UnsafeOptionError):
                 rw_repo.index.checkout(prefix=f"{target}/")
 
@@ -80,7 +81,7 @@ class TestIndex(TestBase):
 
     @with_rw_repo("HEAD")
     def test_remove_rejects_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
             for option_name in ("pathspec_from_file", "pathspec_from"):
@@ -93,7 +94,7 @@ class TestIndex(TestBase):
 
     @with_rw_repo("HEAD")
     def test_remove_allows_explicit_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"CHANGES\0")
             removed = rw_repo.index.remove(
@@ -196,7 +197,7 @@ class TestIndex(TestBase):
         "a\\.git\\config",
     )
     def test_index_reader_and_writer_reject_unsafe_paths(self, path):
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             index_path = Path(directory, "index")
             index_path.write_bytes(_raw_index(path))
             if "\0" in path:
@@ -280,7 +281,7 @@ class TestIndex(TestBase):
                 unsupported.append("a\\b")
             else:
                 names.append("a\\b")
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
             index.entries = {(name, 0): IndexEntry((0o100644, b"a" * 20, 0, name)) for name in names}
             index.write()
@@ -303,7 +304,7 @@ class TestIndex(TestBase):
                 return ""
             return call(git, command, *args, **kwargs)
 
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
             index.entries = {("before", 0): IndexEntry((0o100644, b"a" * 20, 0, "before"))}
             index.write()
@@ -317,7 +318,7 @@ class TestIndex(TestBase):
 
     def test_long_index_names_are_fully_validated(self):
         prefix = "a/" + "nested/" * 650
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             index_path = Path(directory, "index")
             index_path.write_bytes(_raw_index(prefix + "../outside"))
             with pytest.raises((ValueError, GitCommandError)):
@@ -1524,7 +1525,7 @@ class TestIndex(TestBase):
     @ddt.data(0, 5)
     def test_unsupported_index_versions_fail_even_with_optimization(self, version):
         data = b"DIRC" + struct.pack(">LL", version, 0)
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             path = Path(directory, "index")
             path.write_bytes(data + sha1(data).digest())
             with pytest.raises(GitCommandError):
@@ -1533,7 +1534,7 @@ class TestIndex(TestBase):
     @ddt.data(b"link", b"test")
     def test_unsupported_mandatory_index_extensions_fail_closed(self, signature):
         data = b"DIRC" + struct.pack(">LL", 2, 0) + signature + struct.pack(">L", 0)
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             path = Path(directory, "index")
             path.write_bytes(data + sha1(data).digest())
             with pytest.raises(GitCommandError):

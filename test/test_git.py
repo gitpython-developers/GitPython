@@ -28,6 +28,7 @@ from git import Git, GitCommandError, GitCommandNotFound, Repo, _backend, cmd, r
 from git.exc import UnsafeOptionError, UnsupportedOperation
 from git.util import cwd, finalize_process
 
+from test.cleanup import TemporaryDirectory
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
@@ -74,7 +75,7 @@ def _fake_git(*version_info):
     fake_version = ".".join(map(str, version_info))
     fake_output = f"git version {fake_version} (fake)"
 
-    with tempfile.TemporaryDirectory() as tdir:
+    with TemporaryDirectory() as tdir:
         if sys.platform == "win32":
             fake_git = Path(tdir, "fake-git.cmd")
             script = f"@echo {fake_output}\n"
@@ -344,7 +345,7 @@ class TestGit(TestBase):
     )
     @ddt.data(False, True)
     def test_timeout_kills_direct_child(self, without_pgrep):
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             marker = Path(directory, "child-survived")
             child_code = (
                 "import pathlib, sys, time; time.sleep(2); "

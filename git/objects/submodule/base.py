@@ -460,8 +460,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 except FileNotFoundError:
                     pass
                 raise
-            cls._connect_module(module_checkout_path, module_abspath)
             clone.close()
+            cls._connect_module(module_checkout_path, module_abspath)
             clone = git.Repo(module_checkout_path)
 
         return clone

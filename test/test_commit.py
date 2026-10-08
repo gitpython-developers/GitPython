@@ -19,6 +19,7 @@ from git.exc import UnsafeOptionError
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
+from test.cleanup import TemporaryDirectory
 from test.lib import (
     StringProcessAdapter,
     TestBase,
@@ -290,12 +291,12 @@ class TestCommit(TestCommitSerialization):
         self.assertRaises(ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw")
 
     def test_iter_items_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             marker = osp.join(tdir, "pwn")
             self.assertRaises(UnsafeOptionError, Commit.iter_items, self.rorepo, f"--output={marker}")
 
     def test_iter_items_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 list(Commit.iter_items(self.rorepo, "HEAD", output=marker))

@@ -33,7 +33,8 @@ from git import (
 )
 from git.cmd import Git
 from git.exc import UnsafeOptionError, UnsafeProtocolError
-from git.util import HIDE_WINDOWS_FREEZE_ERRORS, IterableList, rmtree
+from git.util import HIDE_WINDOWS_FREEZE_ERRORS, IterableList
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import (
     GIT_DAEMON_PORT,
     TestBase,
@@ -330,7 +331,8 @@ class TestRemote(TestBase):
             # ttys.
             res = fetch_and_test(other_origin)
         finally:
-            rmtree(other_repo_dir)
+            other_repo.close()
+            cleanup_directory(other_repo_dir)
         # END test and cleanup
 
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
@@ -651,7 +653,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -666,7 +668,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -681,7 +683,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -696,7 +698,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -711,7 +713,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -730,7 +732,7 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -744,7 +746,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -759,7 +761,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -776,7 +778,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -801,7 +803,7 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -816,7 +818,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -831,7 +833,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -848,7 +850,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -873,7 +875,7 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -888,7 +890,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -903,7 +905,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -920,7 +922,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -948,7 +950,7 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_push_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -967,7 +969,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_ls_remote_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -1001,7 +1003,7 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_ls_remote_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]

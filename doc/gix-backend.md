@@ -54,9 +54,11 @@ The prepared environments in this checkout are `.venv` (CLI) and `.tox/gix`
 ```
 
 The runner uses local version tags, creates an isolated Git configuration,
-prepares the historical test fixture inside a temporary shared clone, and
-disables package-index access. Tests use local repositories, including the
-tutorial example. The suite needs loopback sockets for its Git daemon and
+prepares the historical test fixture inside a temporary shared clone, gives
+pytest a separate temporary root for each run, and disables package-index
+access. Cleanup of these isolated directories is best-effort, so a locked
+leftover cannot change pytest's exit status. Tests use local repositories,
+including the tutorial example. The suite needs loopback sockets for its Git daemon and
 permission to inspect its own child processes. It does not need a remote Git
 server. Missing local tags or packages are errors, not invitations to download.
 
@@ -581,7 +583,7 @@ candidates, not proof that a shared fixture is safe in every execution order.
 | --- | --- | --- |
 | 166 | `TExc` (157) and `TestActor` (9) inherit repository-building `TestBase`. | Use the existing `TestCase` base without repository setup. |
 | 182 | Three submodule rejection bodies repeatedly build `movable_submodule`, then check snapshots for no mutation. | Prepare logical-name baselines once and copy the parent per case, retaining fresh wrappers and independent writable files. |
-| 51 | Six submodule rejection bodies prepare nested metadata, separate metadata, intermediate/leaf symlinks, or retained metadata before checking rejection. | Cache ten prepared layouts and restore complete copies at their original paths, preserving absolute Git links and symlinks. Cleanup removes the active copy even after failure. |
+| 51 | Six submodule rejection bodies prepare nested metadata, separate metadata, intermediate/leaf symlinks, or retained metadata before checking rejection. | Cache ten prepared layouts and restore complete copies at their original paths, preserving absolute Git links and symlinks. Cleanup is best-effort; a locked active copy invalidates the layout so the next case rebuilds at a fresh path. |
 | 15 | Eight revision-query bodies rebuild the same four-commit graph, refs, index, and reflogs through `rev_parse_repo`. | Prepare the graph once and copy it for every consumer, including mutating cases; recreate repository, branch and commit wrappers. |
 | 8 | Tree lookup bodies clone and check out `0.3.2.1` through `with_rw_repo`. | Read the historical tree directly through the existing class repository, removing clones and checkouts. |
 

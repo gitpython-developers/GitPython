@@ -9,12 +9,13 @@ from pathlib import Path
 import socket
 import subprocess
 import sys
-import tempfile
+
+from cleanup import TemporaryDirectory
 
 
 def main():
     root = Path(__file__).resolve().parent.parent
-    with tempfile.TemporaryDirectory(prefix="gitpython-local-tests-") as directory:
+    with TemporaryDirectory(prefix="gitpython-local-tests-") as directory:
         temporary = Path(directory)
         config = temporary / "gitconfig"
         config.write_text("[user]\nname = GitPython Tests\nemail = tests@example.invalid\n", encoding="utf-8")
@@ -51,7 +52,11 @@ def main():
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
             env["GIT_PYTHON_TEST_GIT_DAEMON_PORT"] = str(listener.getsockname()[1])
-        return subprocess.call([sys.executable, "-m", "pytest", *sys.argv[1:]], cwd=root, env=env)
+        return subprocess.call(
+            [sys.executable, "-m", "pytest", "--basetemp", str(temporary / "pytest"), *sys.argv[1:]],
+            cwd=root,
+            env=env,
+        )
 
 
 if __name__ == "__main__":
