@@ -424,6 +424,49 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(cmt.author.name, "E.Azer Ko�o�o�oculu", cmt.author.name)
         self.assertEqual(cmt.author.email, "azer@kodfabrik.com", cmt.author.email)
 
+    @with_rw_directory
+    def test_identity_cannot_alter_headers(self, rw_dir):
+        """A name or email must not add header lines or present another identity."""
+        rw_repo = Repo.init(osp.join(rw_dir, "test_identity_headers"))
+        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
+        touch(path)
+        rw_repo.index.add([path])
+        tree = rw_repo.index.write_tree()
+        service = Actor("Service", "service@example.com")
+        forged = "committer Forged <forged@example.com> 0 +0000"
+
+        for name, email in (
+            # A line feed ends the header line, so the remainder would become headers
+            # of its own, which Git reads before the committer written after them.
+            ("User <user@example.com> 0 +0000\n" + forged, "user@example.com"),
+            ("User", "user@example.com> 0 +0000\n" + forged),
+            # Angle brackets delimit the email, so these would present another one.
+            ("Forged <forged@example.com>", "user@example.com"),
+            ("User", "forged@example.com> <user@example.com"),
+            ("User>", "user@example.com"),
+            ("User", "<user@example.com"),
+        ):
+            with self.subTest(name=name, email=email):
+                identity = Actor(name, email)
+                with self.assertRaises(ValueError):
+                    Commit.create_from_tree(rw_repo, tree, "message", head=True, author=identity, committer=service)
+                with self.assertRaises(ValueError):
+                    Commit.create_from_tree(rw_repo, tree, "message", head=True, author=service, committer=identity)
+
+        # Nothing was committed along the way.
+        assert not rw_repo.head.is_valid()
+
+        # Other punctuation is still written as given.
+        author = Actor("Dr. J. O'Neil-Smith, Jr.", "user+tag@example.com")
+        commit = Commit.create_from_tree(rw_repo, tree, "message", head=True, author=author, committer=service)
+        stored = Commit(rw_repo, commit.binsha)
+        self.assertEqual(stored.author, author)
+        self.assertEqual(stored.committer, service)
+        self.assertEqual(stored.message, "message")
+
+        with self.assertRaises(ValueError):
+            commit.replace(author=Actor("User\n" + forged, "user@example.com"))
+
     def test_gpgsig(self):
         cmt = self.rorepo.commit()
         with open(fixture_path("commit_with_gpgsig"), "rb") as fd:
