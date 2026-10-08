@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from unittest import mock, skipUnless
 
@@ -367,25 +368,59 @@ class TestGit(TestBase):
             self.assertFalse(marker.exists(), "the direct child survived the timeout")
 
     @skipUnless(sys.platform != "win32", "kill_after_timeout is not supported on Windows")
-    def test_timeout_ps_fallback_selects_only_direct_children(self):
+    @ddt.data(False, True)
+    def test_timeout_ps_fallback_selects_only_descendants(self, cygwin):
         process = mock.MagicMock()
         process.pid = 1234
         process.communicate.return_value = (b"", b"")
         process.returncode = -signal.SIGKILL
         ps = mock.MagicMock()
         ps.__enter__.return_value = ps
-        ps.stdout = io.BytesIO(b"PID PPID\n 321 1\n 5678 1234\n 9012 5678\n\n")
+        ps.stdout = mock.MagicMock()
+        rows = [b"PID PPID\n", b" 321 1\n", b" 5678 1234\n", b" 9012 5678\n"]
+        if cygwin:
+            rows = [
+                b"UID PID PPID TTY STIME COMMAND\n",
+                b"user 321 1 ? 00:00 other\n",
+                b"user 5678 1234 ? 00:00 helper\n",
+                b"user 9012 5678 ? 00:00 helper\n",
+            ]
+        ps.stdout.__iter__.side_effect = lambda: iter(rows)
+
+        def portable_popen(args, **kwargs):
+            if args[0] == "pgrep":
+                raise FileNotFoundError("pgrep is not installed")
+            return ps
 
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch.object(cmd, "safer_popen", return_value=process))
-            stack.enter_context(mock.patch.object(cmd, "Popen", side_effect=[FileNotFoundError, ps]))
+            stack.enter_context(mock.patch.object(cmd, "Popen", side_effect=portable_popen))
+            stack.enter_context(mock.patch.object(cmd.sys, "platform", "cygwin" if cygwin else "linux"))
             kill = stack.enter_context(mock.patch.object(cmd.os, "kill"))
             timer = stack.enter_context(mock.patch.object(cmd.threading, "Timer"))
             # Run the timeout callback synchronously, with no real processes or signals.
             timer.return_value.start.side_effect = lambda: timer.call_args.args[1](1234)
             self.git.execute(["git", "version"], kill_after_timeout=1, with_exceptions=False)
 
-        self.assertEqual(kill.call_args_list, [mock.call(1234, signal.SIGKILL), mock.call(5678, signal.SIGKILL)])
+        self.assertEqual(
+            kill.call_args_list,
+            [mock.call(1234, signal.SIGKILL), mock.call(5678, signal.SIGKILL), mock.call(9012, signal.SIGKILL)],
+        )
+
+    @skipUnless(sys.platform != "win32", "requires POSIX timeout signalling")
+    def test_timeout_without_process_lookup_tools(self):
+        process = self.git.execute([sys.executable, "-c", "import time; time.sleep(30)"], as_process=True)
+        proc = process.proc
+        assert proc is not None
+        try:
+            with mock.patch.object(cmd, "Popen", side_effect=FileNotFoundError("lookup unavailable")):
+                cmd.handle_process_output(process, None, None, kill_after_timeout=0.1)
+            self.assertIsNotNone(proc.poll())
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+                process._terminate()
 
     def test_it_executes_git_without_stdout_redirect(self):
         returncode, stdout, stderr = self.git.execute(
@@ -1005,6 +1040,51 @@ class TestGit(TestBase):
 
         self.assertEqual(len(actual_lines[1]), expected_line_count, repr(actual_lines[1]))
         self.assertEqual(len(actual_lines[2]), expected_line_count, repr(actual_lines[2]))
+
+    @skipUnless(sys.platform != "win32", "requires POSIX timeout signalling")
+    @ddt.data((False, False), (True, False), (False, True), (True, True))
+    @ddt.unpack
+    def test_timeout_does_not_wait_for_blocked_output_handler(self, stderr, exits):
+        release = threading.Event()
+        finished = threading.Event()
+
+        def handler(line):
+            try:
+                release.wait(5)
+            finally:
+                finished.set()
+
+        process = self.git.execute(
+            [
+                sys.executable,
+                "-c",
+                "import sys, time; "
+                "print('ready', file=sys.stderr if sys.argv[1] == 'True' else sys.stdout, flush=True); "
+                "time.sleep(0 if sys.argv[2] == 'True' else 30)",
+                str(stderr),
+                str(exits),
+            ],
+            as_process=True,
+        )
+        if exits:
+            assert process.proc is not None
+            self.assertEqual(process.proc.wait(timeout=5), 0)
+        started = time.monotonic()
+        try:
+            with mock.patch.object(cmd, "_kill_process", wraps=cmd._kill_process) as kill_process:
+                cmd.handle_process_output(
+                    process, None if stderr else handler, handler if stderr else None, kill_after_timeout=0.5
+                )
+                if exits:
+                    kill_process.assert_not_called()
+            self.assertLess(time.monotonic() - started, 3)
+            with self.assertRaisesRegex(GitCommandError, "process killed because it timed out") as error:
+                process.wait(stderr="fatal: earlier remote error" if stderr else b"fatal: earlier remote error")
+            self.assertNotEqual(error.exception.status, 0)
+            self.assertIn("fatal: earlier remote error", error.exception.stderr)
+        finally:
+            release.set()
+            self.assertTrue(finished.wait(5))
 
     def test_execute_kwargs_set_agrees_with_method(self):
         parameter_names = inspect.signature(cmd.Git.execute).parameters.keys()
