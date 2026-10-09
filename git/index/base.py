@@ -525,17 +525,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             the piped-in files are processed anyway and just in time.
 
         :note:
-            Newlines are essential here, git's behaviour is somewhat inconsistent on
-            this depending on the version, hence we try our best to deal with newlines
-            carefully. Usually the last newline will not be sent, instead we will close
-            stdin to break the pipe.
+            Paths are NUL-terminated, so the command has to run with ``-z``. A path can
+            contain a line feed, and with line-feed separation git would read such a
+            path as two paths and act on files that were never passed. git also unquotes
+            a line-feed separated path that begins with a double quote.
         """
         fprogress(filepath, False, item)
         rval: Union[None, str] = None
 
         if proc.stdin is not None:
             try:
-                proc.stdin.write(("%s\n" % filepath).encode(defenc))
+                proc.stdin.write(("%s\0" % filepath).encode(defenc))
             except OSError as e:
                 # Pipe broke, usually because some error happened.
                 raise fmakeexc() from e
@@ -1452,6 +1452,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # initialization.
             self.entries  # noqa: B018
 
+            args.append("-z")
             args.append("--stdin")
             kwargs["as_process"] = True
             kwargs["istream"] = subprocess.PIPE

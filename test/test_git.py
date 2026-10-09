@@ -593,6 +593,19 @@ class TestGit(TestBase):
         self.assertEqual(typename, typename_two)
         self.assertEqual(size, size_two)
 
+    def test_object_header_rejects_an_embedded_line_feed(self):
+        hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
+        git = Git(self.rorepo.working_dir)
+        header = git.get_object_header(hexsha)
+
+        # A single trailing line feed is the request terminator, not a second request.
+        self.assertEqual(git.get_object_header(hexsha + "\n"), header)
+
+        self.assertRaises(ValueError, git.get_object_header, "HEAD\nHEAD")
+
+        # The persistent command is still in step, so this is not HEAD's header.
+        self.assertEqual(git.get_object_header(hexsha), header)
+
     def test_version_info(self):
         """The version_info attribute is a tuple of up to four ints."""
         v = self.git.version_info
