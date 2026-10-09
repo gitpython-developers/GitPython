@@ -1419,6 +1419,7 @@ class TestSubmodule(TestBase):
 
             # Now delete only the module of the main submodule.
             assert sm.module_exists()
+            csm.repo.close()
             sm.remove(configuration=False, force=True)
             assert sm.exists()
             assert not sm.module_exists()
@@ -1521,13 +1522,6 @@ class TestSubmodule(TestBase):
             True,
         )
 
-    # ACTUALLY skipped by git.util.rmtree (in local onerror function), called via
-    # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1011.
-    #
-    # @skipIf(sys.platform == "win32",
-    #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
-    #         "it is being used by another process: "
-    #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa: E501
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
