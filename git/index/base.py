@@ -728,8 +728,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             else:
                 raise TypeError("Invalid Type: %r" % item)
         # END for each item
+        # Source paths must be safe to read, but their recorded names may be rewritten.
+        # Apply mode-dependent restrictions to the final entries in add().
         for entry in entries:
-            _validate_repo_path(entry.path, entry.mode)
+            _validate_repo_path(entry.path)
         return paths, entries
 
     def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:

@@ -350,6 +350,21 @@ class TestIndex(TestBase):
         "gitmod~4",
         "gi7eba~1",
         "gi7eba~9",
+        "GI7EB~10",
+        "GI7EB~99",
+        "GI7E~100",
+        "GI7E~999",
+        "GI7~1000",
+        "GI7~9999",
+        "GI~10000",
+        "GI~99999",
+        "G~100000",
+        "G~999999",
+        "~1000000",
+        "~9999999",
+        "GI7EB~10. ",
+        "GI7E~100:$DATA",
+        "sub/~1000000",
         "sub/.gitmodules",
     )
     def test_index_reader_and_writer_reject_gitmodules_symlinks(self, path):
@@ -366,6 +381,26 @@ class TestIndex(TestBase):
         write_cache([IndexEntry((0o100644, b"a" * 20, 0, path))], stream)
         stream.seek(0)
         assert next(iter(read_cache(stream)[1])) == (path, 0)
+
+    @ddt.data("GI7EB~10", "GI7E~100", "GI7~1000", "GI~10000", "G~100000", "~1000000", "~9999999")
+    @with_rw_directory
+    def test_index_add_and_write_tree_reject_gitmodules_fallback_symlinks(self, rw_dir, path):
+        with Repo.init(rw_dir) as repo:
+            binsha = repo.odb.store(IStream("blob", 6, BytesIO(b"target"))).binsha
+            index = repo.index
+            for item in (Blob(repo, binsha, 0o120000, path), BaseIndexEntry((0o120000, binsha, 0, path))):
+                with pytest.raises(ValueError, match="submodule configuration"):
+                    index.add([item], write=False)
+                assert not index.entries
+
+            index.entries[(path, 0)] = IndexEntry((0o120000, binsha, 0, path))
+            with pytest.raises(ValueError, match="submodule configuration"):
+                index.write_tree()
+            assert not Path(index.path).exists()
+
+            index.add([BaseIndexEntry((0o100644, binsha, 0, path))])
+            assert repo.index.entries[(path, 0)].mode == 0o100644
+            assert index.write_tree()[path].mode == 0o100644
 
     def test_valid_unusual_index_names_round_trip(self):
         names = ["a b", "a\nb", "a\tb", "name:value", "dir/.gitignore", "café"]
@@ -408,20 +443,26 @@ class TestIndex(TestBase):
 
     @with_rw_repo("0.1.6")
     def test_index_lock_handling(self, rw_repo):
-        def add_bad_blob():
-            rw_repo.index.add([Blob(rw_repo, b"f" * 20, "bad-permissions", "foo")])
+        index = rw_repo.index
+        index_path = Path(index.path)
+        lock_path = Path(str(index_path) + ".lock")
+        before = index_path.read_bytes()
 
-        try:
-            ## First, fail on purpose adding into index.
-            add_bad_blob()
-        except Exception as ex:
-            assert "required argument is not an integer" in str(ex)
+        def fail_serialize(stream, ignore_extension_data):
+            assert lock_path.exists()
+            stream.write(b"partial index")
+            raise OSError("simulated index write failure")
 
-        ## The second time should not fail due to stray lock file.
-        try:
-            add_bad_blob()
-        except Exception as ex:
-            assert "index.lock' could not be obtained" not in str(ex)
+        with mock.patch.object(IndexFile, "_serialize", side_effect=fail_serialize):
+            for _ in range(2):
+                with pytest.raises(OSError, match="simulated index write failure"):
+                    index.write()
+                assert not lock_path.exists()
+                assert index_path.read_bytes() == before
+
+        index.add([Blob(rw_repo, b"f" * 20, 0o100644, "foo")])
+        assert not lock_path.exists()
+        assert rw_repo.index.entries[("foo", 0)].mode == 0o100644
 
     @with_rw_repo("0.1.6")
     def test_read_tree_methods_reject_index_output(self, rw_repo):
@@ -1246,6 +1287,60 @@ class TestIndex(TestBase):
             index = repo.index
             with pytest.raises(ValueError):
                 index.add([item], write=False, **kwargs)
+            assert not index.entries
+
+    @ddt.data(*product(("path", "blob", "entry", "stored-blob", "stored-entry"), (False, True), (False, True)))
+    @ddt.unpack
+    @with_rw_directory
+    def test_staging_gitmodules_symlink_check_uses_rewritten_path(self, rw_dir, kind, unsafe_destination, write):
+        with Repo.init(rw_dir) as repo:
+            source, destination = ("safe-link", ".gitmodules") if unsafe_destination else (".gitmodules", "safe-link")
+            binsha = Blob.NULL_BIN_SHA
+            if kind.startswith("stored-"):
+                binsha = repo.odb.store(IStream("blob", 6, BytesIO(b"target"))).binsha
+            else:
+                try:
+                    (Path(rw_dir) / source).symlink_to("target")
+                except OSError:
+                    pytest.skip("Symlinks unavailable")
+            if kind == "path":
+                item = source
+            elif kind.endswith("blob"):
+                item = Blob(repo, binsha, 0o120000, source)
+            else:
+                item = BaseIndexEntry((0o120000, binsha, 0, source))
+            index = repo.index
+            rewriter = mock.Mock(return_value=destination)
+            if unsafe_destination:
+                with pytest.raises(ValueError, match="submodule configuration"):
+                    index.add([item], path_rewriter=rewriter, write=write)
+                assert not index.entries
+                assert not Path(index.path).exists()
+            else:
+                added = index.add([item], path_rewriter=rewriter, write=write)
+                assert [(entry.path, entry.mode) for entry in added] == [(destination, 0o120000)]
+                assert set(index.entries) == {(destination, 0)}
+                assert index.write_tree()[destination].mode == 0o120000
+                if write:
+                    assert repo.index.entries[(destination, 0)].mode == 0o120000
+            rewriter.assert_called_once()
+            assert rewriter.call_args[0][0].path == source
+
+    @ddt.data(*product(("blob", "entry"), ("../outside", ".git/config")))
+    @ddt.unpack
+    @with_rw_directory
+    def test_staging_rewriter_cannot_sanitize_unsafe_source_paths(self, rw_dir, kind, path):
+        with Repo.init(rw_dir) as repo:
+            item = (
+                Blob(repo, b"a" * 20, 0o120000, path)
+                if kind == "blob"
+                else BaseIndexEntry((0o120000, b"a" * 20, 0, path))
+            )
+            index = repo.index
+            rewriter = mock.Mock(return_value="safe-link")
+            with pytest.raises(ValueError):
+                index.add([item], path_rewriter=rewriter, write=False)
+            rewriter.assert_not_called()
             assert not index.entries
 
     @with_rw_directory
