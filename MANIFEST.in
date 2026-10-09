@@ -5,6 +5,7 @@ include LICENSE
 include README.md
 include VERSION
 include requirements.txt
+include gix-requirements.txt
 include test-requirements.txt
 include git/py.typed
 

@@ -14,10 +14,12 @@ permissions:
 
 jobs:
   test:
+    name: test (${{ matrix.os-type }}, ${{ matrix.python-version }}${{ matrix.backend == 'gix' && ', gix' || '' }})
     strategy:
       matrix:
         os-type: [ubuntu, macos, windows]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t", "3.15", "3.15t"]
+        backend: [cli]
         exclude:
         - os-type: macos
           python-version: "3.14t"
@@ -32,6 +34,21 @@ jobs:
           experimental: true
         - python-version: "3.15t"
           experimental: true
+        - os-type: ubuntu
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
+        - os-type: macos
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
+        - os-type: windows
+          python-version: "3.12"
+          backend: gix
+          build-docs: false
+          experimental: false
 
       fail-fast: false
 
@@ -51,12 +68,53 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
+        cache: ${{ matrix.backend == 'gix' && 'pip' || '' }}
+        cache-dependency-path: |
+          pyproject.toml
+          requirements.txt
+          test-requirements.txt
+          gix-requirements.txt
+
+    - name: Prepare Rust for GixPython source builds
+      if: matrix.backend == 'gix'
+      id: rust
+      run: |
+        # GixPython 0.1.0 publishes macOS wheels only and needs Rust >= 1.89.
+        rustup toolchain install stable --profile minimal
+        rustup default stable
+        rustc --version
+        echo "version=$(rustc --version)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache GixPython Cargo dependencies and build output
+      if: matrix.backend == 'gix'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          ${{ runner.temp }}/gix-target
+        key: gix-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.rust.outputs.version }}-${{ hashFiles('gix-requirements.txt') }}
+        restore-keys: |
+          gix-${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-${{ steps.rust.outputs.version }}-
 
     - name: Set up WSL (Windows)
       if: matrix.os-type == 'windows'
       uses: Vampire/setup-wsl@v7.0.0
       with:
         wsl-version: 1
+
+    - name: Install current Git (Linux)
+      if: matrix.os-type == 'ubuntu'
+      run: |
+        sudo add-apt-repository --yes ppa:git-core/ppa
+        sudo apt-get update
+        sudo apt-get install --yes git
+
+    - name: Install current Git (macOS)
+      if: matrix.os-type == 'macos'
+      run: |
+        brew install git
+        echo "$(brew --prefix git)/bin" >> "$GITHUB_PATH"
 
     - name: Prepare this repo for tests
       run: |
@@ -76,7 +134,13 @@ jobs:
 
     - name: Install project and test dependencies
       run: |
-        pip install ./smmap ./gitdb '.[test]'
+        pip install ./smmap ./gitdb ".[${EXTRAS}]"
+        python -c 'import os; from git import _backend; print("Backend:", _backend.name); assert _backend.name == os.environ["EXPECTED_BACKEND"]'
+      env:
+        EXTRAS: ${{ matrix.backend == 'gix' && 'test,gix' || 'test' }}
+        EXPECTED_BACKEND: ${{ matrix.backend }}
+        # Keep Cargo output when pip removes its temporary source directory.
+        CARGO_TARGET_DIR: ${{ runner.temp }}/gix-target
 
     - name: Show POSIX file ownership
       # Linux and macOS only. On Windows, Git Bash's `ls -ld` reports a
@@ -159,8 +223,21 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv
+        if [[ "$RUNNER_OS" == "Windows" && -z "${GIT_PYTHON_GIT_EXECUTABLE+x}" ]]; then
+          # Absolute paths let Windows share minimum-version probes.
+          git_executable="$(python -c 'import os, shutil; print(os.path.abspath(shutil.which("git")))')"
+          export GIT_PYTHON_GIT_EXECUTABLE="$git_executable"
+        fi
+        pytest --color=yes -p no:sugar --instafail -vv --durations=30 \
+          --junitxml=test-results/pytest.xml --backend-report=test-results/backend.json
       continue-on-error: false
+
+    - name: Retain test results and backend operation counts
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: tests-${{ matrix.os-type }}-${{ matrix.python-version }}-${{ matrix.backend }}
+        path: test-results/
 
     - name: Documentation
       if: matrix.build-docs

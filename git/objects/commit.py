@@ -10,20 +10,20 @@ import datetime
 from io import BytesIO
 import logging
 import os
-from subprocess import Popen, PIPE
+from subprocess import Popen
 from time import altzone, daylight, localtime, time, timezone
-import warnings
+import tempfile
 
-from gitdb import IStream
 
+from git import _backend
 from git.cmd import Git
+from git.exc import BadObject, GitCommandError, UnsafeOptionError
 from git.diff import Diffable
 from git.util import Actor, Stats, finalize_process, hex_to_bin
 
 from . import base
 from .tree import Tree
 from .util import (
-    Serializable,
     TraversableIterableObj,
     altz_to_utctz_str,
     from_timestamp,
@@ -58,7 +58,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
+class Commit(base.Object, TraversableIterableObj, Diffable):
     """Wraps a git commit object.
 
     See :manpage:`gitglossary(7)` on "commit object":
@@ -126,7 +126,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         default will be implicitly set on first query.
 
         :param binsha:
-            20 byte sha1.
+            Binary object ID in the repository's object format.
 
         :param tree:
             A :class:`~git.objects.tree.Tree` object.
@@ -170,7 +170,6 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             timezone.
         """
         super().__init__(repo, binsha)
-        self.binsha = binsha
         if tree is not None:
             assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
         if tree is not None:
@@ -211,13 +210,37 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             :class:`Commit` object for which to generate the sha.
         """
 
-        stream = BytesIO()
-        commit._serialize(stream)
-        streamlen = stream.tell()
-        stream.seek(0)
-
-        istream = repo.odb.store(IStream(cls.type, streamlen, stream))
-        return istream.binsha
+        tree = commit.tree.hexsha
+        Git._check_operand(tree, "tree object ID")
+        args = ["--no-gpg-sign", tree]
+        for parent in commit.parents:
+            Git._check_operand(parent.hexsha, "parent object ID")
+            args.extend(("-p", parent.hexsha))
+        env = {}
+        for role, actor, timestamp, offset in (
+            ("AUTHOR", commit.author, commit.authored_date, commit.author_tz_offset),
+            ("COMMITTER", commit.committer, commit.committed_date, commit.committer_tz_offset),
+        ):
+            for field, value in (("NAME", actor.name), ("EMAIL", actor.email)):
+                value = value or ""
+                if any(character in value for character in "\0\r\n<>"):
+                    raise ValueError("Invalid commit identity")
+                env["GIT_%s_%s" % (role, field)] = value
+            env["GIT_%s_DATE" % role] = "%d %s" % (timestamp, altz_to_utctz_str(offset))
+        message = commit.message.encode(commit.encoding) if isinstance(commit.message, str) else commit.message
+        if b"\0" in message:
+            raise ValueError("Commit messages cannot contain NUL bytes")
+        with tempfile.TemporaryFile() as stream:
+            stream.write(message)
+            stream.seek(0)
+            oid = repo.git._call_process_safe(
+                "commit_tree",
+                *args,
+                istream=stream,
+                env=env,
+                _config=["i18n.commitEncoding=" + commit.encoding],
+            )
+        return bytes.fromhex(oid)
 
     def replace(self, **kwargs: Any) -> "Commit":
         """Create new commit object from an existing commit object.
@@ -226,7 +249,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         attribute in the new object.
         """
 
-        attrs = {k: getattr(self, k) for k in self.__slots__}
+        if not kwargs:
+            return self.__class__(self.repo, self.binsha)
+        if "gpgsig" in kwargs:
+            raise ValueError("Writing an existing signature is unsupported; Git creates commit objects")
+        attrs = {k: getattr(self, k) for k in self.__slots__ if k != "gpgsig"}
+        attrs["gpgsig"] = ""
 
         for attrname in kwargs:
             if attrname not in self.__slots__:
@@ -240,9 +268,41 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     def _set_cache_(self, attr: str) -> None:
         if attr in Commit.__slots__:
-            # Read the data in a chunk, its faster - then provide a file wrapper.
-            _binsha, _typename, self.size, stream = self.repo.odb.stream(self.binsha)
-            self._deserialize(BytesIO(stream.read()))
+            data = _backend.object_metadata(self.repo.git, self.hexsha, "commit")
+            if data is NotImplemented:
+                # Git has no formatted query that faithfully exposes every header.
+                try:
+                    raw = self.repo.git._call_process_safe(
+                        "cat_file", "commit", self.hexsha, stdout_as_string=False, strip_newline_in_stdout=False
+                    )
+                except GitCommandError as exc:
+                    raise BadObject(self.binsha) from exc
+                self._deserialize(BytesIO(raw))
+            else:
+                self.encoding = (data["encoding"] or self.default_encoding.encode()).decode("ascii")
+                self.tree = Tree(self.repo, bytes.fromhex(data["tree"]), Tree.tree_id << 12, "")
+                self.parents = tuple(type(self)(self.repo, bytes.fromhex(oid)) for oid in data["parents"])
+                for role in ("author", "committer"):
+                    signature = data[role]
+                    setattr(
+                        self,
+                        role,
+                        Actor(
+                            signature.name.decode(self.encoding, "replace"),
+                            signature.email.decode(self.encoding, "replace"),
+                        ),
+                    )
+                    setattr(self, "authored_date" if role == "author" else "committed_date", signature.time.seconds)
+                    setattr(self, role + "_tz_offset", -signature.time.offset)
+                self.message = data["message"].decode(self.encoding, "replace")
+                self.gpgsig = next(
+                    (
+                        value.rstrip(b"\n").decode(self.encoding, "ignore")
+                        for key, value in data["extra_headers"]
+                        if key == b"gpgsig"
+                    ),
+                    "",
+                )
         else:
             super()._set_cache_(attr)
         # END handle attrs
@@ -293,9 +353,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         # Yes, it makes a difference whether empty paths are given or not in our case as
         # the empty paths version will ignore merge commits for some reason.
+        native = _backend.history(self.repo.git, self.hexsha, paths, kwargs, count=True)
+        if native is not NotImplemented:
+            return native
         if paths:
-            return len(self.repo.git.rev_list(self.hexsha, "--", paths, **kwargs).splitlines())
-        return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
+            return len(self.repo.git._call_process_safe("rev_list", self.hexsha, "--", paths, **kwargs).splitlines())
+        return len(self.repo.git._call_process_safe("rev_list", self.hexsha, **kwargs).splitlines())
 
     @property
     def name_rev(self) -> str:
@@ -307,7 +370,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :note:
             Mostly useful for UI purposes.
         """
-        return self.repo.git.name_rev(self)
+        Git._check_operand(self.hexsha, "commit object ID")
+        return self.repo.git._call_process_safe("name_rev", self.hexsha)
 
     @classmethod
     def iter_items(
@@ -364,7 +428,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             args_list.extend(paths_tup)
         # END if paths
 
-        proc = repo.git.rev_list(rev, args_list, as_process=True, **kwargs)
+        Git._check_operand(str(rev), "revision")
+        native = _backend.history(repo.git, str(rev), paths, kwargs)
+        if native is not NotImplemented:
+            return (cls(repo, hex_to_bin(oid)) for oid in native)
+        proc = repo.git._call_process_safe("rev_list", rev, args_list, as_process=True, **kwargs)
         return cls._iter_from_process_or_stream(repo, proc)
 
     def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> Iterator["Commit"]:
@@ -401,6 +469,9 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             :class:`Stats`
         """
+        native = _backend.commit_stats(self)
+        if native is not NotImplemented:
+            return native
 
         def process_lines(lines: List[str]) -> str:
             text = ""
@@ -411,35 +482,16 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             return text
 
         if not self.parents:
-            lines = self.repo.git.diff_tree(
-                self.hexsha, "--", numstat=True, no_renames=True, root=True, raw=True
+            lines = self.repo.git._call_process_safe(
+                "diff_tree", self.hexsha, "--", numstat=True, no_renames=True, root=True, raw=True
             ).splitlines()[1:]
             text = process_lines(lines)
         else:
-            lines = self.repo.git.diff(
-                self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True, raw=True
+            lines = self.repo.git._call_process_safe(
+                "diff", self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True, raw=True
             ).splitlines()
             text = process_lines(lines)
         return Stats._list_from_string(self.repo, text)
-
-    @property
-    def trailers(self) -> Dict[str, str]:
-        """Deprecated. Get the trailers of the message as a dictionary.
-
-        :note:
-            This property is deprecated, please use either :attr:`trailers_list` or
-            :attr:`trailers_dict`.
-
-        :return:
-            Dictionary containing whitespace stripped trailer information.
-            Only contains the latest instance of each trailer key.
-        """
-        warnings.warn(
-            "Commit.trailers is deprecated, use Commit.trailers_list or Commit.trailers_dict instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:
@@ -495,17 +547,30 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         encoding: str = default_encoding,
     ) -> str:
         message_bytes = message if isinstance(message, bytes) else message.encode(encoding, errors="strict")
-        cmd = [repo.git.GIT_PYTHON_GIT_EXECUTABLE, "interpret-trailers", *trailer_args]
-        proc: Git.AutoInterrupt = repo.git.execute(
-            cmd,
-            as_process=True,
-            istream=PIPE,
-        )
-        try:
-            stdout_bytes, _ = proc.communicate(message_bytes)
-            return stdout_bytes.decode(encoding, errors="strict")
-        finally:
-            finalize_process(proc)
+        Git.check_unsafe_options(list(trailer_args), ["--in-place"])
+        if "--parse" not in trailer_args:
+            status, _output, error = repo.git._call_process_safe(
+                "config",
+                "--name-only",
+                "--get-regexp",
+                r"^trailer\..*\.(cmd|command)$",
+                with_extended_output=True,
+                with_exceptions=False,
+            )
+            if status == 0:
+                raise UnsafeOptionError("Configured trailer commands cannot run during commit creation")
+            if status != 1:
+                raise GitCommandError("git config", status, error)
+        with tempfile.TemporaryFile() as stream:
+            stream.write(message_bytes)
+            stream.seek(0)
+            return repo.git._call_process_safe(
+                "interpret_trailers",
+                *trailer_args,
+                istream=stream,
+                stdout_as_string=False,
+                strip_newline_in_stdout=False,
+            ).decode(encoding, errors="strict")
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
@@ -584,12 +649,13 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             if not line:
                 break
             hexsha = line.strip()
-            if len(hexsha) > 40:
+            if len(hexsha) > repo._oid_size * 2:
                 # Split additional information, as returned by bisect for instance.
                 hexsha, _ = line.split(None, 1)
             # END handle extra info
 
-            assert len(hexsha) == 40, "Invalid line: %s" % hexsha
+            if len(hexsha) != repo._oid_size * 2:
+                raise ValueError("Invalid commit object ID returned by Git: %r" % hexsha)
             yield cls(repo, hex_to_bin(hexsha))
         # END for each line in stream
 
@@ -790,75 +856,22 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     # { Serializable Implementation
 
     def _serialize(self, stream: BytesIO) -> "Commit":
-        # An identity is written as "name <email> date" on a single header line, so a
-        # line feed or an angle bracket inside a name or email moves those boundaries:
-        # it can add header lines, end the headers early, or present another email.
-        # Git drops these three characters when it writes an identity; refuse them
-        # here before anything is written.
-        for actor in (self.author, self.committer):
-            for value in (actor.name, actor.email):
-                if value and any(char in value for char in "<>\n"):
-                    raise ValueError("Commit identity %r must not contain '<', '>' or a line feed" % value)
+        """Copy Git's serialization of an unsigned commit to a stream.
 
-        write = stream.write
-        write(("tree %s\n" % self.tree).encode("ascii"))
-        for p in self.parents:
-            write(("parent %s\n" % p).encode("ascii"))
-
-        a = self.author
-        aname = a.name
-        c = self.committer
-        fmt = "%s %s <%s> %s %s\n"
-        write(
-            (
-                fmt
-                % (
-                    "author",
-                    aname,
-                    a.email,
-                    self.authored_date,
-                    altz_to_utctz_str(self.author_tz_offset),
-                )
-            ).encode(self.encoding)
-        )
-
-        # Encode committer.
-        aname = c.name
-        write(
-            (
-                fmt
-                % (
-                    "committer",
-                    aname,
-                    c.email,
-                    self.committed_date,
-                    altz_to_utctz_str(self.committer_tz_offset),
-                )
-            ).encode(self.encoding)
-        )
-
-        if self.encoding != self.default_encoding:
-            write(("encoding %s\n" % self.encoding).encode("ascii"))
-
+        Existing signature headers cannot be injected through ``commit-tree``.
+        """
         try:
-            if self.__getattribute__("gpgsig"):
-                write(b"gpgsig")
-                for sigline in self.gpgsig.rstrip("\n").split("\n"):
-                    write((" " + sigline + "\n").encode("ascii"))
+            signature = object.__getattribute__(self, "gpgsig")
         except AttributeError:
-            pass
-
-        write(b"\n")
-
-        # Write plain bytes, be sure its encoded according to our encoding.
-        if isinstance(self.message, str):
-            write(self.message.encode(self.encoding))
-        else:
-            write(self.message)
-        # END handle encoding
+            signature = self.gpgsig if any(self.binsha) else ""
+        if signature:
+            raise ValueError("Writing an existing commit signature is unsupported")
+        oid = self._calculate_sha_(self.repo, self)
+        stream.write(self.repo.odb.stream(oid).read())
         return self
 
     def _deserialize(self, stream: BytesIO) -> "Commit":
+        """Decode CLI commit bytes where formatted Git queries cannot preserve metadata."""
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
@@ -896,7 +909,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         enc = next_line
         buf = enc.strip()
         while buf:
-            if buf[0:10] == b"encoding ":
+            if buf.startswith(b"encoding "):
                 self.encoding = buf[buf.find(b" ") + 1 :].decode(self.encoding, "ignore")
             elif buf[0:7] == b"gpgsig ":
                 sig_lines = [buf[buf.find(b" ") + 1 :] + b"\n"]
@@ -974,24 +987,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :return:
             List of co-authors for this commit (as :class:`~git.util.Actor` objects).
         """
-        co_authors = []
-
-        if self.message:
-            # Scan line by line instead of matching `(.*) <(.*?)>` across the whole
-            # message. On a single trailer line that repeats " <" without ever closing
-            # a ">", greedy backtracking over each " <" made the regex run in O(n^2)
-            # time, so a large (fully attacker-controlled) commit message could stall
-            # any caller of this property. A trailer is "Co-authored-by: <name> <email>"
-            # with the email in the final angle brackets, so the name ends at the last
-            # " <" and the line ends at ">".
-            prefix = "Co-authored-by: "
-            for line in str(self.message).split("\n"):
-                if not line.startswith(prefix) or not line.endswith(">"):
-                    continue
-                identity = line[len(prefix) :]
-                separator = identity.rfind(" <")
-                if separator == -1:
-                    continue
-                co_authors.append(Actor(identity[:separator], identity[separator + 2 : -1]))
-
-        return co_authors
+        return [
+            Actor.from_string(value)
+            for key, value in self.trailers_list
+            if key.lower() == "co-authored-by" and " <" in value and value.endswith(">")
+        ]

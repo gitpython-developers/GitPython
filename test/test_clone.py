@@ -5,13 +5,13 @@ import os
 import os.path as osp
 import pathlib
 import sys
-import tempfile
 from unittest import skip
 from unittest import mock
 
 from git import Git, GitCommandError, Repo
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 
+from test.cleanup import TemporaryDirectory
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
 
 from pathlib import Path
@@ -41,6 +41,29 @@ def test_clone_preserves_literal_separate_git_dir(tmp_path, monkeypatch, caplog,
 
     assert not (tmp_path / "sensitive-value").exists()
     assert "sensitive-value" not in caplog.text
+
+
+@pytest.mark.parametrize("clone_method", ["clone", "clone_from"])
+def test_clone_clears_ambient_source_storage_environment(tmp_path, clone_method):
+    source = Repo.init(tmp_path / "source")
+    initial = source.index.commit("initial")
+    environment = {
+        "GIT_DIR": str(source.git_dir),
+        "GIT_COMMON_DIR": str(source.common_dir),
+        "GIT_WORK_TREE": str(source.working_tree_dir),
+        "GIT_OBJECT_DIRECTORY": str(source.odb.root_path()),
+    }
+    destination = tmp_path / "clone"
+    with mock.patch.dict(os.environ, environment):
+        cloned = source.clone(destination) if clone_method == "clone" else Repo.clone_from(source.git_dir, destination)
+        assert os.path.samefile(cloned.working_tree_dir, destination)
+        assert os.path.samefile(cloned.common_dir, destination / ".git")
+        assert os.path.samefile(cloned.git.rev_parse("--show-toplevel"), destination)
+        assert cloned.head.commit == initial
+        created = cloned.index.commit("clone-only commit")
+        assert source.head.commit == initial
+        assert not source.odb.has_object(created.binsha)
+    assert cloned.head.commit == created
 
 
 class TestClone(TestBase):
@@ -100,7 +123,7 @@ class TestClone(TestBase):
         )
 
     def test_clone_from_with_path_contains_unicode(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with TemporaryDirectory() as tmpdir:
             unicode_dir_name = "\u0394"
             path_with_unicode = os.path.join(tmpdir, unicode_dir_name)
             os.makedirs(path_with_unicode)
@@ -138,7 +161,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -181,7 +204,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_abbreviated(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -206,7 +229,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             payload = "--single-branch --config protocol.ext.allow=always"
 
@@ -224,7 +247,7 @@ class TestClone(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -252,7 +275,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_safe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             options = [
                 "--depth=1",
@@ -269,7 +292,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -304,7 +327,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_are_checked_after_splitting_multi_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             payload = "--single-branch --config protocol.ext.allow=always"
 
@@ -322,7 +345,7 @@ class TestClone(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -354,7 +377,7 @@ class TestClone(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_safe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             options = [
                 "--depth=1",
@@ -368,7 +391,7 @@ class TestClone(TestBase):
                 assert destination.exists()
 
     def test_clone_from_unsafe_protocol(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -388,7 +411,7 @@ class TestClone(TestBase):
         ]
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             for url in urls:
-                with mock.patch.object(Git, "_call_process", side_effect=RuntimeError) as call_process:
+                with mock.patch.object(Git, "_call_process_safe", side_effect=RuntimeError) as call_process:
                     with self.assertRaises(RuntimeError):
                         Repo.clone_from(url, "unused")
 
@@ -402,7 +425,7 @@ class TestClone(TestBase):
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             cloned = Repo.clone_from(url, pathlib.Path(rw_dir) / "clone")
 
-        assert cloned.remotes.origin.url == Git.polish_url(str(url), expand_vars=False)
+        assert cloned.remotes.origin.url == Git.polish_url(str(url))
 
     def test_clone_from_checks_polished_url_for_unsafe_protocol(self):
         with mock.patch.object(Git, "polish_url", return_value="ext::command"):
@@ -416,10 +439,10 @@ class TestClone(TestBase):
         urls = ["$GITPYTHON_TEST_SECRET/repo", "user@example.com:$GITPYTHON_TEST_SECRET/repo"]
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             for url in urls:
-                assert Git.polish_url(url, is_cygwin=True, expand_vars=False) == url
+                assert Git.polish_url(url, is_cygwin=True) == url
 
     def test_clone_from_unsafe_protocol_allowed(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -434,7 +457,7 @@ class TestClone(TestBase):
                 assert not tmp_file.exists()
 
     def test_clone_from_unsafe_protocol_allowed_and_enabled(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [

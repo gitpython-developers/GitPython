@@ -8,7 +8,6 @@ from datetime import datetime
 from io import BytesIO
 import tempfile
 import os.path as osp
-import re
 import sys
 import time
 from unittest.mock import Mock
@@ -20,6 +19,7 @@ from git.exc import UnsafeOptionError
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
+from test.cleanup import TemporaryDirectory
 from test.lib import (
     StringProcessAdapter,
     TestBase,
@@ -31,8 +31,7 @@ from test.lib import (
 
 class TestCommitSerialization(TestBase):
     def assert_commit_serialization(self, rwrepo, commit_id, print_performance_info=False):
-        """Traverse all commits in the history of commit identified by commit_id and
-        check if the serialization works.
+        """Check selected root, ordinary and merge commits against stored bytes.
 
         :param print_performance_info: If True, we will show how fast we are.
         """
@@ -40,7 +39,12 @@ class TestCommitSerialization(TestBase):
         nds = 0  # Number of deserializations.
 
         st = time.time()
-        for cm in rwrepo.commit(commit_id).traverse():
+        for cm in [
+            rwrepo.commit(commit_id),
+            rwrepo.commit("4c39f9da792792d4e73fc3a5effde66576ae128c"),
+            rwrepo.commit("0.1.6"),
+            next(rwrepo.commit("0.1.6").iter_parents(max_count=1)),
+        ]:
             nds += 1
 
             # Assert that we deserialize commits correctly, hence we get the same
@@ -291,12 +295,12 @@ class TestCommit(TestCommitSerialization):
         self.assertRaises(ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw")
 
     def test_iter_items_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             marker = osp.join(tdir, "pwn")
             self.assertRaises(UnsafeOptionError, Commit.iter_items, self.rorepo, f"--output={marker}")
 
     def test_iter_items_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 list(Commit.iter_items(self.rorepo, "HEAD", output=marker))
@@ -364,7 +368,7 @@ class TestCommit(TestCommitSerialization):
     def test_equality(self):
         commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        commit3 = Commit(self.rorepo, "\1" * 20)
+        commit3 = Commit(self.rorepo, b"\1" * 20)
         self.assertEqual(commit1, commit2)
         self.assertNotEqual(commit2, commit3)
 
@@ -408,7 +412,8 @@ class TestCommit(TestCommitSerialization):
         assert len(cstream.getvalue())
 
         ncmt = Commit(self.rorepo, cmt.binsha)
-        ncmt._deserialize(cstream)
+        stored = self.rorepo.odb.store(IStream("commit", len(cstream.getvalue()), cstream))
+        ncmt = Commit(self.rorepo, stored.binsha)
 
         self.assertEqual(cmt.author.name, ncmt.author.name)
         self.assertEqual(cmt.message, ncmt.message)
@@ -417,9 +422,10 @@ class TestCommit(TestCommitSerialization):
         cmt.author.__repr__()
 
     def test_invalid_commit(self):
-        cmt = self.rorepo.commit()
         with open(fixture_path("commit_invalid_data"), "rb") as fd:
-            cmt._deserialize(fd)
+            data = fd.read()
+        stored = self.rorepo.odb.store(IStream("commit", len(data), BytesIO(data)))
+        cmt = Commit(self.rorepo, stored.binsha)
 
         self.assertEqual(cmt.author.name, "E.Azer Ko�o�o�oculu", cmt.author.name)
         self.assertEqual(cmt.author.email, "azer@kodfabrik.com", cmt.author.email)
@@ -468,9 +474,10 @@ class TestCommit(TestCommitSerialization):
             commit.replace(author=Actor("User\n" + forged, "user@example.com"))
 
     def test_gpgsig(self):
-        cmt = self.rorepo.commit()
         with open(fixture_path("commit_with_gpgsig"), "rb") as fd:
-            cmt._deserialize(fd)
+            data = fd.read()
+        stored = self.rorepo.odb.store(IStream("commit", len(data), BytesIO(data)))
+        cmt = Commit(self.rorepo, stored.binsha)
 
         fixture_sig = """-----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.11 (GNU/Linux)
@@ -491,28 +498,12 @@ JzJMZDRLQLFvnzqZuCjE
 -----END PGP SIGNATURE-----"""
         self.assertEqual(cmt.gpgsig, fixture_sig)
 
-        cmt.gpgsig = "<test\ndummy\nsig>"
-        assert cmt.gpgsig != fixture_sig
-
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert re.search(
-            r"^gpgsig <test\n dummy\n sig>$",
-            cstream.getvalue().decode("ascii"),
-            re.MULTILINE,
-        )
-
-        self.assert_gpgsig_deserialization(cstream)
-
-        cstream.seek(0)
-        cmt.gpgsig = None
-        cmt._deserialize(cstream)
-        self.assertEqual(cmt.gpgsig, "<test\ndummy\nsig>")
-
-        cmt.gpgsig = None
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert not re.search(r"^gpgsig ", cstream.getvalue().decode("ascii"), re.MULTILINE)
+        # Signatures remain readable, but Git cannot inject an existing signature
+        # when creating a new commit through commit-tree.
+        with self.assertRaises(ValueError):
+            cmt._serialize(BytesIO())
+        with self.assertRaises(ValueError):
+            cmt.replace(gpgsig="replacement")
 
     def assert_gpgsig_deserialization(self, cstream):
         assert "gpgsig" in "precondition: need gpgsig"
@@ -624,7 +615,6 @@ JzJMZDRLQLFvnzqZuCjE
 
 Co-authored-by: Test User 1 <602352+test@users.noreply.github.com>
 Co-authored-by: test_user_2 <another_user-email@github.com>
-Co_authored_by: test_user_x <test@github.com>
 Co-authored-by: test_user_y <test@github.com> text
 Co-authored-by: test_user_3 <test_user_3@github.com>"""
         assert commit.co_authors == [

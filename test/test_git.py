@@ -24,10 +24,11 @@ from unittest import mock, skipUnless
 
 import ddt
 
-from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
-from git.exc import UnsafeOptionError
+from git import Git, GitCommandError, GitCommandNotFound, Repo, _backend, cmd, refresh
+from git.exc import UnsafeOptionError, UnsupportedOperation
 from git.util import cwd, finalize_process
 
+from test.cleanup import TemporaryDirectory
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
@@ -74,7 +75,7 @@ def _fake_git(*version_info):
     fake_version = ".".join(map(str, version_info))
     fake_output = f"git version {fake_version} (fake)"
 
-    with tempfile.TemporaryDirectory() as tdir:
+    with TemporaryDirectory() as tdir:
         if sys.platform == "win32":
             fake_git = Path(tdir, "fake-git.cmd")
             script = f"@echo {fake_output}\n"
@@ -117,7 +118,7 @@ class TestGit(TestBase):
         git.return_value = ""
         self.git.version()
         self.assertTrue(git.called)
-        self.assertEqual(git.call_args, ((["git", "version"],), {}))
+        self.assertEqual(git.call_args, (([Git.GIT_PYTHON_GIT_EXECUTABLE, "version"],), {}))
 
     def test_call_unpack_args_unicode(self):
         args = Git._unpack_args("Unicode€™")
@@ -128,6 +129,13 @@ class TestGit(TestBase):
         args = Git._unpack_args(["git", "log", "--", "Unicode€™"])
         mangled_value = "Unicode\u20ac\u2122"
         self.assertEqual(args, ["git", "log", "--", mangled_value])
+
+    def test_call_unpack_pathlike_args(self):
+        class CustomPath:
+            def __fspath__(self):
+                return "a path"
+
+        self.assertEqual(Git._unpack_args(["--", [CustomPath()]]), ["--", "a path"])
 
     def test_it_raises_errors(self):
         self.assertRaises(GitCommandError, self.git.this_does_not_exist)
@@ -251,40 +259,11 @@ class TestGit(TestBase):
         with self.assertRaises(UnsafeOptionError):
             Git.check_unsafe_options(options=candidates, unsafe_options=["-u"])
 
-    _shell_cases = (
-        # value_in_call, value_from_class, expected_popen_arg
-        (None, False, False),
-        (None, True, True),
-        (False, True, False),
-        (False, False, False),
-        (True, False, True),
-        (True, True, True),
-    )
-
-    def _do_shell_combo(self, value_in_call, value_from_class):
-        with mock.patch.object(Git, "USE_SHELL", value_from_class):
-            with mock.patch.object(cmd, "safer_popen", wraps=cmd.safer_popen) as mock_safer_popen:
-                # Use a command with no arguments (besides the program name), so it runs
-                # with or without a shell, on all OSes, with the same effect.
-                self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
-
-        return mock_safer_popen
-
-    @ddt.idata(_shell_cases)
-    def test_it_uses_shell_or_not_as_specified(self, case):
-        """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
-        value_in_call, value_from_class, expected_popen_arg = case
-        mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
-        mock_safer_popen.assert_called_once()
-        self.assertIs(mock_safer_popen.call_args.kwargs["shell"], expected_popen_arg)
-
-    @ddt.idata(full_case[:2] for full_case in _shell_cases)
-    def test_it_logs_if_it_uses_a_shell(self, case):
-        """``shell=`` in the log message agrees with what is passed to `Popen`."""
-        value_in_call, value_from_class = case
-        with self.assertLogs(cmd.__name__, level=logging.DEBUG) as log_watcher:
-            mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
-        self._assert_logged_for_popen(log_watcher, "shell", mock_safer_popen.call_args.kwargs["shell"])
+    @ddt.data(None, False, True)
+    def test_it_uses_shell_or_not_as_specified(self, shell):
+        with mock.patch.object(cmd, "safer_popen", wraps=cmd.safer_popen) as popen:
+            self.git.execute(["git"], with_exceptions=False, shell=shell)
+        self.assertIs(popen.call_args.kwargs["shell"], bool(shell))
 
     @ddt.data(
         ("None", None),
@@ -337,7 +316,7 @@ class TestGit(TestBase):
     )
     @ddt.data(False, True)
     def test_timeout_kills_direct_child(self, without_pgrep):
-        with tempfile.TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             marker = Path(directory, "child-survived")
             child_code = (
                 "import pathlib, sys, time; time.sleep(2); "
@@ -790,9 +769,11 @@ class TestGit(TestBase):
         dirname, basename = osp.split(absolute_path)
 
         with cwd(dirname):
+            # getcwd may resolve directory symlinks, such as Homebrew's opt/git in PATH.
+            expected_path = osp.join(os.getcwd(), basename)
             with _rollback_refresh():
                 refresh(basename)
-                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, expected_path)
 
     def test_version_info_is_cached(self):
         fake_version_info = (123, 456, 789)
@@ -815,6 +796,43 @@ class TestGit(TestBase):
                 with self.assertRaises(GitCommandNotFound):
                     git2.version_info
                 git1.version_info
+
+    def test_minimum_version_shares_context_and_detects_replacement(self):
+        def calls():
+            return _backend.statistics().get(("Git.execute", "CLI process"), 0)
+
+        with _rollback_refresh(), _fake_git(2, 54, 0) as path:
+            refresh(path)
+            count = calls()
+            Git()._require_version()
+            Git()._require_version()
+            self.assertEqual(calls() - count, 1)
+            custom = Git()
+            custom.update_environment(GITPYTHON_VERSION_CONTEXT="different")
+            for command in (Git(Path(path).parent), custom):
+                count = calls()
+                command._require_version()
+                self.assertEqual(calls() - count, 1)
+            with _fake_git(2, 51, 0) as older:
+                shutil.copy(older, path)
+                with self.assertRaises(UnsupportedOperation):
+                    Git()._require_version()
+
+    def test_minimum_version_detects_new_executable_earlier_in_path(self):
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_rollback_refresh())
+            older = Path(stack.enter_context(_fake_git(2, 51, 0)))
+            newer = Path(stack.enter_context(_fake_git(2, 54, 0)))
+            stack.enter_context(mock.patch.dict(os.environ, {"PATH": f"{older.parent}{os.pathsep}{newer.parent}"}))
+            stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
+            if sys.platform == "win32":
+                stack.enter_context(mock.patch.object(Git, "git_exec_name", "git.cmd"))
+            _rename_with_stem(newer, "git")
+            refresh()
+            Git()._require_version()
+            _rename_with_stem(older, "git")
+            with self.assertRaises(UnsupportedOperation):
+                Git()._require_version()
 
     def test_version_info_cache_is_not_pickled(self):
         with _rollback_refresh():
@@ -920,14 +938,9 @@ class TestGit(TestBase):
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
 
             if sys.platform == "win32":
-                # On Windows, use a shell so "git" finds "git.cmd". The correct and safe
-                # ways to do this straightforwardly are to set GIT_PYTHON_GIT_EXECUTABLE
-                # to git.cmd in the environment, or call git.refresh with the command's
-                # full path. See the Git.USE_SHELL docstring for deprecation details.
-                # But this tests a "default" scenario where neither is done. The
-                # approach used here, setting USE_SHELL to True so PATHEXT is honored,
-                # should not be used in production code (nor even in most test cases).
-                stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
+                # The fake executable is a batch file. Name its extension explicitly
+                # so PATH lookup works without a shell, including version probes.
+                stack.enter_context(mock.patch.object(Git, "git_exec_name", "git.cmd"))
 
             new_git = Git()
             _rename_with_stem(path2, "git")  # "Install" git, "late" in the PATH.

@@ -1,0 +1,78 @@
+name: Backend benchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare-backends:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Ensure Git 2.52 or newer
+        run: |
+          if ! dpkg --compare-versions "$(git version | awk '{print $3}')" ge 2.52; then
+            sudo add-apt-repository --yes ppa:git-core/ppa
+            sudo apt-get update
+            sudo apt-get install --yes git
+          fi
+      - name: Install separate backends with the same interpreter
+        run: |
+          python -m venv .bench-cli
+          python -m venv .bench-gix
+          .bench-cli/bin/python -m pip install . -r test/performance/benchmark-requirements.txt
+          .bench-gix/bin/python -m pip install '.[gix]' -r test/performance/benchmark-requirements.txt
+      - name: Prepare an existing repository outside the timed operations
+        env:
+          BENCH_REPO: ${{ runner.temp }}/benchmark-repo
+          GIT_CONFIG_NOSYSTEM: "1"
+          GIT_CONFIG_GLOBAL: /dev/null
+        run: |
+          git init --object-format=sha1 --ref-format=files "$BENCH_REPO"
+          git -C "$BENCH_REPO" fetch --no-tags "$GITHUB_WORKSPACE" 6ba2c0a2f9ee7feffd7e079621c4845820180c9a
+          git -C "$BENCH_REPO" checkout -b benchmark FETCH_HEAD
+          git -C "$BENCH_REPO" config core.excludesFile /dev/null
+          git -C "$BENCH_REPO" config core.attributesFile /dev/null
+          git -C "$BENCH_REPO" config core.fsmonitor false
+          git -C "$BENCH_REPO" config core.untrackedCache false
+          git -C "$BENCH_REPO" config gc.auto 0
+          git -C "$BENCH_REPO" config maintenance.auto false
+          mkdir "$BENCH_REPO/.benchmark-cache"
+          touch "$BENCH_REPO/.benchmark-cache/probe" "$BENCH_REPO/benchmark-untracked.txt"
+          echo '.benchmark-cache/' >> "$BENCH_REPO/.git/info/exclude"
+          mkdir benchmark-results
+      - name: Measure GixPython operations, opening and discovery first
+        run: |
+          .bench-gix/bin/python -m test.performance.bench_repository \
+            --repo "$RUNNER_TEMP/benchmark-repo" --expect-backend gix -o benchmark-results/gix.json
+      - name: Measure CLI operations, opening and discovery
+        run: |
+          .bench-cli/bin/python -m test.performance.bench_repository \
+            --repo "$RUNNER_TEMP/benchmark-repo" --expect-backend cli -o benchmark-results/cli.json
+      - name: Check parity and publish comparison
+        run: |
+          .bench-gix/bin/python -m test.performance.compare_backends \
+            benchmark-results/cli.json benchmark-results/gix.json \
+            --cli-budget test/performance/cli-budget.json > benchmark-results/comparison.md
+          cat benchmark-results/comparison.md >> "$GITHUB_STEP_SUMMARY"
+          .bench-gix/bin/python -m pyperf compare_to \
+            benchmark-results/cli.json benchmark-results/gix.json --table --table-format md \
+            >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain raw timings and comparison
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-benchmark
+          path: benchmark-results/

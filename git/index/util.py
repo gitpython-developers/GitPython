@@ -3,13 +3,12 @@
 
 """Index utilities."""
 
-__all__ = ["TemporaryFileSwap", "post_clear_cache", "default_index", "git_working_dir"]
+__all__ = ["TemporaryFileSwap", "default_index", "git_working_dir"]
 
 import contextlib
 from functools import wraps
 import os
 import os.path as osp
-import struct
 import tempfile
 from types import TracebackType
 
@@ -23,11 +22,6 @@ if TYPE_CHECKING:
     from git.index import IndexFile
 
 # ---------------------------------------------------------------------------------
-
-# { Aliases
-pack = struct.pack
-unpack = struct.unpack
-# } END aliases
 
 
 class TemporaryFileSwap:
@@ -59,24 +53,6 @@ class TemporaryFileSwap:
 
 
 # { Decorators
-
-
-def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
-    """Decorator for functions that alter the index using the git command.
-
-    When a git command alters the index, this invalidates our possibly existing entries
-    dictionary, which is why it must be deleted to allow it to be lazily reread later.
-    """
-
-    @wraps(func)
-    def post_clear_cache_if_not_raised(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
-        rval = func(self, *args, **kwargs)
-        self._delete_entries_cache()
-        return rval
-
-    # END wrapper method
-
-    return post_clear_cache_if_not_raised
 
 
 def default_index(func: Callable[..., _T]) -> Callable[..., _T]:

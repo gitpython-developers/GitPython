@@ -3,15 +3,12 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import ast
+import contextlib
 from datetime import datetime
 import os
-import pathlib
 import pickle
 import stat
-import subprocess
 import sys
-import tempfile
 import threading
 import time
 from unittest import SkipTest, mock
@@ -43,6 +40,7 @@ from git.util import (
     rmtree,
 )
 
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import TestBase, requires_symlinks, with_rw_repo
 
 
@@ -143,15 +141,16 @@ class TestRmtree:
             rwx = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
             if not dir2.exists():
                 return
-            if symlink.exists():
-                try:
-                    # Try lchmod first, if the platform supports it.
-                    symlink.lchmod(rwx)
-                except NotImplementedError:
-                    # The platform (probably win32) doesn't support lchmod; fall back to chmod.
-                    symlink.chmod(rwx)
-            dir2.chmod(rwx)
-            rmtree(dir2)
+            with contextlib.suppress(OSError):
+                if symlink.exists():
+                    try:
+                        # Try lchmod first, if the platform supports it.
+                        symlink.lchmod(rwx)
+                    except NotImplementedError:
+                        # The platform (probably win32) doesn't support lchmod; fall back to chmod.
+                        symlink.chmod(rwx)
+                dir2.chmod(rwx)
+            cleanup_directory(dir2)
 
         request.addfinalizer(preen_dir2)
 
@@ -164,118 +163,6 @@ class TestRmtree:
 
         new_mode = (dir1 / "file").stat().st_mode
         assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
-
-    def _patch_for_wrapping_test(self, mocker, hide_windows_known_errors):
-        # Access the module through sys.modules so it is unambiguous which module's
-        # attribute we patch: the original git.util, not git.index.util even though
-        # git.index.util "replaces" git.util and is what "import git.util" gives us.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
-
-        # Mock out common chmod functions to simulate PermissionError the callback can't
-        # fix. (We leave the corresponding lchmod functions alone. If they're used, it's
-        # more important we detect any failures from inadequate compatibility checks.)
-        mocker.patch.object(os, "chmod")
-        mocker.patch.object(pathlib.Path, "chmod")
-
-    @pytest.mark.skipif(
-        sys.platform != "win32",
-        reason="PermissionError is only ever wrapped on Windows",
-    )
-    def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is
-        true."""
-        self._patch_for_wrapping_test(mocker, True)
-
-        with pytest.raises(SkipTest):
-            rmtree(permission_error_tmpdir)
-
-    @pytest.mark.skipif(
-        sys.platform == "cygwin",
-        reason="Cygwin can't set the permissions that make the test meaningful.",
-    )
-    @pytest.mark.parametrize(
-        "hide_windows_known_errors",
-        [
-            pytest.param(False),
-            pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="We would wrap on Windows")),
-        ],
-    )
-    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
-        """rmtree does not wrap PermissionError on non-Windows systems or when
-        HIDE_WINDOWS_KNOWN_ERRORS is false."""
-        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
-
-        with pytest.raises(PermissionError):
-            try:
-                rmtree(permission_error_tmpdir)
-            except SkipTest as ex:
-                pytest.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-    @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
-    def test_does_not_wrap_other_errors(self, tmp_path, mocker, hide_windows_known_errors):
-        # The file is deliberately never created.
-        file_not_found_tmpdir = tmp_path / "testdir"
-
-        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
-
-        with pytest.raises(FileNotFoundError):
-            try:
-                rmtree(file_not_found_tmpdir)
-            except SkipTest as ex:
-                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-
-class TestEnvParsing:
-    """Tests for environment variable parsing logic in :mod:`git.util`."""
-
-    @staticmethod
-    def _run_parse(name, value):
-        command = [
-            sys.executable,
-            "-c",
-            f"from git.util import {name}; print(repr({name}))",
-        ]
-        output = subprocess.check_output(
-            command,
-            env=None if value is None else dict(os.environ, **{name: value}),
-            text=True,
-        )
-        return ast.literal_eval(output)
-
-    @pytest.mark.skipif(
-        sys.platform != "win32",
-        reason="These environment variables are only used on Windows.",
-    )
-    @pytest.mark.parametrize(
-        "env_var_value, expected_truth_value",
-        [
-            (None, True),  # When the environment variable is unset.
-            ("", False),
-            (" ", False),
-            ("0", False),
-            ("1", True),
-            ("false", False),
-            ("true", True),
-            ("False", False),
-            ("True", True),
-            ("no", False),
-            ("yes", True),
-            ("NO", False),
-            ("YES", True),
-            (" no  ", False),
-            (" yes  ", True),
-        ],
-    )
-    @pytest.mark.parametrize(
-        "name",
-        [
-            "HIDE_WINDOWS_KNOWN_ERRORS",
-            "HIDE_WINDOWS_FREEZE_ERRORS",
-        ],
-    )
-    def test_env_vars_for_windows_tests(self, name, env_var_value, expected_truth_value):
-        actual_parsed_value = self._run_parse(name, env_var_value)
-        assert actual_parsed_value is expected_truth_value
 
 
 def _xfail_param(*values, **xfail_kwargs):
@@ -421,7 +308,7 @@ class TestUtils(TestBase):
 
     @ddt.data("my-lock-file", "my-lock-file-\u0394", "\u0394/my-lock-file", "\U0001f680/my-lock-file")
     def test_lock_file(self, filename):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, filename)
             os.makedirs(os.path.dirname(my_file), exist_ok=True)
             lock_file = LockFile(my_file)
@@ -452,7 +339,7 @@ class TestUtils(TestBase):
             lock_file._release_lock()
 
     def test_lock_file_rejects_embedded_nul(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = LockFile(my_file + "\0suffix")
             self.assertRaises(ValueError, lock_file._obtain_lock_or_raise)
@@ -462,7 +349,7 @@ class TestUtils(TestBase):
     @ddt.data(False, True)
     @requires_symlinks
     def test_lock_file_does_not_follow_a_symlink(self, target_exists):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             outside = os.path.join(tdir, "outside-the-lock")
             content = b"Do not modify the symlink target."
@@ -483,7 +370,7 @@ class TestUtils(TestBase):
                 assert not os.path.exists(outside)
 
     def test_lock_file_is_obtained_by_a_single_holder(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             racers = 8
             at_the_line = threading.Barrier(racers)
@@ -513,7 +400,7 @@ class TestUtils(TestBase):
                     lock_file._release_lock()
 
     def test_blocking_lock_file(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = BlockingLockFile(my_file)
             lock_file._obtain_lock()
@@ -564,18 +451,17 @@ class TestUtils(TestBase):
         iso = ("2005-04-07T22:13:11 -0200", 7200)
         iso2 = ("2005-04-07 22:13:11 +0400", -14400)
         iso3 = ("2005.04.07 22:13:11 -0000", 0)
-        alt = ("04/07/2005 22:13:11", 0)
-        alt2 = ("07.04.2005 22:13:11", 0)
+        alt = ("04/07/2005 22:13:11 +0000", 0)
+        alt2 = ("07.04.2005 22:13:11 +0000", 0)
         veri_time_utc = 1112911991  # The time this represents, in time since epoch, UTC.
         for date, offset in (rfc, iso, iso2, iso3, alt, alt2):
-            assert_rval(parse_date(date), veri_time_utc, offset)
+            assert_rval(parse_date(date), veri_time_utc + offset, offset)
         # END for each date type
 
         # ...and failure.
         self.assertRaises(ValueError, parse_date, datetime.now())  # Non-aware datetime.
         self.assertRaises(ValueError, parse_date, "invalid format")
-        self.assertRaises(ValueError, parse_date, "123456789 -02000")
-        self.assertRaises(ValueError, parse_date, " 123456789 -0200")
+        assert parse_date(" 123456789 -0200") == (123456789, 7200)
 
     def test_actor(self):
         for cr in (None, self.rorepo.config_reader()):

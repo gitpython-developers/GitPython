@@ -6,7 +6,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    List,
     NoReturn,
     Optional,
     Sequence as Sequence,
@@ -15,7 +14,6 @@ from typing import (
     TypeVar,
     Union,
 )
-import warnings
 
 from typing import (
     Literal,
@@ -134,51 +132,6 @@ These are the same strings git itself uses to identify its four object types.
 See :manpage:`gitglossary(7)` on "object type":
 https://git-scm.com/docs/gitglossary#def_object_type
 """
-
-if TYPE_CHECKING:
-    Lit_commit_ish = Literal["commit", "tag"]
-"""Deprecated. Type of literal strings identifying typically-commitish git object types.
-
-Prior to a bugfix, this type had been defined more broadly. Any usage is in practice
-ambiguous and likely to be incorrect. This type has therefore been made a static type
-error to appear in annotations. It is preserved, with a deprecated status, to avoid
-introducing runtime errors in code that refers to it, but it should not be used.
-
-Instead of this type:
-
-* For the type of the string literals associated with :class:`Commit_ish`, use
-  ``Literal["commit", "tag"]`` or create a new type alias for it. That is equivalent to
-  this type as currently defined (but usable in statically checked type annotations).
-
-* For the type of all four string literals associated with :class:`AnyGitObject`, use
-  :class:`GitObjectTypeString`. That is equivalent to the old definition of this type
-  prior to the bugfix (and is also usable in statically checked type annotations).
-"""
-
-
-def _getattr(name: str) -> Any:
-    if name != "Lit_commit_ish":
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    warnings.warn(
-        "Lit_commit_ish is deprecated. It is currently defined as "
-        '`Literal["commit", "tag"]`, which should be used in its place if desired. It '
-        'had previously been defined as `Literal["commit", "tag", "blob", "tree"]`, '
-        "covering all four git object type strings including those that are never "
-        "commit-ish. For that, use the GitObjectTypeString type instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return Literal["commit", "tag"]
-
-
-if not TYPE_CHECKING:  # Preserve static checking for undefined/misspelled attributes.
-    __getattr__ = _getattr
-
-
-def __dir__() -> List[str]:
-    return [*globals(), "Lit_commit_ish"]
-
 
 # Config_levels ---------------------------------------------------------
 

@@ -11,7 +11,6 @@ __all__ = [
     "to_native_path_linux",
     "join_path_native",
     "Stats",
-    "IndexFileSHA1Writer",
     "IterableObj",
     "IterableList",
     "BlockingLockFile",
@@ -23,7 +22,6 @@ __all__ = [
     "CallableRemoteProgress",
     "rmtree",
     "unbare_repo",
-    "HIDE_WINDOWS_KNOWN_ERRORS",
 ]
 
 if sys.platform == "win32":
@@ -41,14 +39,12 @@ import shutil
 import stat
 import subprocess
 import time
-import warnings
 from abc import abstractmethod
 from functools import wraps
 from pathlib import Path
 
 # typing ---------------------------------------------------------
 from typing import (
-    IO,
     TYPE_CHECKING,
     Any,
     AnyStr,
@@ -81,9 +77,6 @@ from gitdb.util import (
     file_contents_ro,  # noqa: F401
     file_contents_ro_filepath,  # noqa: F401
     hex_to_bin,  # noqa: F401
-    make_sha,
-    to_bin_sha,  # noqa: F401
-    to_hex_sha,  # noqa: F401
 )
 
 if TYPE_CHECKING:
@@ -115,50 +108,24 @@ T_Actor = TypeVar("T_Actor", bound="Actor")
 _logger = logging.getLogger(__name__)
 
 
-def _read_env_flag(name: str, default: bool) -> bool:
-    """Read a boolean flag from an environment variable.
-
-    :return:
-        The flag, or the `default` value if absent or ambiguous.
-    """
-    try:
-        value = os.environ[name]
-    except KeyError:
-        return default
-
-    _logger.warning(
-        "The %s environment variable is deprecated. Its effect has never been documented and changes without warning.",
-        name,
-    )
-
-    adjusted_value = value.strip().lower()
-
-    if adjusted_value in {"", "0", "false", "no"}:
-        return False
-    if adjusted_value in {"1", "true", "yes"}:
-        return True
-    _logger.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
-    return default
+def to_hex_sha(sha: Union[str, bytes]) -> Union[str, bytes]:
+    """Normalize legacy SHA-1 or SHA-256 IDs; use ``bin_to_hex`` for raw IDs."""
+    if len(sha) in (40, 64):
+        hex_to_bin(sha)  # Validate already hexadecimal input.
+        return sha
+    if isinstance(sha, bytes) and len(sha) in (20, 32):
+        return bin_to_hex(sha)
+    raise ValueError("Expected a binary or hexadecimal SHA-1/SHA-256 object ID")
 
 
-def _read_win_env_flag(name: str, default: bool) -> bool:
-    """Read a boolean flag from an environment variable on Windows.
+def to_bin_sha(sha: Union[str, bytes]) -> bytes:
+    """Normalize legacy SHA-1 or SHA-256 IDs; use ``hex_to_bin`` for hex IDs."""
+    if isinstance(sha, bytes) and len(sha) in (20, 32):
+        return sha
+    if len(sha) in (40, 64):
+        return hex_to_bin(sha)
+    raise ValueError("Expected a binary or hexadecimal SHA-1/SHA-256 object ID")
 
-    :return:
-        On Windows, the flag, or the `default` value if absent or ambiguous.
-        On all other operating systems, ``False``.
-
-    :note:
-        This only accesses the environment on Windows.
-    """
-    return sys.platform == "win32" and _read_env_flag(name, default)
-
-
-#: We need an easy way to see if Appveyor TCs start failing,
-#: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
-#: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = _read_win_env_flag("HIDE_WINDOWS_KNOWN_ERRORS", True)
-HIDE_WINDOWS_FREEZE_ERRORS = _read_win_env_flag("HIDE_WINDOWS_FREEZE_ERRORS", True)
 
 # { Utility Methods
 
@@ -228,14 +195,7 @@ def rmtree(path: PathLike) -> None:
         # Is the error an access error?
         os.chmod(path, stat.S_IWUSR)
 
-        try:
-            function(path)
-        except PermissionError as ex:
-            if HIDE_WINDOWS_KNOWN_ERRORS:
-                from unittest import SkipTest
-
-                raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
-            raise
+        function(path)
 
     if sys.platform != "win32":
         shutil.rmtree(path)
@@ -496,13 +456,13 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     return progs
 
 
-def _cygexpath(drive: Optional[str], path: str, expand_vars: bool = True) -> str:
+def _cygexpath(drive: Optional[str], path: str) -> str:
     if osp.isabs(path) and not drive:
         # Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
         p = path  # convert to str if AnyPath given
     else:
-        p = path and osp.normpath(osp.expandvars(osp.expanduser(path)) if expand_vars else path)
+        p = path and osp.normpath(osp.expanduser(path))
         if osp.isabs(p):
             if drive:
                 # Confusing, maybe a remote system should expand vars.
@@ -530,7 +490,7 @@ _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable[..., str], bool], ...] = (
 )
 
 
-def cygpath(path: str, expand_vars: bool = True) -> str:
+def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
     path = os.fspath(path)  # Ensure is str and not AnyPath.
     # Fix to use Paths when 3.5 dropped. Or to be just str if only for URLs?
@@ -539,14 +499,14 @@ def cygpath(path: str, expand_vars: bool = True) -> str:
             match = regex.match(path)
             if match:
                 if parser is _cygexpath:
-                    path = parser(*match.groups(), expand_vars=expand_vars)
+                    path = parser(*match.groups())
                 else:
                     path = parser(*match.groups())
                 if recurse:
-                    path = cygpath(path, expand_vars=expand_vars)
+                    path = cygpath(path)
                 break
         else:
-            path = _cygexpath(None, path, expand_vars=expand_vars)
+            path = _cygexpath(None, path)
 
     return path
 
@@ -629,24 +589,20 @@ def finalize_process(proc: Union["subprocess.Popen[Any]", "Git.AutoInterrupt"], 
 
 
 @overload
-def expand_path(p: None, expand_vars: bool = ...) -> None: ...
+def expand_path(p: None) -> None: ...
 
 
 @overload
-def expand_path(p: PathLike, expand_vars: bool = ...) -> Optional[PathLike]:
+def expand_path(p: PathLike) -> Optional[PathLike]:
     # TODO: Support for Python 3.5 has been dropped, so these overloads can be improved.
     ...
 
 
-def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[PathLike]:
+def expand_path(p: Union[None, PathLike]) -> Optional[PathLike]:
     if p is None:
         return None
     try:
-        if isinstance(p, Path):
-            return p.resolve()
         expanded_path = osp.expanduser(os.fspath(p))
-        if expand_vars:
-            expanded_path = osp.expandvars(expanded_path)
         return osp.normpath(osp.abspath(expanded_path))
     except Exception:
         return None
@@ -905,26 +861,10 @@ class CallableRemoteProgress(RemoteProgress):
         self._callable(*args, **kwargs)
 
 
-class _DeprecatedActorNameEmailRegex:
-    _pattern = re.compile(r"(.*) <(.*?)>")
-
-    def __get__(self, _instance: Any, _owner: Any) -> Pattern[str]:
-        warnings.warn(
-            "Actor.name_email_regex is deprecated and will be removed in GitPython 4.0.0 because searching long "
-            "malformed strings with it can take quadratic time. Use Actor.from_string() to parse actor identities, "
-            "or Actor(name, email) when the fields are already separate.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._pattern
-
-
 class Actor:
     """Actors hold information about a person acting on the repository. They can be
     committers and authors or anything with a name and an email as mentioned in the git
     log entries."""
-
-    name_email_regex = _DeprecatedActorNameEmailRegex()
 
     # ENVIRONMENT VARIABLES
     # These are read when creating new commits.
@@ -1109,41 +1049,6 @@ class Stats:
             }
             hsh["files"][filename.strip()] = files_dict
         return Stats(hsh["total"], hsh["files"])
-
-
-class IndexFileSHA1Writer:
-    """Wrapper around a file-like object that remembers the SHA1 of the data written to
-    it. It will write a sha when the stream is closed or if asked for explicitly using
-    :meth:`write_sha`.
-
-    Only useful to the index file.
-
-    :note:
-        Based on the dulwich project.
-    """
-
-    __slots__ = ("f", "sha1")
-
-    def __init__(self, f: IO[bytes]) -> None:
-        self.f = f
-        self.sha1 = make_sha(b"")
-
-    def write(self, data: bytes) -> int:
-        self.sha1.update(data)
-        return self.f.write(data)
-
-    def write_sha(self) -> bytes:
-        sha = self.sha1.digest()
-        self.f.write(sha)
-        return sha
-
-    def close(self) -> bytes:
-        sha = self.write_sha()
-        self.f.close()
-        return sha
-
-    def tell(self) -> int:
-        return self.f.tell()
 
 
 class LockFile:
@@ -1477,64 +1382,6 @@ class IterableObj(Protocol):
             list(Item,...) list of item instances
         """
         out_list: IterableList[T_IterableObj] = IterableList(cls._id_attribute_)
-        out_list.extend(cls.iter_items(repo, *args, **kwargs))
-        return out_list
-
-
-class IterableClassWatcher(type):
-    """Metaclass that issues :exc:`DeprecationWarning` when :class:`git.util.Iterable`
-    is subclassed."""
-
-    def __init__(cls, name: str, bases: Tuple[type, ...], clsdict: Dict[str, Any]) -> None:
-        super().__init__(name, bases, clsdict)
-        for base in bases:
-            if type(base) is IterableClassWatcher:
-                warnings.warn(
-                    f"GitPython Iterable subclassed by {name}."
-                    " Iterable is deprecated due to naming clash since v3.1.18"
-                    " and will be removed in 4.0.0."
-                    " Use IterableObj instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-
-
-class Iterable(metaclass=IterableClassWatcher):
-    """Deprecated, use :class:`IterableObj` instead.
-
-    Defines an interface for iterable items, so there is a uniform way to retrieve
-    and iterate items within the git repository.
-    """
-
-    __slots__ = ()
-
-    _id_attribute_ = "attribute that most suitably identifies your instance"
-
-    @classmethod
-    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
-        """Deprecated, use :class:`IterableObj` instead.
-
-        Find (all) items of this type.
-
-        See :meth:`IterableObj.iter_items` for details on usage.
-
-        :return:
-            Iterator yielding Items
-        """
-        raise NotImplementedError("To be implemented by Subclass")
-
-    @classmethod
-    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
-        """Deprecated, use :class:`IterableObj` instead.
-
-        Find (all) items of this type and collect them into a list.
-
-        See :meth:`IterableObj.list_items` for details on usage.
-
-        :return:
-            list(Item,...) list of item instances
-        """
-        out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 

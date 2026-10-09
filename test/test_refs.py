@@ -28,7 +28,8 @@ from git import (
 )
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
-from git.util import Actor, rmtree
+from git.util import Actor
+from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 
 
@@ -43,8 +44,8 @@ class TestRefs(TestBase):
         try:
             yield repo
         finally:
-            repo.git.clear_cache()
-            rmtree(repo_dir)
+            repo.close()
+            cleanup_directory(repo_dir)
 
     def test_from_path(self):
         # Should be able to create any reference directly.
@@ -210,7 +211,7 @@ class TestRefs(TestBase):
         # One new log-entry.
         thlog = head.log()
         assert len(thlog) == hlog_len + 1
-        assert thlog[-1].oldhexsha == cur_commit.hexsha
+        assert not hasattr(thlog[-1], "oldhexsha")
         assert thlog[-1].newhexsha == pcommit.hexsha
 
         # The ref didn't change though.
@@ -235,7 +236,7 @@ class TestRefs(TestBase):
         other_head = Head.create(rwrepo, "mynewhead", pcommit, logmsg="new head created")
         log = other_head.log()
         assert len(log) == 1
-        assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
+        assert not hasattr(log[0], "oldhexsha")
         assert log[0].newhexsha == pcommit.hexsha
 
     @with_rw_repo("HEAD", bare=False)
@@ -281,7 +282,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD")
     def test_head_checkout_rejects_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
             for option_name in ("pathspec_from_file", "pathspec_from"):
@@ -296,7 +297,7 @@ class TestRefs(TestBase):
                     branch.checkout()
 
     def test_cloned_head_checkout_rejects_pathspec_from_file(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             base_dir = Path(tdir)
             with self._repo_with_initial_commit(base_dir) as source:
                 branch = source.create_head("--pathspec-from-file=pathspecs")
@@ -304,15 +305,15 @@ class TestRefs(TestBase):
                 with Repo.clone_from(source.working_tree_dir, base_dir / "clone") as cloned:
                     (base_dir / "clone" / "pathspecs").write_text("unmatched-private-content\n", encoding="utf-8")
                     assert cloned.active_branch.name == branch.name
-                    with self.assertRaises(UnsafeOptionError):
-                        cloned.active_branch.checkout()
-                    with self.assertRaises(GitCommandError) as error:
-                        cloned.active_branch.checkout(allow_unsafe_options=True)
-                    assert "unmatched-private-content" in str(error.exception)
+                    for allow_unsafe_options in (False, True):
+                        with self.assertRaises(UnsafeOptionError) as error:
+                            cloned.active_branch.checkout(allow_unsafe_options=allow_unsafe_options)
+                        assert "unmatched-private-content" not in str(error.exception)
+                    assert cloned.active_branch.name == branch.name
 
     @with_rw_repo("HEAD")
     def test_head_reset_rejects_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"unmatched-path-one\nunmatched-path-two")
             for option_name in ("pathspec_from_file", "pathspec_from"):
@@ -330,7 +331,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD")
     def test_head_commands_allow_explicit_pathspec_from_file(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             pathspecs = Path(tdir) / "pathspecs"
             pathspecs.write_bytes(b"CHANGES\0")
             options = {
@@ -436,11 +437,10 @@ class TestRefs(TestBase):
             tmp_head.rename(new_head, force=True)
             assert tmp_head == new_head and tmp_head.object == new_head.object
 
-            logfile = RefLog.path(tmp_head)
-            assert osp.isfile(logfile)
+            assert tmp_head.log()
             Head.delete(rw_repo, tmp_head)
             # Deletion removes the log as well.
-            assert not osp.isfile(logfile)
+            assert tmp_head.log() == []
             heads = rw_repo.heads
             assert tmp_head not in heads and new_head not in heads
             # Force on deletion testing would be missing here, code looks okay though. ;)
@@ -508,15 +508,12 @@ class TestRefs(TestBase):
         assert head.commit == cur_head.commit
         head.commit = old_commit
 
-        # Setting a non-commit as commit fails, but succeeds as object.
+        # Git enforces commit-only branch targets for either setter.
         head_tree = head.commit.tree
         self.assertRaises(ValueError, setattr, head, "commit", head_tree)
         assert head.commit == old_commit  # And the ref did not change.
-        # We allow heads to point to any object.
-        head.object = head_tree
-        assert head.object == head_tree
-        # Cannot query tree as commit.
-        self.assertRaises(TypeError, getattr, head, "commit")
+        self.assertRaises(TypeError, setattr, head, "object", head_tree)
+        assert head.commit == old_commit
 
         # Set the commit directly using the head. This would never detach the head.
         assert not cur_head.is_detached
@@ -602,7 +599,7 @@ class TestRefs(TestBase):
         assert ref.rename(ref.path).path == ex_ref_path  # rename to same name
 
         # Create symbolic refs.
-        symref_path = "symrefs/sym"
+        symref_path = "refs/symrefs/sym"
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
         assert symref.path == symref_path
         assert symref.reference == cur_head.reference
@@ -633,7 +630,7 @@ class TestRefs(TestBase):
         assert osp.isfile(symbol_ref_abspath)
         assert symref.commit == new_head.commit
 
-        for name in ("absname", "folder/rela_name"):
+        for name in ("ROOT_SYM", "refs/folder/rela_name"):
             symref_new_name = symref.rename(name)
             assert isinstance(symref_new_name, SymbolicReference)
             assert name in symref_new_name.path
@@ -682,7 +679,8 @@ class TestRefs(TestBase):
         # At least the head should still exist.
         assert osp.isfile(osp.join(rw_repo.git_dir, "HEAD"))
         refs = list(SymbolicReference.iter_items(rw_repo))
-        assert len(refs) == 1
+        assert rw_repo.head in refs
+        assert all(not ref.is_detached for ref in refs)
 
         # Test creation of new refs from scratch.
         for path in ("basename", "dir/somename", "dir2/subdir/basename"):
@@ -757,7 +755,7 @@ class TestRefs(TestBase):
             self.assertRaises(BadName, self.rorepo.commit, f"../../{ref_file_name}")
 
     def test_reference_create_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -766,7 +764,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_create_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -775,7 +773,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_set_reference_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_write.txt"
@@ -784,7 +782,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_symbolic_reference_rename_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_move.txt"
@@ -795,7 +793,7 @@ class TestRefs(TestBase):
                 assert Path(ref.abspath).is_file()
 
     def test_symbolic_reference_delete_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_delete.txt"
@@ -805,7 +803,7 @@ class TestRefs(TestBase):
                 assert outside_path.read_text(encoding="utf-8") == "do not delete\n"
 
     def test_symbolic_reference_log_append_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_path = base_dir / "outside_reflog.txt"
@@ -818,7 +816,7 @@ class TestRefs(TestBase):
 
     @requires_symlinks
     def test_symbolic_reference_set_reference_rejects_symlink_escape(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             with self._repo_with_initial_commit(base_dir) as repo:
                 outside_dir = base_dir / "outside_refs"
@@ -837,7 +835,7 @@ class TestRefs(TestBase):
                 assert not outside_path.exists()
 
     def test_remote_reference_delete_cleanup_rejects_path_traversal(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory() as tmp_dir:
             base_dir = Path(tmp_dir)
             git_dir = base_dir / "repo" / ".git"
             git_dir.mkdir(parents=True)
@@ -917,7 +915,7 @@ class TestRefs(TestBase):
 
 class TestSymbolicReferenceSecurity(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.repo = Repo.init(Path(self.tmp.name) / "repo")
         self.addCleanup(self.repo.close)
@@ -928,7 +926,8 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
     def write_ref(self, path, value):
         file = Path(self.repo.git_dir) / path
         file.parent.mkdir(parents=True, exist_ok=True)
-        file.write_text(value + "\n", encoding="utf-8")
+        # Packed references require LF even on Windows.
+        file.write_bytes((value + "\n").encode("utf-8"))
 
     def chain(self, count, terminal=None):
         paths = ["HEAD"] + [f"refs/heads/link-{i}" for i in range(1, count)]
@@ -1016,7 +1015,7 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
             self.assertEqual((Path(self.repo.git_dir) / path).read_text(), "ref: " + target + "\n")
         for path in ("HEAD", paths[-1]):
             entry = SymbolicReference(self.repo, path).log()[-1]
-            self.assertEqual(entry.oldhexsha, self.commit.hexsha)
+            self.assertFalse(hasattr(entry, "oldhexsha"))
             self.assertEqual(entry.newhexsha, self.next_commit.hexsha)
             self.assertEqual(entry.message, "updated through chain")
 
@@ -1042,7 +1041,7 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
         paths = self.chain(5)
         ref = CustomReference(self.repo, "HEAD", check_path=False)
         self.assertIs(ref.set_object(self.next_commit, "custom reference"), ref)
-        self.assertEqual(calls, paths)
+        self.assertEqual(calls, [paths[0]])
         self.assertEqual(self.repo.head.commit, self.next_commit)
         self.assertEqual(self.repo.head.log()[-1].message, "custom reference")
 

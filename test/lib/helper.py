@@ -42,10 +42,10 @@ import unittest
 import venv
 from typing import Union, Type, Tuple
 
-import gitdb
 import pytest
 
-from git.util import rmtree, cwd
+from git.util import cwd
+from test.cleanup import TemporaryDirectory, cleanup_directory
 
 TestCase = unittest.TestCase
 SkipTest = unittest.SkipTest
@@ -107,7 +107,10 @@ class StringProcessAdapter:
 
 def with_rw_directory(func):
     """Create a temporary directory which can be written to, remove it if the
-    test succeeds, but leave it otherwise to aid additional debugging."""
+    test succeeds, but leave it otherwise to aid additional debugging.
+
+    Cleanup is best-effort: a locked file must not change the test result.
+    """
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -132,7 +135,7 @@ def with_rw_directory(func):
             # though this is not the case here unless we collect explicitly.
             gc.collect()
             if not keep:
-                rmtree(path)
+                cleanup_directory(path)
 
     return wrapper
 
@@ -179,13 +182,10 @@ def with_rw_repo(working_tree_ref, bare=False):
                 raise
             finally:
                 os.chdir(prev_cwd)
-                rw_repo.git.clear_cache()
+                rw_repo.close()
                 rw_repo = None
                 if repo_dir is not None:
-                    gc.collect()
-                    gitdb.util.mman.collect()
-                    gc.collect()
-                    rmtree(repo_dir)
+                    cleanup_directory(repo_dir)
                 # END rm test repo if possible
             # END cleanup
 
@@ -202,29 +202,17 @@ def git_daemon_launched(base_path, ip, port):
 
     gd = None
     try:
-        if sys.platform == "win32":
-            # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
-            # but if invoked as 'git daemon', it detaches from parent `git` cmd,
-            # and then CANNOT DIE!
-            # So, invoke it as a single command.
-            daemon_cmd = [
-                osp.join(Git()._call_process("--exec-path"), "git-daemon"),
-                "--enable=receive-pack",
-                "--listen=%s" % ip,
-                "--port=%s" % port,
-                "--base-path=%s" % base_path,
-                base_path,
-            ]
-            gd = Git().execute(daemon_cmd, as_process=True)
-        else:
-            gd = Git().daemon(
-                base_path,
-                enable="receive-pack",
-                listen=ip,
-                port=port,
-                base_path=base_path,
-                as_process=True,
-            )
+        # Killing a `git daemon` wrapper can leave its child listening on any OS.
+        daemon_cmd = [
+            osp.join(Git()._call_process("--exec-path"), "git-daemon"),
+            "--enable=receive-pack",
+            "--reuseaddr",
+            "--listen=%s" % ip,
+            "--port=%s" % port,
+            "--base-path=%s" % base_path,
+            base_path,
+        ]
+        gd = Git().execute(daemon_cmd, as_process=True)
 
         # Wait until git daemon listens for connections.
         for _attempt in range(1, 30):
@@ -241,7 +229,7 @@ def git_daemon_launched(base_path, ip, port):
           Probably test will fail subsequently.
 
           BUT you may start *git-daemon* manually with this command:"
-                git daemon --enable=receive-pack  --listen=%s --port=%s --base-path=%s  %s
+                git daemon --enable=receive-pack --reuseaddr --listen=%s --port=%s --base-path=%s %s
           You may also run the daemon on a different port by passing --port=<port>"
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """
@@ -257,6 +245,7 @@ def git_daemon_launched(base_path, ip, port):
             try:
                 _logger.debug("Killing git-daemon...")
                 gd.proc.kill()
+                gd.proc.wait(timeout=5)
             except Exception as ex:
                 # Either it has died (and we're here), or it won't die, again here...
                 _logger.debug("Hidden error while Killing git-daemon: %s", ex, exc_info=1)
@@ -312,12 +301,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
                 # This thing is just annoying!
                 with rw_daemon_repo.config_writer() as crw:
-                    section = "daemon"
-                    try:
-                        crw.add_section(section)
-                    except Exception:
-                        pass
-                    crw.set(section, "receivepack", True)
+                    crw.set_value("daemon", "receivepack", True)
 
                 # Initialize the remote - first do it as local remote and pull, then
                 # we change the url to point to the daemon.
@@ -351,17 +335,14 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                             raise
 
             finally:
-                rw_repo.git.clear_cache()
-                rw_daemon_repo.git.clear_cache()
+                rw_repo.close()
+                rw_daemon_repo.close()
                 del rw_repo
                 del rw_daemon_repo
-                gc.collect()
-                gitdb.util.mman.collect()
-                gc.collect()
                 if rw_repo_dir:
-                    rmtree(rw_repo_dir)
+                    cleanup_directory(rw_repo_dir)
                 if rw_daemon_repo_dir:
-                    rmtree(rw_daemon_repo_dir)
+                    cleanup_directory(rw_daemon_repo_dir)
             # END cleanup
 
         # END bare repo creator
@@ -400,13 +381,13 @@ class TestBase(TestCase):
         """:return: A path to a small, clonable repository"""
         from git.cmd import Git
 
-        return Git.polish_url(self._dependency_repo_dirs["smmap"])
+        return Git.polish_url(self._dependency_repo_factory("smmap"))
 
     def _gitdb_repo_url(self):
         """:return: A local gitdb repository reconstructed from merged history"""
         from git.cmd import Git
 
-        return Git.polish_url(self._dependency_repo_dirs["gitdb"])
+        return Git.polish_url(self._dependency_repo_factory("gitdb"))
 
     @classmethod
     def setUpClass(cls):
@@ -418,26 +399,11 @@ class TestBase(TestCase):
 
         gc.collect()
         cls.rorepo = Repo(GIT_REPO)
-        cls._dependency_repo_root = tempfile.mkdtemp(prefix="gitpython-dependency-repos-")
-        cls._dependency_repo_dirs = {}
-        for name, rev in {
-            "gitdb": "2da3232f9d58e7761e384ac6d32f7b1ed77a74a2",
-            "smmap": "8ce61ad5cc4016bffaf25080bc0d69b3acbe8555",
-        }.items():
-            path = osp.join(cls._dependency_repo_root, name)
-            repo = cls.rorepo.clone(path, shared=True, no_checkout=True)
-            repo.create_head("master", repo.commit(rev), force=True).checkout()
-            if name == "smmap":
-                repo.create_tag("v0.8.1", ref="master~10", message="Test fixture tag", force=True)
-            repo.git.gc()
-            repo.close()
-            cls._dependency_repo_dirs[name] = path
 
     @classmethod
     def tearDownClass(cls):
-        cls.rorepo.git.clear_cache()
+        cls.rorepo.close()
         cls.rorepo.git = None
-        rmtree(cls._dependency_repo_root)
 
     def _make_file(self, rela_path, data, repo=None):
         """
@@ -516,7 +482,7 @@ def symlinks_supported() -> bool:
     Developer Mode or SeCreateSymbolicLinkPrivilege, and an unprivileged process gets
     OSError (WinError 1314) instead.
     """
-    with tempfile.TemporaryDirectory(prefix="gitpython-symlink-check-") as temp_dir:
+    with TemporaryDirectory(prefix="gitpython-symlink-check-") as temp_dir:
         link_path = osp.join(temp_dir, "link")
         try:
             os.symlink("missing-target", link_path)

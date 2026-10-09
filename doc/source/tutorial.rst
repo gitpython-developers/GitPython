@@ -122,7 +122,7 @@ You can traverse down to :class:`git objects <git.objects.base.Object>` through 
     :start-after: # [12-test_init_repo_object]
     :end-before: # ![12-test_init_repo_object]
 
-The :class:`index <git.index.base.IndexFile>` is also called stage in git-speak. It is used to prepare new commits, and can be used to keep results of merge operations. Our index implementation allows to stream date into the index, which is useful for bare repositories that do not have a working tree.
+The :class:`index <git.index.base.IndexFile>` is also called stage in git-speak. It is used to prepare new commits, and can be used to keep results of merge operations. Our index implementation allows to stream data into the index, which is useful for bare repositories that do not have a working tree.
 
 .. literalinclude:: ../../test/test_docs.py
     :language: python
@@ -166,7 +166,7 @@ A :class:`symbolic reference <git.refs.symbolic.SymbolicReference>` can point to
     :start-after: # [3-test_references_and_objects]
     :end-before: # ![3-test_references_and_objects]
 
-Access the :class:`reflog <git.refs.log.RefLog>` easily.
+Access the :class:`reflog <git.refs.log.RefLog>` through a reference. Entries expose the new object ID, reflog actor, timestamp, and message in oldest-first order. They follow Git's commit-reflog view; exact old IDs and raw reflog-file access are unavailable.
 
 .. literalinclude:: ../../test/test_docs.py
     :language: python
@@ -202,7 +202,7 @@ Change the :class:`symbolic reference <git.refs.symbolic.SymbolicReference>` to 
 
 Understanding Objects
 *********************
-An Object is anything storable in git's object database. Objects contain information about their type, their uncompressed size as well as the actual data. Each object is uniquely identified by a binary SHA1 hash, being 20 bytes in size, or 40 bytes in hexadecimal notation.
+An Object is anything storable in git's object database. Objects contain information about their type, their uncompressed size as well as the actual data. Each object is identified by an object ID in the repository's hash format, reported by ``repo.object_format``. SHA-1 IDs contain 20 binary bytes (40 hexadecimal characters); SHA-256 IDs contain 32 binary bytes (64 hexadecimal characters). Treat IDs returned by Git as opaque values instead of assuming a fixed width.
 
 Git only knows 4 distinct object types being :class:`Blobs <git.objects.blob.Blob>`, :class:`Trees <git.objects.tree.Tree>`, :class:`Commits <git.objects.commit.Commit>` and :class:`Tags <git.objects.tag.TagObject>`.
 
@@ -341,7 +341,7 @@ As trees allow direct access to their intermediate child entries only, use the t
 
 The Index Object
 ****************
-The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. You may freely access and manipulate this information using the :class:`IndexFile <git.index.base.IndexFile>` object.
+The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. Use :meth:`IndexFile.iter_entries <git.index.base.IndexFile.iter_entries>` and :meth:`IndexFile.entry <git.index.base.IndexFile.entry>` to query immutable entry records (mode, object ID, path, and stage); use ``add`` and ``remove`` to edit them. Deferred edits retain opaque index-file bytes. Git reads and writes the underlying index; raw stat fields and binary index extensions are not exposed.
 Modify the index with ease
 
 .. literalinclude:: ../../test/test_docs.py
@@ -377,13 +377,13 @@ You can easily access configuration information for a remote by accessing option
     :start-after: # [26-test_references_and_objects]
     :end-before: # ![26-test_references_and_objects]
 
-You can also specify per-call custom environments using a new context manager on the Git command, e.g. for using a specific SSH key. The following example works with `git` starting at *v2.3*::
+You can also specify per-call custom environments using a context manager on the Git command, e.g. for using a specific SSH key::
 
     ssh_cmd = 'ssh -i id_deployment_key'
     with repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd):
         repo.remotes.origin.fetch()
 
-This one sets a custom script to be executed in place of `ssh`, and can be used in `git` prior to *v2.3*::
+Alternatively, set a custom script to be executed in place of `ssh`::
 
     ssh_executable = os.path.join(rw_dir, 'my_ssh_executable.sh')
     with repo.git.custom_environment(GIT_SSH=ssh_executable):
@@ -522,20 +522,9 @@ resolves abbreviated object IDs through persistent ``git cat-file`` processes::
     # Equivalent explicit selection:
     repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
 
-GitDB
-=====
-.. warning::
-   The pure-Python ``GitDB`` backend is deprecated due to security and performance
-   issues. Its object parsers can exhaust resources or return incorrect object
-   data when processing untrusted repositories. Do not use it for untrusted data.
-
-Selecting ``odbt=GitDB`` (including a subclass) emits a ``DeprecationWarning``.
-To migrate, remove ``odbt=GitDB`` or replace it with ``odbt=GitCmdObjectDB`` when
-opening, initializing, or cloning a repository. The deprecated backend remains
-available for compatibility; deprecation does not fix its parsing issues.
-
-The ``gitdb`` package remains a dependency because GitPython still uses its shared
-types and utilities.
+Only ``GitCmdObjectDB`` and subclasses can be selected through ``odbt``. The
+legacy ``GitDB`` backend is removed. The ``gitdb`` package remains a dependency
+for shared types and utilities.
 
 Git Command Debugging and Customization
 ***************************************

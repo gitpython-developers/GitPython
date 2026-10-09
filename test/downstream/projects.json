@@ -1,0 +1,65 @@
+{
+  "langchain": {
+    "distribution": "langchain-community",
+    "source": "git",
+    "repository": "https://github.com/langchain-ai/langchain-community.git",
+    "tag": "libs/community/v{version}",
+    "cwd": "libs/community",
+    "install": [
+      "langchain-community=={version}",
+      "pytest>=8.4.1,<9",
+      "pytest-asyncio>=0.20.3,<1",
+      "blockbuster>=1.5.18,<1.6"
+    ],
+    "pytest_args": ["--only-extended"],
+    "tests": ["tests/unit_tests/document_loaders/test_git.py"]
+  },
+  "mlflow": {
+    "distribution": "mlflow-skinny",
+    "source": "git",
+    "repository": "https://github.com/mlflow/mlflow.git",
+    "tag": "v{version}",
+    "install": ["mlflow=={version}", "pytest>=9,<10", "pytest-timeout", "psutil"],
+    "unset_env": ["CI", "GITHUB_ACTIONS"],
+    "env": {"MLFLOW_DISABLE_TELEMETRY": "true"},
+    "tests": [
+      "tests/genai/test_git_versioning.py",
+      "tests/projects/test_utils.py::test__fetch_project",
+      "tests/projects/test_utils.py::test__fetch_git_repo",
+      "tests/projects/test_utils.py::test_fetch_git_repo_commit",
+      "tests/projects/test_utils.py::test_fetching_non_existing_version_fails",
+      "tests/projects/test_utils.py::test_fetch_project_validations",
+      "tests/projects/test_utils.py::test_is_valid_branch_name",
+      "tests/projects/test_projects.py::test_run_local_git_repo",
+      "tests/projects/test_projects.py::test_invalid_version_local_git_repo",
+      "tests/tracking/context/test_git_context.py",
+      "tests/utils/test_git_utils.py"
+    ]
+  },
+  "bandit": {
+    "distribution": "bandit",
+    "source": "sdist",
+    "install": ["{source}[baseline]", "pytest", "fixtures", "testtools"],
+    "tests": ["tests/unit/cli/test_baseline.py"]
+  },
+  "swebench": {
+    "distribution": "swebench",
+    "source": "sdist",
+    "install": ["chardet", "pytest"],
+    "no_deps": ["{source}"],
+    "pytest_args": ["--confcutdir={checks}", "--import-mode=importlib"],
+    "tests": ["{checks}/swebench.py"]
+  },
+  "datahub": {
+    "distribution": "acryl-datahub",
+    "source": "git",
+    "repository": "https://github.com/acryldata/datahub.git",
+    "tag": "v{version}",
+    "cwd": "metadata-ingestion",
+    "install": ["acryl-datahub=={version}", "pytest"],
+    "unset_env": ["DATAHUB_LOOKML_GIT_TEST_SSH_KEY"],
+    "env": {"DATAHUB_TELEMETRY_ENABLED": "false"},
+    "pytest_args": ["--confcutdir=tests/integration/git"],
+    "tests": ["tests/integration/git/test_git_clone.py"]
+  }
+}

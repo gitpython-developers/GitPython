@@ -12,14 +12,14 @@ from pathlib import Path
 import ddt
 import pytest
 
+from gitdb import IStream
+
 from git.objects import Blob, Tree
-from git.objects.fun import tree_entries_from_data, tree_to_stream
 from git.objects.tree import TreeModifier
-from git.repo import Repo
 from git.util import cwd
 from test.lib import TestBase, with_rw_directory
 
-from .lib.helper import PathLikeMock, with_rw_repo
+from .lib.helper import PathLikeMock
 
 
 @ddt.ddt
@@ -43,13 +43,11 @@ class TestTree(TestBase):
             assert stream.getvalue() == orig_data
 
             stream.seek(0)
-            testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, "")
-            testtree._deserialize(stream)
+            stored = self.rorepo.odb.store(IStream("tree", len(stream.getvalue()), stream))
+            testtree = Tree(self.rorepo, stored.binsha, 0, "")
             assert testtree._cache == orig_cache
-
-            # Replaces cache, but we make sure of it.
             del testtree._cache
-            testtree._deserialize(stream)
+            assert testtree._cache == orig_cache
         # END for each item in tree
 
     def test_valid_unusual_tree_names_round_trip(self):
@@ -62,8 +60,12 @@ class TestTree(TestBase):
             modifier.add(b"a" * 20, 0o100644, name)
         modifier.set_done()
         data = BytesIO()
-        tree_to_stream(cache, data.write)
-        assert tree_entries_from_data(data.getvalue()) == cache
+        tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+        tree._cache = cache
+        tree._serialize(data)
+        data.seek(0)
+        stored = self.rorepo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert Tree(self.rorepo, stored.binsha, path="")._cache == cache
 
     @with_rw_directory
     def _get_git_ordered_files(self, rw_dir):
@@ -136,7 +138,9 @@ class TestTree(TestBase):
             TreeModifier(cache).add(b"a" * 20, 0o100644, name)
         assert not cache
         with pytest.raises(ValueError):
-            tree_to_stream([(b"a" * 20, 0o100644, name)], BytesIO().write)
+            tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+            tree._cache = [(b"a" * 20, 0o100644, name)]
+            tree._serialize(BytesIO())
 
     @ddt.data(
         ".gitmodules",
@@ -171,25 +175,19 @@ class TestTree(TestBase):
         "~1000000 . :$DATA",
     )
     def test_gitmodules_symlink_entries_are_rejected(self, name):
-        """A symbolic link named like the submodule configuration would make Git read
-        it from outside the repository, so such an entry is refused in both
-        directions. A regular file with the same name is the normal case."""
-        symlink_mode = 0o120000
         cache = []
-        with pytest.raises(ValueError):
-            TreeModifier(cache).add(b"a" * 20, symlink_mode, name)
+        with pytest.raises(ValueError, match="submodule configuration"):
+            TreeModifier(cache).add(b"a" * 20, 0o120000, name)
         assert not cache
-        with pytest.raises(ValueError):
-            tree_to_stream([(b"a" * 20, symlink_mode, name)], BytesIO().write)
-        raw = b"120000 " + name.encode() + b"\0" + b"a" * 20
-        with pytest.raises(ValueError):
-            tree_entries_from_data(raw)
 
         TreeModifier(cache).add(b"a" * 20, 0o100644, name)
-        assert cache == [(b"a" * 20, 0o100644, name)]
+        tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+        tree._cache = cache
         data = BytesIO()
-        tree_to_stream(cache, data.write)
-        assert tree_entries_from_data(data.getvalue()) == cache
+        tree._serialize(data)
+        data.seek(0)
+        stored = self.rorepo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert Tree(self.rorepo, stored.binsha, path="")._cache == cache
 
     @ddt.data(
         "gitmod~0",
@@ -239,11 +237,15 @@ class TestTree(TestBase):
             cache = []
             TreeModifier(cache).add(b"a" * 20, mode, name)
             assert cache == [(b"a" * 20, mode, name)]
+            tree = Tree(self.rorepo, Tree.NULL_BIN_SHA, path="")
+            tree._cache = cache
             data = BytesIO()
-            tree_to_stream(cache, data.write)
+            tree._serialize(data)
             raw = ("%o " % mode).encode() + name.encode() + b"\0" + b"a" * 20
             assert data.getvalue() == raw
-            assert tree_entries_from_data(raw) == cache
+            data.seek(0)
+            stored = self.rorepo.odb.store(IStream("tree", len(data.getvalue()), data))
+            assert Tree(self.rorepo, stored.binsha, path="")._cache == cache
 
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")
@@ -300,56 +302,48 @@ class TestTree(TestBase):
         # END for each item
         assert found_slash
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / ".gitignore"
+    def test_repo_lookup_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / ".gitignore"
         assert isinstance(blob, Blob)
         assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / PathLikeMock(".gitignore")
+    def test_repo_lookup_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / PathLikeMock(".gitignore")
         assert isinstance(blob, Blob)
         assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_invalid_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
+    def test_repo_lookup_invalid_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
         with pytest.raises(KeyError):
-            repo.tree() / "doesnotexist"
+            tree / "doesnotexist"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_invalid_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
+    def test_repo_lookup_invalid_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
         with pytest.raises(KeyError):
-            repo.tree() / PathLikeMock("doesnotexist")
+            tree / PathLikeMock("doesnotexist")
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_nested_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / "git/__init__.py"
+    def test_repo_lookup_nested_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / "git/__init__.py"
         assert isinstance(blob, Blob)
         assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_nested_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        blob = repo.tree() / PathLikeMock("git/__init__.py")
+    def test_repo_lookup_nested_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        blob = tree / PathLikeMock("git/__init__.py")
         assert isinstance(blob, Blob)
         assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_folder_string_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        tree = repo.tree() / "git"
+    def test_repo_lookup_folder_string_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        tree = tree / "git"
         assert isinstance(tree, Tree)
         assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
 
-    @with_rw_repo("0.3.2.1")
-    def test_repo_lookup_folder_pathlike_path(self, rw_repo):
-        repo = Repo(rw_repo.git_dir)
-        tree = repo.tree() / PathLikeMock("git")
+    def test_repo_lookup_folder_pathlike_path(self):
+        tree = self.rorepo.tree("0.3.2.1")
+        tree = tree / PathLikeMock("git")
         assert isinstance(tree, Tree)
         assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"

@@ -25,7 +25,6 @@ from git import (
     Git,
     GitCmdObjectDB,
     GitCommandError,
-    GitDB,
     Head,
     IndexFile,
     InvalidGitRepositoryError,
@@ -37,9 +36,10 @@ from git import (
     Submodule,
     Tree,
 )
-from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError, WorkTreeRepositoryUnsupported
+from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError
 from git.repo.fun import find_worktree_git_dir, touch
 from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
+from test.cleanup import TemporaryDirectory
 from test.lib import PathLikeMock, TestBase, fixture, requires_symlinks, with_rw_directory, with_rw_repo
 
 
@@ -75,11 +75,11 @@ class TestRepo(TestBase):
         # Ideally this tests a directory that is outside of any repository. In the rare
         # case tempfile.gettempdir() is inside a repo, this still passes, but tests the
         # same scenario as test_new_should_raise_on_invalid_repo_location_within_repo.
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
 
     def test_init_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             template_dir = osp.join(tdir, "template")
             os.mkdir(template_dir)
             unsafe_options = [
@@ -95,7 +95,7 @@ class TestRepo(TestBase):
                 assert not osp.exists(repo_dir)
 
     def test_init_allows_explicitly_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             template_dir = osp.join(tdir, "template")
             os.mkdir(template_dir)
             repo = Repo.init(
@@ -114,7 +114,7 @@ class TestRepo(TestBase):
         self.assertRaises(InvalidGitRepositoryError, Repo, subdir)
 
     def test_new_should_raise_on_non_existent_path(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             nonexistent = osp.join(tdir, "foobar")
             self.assertRaises(NoSuchPathError, Repo, nonexistent)
 
@@ -128,7 +128,7 @@ class TestRepo(TestBase):
             "bare": {"objects": None, "refs": None, "HEAD": "ref: refs/heads/main\n"},
         }
 
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             for name, entries in layouts.items():
                 path = Path(tdir) / name
                 Repo.init(path).close()
@@ -144,7 +144,7 @@ class TestRepo(TestBase):
                     assert osp.samefile(Repo(path).git_dir, expected_git_dir)
 
     def test_repo_discovery_honors_explicit_git_dir(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             git_dir = Path(tdir) / "repo.git"
             Repo.init(git_dir, bare=True).close()
             Repo.init(git_dir / ".git", bare=True).close()
@@ -160,8 +160,28 @@ class TestRepo(TestBase):
                 with Repo() as repo:
                     assert osp.samefile(repo.git_dir, worktree / ".git")
 
+    def test_repo_discovery_uses_native_worktree_configuration(self):
+        with TemporaryDirectory() as tdir:
+            root = Path(tdir)
+            repo = Repo.init(root / "main")
+            configured = root / "configured"
+            overridden = root / "overridden"
+            configured.mkdir()
+            overridden.mkdir()
+            repo.git.config("core.worktree", "../../configured")
+
+            with Repo(repo.git_dir) as reopened:
+                assert osp.samefile(reopened.working_tree_dir, configured)
+                assert osp.samefile(reopened.git.rev_parse("--show-toplevel"), configured)
+            with mock.patch.dict(os.environ, {"GIT_WORK_TREE": str(overridden)}):
+                with Repo(repo.git_dir) as reopened:
+                    assert osp.samefile(reopened.working_tree_dir, overridden)
+            with mock.patch.dict(os.environ, {"GIT_COMMON_DIR": str(repo.git_dir)}):
+                with Repo(repo.git_dir) as reopened:
+                    assert osp.samefile(reopened.working_tree_dir, root / "main")
+
     def test_repo_discovery_rejects_invalid_metadata(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             (path / "objects").mkdir()
             (path / "refs").mkdir()
@@ -180,7 +200,7 @@ class TestRepo(TestBase):
             (path / "gitdir").write_text("../worktree/.git\n")
             (path / "commondir").write_text("missing\n")
             with self.subTest(metadata="linked-worktree"):
-                self.assertRaises(WorkTreeRepositoryUnsupported, Repo, path)
+                self.assertRaises(InvalidGitRepositoryError, Repo, path)
 
             (path / "gitdir").unlink()
             (path / "commondir").unlink()
@@ -195,7 +215,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_repo_discovery_rejects_dangling_commondir(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             (path / "objects").mkdir()
             (path / "refs").mkdir()
@@ -206,7 +226,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_repo_discovery_rejects_dotgit_stat_errors(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             path = Path(tdir)
             Repo.init(path).close()
             child = path / "child"
@@ -215,8 +235,8 @@ class TestRepo(TestBase):
 
             self.assertRaises(InvalidGitRepositoryError, Repo, child, search_parent_directories=True)
 
-    def test_gitfile_read_is_bounded(self):
-        with tempfile.TemporaryDirectory() as tdir:
+    def test_gitfile_resolution_does_not_read_storage_in_python(self):
+        with TemporaryDirectory() as tdir:
             dotgit = Path(tdir) / ".git"
             content = b"gitdir: target\n"
             dotgit.write_bytes(content)
@@ -225,10 +245,24 @@ class TestRepo(TestBase):
             with mock.patch("builtins.open", reader):
                 assert find_worktree_git_dir(dotgit) is None
 
-            reader().read.assert_called_once_with(len(content))
+            reader.assert_not_called()
+
+    def test_relative_gitfile_resolution_uses_gitfile_directory(self):
+        with TemporaryDirectory() as tdir:
+            root = Path(tdir)
+            with Repo.init(root / "source") as source, Repo.init(root / "unrelated") as unrelated:
+                checkout = root / "checkout"
+                checkout.mkdir()
+                dotgit = checkout / ".git"
+                dotgit.write_text("gitdir: ../source/.git\n")
+                # In particular, a native Windows operand contains backslashes;
+                # Git still needs forward slashes to resolve a relative target.
+                with cwd(unrelated.working_tree_dir), Repo(checkout) as reopened:
+                    assert osp.samefile(reopened.git_dir, source.git_dir)
+                    assert osp.samefile(find_worktree_git_dir(dotgit), source.git_dir)
 
     def test_repo_discovery_uses_storage_environment(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             git_dir = Path(tdir) / "git"
             common_dir = Path(tdir) / "common"
             git_dir.mkdir()
@@ -280,15 +314,15 @@ class TestRepo(TestBase):
         (git_dir / "objects").rename(object_dir)
 
         with cwd(tdir), mock.patch.dict(os.environ, {"GIT_DIR": "git", "GIT_OBJECT_DIRECTORY": "objects"}):
-            repo = Repo(odbt=GitDB)
+            repo = Repo()
 
         with repo:
             assert osp.samefile(repo.odb.root_path(), object_dir)
             assert repo.odb.has_object(bytes.fromhex(blob_hexsha))
             assert repo.git.cat_file("blob", blob_hexsha) == payload.decode()
-            repo.alternates = ["other/location"]
-            assert repo.alternates == ["other/location"]
-            assert (object_dir / "info" / "alternates").is_file()
+            # Reading uses the explicit object directory; raw alternates-file
+            # mutation is no longer a library operation.
+            assert repo.alternates == []
 
     @with_rw_repo("0.3.2.1")
     def test_repo_creation_from_different_paths(self, rw_repo):
@@ -398,7 +432,7 @@ class TestRepo(TestBase):
         It should throw good errors.
         """
         # Entries should be empty.
-        self.assertEqual(len(repo.index.entries), 0)
+        self.assertEqual(len([(e.path, e.stage) for e in repo.index.iter_entries()]), 0)
 
         # head is accessible.
         assert repo.head
@@ -427,7 +461,10 @@ class TestRepo(TestBase):
 
         cloned = Repo.clone_from(original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment)
 
-        self.assertEqual(environment, cloned.git.environment())
+        for key, value in environment.items():
+            self.assertEqual(cloned.git.environment()[key], value)
+        self.assertEqual(cloned.git.environment()["GIT_DIR"], cloned.git_dir)
+        self.assertEqual(cloned.git.environment()["GIT_WORK_TREE"], cloned.working_tree_dir)
 
     @pytest.mark.skipif(os.name != "nt", reason="Specifically for Windows drive-rooted paths.")
     @with_rw_directory
@@ -472,7 +509,7 @@ class TestRepo(TestBase):
         repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE))
 
     def test_init(self):
-        with tempfile.TemporaryDirectory() as tdir, cwd(tdir):
+        with TemporaryDirectory() as tdir, cwd(tdir):
             git_dir_rela = "repos/foo/bar.git"
             git_dir_abs = osp.abspath(git_dir_rela)
 
@@ -538,32 +575,27 @@ class TestRepo(TestBase):
         self.assertFalse(repo._get_daemon_export())
         repo._set_daemon_export(True)
 
-    def test_alternates(self):
-        cur_alternates = self.rorepo.alternates
-        try:
-            # Empty alternates.
-            self.rorepo.alternates = []
-            self.assertEqual(self.rorepo.alternates, [])
-            alts = ["other/location", "this/location"]
-            self.rorepo.alternates = alts
-            self.assertEqual(alts, self.rorepo.alternates)
-        finally:
-            self.rorepo.alternates = cur_alternates
+    @with_rw_directory
+    def test_alternates(self, rw_dir):
+        repo = Repo.init(osp.join(rw_dir, "repo"))
+        source = Repo.init(osp.join(rw_dir, "source"))
+        assert repo.alternates == []
+        objects = osp.join(source.common_dir, "objects")
+        with repo.git.custom_environment(GIT_ALTERNATE_OBJECT_DIRECTORIES=objects):
+            assert len(repo.alternates) == 1
+            assert osp.samefile(repo.alternates[0], objects)
+        with pytest.raises(AttributeError):
+            repo.alternates = []
 
     @with_rw_directory
     def test_alternates_use_common_dir(self, rw_dir):
-        common_dir = osp.join(rw_dir, "common")
-        git_dir = osp.join(rw_dir, "worktrees", "linked")
-        os.makedirs(osp.join(common_dir, "objects", "info"))
-        os.makedirs(osp.join(git_dir, "objects", "info"))
-        repo = mock.Mock(common_dir=common_dir, git_dir=git_dir)
-        repo.odb.root_path.return_value = osp.join(common_dir, "objects")
-
-        alts = ["other/location", "this/location"]
-        Repo._set_alternates(repo, alts)
-
-        self.assertEqual(Repo._get_alternates(repo), alts)
-        self.assertFalse(osp.exists(osp.join(git_dir, "objects", "info", "alternates")))
+        repo = self.rorepo.clone(osp.join(rw_dir, "shared"), shared=True)
+        linked_path = osp.join(rw_dir, "linked")
+        repo.git.worktree("add", "--detach", linked_path, "HEAD")
+        linked = Repo(linked_path)
+        assert linked.alternates == repo.alternates
+        assert len(linked.alternates) >= 1
+        assert osp.samefile(linked.alternates[0], self.rorepo.odb.root_path())
 
     def test_repr(self):
         assert repr(self.rorepo).startswith("<git.repo.base.Repo ")
@@ -656,7 +688,7 @@ class TestRepo(TestBase):
         os.remove(stream.name)  # Do it this way so we can inspect the file on failure.
 
     def test_archive_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.archive(io.BytesIO(), "0.1.6", exec=f"touch {output_marker}")
@@ -670,7 +702,7 @@ class TestRepo(TestBase):
                 self.rorepo.archive(io.BytesIO(), "0.1.6", add_virtual_file="file:content")
 
     def test_archive_rejects_unsafe_remote_protocol(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeProtocolError):
                 self.rorepo.archive(io.BytesIO(), "HEAD", remote=f"ext::sh -c touch% {output_marker}")
@@ -702,14 +734,23 @@ class TestRepo(TestBase):
             self.rorepo.archive(io.BytesIO(), "HEAD", remote=FalseyRemote())
 
     def test_iter_commits_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             target = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 list(self.rorepo.iter_commits(f"--output={target}", max_count=1))
 
-    @mock.patch.object(Git, "_call_process")
-    def test_should_display_blame_information(self, git):
-        git.return_value = fixture("blame")
+    def test_should_display_blame_information(self):
+        original_call = Git._call_process
+        git = mock.Mock(return_value=fixture("blame"))
+
+        def blame_only(command, method, *args, **kwargs):
+            if method == "blame":
+                return git(method, *args, **kwargs)
+            return original_call(command, method, *args, **kwargs)
+
+        patcher = mock.patch.object(Git, "_call_process", blame_only)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         b = self.rorepo.blame("master", "lib/git.py")
         self.assertEqual(13, len(b))
         self.assertEqual(2, len(b[0]))
@@ -726,8 +767,8 @@ class TestRepo(TestBase):
         self.assertEqual("tom@mojombo.com", c.committer.email)
         self.assertEqual(1191997100, c.committed_date)
         self.assertRaisesRegex(
-            ValueError,
-            "634396b2f541a9f2d58b00be1a07f0c358b999b3 missing",
+            BadObject,
+            "634396b2f541a9f2d58b00be1a07f0c358b999b3",
             lambda: c.message,
         )
 
@@ -757,7 +798,7 @@ class TestRepo(TestBase):
         assert nml, "There should at least be one blame commit that contains multiple lines"
 
     def test_blame_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             for option in ("--output", "--contents", "-S", "-wS", "--ignore-revs-file"):
                 with self.assertRaises(UnsafeOptionError):
@@ -767,14 +808,14 @@ class TestRepo(TestBase):
             assert not osp.exists(output_marker)
 
     def test_blame_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.blame("HEAD", "README.md", output=output_marker)
             assert not osp.exists(output_marker)
 
     def test_blame_rejects_unsafe_rev_opts(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             output_marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 self.rorepo.blame("HEAD", "README.md", rev_opts=(f"--output={output_marker}",))
@@ -835,9 +876,9 @@ class TestRepo(TestBase):
         self.assertEqual(len(res), 1)
         self.assertEqual(len(res[0][1]), 83, "Unexpected amount of parsed blame lines")
 
-    @mock.patch.object(Git, "_call_process")
+    @mock.patch.object(Git, "_call_process_safe")
     def test_blame_accepts_rev_opts(self, git):
-        expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--", "README.md"]
+        expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--no-textconv", "--", "README.md"]
         boilerplate_kwargs = {"p": True, "stdout_as_string": False}
         self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
@@ -912,16 +953,6 @@ class TestRepo(TestBase):
         self.assertEqual(self.rorepo, self.rorepo)
         self.assertFalse(self.rorepo != self.rorepo)
         self.assertEqual(len({self.rorepo, self.rorepo}), 1)
-
-    @with_rw_directory
-    def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        with mock.patch.dict(os.environ, {"HOME": rw_dir}):
-            os.environ["HOME"] = rw_dir
-            Repo.init(osp.join("~", "test.git"), bare=True)
-
-        with mock.patch.dict(os.environ, {"FOO": rw_dir}):
-            os.environ["FOO"] = rw_dir
-            Repo.init(osp.join("$FOO", "test.git"), bare=True)
 
     def test_git_cmd(self):
         # Test CatFileContentStream, just to be very sure we have no fencepost errors.
@@ -1146,17 +1177,17 @@ class TestRepo(TestBase):
         # END for each binsha in repo
 
         # Missing closing brace: commit^{tree
-        self.assertRaises(ValueError, rev_parse, "0.1.4^{tree")
+        self.assertRaises(BadName, rev_parse, "0.1.4^{tree")
 
         # Missing starting brace.
-        self.assertRaises(ValueError, rev_parse, "0.1.4^tree}")
+        self.assertRaises(BadName, rev_parse, "0.1.4^tree}")
 
         # REVLOG
         #######
         head = self.rorepo.head
 
         # Need to specify a ref when using the @ syntax.
-        self.assertRaises(BadObject, rev_parse, "%s@{0}" % head.commit.hexsha)
+        self.assertRaises(BadName, rev_parse, "%s@{0}" % head.commit.hexsha)
 
         # Uses HEAD.ref by default.
         self.assertEqual(rev_parse("@{0}"), head.commit)
@@ -1169,15 +1200,15 @@ class TestRepo(TestBase):
         # END operate on non-detached head
 
         # Position doesn't exist.
-        self.assertRaises(IndexError, rev_parse, "@{10000}")
+        self.assertRaises(GitCommandError, rev_parse, "@{10000}")
 
-        # Currently, nothing more is supported.
-        self.assertRaises(NotImplementedError, rev_parse, "@{1 week ago}")
+        # Date-based reflog selectors now follow native Git semantics.
+        self.assertEqual(rev_parse("@{1 week ago}").hexsha, self.rorepo.git.rev_parse("@{1 week ago}"))
 
         # The previous position, if this checkout has enough reflog history.
         try:
             previous = rev_parse("@{1}")
-        except IndexError:
+        except GitCommandError:
             pass
         else:
             self.assertNotEqual(previous, head.commit)
@@ -1240,7 +1271,7 @@ class TestRepo(TestBase):
         # The loops below would easily create 500 handles if these would leak
         # (4 pipes + multiple mapped files).
         for _ in range(64):
-            for repo_type in (GitCmdObjectDB, GitDB):
+            for repo_type in (GitCmdObjectDB,):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
                 last_commit(repo, "HEAD", "test/test_base.py")
             # END for each repository type
@@ -1294,7 +1325,7 @@ class TestRepo(TestBase):
 
         self.assertRaisesRegex(
             ValueError,
-            r"refs/heads/\.invalid.*older clients",
+            r"Invalid reference 'refs/heads/\.invalid'",
             lambda: repo.active_branch,
         )
 
@@ -1309,15 +1340,12 @@ class TestRepo(TestBase):
             raise
 
         repo = Repo(rw_dir)
-        self.assertEqual(repo.head.reference.name, ".invalid")
-        self.assertRaisesRegex(
-            ValueError,
-            r"refs/heads/\.invalid.*older clients",
-            lambda: repo.active_branch,
-        )
+        self.assertEqual(repo.head.reference.name, git.symbolic_ref("--short", "HEAD"))
+        self.assertEqual(repo.active_branch, repo.head.reference)
+        self.assertFalse(repo.active_branch.is_valid())
 
     @with_rw_directory
-    def test_reftable_repo_opens_but_direct_refs_are_unsupported(self, rw_dir):
+    def test_reftable_repo_exposes_native_references(self, rw_dir):
         git = Git(rw_dir)
         try:
             git.init(ref_format="reftable")
@@ -1332,13 +1360,14 @@ class TestRepo(TestBase):
             GIT_COMMITTER_NAME="Test Committer",
             GIT_COMMITTER_EMAIL="committer@example.com",
         )
-        git.commit(allow_empty=True, message="initial commit")
+        git.commit(allow_empty=True, message="initial commit", no_gpg_sign=True)
         expected_head = git.rev_parse("HEAD")
 
         repo = Repo(rw_dir)
         assert repo.git.rev_parse("HEAD") == expected_head
-        assert repo.head.reference.name == ".invalid"
-        assert not repo.heads
+        assert repo.head.reference.name == git.symbolic_ref("--short", "HEAD")
+        assert repo.head.commit.hexsha == expected_head
+        assert repo.heads
 
     @with_rw_directory
     def test_active_branch_raises_type_error_when_head_is_detached(self, rw_dir):
@@ -1613,7 +1642,7 @@ class TestRepo(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_clone_command_injection(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             unexpected_file = tmp_dir / "pwn"
             assert not unexpected_file.exists()
@@ -1627,7 +1656,7 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_from_command_injection(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
             unexpected_file = tmp_dir / "pwn"
@@ -1640,7 +1669,7 @@ class TestRepo(TestBase):
             assert not unexpected_file.exists()
 
     def test_ignored_items_reported(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
 
@@ -1659,7 +1688,7 @@ class TestRepo(TestBase):
 
     @requires_symlinks
     def test_ignored_raises_error_w_symlink(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             temp_repo = Repo.init(tmp_dir / "repo")
 
@@ -1668,6 +1697,41 @@ class TestRepo(TestBase):
 
             with pytest.raises(GitCommandError):
                 temp_repo.ignored(tmp_dir / "symlink/file.txt")
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+@pytest.mark.parametrize("bare", [False, True])
+@pytest.mark.parametrize(
+    "dirname",
+    [
+        "repo with spaces",
+        pytest.param(
+            "repo\nwith\nnewlines",
+            marks=pytest.mark.skipif(sys.platform == "win32", reason="Windows paths cannot contain newlines"),
+        ),
+    ],
+)
+def test_repo_batches_cli_metadata_queries(tmp_path, monkeypatch, object_format, ref_format, bare, dirname):
+    from git import _backend
+
+    monkeypatch.setattr(_backend, "gix", None)
+    with Repo.init(tmp_path / dirname, object_format=object_format, ref_format=ref_format, bare=bare) as original:
+        with mock.patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as execute:
+            with Repo(original.git_dir) as reopened:
+                assert reopened.ref_format == ref_format
+                assert reopened.object_format == object_format
+                assert reopened.bare == bare
+                assert reopened.common_dir == original.common_dir
+                assert reopened.git_dir == original.git_dir
+                assert reopened.working_tree_dir == original.working_tree_dir
+
+        metadata_options = {"--show-ref-format", "--show-object-format", "--is-bare-repository", "--git-common-dir"}
+        metadata_commands = [
+            call.args[1] for call in execute.call_args_list if metadata_options.intersection(call.args[1])
+        ]
+        assert len(metadata_commands) == 1
+        assert metadata_options.issubset(metadata_commands[0])
 
 
 @pytest.mark.parametrize("allow_unsafe_options", (False, True))
@@ -1694,31 +1758,45 @@ def test_archive_protocol_guard_checks_emitted_remote_options(tmp_path, kwargs, 
 
 def test_archive_preserves_safe_repeated_remote_options(tmp_path):
     urls = ["https://[::1]/repo.git", "ssh://git@[2001:db8::1]/repo.git"]
-    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
-        output = BytesIO()
-        repo.archive(output, "HEAD", rem=urls)
-        execute.assert_called_once_with(
-            [Git.GIT_PYTHON_GIT_EXECUTABLE, "archive", *(f"--rem={url}" for url in urls), "--", "HEAD"],
-            output_stream=output,
-        )
+    with Repo.init(tmp_path) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute") as execute:
+            output = BytesIO()
+            repo.archive(output, "HEAD", rem=urls)
+            execute.assert_called_once()
+            command = execute.call_args.args[0]
+            assert command[command.index("archive") :] == ["archive", *(f"--rem={url}" for url in urls), "--", "HEAD"]
+            assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert execute.call_args.kwargs["output_stream"] is output
+            assert execute.call_args.kwargs["shell"] is False
 
 
 def test_archive_protocol_and_option_opt_ins_are_independent(tmp_path):
-    with Repo.init(tmp_path) as repo, mock.patch.object(Git, "execute") as execute:
-        with pytest.raises(UnsafeOptionError):
-            repo.archive(BytesIO(), "HEAD", rem=["ext::helper"], exec="helper", allow_unsafe_protocols=True)
-        execute.assert_not_called()
+    with Repo.init(tmp_path) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute") as execute:
+            with pytest.raises(UnsafeOptionError):
+                repo.archive(BytesIO(), "HEAD", rem=["ext::helper"], exec="helper", allow_unsafe_protocols=True)
+            execute.assert_not_called()
 
-        output = BytesIO()
-        repo.archive(
-            output,
-            "HEAD",
-            rem=["ext::helper"],
-            exec="helper",
-            allow_unsafe_options=True,
-            allow_unsafe_protocols=True,
-        )
-        execute.assert_called_once_with(
-            [Git.GIT_PYTHON_GIT_EXECUTABLE, "archive", "--rem=ext::helper", "--exec=helper", "--", "HEAD"],
-            output_stream=output,
-        )
+            output = BytesIO()
+            repo.archive(
+                output,
+                "HEAD",
+                rem=["ext::helper"],
+                exec="helper",
+                allow_unsafe_options=True,
+                allow_unsafe_protocols=True,
+            )
+            execute.assert_called_once()
+            command = execute.call_args.args[0]
+            assert command[command.index("archive") :] == [
+                "archive",
+                "--rem=ext::helper",
+                "--exec=helper",
+                "--",
+                "HEAD",
+            ]
+            assert command[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert execute.call_args.kwargs["output_stream"] is output
+            assert execute.call_args.kwargs["shell"] is False

@@ -11,11 +11,10 @@ from pathlib import Path
 from git.objects import Blob
 from git.objects.base import IndexObject
 
-from .util import pack, unpack
 
 # typing ----------------------------------------------------------------------
 
-from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast
+from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Type, TypeVar, Union
 
 from git.types import PathLike
 
@@ -85,15 +84,6 @@ class BaseIndexEntryHelper(NamedTuple):
     binsha: bytes
     flags: int
     path: PathLike
-    ctime_bytes: bytes = pack(">LL", 0, 0)
-    mtime_bytes: bytes = pack(">LL", 0, 0)
-    dev: int = 0
-    inode: int = 0
-    uid: int = 0
-    gid: int = 0
-    size: int = 0
-    # version 3 extended flags, only when (flags & CE_EXTENDED) is set
-    extended_flags: int = 0
 
 
 class BaseIndexEntry(BaseIndexEntryHelper):
@@ -115,10 +105,8 @@ class BaseIndexEntry(BaseIndexEntryHelper):
     ) -> _T_IndexEntry:
         """Override ``__new__`` to allow construction from a tuple for backwards
         compatibility."""
-        if len(inp_tuple) == 4:
-            return BaseIndexEntryHelper.__new__(cls, *inp_tuple)
-        if len(inp_tuple) == 11:
-            return BaseIndexEntryHelper.__new__(cls, *inp_tuple)
+        if len(inp_tuple) != 4:
+            raise TypeError("Index entries contain mode, object ID, flags and path; raw stat metadata is unsupported")
         return BaseIndexEntryHelper.__new__(cls, *inp_tuple)
 
     def __str__(self) -> str:
@@ -148,14 +136,10 @@ class BaseIndexEntry(BaseIndexEntryHelper):
 
     @property
     def skip_worktree(self) -> bool:
-        return (self.extended_flags & CE_EXT_SKIP_WORKTREE) > 0
-
-    @property
-    def intent_to_add(self) -> bool:
-        return (self.extended_flags & CE_EXT_INTENT_TO_ADD) > 0
+        return bool(self.flags & (CE_EXT_SKIP_WORKTREE << 16))
 
     @classmethod
-    def from_blob(cls, blob: IndexObject, stage: int = 0) -> "BaseIndexEntry":
+    def from_blob(cls: Type[_T_IndexEntry], blob: IndexObject, stage: int = 0) -> _T_IndexEntry:
         """:return: Fully equipped BaseIndexEntry at the given stage"""
         return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
 
@@ -165,58 +149,8 @@ class BaseIndexEntry(BaseIndexEntryHelper):
 
 
 class IndexEntry(BaseIndexEntry):
-    """Allows convenient access to index entry data as defined in
-    :class:`BaseIndexEntry` without completely unpacking it.
-
-    Attributes usually accessed often are cached in the tuple whereas others are
-    unpacked on demand.
-
-    See the properties for a mapping between names and tuple indices.
-    """
-
-    @property
-    def ctime(self) -> Tuple[int, int]:
-        """
-        :return:
-            Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
-            file's creation time
-        """
-        return cast(Tuple[int, int], unpack(">LL", self.ctime_bytes))
-
-    @property
-    def mtime(self) -> Tuple[int, int]:
-        """See :attr:`ctime` property, but returns modification time."""
-        return cast(Tuple[int, int], unpack(">LL", self.mtime_bytes))
+    """Semantic index entry. Git owns filesystem cache metadata and extensions."""
 
     @classmethod
-    def from_base(cls, base: "BaseIndexEntry") -> "IndexEntry":
-        """
-        :return:
-            Minimal entry as created from the given :class:`BaseIndexEntry` instance.
-            Missing values will be set to null-like values.
-
-        :param base:
-            Instance of type :class:`BaseIndexEntry`.
-        """
-        time = pack(">LL", 0, 0)
-        return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
-
-    @classmethod
-    def from_blob(cls, blob: IndexObject, stage: int = 0) -> "IndexEntry":
-        """:return: Minimal entry resembling the given blob object"""
-        time = pack(">LL", 0, 0)
-        return IndexEntry(
-            (
-                blob.mode,
-                blob.binsha,
-                stage << CE_STAGESHIFT,
-                blob.path,
-                time,
-                time,
-                0,
-                0,
-                0,
-                0,
-                blob.size,
-            )
-        )
+    def from_base(cls, base: BaseIndexEntry) -> "IndexEntry":
+        return cls((base.mode, base.binsha, base.flags, base.path))

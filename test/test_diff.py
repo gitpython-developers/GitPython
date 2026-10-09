@@ -5,18 +5,16 @@
 
 import gc
 import os.path as osp
-import shutil
-import sys
 import tempfile
 
 import ddt
-import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
 
+from test.cleanup import cleanup_directory
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
 
@@ -32,8 +30,8 @@ class TestDiff(TestBase):
 
     def tearDown(self):
         gc.collect()
-        shutil.rmtree(self.repo_dir)
-        shutil.rmtree(self.submodule_dir)
+        cleanup_directory(self.repo_dir)
+        cleanup_directory(self.submodule_dir)
 
     def _assert_diff_format(self, diffs):
         # Verify that the format of the diff is sane.
@@ -130,7 +128,7 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         self.assertTrue(diff.renamed_file)
-        self.assertTrue(diff.renamed)
+        self.assertTrue(diff.renamed_file)
         self.assertEqual(diff.rename_from, "Jérôme")
         self.assertEqual(diff.rename_to, "müller")
         self.assertEqual(diff.raw_rename_from, b"J\xc3\xa9r\xc3\xb4me")
@@ -142,7 +140,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
         self.assertIsNotNone(diff.renamed_file)
-        self.assertIsNotNone(diff.renamed)
+        self.assertIsNotNone(diff.renamed_file)
         self.assertEqual(diff.rename_from, "this")
         self.assertEqual(diff.rename_to, "that")
         self.assertEqual(diff.change_type, "R")
@@ -336,11 +334,6 @@ class TestDiff(TestBase):
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
-    @pytest.mark.xfail(
-        sys.platform == "win32",
-        reason='"Access is denied" when tearDown calls shutil.rmtree',
-        raises=PermissionError,
-    )
     def test_diff_submodule(self):
         """Test that diff is able to correctly diff commits that cover submodule changes"""
         # Init a temp git repo that will be referenced as a submodule.

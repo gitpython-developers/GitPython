@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from git import Actor, Git, GitCommandError, Head, Remote, RemoteReference, Repo, TagReference
+from git import Actor, Git, GitCommandError, Head, Remote, RemoteReference, Repo, TagReference, _backend
 from git.exc import UnsafeOptionError
 
 
@@ -33,6 +33,7 @@ def test_pull_rejects_option_shaped_remote(tmp_path):
 
 def test_pull_preserves_operand_and_explicit_option_values(tmp_path):
     repo = Repo.init(tmp_path)
+    repo.git.version_info
     remote = Remote(repo, "origin")
     with mock.patch.object(Git, "_call_process") as run, mock.patch.object(
         Remote, "_get_fetch_info_from_stderr", return_value=[]
@@ -48,7 +49,7 @@ def test_delete_head_cannot_override_force(tmp_path):
     initial = repo.index.commit("initial", author=actor, committer=actor)
     branch = repo.create_head("unmerged", initial)
     branch.commit = repo.index.commit("unmerged", head=False, author=actor, committer=actor)
-    with pytest.raises(GitCommandError):
+    with pytest.raises(UnsafeOptionError):
         repo.delete_head("--force", branch, force=False)
     assert branch.is_valid()
     repo.delete_head(branch, force=True)
@@ -65,21 +66,44 @@ def test_rename_head_cannot_select_current_branch(tmp_path):
     assert repo.active_branch.name == original
 
 
+@pytest.mark.parametrize("allow_unsafe_options", [False, True])
+@pytest.mark.parametrize("name", ["--force", "--detach", "--ours"])
+def test_checkout_rejects_option_shaped_branch_names(tmp_path, name, allow_unsafe_options):
+    repo = Repo.init(tmp_path)
+    branch = Head(repo, "refs/heads/" + name)
+    with mock.patch.object(Git, "_call_process_safe", side_effect=AssertionError("Git must not run")) as run:
+        with pytest.raises(UnsafeOptionError):
+            branch.checkout(allow_unsafe_options=allow_unsafe_options)
+        run.assert_not_called()
+
+
 def test_tag_operands_follow_option_terminator(tmp_path):
     repo = Repo.init(tmp_path)
-    with mock.patch.object(Git, "_call_process") as run:
+    commit = repo.index.commit("initial")
+    with mock.patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as run:
         TagReference.create(repo, "topic", "HEAD")
-        assert run.call_args[0] == ("tag", "--", "topic", "HEAD")
-        TagReference.delete(repo, "--list")
-        assert run.call_args[0] == ("tag", "-d", "--", "--list")
+        argv = run.call_args.args[1]
+        assert argv[argv.index("tag") :] == ["tag", "--no-sign", "--", "topic", commit.hexsha]
+        run.reset_mock()
+        with pytest.raises(UnsafeOptionError):
+            TagReference.delete(repo, "--list")
+        run.assert_not_called()
+    assert repo.tags.topic.commit == commit
 
 
 def test_remote_ref_delete_preserves_operand(tmp_path):
     repo = Repo.init(tmp_path)
+    commit = repo.index.commit("initial")
     ref = RemoteReference(repo, "refs/remotes/--force")
-    with mock.patch.object(Git, "_call_process") as run:
+    repo.git.update_ref(ref.path, commit.hexsha)
+    # Exercise the CLI fallback's option boundary even with GixPython installed.
+    with mock.patch.object(_backend, "dispatch", return_value=NotImplemented), mock.patch.object(
+        Git, "execute", autospec=True, side_effect=Git.execute
+    ) as run:
         RemoteReference.delete(repo, ref)
-    assert run.call_args[0] == ("branch", "-d", "-r", "--", ref)
+    argv = run.call_args.args[1]
+    assert argv[argv.index("update-ref") :] == ["update-ref", "--no-deref", "-d", "--", ref.path]
+    assert not ref.is_valid()
 
 
 def test_move_treats_option_shaped_source_as_filename(tmp_path):

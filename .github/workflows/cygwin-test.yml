@@ -11,17 +11,6 @@ permissions:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        selection: [fast, perf]
-        include:
-        - selection: fast
-          additional-pytest-args: --ignore=test/performance
-        - selection: perf
-          additional-pytest-args: test/performance
-
-      fail-fast: false
-
     runs-on: windows-latest
 
     env:
@@ -45,13 +34,24 @@ jobs:
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@v6
       with:
-        packages: curl git python39 python-setuptools-wheel
+        packages: >-
+          curl gcc-core git libcurl-devel libexpat-devel libiconv-devel
+          libssl-devel make python39 python-setuptools-wheel zlib-devel
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
     - name: Arrange for verbose output
       run: |
         # Arrange for verbose output but without shell environment setup details.
         echo 'set -x' >~/.bash_profile
+
+    - name: Build minimum supported Cygwin Git
+      run: |
+        # Cygwin's packaged Git is older than our minimum supported version.
+        git clone --depth 1 --branch v2.52.0 -- https://github.com/git/git.git /tmp/git-source
+        # Use Cygwin's normal prefix: GitPython checks for uname next to git.
+        make -C /tmp/git-source -j2 prefix=/usr NO_GETTEXT=YesPlease NO_TCLTK=YesPlease NO_PERL=YesPlease install
+        hash -r
+        test "$(git version)" = 'git version 2.52.0'
 
     - name: Special configuration for Cygwin git
       run: |
@@ -86,6 +86,9 @@ jobs:
     - name: Install project and test dependencies
       run: |
         pip install ./smmap ./gitdb '.[test]'
+
+    - name: Verify Cygwin Git detection
+      run: python -c 'from git import Git; assert Git.is_cygwin()'
 
     - name: Show POSIX file ownership
       # Cygwin's `ls -ld` reports the NTFS Owner SID via Cygwin's SID-to-uid
@@ -135,6 +138,6 @@ jobs:
         python --version
         python -c 'import os, sys; print(f"{sys.platform=}, {os.name=}")'
 
-    - name: Test with pytest (${{ matrix.additional-pytest-args }})
+    - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
+        pytest --color=yes -p no:sugar --instafail -vv

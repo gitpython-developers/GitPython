@@ -5,7 +5,6 @@
 
 __all__ = ["RemoteReference"]
 
-import os
 
 from git.util import join_path
 
@@ -59,22 +58,9 @@ class RemoteReference(Head):
             should not narrow the signature.
         """
         for ref in refs:
-            cls._check_ref_name_valid(ref.path)
-
-        repo.git.branch("-d", "-r", "--", *refs)
-        # The official deletion method will ignore remote symbolic refs - these are
-        # generally ignored in the refs/ folder. We don't though and delete remainders
-        # manually.
+            cls._get_validated_ref_path(repo, ref.path)
         for ref in refs:
-            try:
-                os.remove(cls._get_validated_path(repo.common_dir, ref.path))
-            except OSError:
-                pass
-            try:
-                os.remove(cls._get_validated_path(repo.git_dir, ref.path))
-            except OSError:
-                pass
-        # END for each ref
+            repo.git._call_process_safe("update_ref", "--no-deref", "-d", "--", ref.path)
 
     @classmethod
     def create(cls, *args: Any, **kwargs: Any) -> NoReturn:

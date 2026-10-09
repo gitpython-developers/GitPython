@@ -3,14 +3,18 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os
+import shutil
 import subprocess
 import sys
+from io import BytesIO
 from pathlib import Path
 
 import pytest
+from gitdb.base import IStream
 from gitdb.exc import BadName
 
-from git import Actor, Commit, Repo
+from git import Actor, Commit, Repo, GitCommandError
 from git.refs import RemoteReference, SymbolicReference
 
 
@@ -21,8 +25,9 @@ def _write(repo, path, content):
     repo.index.add([str(full_path)])
 
 
-@pytest.fixture
-def rev_parse_repo(tmp_path):
+@pytest.fixture(scope="module")
+def rev_parse_baseline(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("rev-parse")
     repo = Repo.init(tmp_path)
     with repo.config_writer() as writer:
         writer.set_value("user", "name", "GitPython Tests")
@@ -49,14 +54,30 @@ def rev_parse_repo(tmp_path):
     repo.create_head("aaaaaaaa", merge)
     repo.create_tag("@foo", ref=merge)
 
-    return {
-        "repo": repo,
-        "root": root,
-        "release": release,
-        "side": side_commit,
-        "merge": merge,
-        "main": main,
-    }
+    commits = {"root": root.hexsha, "release": release.hexsha, "side": side_commit.hexsha, "merge": merge.hexsha}
+    branch_name = main.name
+    repo.close()
+    return tmp_path, commits, branch_name
+
+
+@pytest.fixture
+def rev_parse_repo(tmp_path, rev_parse_baseline):
+    path, commits, branch_name = rev_parse_baseline
+    shutil.copytree(path, tmp_path / "repo", symlinks=True)
+    with Repo(tmp_path / "repo") as repo:
+        yield {"repo": repo, "main": repo.heads[branch_name], **{key: repo.commit(sha) for key, sha in commits.items()}}
+
+
+def test_rev_parse_copies_are_isolated(rev_parse_repo, rev_parse_baseline):
+    repo = rev_parse_repo["repo"]
+    path, _, _ = rev_parse_baseline
+    repo.create_tag("private-copy")
+    _write(repo, "README.md", "private")
+    repo.index.commit("private commit")
+    with Repo(path) as baseline:
+        assert "private-copy" not in baseline.tags
+        assert baseline.head.commit == rev_parse_repo["merge"]
+        assert Path(path, "README.md").read_text() == "release\n"
 
 
 def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
@@ -71,7 +92,9 @@ def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
     describe_name = "anything-9-g%s" % merge.hexsha[:7]
     assert repo.rev_parse("v1.0-1-g%s" % merge.hexsha[:7]) == merge
     assert repo.rev_parse(describe_name) == merge
-    assert repo.rev_parse("%s-dirty" % merge.hexsha[:7]) == merge
+    # Git does not treat an abbreviated ID with a -dirty suffix as a revision.
+    with pytest.raises(BadName):
+        repo.rev_parse("%s-dirty" % merge.hexsha[:7])
 
     repo.create_tag(describe_name, ref=release)
     assert repo.rev_parse(describe_name) == release
@@ -98,8 +121,7 @@ def test_rev_parse_navigation_and_peeling(rev_parse_repo):
     assert repo.rev_parse("ann^{}") == root
     assert repo.rev_parse("ann^{commit}") == root
     assert repo.rev_parse("HEAD^{tree}") == merge.tree
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{/}")
+    assert repo.rev_parse("HEAD^{/}") == merge
 
 
 def test_rev_parse_tree_and_index_paths(rev_parse_repo):
@@ -111,6 +133,18 @@ def test_rev_parse_tree_and_index_paths(rev_parse_repo):
     assert repo.rev_parse("HEAD^{tree}:README.md") == merge.tree["README.md"]
     assert repo.rev_parse(":README.md").binsha == merge.tree["README.md"].binsha
     assert repo.rev_parse(":0:README.md").binsha == merge.tree["README.md"].binsha
+
+
+def test_tree_revision_paths(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    tree = rev_parse_repo["merge"].tree
+    for revision in (tree.hexsha, "HEAD^{tree}"):
+        root = repo.tree(revision)
+        assert root.path == ""
+        assert root["dir/file.txt"].path == "dir/file.txt"
+    directory = repo.tree("HEAD:dir")
+    assert directory.path == "dir"
+    assert directory["file.txt"].path == "dir/file.txt"
 
 
 def test_rev_parse_reflog_selectors(rev_parse_repo):
@@ -126,6 +160,8 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     assert repo.rev_parse("%s@{0}" % main.name) == merge
     assert repo.rev_parse("@{-1}") == side
 
+    # Git's upstream resolution also requires the remote's fetch mapping.
+    repo.create_remote("origin", repo.git_dir)
     SymbolicReference.create(repo, "refs/remotes/origin/%s" % main.name, merge)
     main.set_tracking_branch(RemoteReference(repo, "refs/remotes/origin/%s" % main.name))
     assert repo.rev_parse("%s@{upstream}" % main.name) == merge
@@ -139,6 +175,30 @@ def test_rev_parse_commit_message_search(rev_parse_repo):
     assert repo.rev_parse(":/release") == release
     assert repo.rev_parse("HEAD^{/release}") == release
     assert repo.rev_parse("HEAD^{/!-release}") == merge
+
+
+def test_rev_parse_preserves_path_metadata_with_colons(rev_parse_repo):
+    repo = rev_parse_repo["repo"]
+    path = "dir/name:with:colons"
+    # Build object-only fixtures: Windows cannot create colon-named worktree files.
+    data = b"100644 name:with:colons\0" + repo.head.commit.tree["dir/file.txt"].binsha
+    subtree = repo.odb.store(IStream("tree", len(data), BytesIO(data)))
+    data = b"40000 dir\0" + subtree.binsha
+    tree = repo.odb.store(IStream("tree", len(data), BytesIO(data)))
+    commit = Commit.create_from_tree(repo, tree.hexsha.decode("ascii"), "message: with colon", head=True)
+    revisions = [f"HEAD:{path}", f"HEAD^{{/message: with colon}}:{path}"]
+    if os.name != "nt":
+        # Git for Windows also refuses colon names in its index.
+        repo.git.read_tree(commit)
+        revisions.extend([f":{path}", f":0:{path}"])
+    for revision in revisions:
+        blob = repo.rev_parse(revision)
+        assert blob == commit.tree[path]
+        assert blob.path == path
+        assert blob.mode == 0o100644
+    tree = repo.rev_parse("HEAD:dir")
+    assert tree.path == "dir"
+    assert tree.mode == 0o40000
 
 
 @pytest.mark.parametrize(
@@ -247,21 +307,22 @@ def test_commit_and_tree_resolve_before_peeling(rev_parse_repo):
 def test_rev_parse_rejects_invalid_object_specs(rev_parse_repo):
     repo = rev_parse_repo["repo"]
 
-    with pytest.raises(ValueError):
-        repo.rev_parse(":")
-    with pytest.raises(ValueError):
-        repo.rev_parse(":/")
-    with pytest.raises(BadName):
-        repo.rev_parse(":/[")
-    with pytest.raises(BadName):
-        repo.rev_parse("HEAD^{/[}")
-    with pytest.raises(ValueError):
-        repo.rev_parse(":/!reserved")
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{/!reserved}")
-    with pytest.raises(ValueError):
-        repo.rev_parse("@{-0}")
-    with pytest.raises(ValueError):
-        repo.rev_parse("HEAD^{invalid}")
-    with pytest.raises(BadName):
-        repo.rev_parse(":missing")
+    for revision in (
+        ":",
+        ":/",
+        ":/[",
+        "HEAD^{/[}",
+        ":/!reserved",
+        "HEAD^{/!reserved}",
+        "@{-0}",
+        "HEAD^{invalid}",
+        ":missing",
+    ):
+        # Use the same native grammar, including Git's accepted empty searches.
+        try:
+            expected = repo.git.rev_parse("--verify", "--quiet", "--end-of-options", revision)
+        except GitCommandError:
+            with pytest.raises((BadName, GitCommandError)):
+                repo.rev_parse(revision)
+        else:
+            assert repo.rev_parse(revision).hexsha == expected

@@ -59,7 +59,7 @@ class RootModule(Submodule):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super().__init__(
             repo,
-            binsha=self.NULL_BIN_SHA,
+            binsha=repo._null_binsha,
             mode=self.k_default_mode,
             path="",
             name=self.k_root_name,
@@ -174,12 +174,13 @@ class RootModule(Submodule):
             cur_commit = repo.head.commit
             if previous_commit is None:
                 try:
-                    previous_commit = repo.commit(repo.head.log_entry(-1).oldhexsha)
-                    if previous_commit.binsha == previous_commit.NULL_BIN_SHA:
-                        raise IndexError
-                    # END handle initial commit
-                except IndexError:
+                    previous_commit = repo.commit("HEAD@{1}")
+                except (IndexError, ValueError, git.BadName, git.BadObject):
                     # In new repositories, there is no previous commit.
+                    previous_commit = cur_commit
+                except git.GitCommandError as error:
+                    if error.status != 128:
+                        raise
                     previous_commit = cur_commit
                 # END exception handling
             else:
@@ -305,7 +306,7 @@ class RootModule(Submodule):
                                     # A new remote would have no cached refs. Preserve
                                     # the existing refs and tracking configuration for
                                     # offline updates instead of replacing the remote.
-                                    previous_remote.set_url(git.Git.polish_url(sm.url, expand_vars=False))
+                                    previous_remote.set_url(git.Git.polish_url(sm.url))
                                 else:
                                     assert nn not in [r.name for r in rmts]
                                     smr = smm.create_remote(nn, sm.url)

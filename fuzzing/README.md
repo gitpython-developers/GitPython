@@ -46,6 +46,10 @@ capabilities, jump into the "Getting Started" section below.
 Before contributing to fuzzing efforts, ensure Python and Docker are installed on your machine. Docker is required for
 running fuzzers in containers provided by OSS-Fuzz and for safely executing test files directly. [Install Docker](https://docs.docker.com/get-docker/) following the official guide if you do not already have it.
 
+The fuzz targets require **Git 2.52 or newer**, including the Git executable bundled into OSS-Fuzz artifacts.
+The local development image builds pinned Git 2.52.0. The OSS-Fuzz bootstrap and build scripts reject older selected
+Git executables before preparing artifacts; update the external OSS-Fuzz image when its installed Git is too old.
+
 ### Understanding Existing Fuzz Targets
 
 Review the `fuzz-targets/` directory to familiarize yourself with how existing tests are implemented. See
@@ -67,6 +71,8 @@ Contains Python files for each fuzz test.
 **Things to Know**:
 
 - Each fuzz test targets a specific part of GitPython's functionality.
+- Repository and object targets exercise Git-backed workflows. Removed Python index/tree binary parsers are no longer
+  fuzz targets; malformed configuration and object IDs can now be rejected by Git or by Python input validation.
 - Test files adhere to the naming convention: `fuzz_<API Under Test>.py`, where `<API Under Test>` indicates the
   functionality targeted by the test.
 - Any functionality that involves performing operations on input data is a possible candidate for fuzz testing, but

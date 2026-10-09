@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-__all__ = ["GitMeta", "Git"]
+__all__ = ["Git"]
 
 import contextlib
 import io
@@ -13,12 +13,12 @@ import itertools
 import logging
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import time
-import warnings
 from subprocess import DEVNULL, PIPE, Popen
 from textwrap import dedent
 
@@ -44,12 +44,14 @@ from typing import (
 )
 
 from git.compat import defenc, force_bytes, safe_decode
+from git import _backend
 from git.exc import (
     CommandError,
     GitCommandError,
     GitCommandNotFound,
     UnsafeOptionError,
     UnsafeProtocolError,
+    UnsupportedOperation,
 )
 from git.util import (
     cygpath,
@@ -589,79 +591,7 @@ _CatFileContentStream.__name__ = "CatFileContentStream"
 _CatFileContentStream.__qualname__ = "Git.CatFileContentStream"
 
 
-_USE_SHELL_DEFAULT_MESSAGE = (
-    "Git.USE_SHELL is deprecated, because only its default value of False is safe. "
-    "It will be removed in a future release."
-)
-
-_USE_SHELL_DANGER_MESSAGE = (
-    "Setting Git.USE_SHELL to True is unsafe and insecure, as the effect of special "
-    "shell syntax cannot usually be accounted for. This can result in a command "
-    "injection vulnerability and arbitrary code execution. Git.USE_SHELL is deprecated "
-    "and will be removed in a future release."
-)
-
-
-def _warn_use_shell(*, extra_danger: bool) -> None:
-    warnings.warn(
-        _USE_SHELL_DANGER_MESSAGE if extra_danger else _USE_SHELL_DEFAULT_MESSAGE,
-        DeprecationWarning,
-        stacklevel=3,
-    )
-
-
-class _GitMeta(type):
-    """Metaclass for :class:`Git`.
-
-    This helps issue :class:`DeprecationWarning` if :attr:`Git.USE_SHELL` is used.
-    """
-
-    def __getattribute(cls, name: str) -> Any:
-        if name == "USE_SHELL":
-            _warn_use_shell(extra_danger=False)
-        return super().__getattribute__(name)
-
-    def __setattr(cls, name: str, value: Any) -> Any:
-        if name == "USE_SHELL":
-            _warn_use_shell(extra_danger=value)
-        super().__setattr__(name, value)
-
-    if not TYPE_CHECKING:
-        # To preserve static checking for undefined/misspelled attributes while letting
-        # the methods' bodies be type-checked, these are defined as non-special methods,
-        # then bound to special names out of view of static type checkers. (The original
-        # names invoke name mangling (leading "__") to avoid confusion in other scopes.)
-        __getattribute__ = __getattribute
-        __setattr__ = __setattr
-
-
-GitMeta = _GitMeta
-"""Alias of :class:`Git`'s metaclass, whether it is :class:`type` or a custom metaclass.
-
-Whether the :class:`Git` class has the default :class:`type` as its metaclass or uses a
-custom metaclass is not documented and may change at any time. This statically checkable
-metaclass alias is equivalent at runtime to ``type(Git)``. This should almost never be
-used. Code that benefits from it is likely to be remain brittle even if it is used.
-
-In view of the :class:`Git` class's intended use and :class:`Git` objects' dynamic
-callable attributes representing git subcommands, it rarely makes sense to inherit from
-:class:`Git` at all. Using :class:`Git` in multiple inheritance can be especially tricky
-to do correctly. Attempting uses of :class:`Git` where its metaclass is relevant, such
-as when a sibling class has an unrelated metaclass and a shared lower bound metaclass
-might have to be introduced to solve a metaclass conflict, is not recommended.
-
-:note:
-    The correct static type of the :class:`Git` class itself, and any subclasses, is
-    ``Type[Git]``. (This can be written as ``type[Git]`` in Python 3.9 later.)
-
-    :class:`GitMeta` should never be used in any annotation where ``Type[Git]`` is
-    intended or otherwise possible to use. This alias is truly only for very rare and
-    inherently precarious situations where it is necessary to deal with the metaclass
-    explicitly.
-"""
-
-
-class Git(metaclass=_GitMeta):
+class Git:
     """The Git class manages communication with the Git binary.
 
     It provides a convenient interface to calling the Git binary, such as in::
@@ -686,6 +616,7 @@ class Git(metaclass=_GitMeta):
         "_git_options",
         "_persistent_git_options",
         "_environment",
+        "_repo",
     )
 
     _excluded_ = (
@@ -693,7 +624,11 @@ class Git(metaclass=_GitMeta):
         "cat_file_header",
         "_version_info",
         "_version_info_token",
+        "_repo",
     )
+
+    _version_info: Optional[Tuple[int, ...]]
+    _version_info_token: object
 
     # Match Git's leading transport selector, including an empty helper name.
     # Git also selects the command-executing ext helper for an ext:// URL.
@@ -725,55 +660,6 @@ class Git(metaclass=_GitMeta):
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
     """Enables debugging of GitPython's git commands."""
 
-    USE_SHELL: bool = False
-    """Deprecated. If set to ``True``, a shell will be used when executing git commands.
-
-    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
-    functions should be updated to use the default value of ``False`` instead. ``True``
-    is unsafe unless the effect of syntax treated specially by the shell is fully
-    considered and accounted for, which is not possible under most circumstances. As
-    detailed below, it is also no longer needed, even where it had been in the past.
-
-    It is in many if not most cases a command injection vulnerability for an application
-    to set :attr:`USE_SHELL` to ``True``. Any attacker who can cause a specially crafted
-    fragment of text to make its way into any part of any argument to any git command
-    (including paths, branch names, etc.) can cause the shell to read and write
-    arbitrary files and execute arbitrary commands. Innocent input may also accidentally
-    contain special shell syntax, leading to inadvertent malfunctions.
-
-    In addition, how a value of ``True`` interacts with some aspects of GitPython's
-    operation is not precisely specified and may change without warning, even before
-    GitPython 4.0.0 when :attr:`USE_SHELL` may be removed. This includes:
-
-    * Whether or how GitPython automatically customizes the shell environment.
-
-    * Whether, outside of Windows (where :class:`subprocess.Popen` supports lists of
-      separate arguments even when ``shell=True``), this can be used with any GitPython
-      functionality other than direct calls to the :meth:`execute` method.
-
-    * Whether any GitPython feature that runs git commands ever attempts to partially
-      sanitize data a shell may treat specially. Currently this is not done.
-
-    Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
-    in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
-    GitPython solves that problem more robustly and safely by using the
-    ``CREATE_NO_WINDOW`` process creation flag on Windows.
-
-    Because Windows path search differs subtly based on whether a shell is used, in rare
-    cases changing this from ``True`` to ``False`` may keep an unusual git "executable",
-    such as a batch file, from being found. To fix this, set the command name or full
-    path in the :envvar:`GIT_PYTHON_GIT_EXECUTABLE` environment variable or pass the
-    full path to :func:`git.refresh` (or invoke the script using a ``.exe`` shim).
-
-    Further reading:
-
-    * :meth:`Git.execute` (on the ``shell`` parameter).
-    * https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
-    * https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
-    * https://github.com/python/cpython/issues/91558#issuecomment-1100942950
-    * https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
-    """
-
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     _refresh_env_var = "GIT_PYTHON_REFRESH"
 
@@ -787,6 +673,7 @@ class Git(metaclass=_GitMeta):
     """
 
     _refresh_token = object()  # Since None would match an initial _version_info_token.
+    _version_check_cache: Dict[Tuple[Any, ...], Tuple[int, ...]] = {}
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
@@ -960,34 +847,29 @@ class Git(metaclass=_GitMeta):
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Literal[False] = ..., expand_vars: bool = ...) -> str: ...
+    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str: ...
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None, expand_vars: bool = True) -> str: ...
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str: ...
 
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None, expand_vars: bool = True) -> PathLike:
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
         """Remove any backslashes from URLs to be written in config files.
 
         Windows might create config files containing paths with backslashes, but git
         stops liking them as it will escape the backslashes. Hence we undo the escaping
         just to be sure.
 
-        :param expand_vars:
-            Expand environment variables and an initial ``~``. Disable this for values
-            obtained from an untrusted source, such as remote URLs.
         """
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
         if is_cygwin:
-            url = cygpath(url, expand_vars=expand_vars)
+            url = cygpath(url)
         else:
-            if expand_vars:
-                url = os.path.expandvars(url)
-                if url.startswith("~"):
-                    url = os.path.expanduser(url)
+            if url.startswith("~"):
+                url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
         return url
 
@@ -1129,6 +1011,139 @@ class Git(metaclass=_GitMeta):
                         )
         return options
 
+    @staticmethod
+    def _check_operand(value: Any, label: str = "operand") -> str:
+        """Validate a single name/revision, before Git can interpret it as an option.
+
+        Paths and free-form payloads need their own validation and framing instead.
+        """
+        value = safe_decode(value) if isinstance(value, bytes) else str(value)
+        if value.startswith("-") or any(char in value for char in "\0\r\n"):
+            raise UnsafeOptionError(f"Invalid {label}: {value!r}")
+        return value
+
+    def _require_version(self) -> None:
+        key = None
+        if self._version_info_token is not self._refresh_token:
+            key = self._version_check_key()
+            if key is not None:
+                version = self._version_check_cache.get(key)
+                if version is not None:
+                    self._version_info = version
+                    self._version_info_token = key[0]
+        version = self.version_info
+        if version < (2, 52):
+            raise UnsupportedOperation("GitPython requires Git 2.52 or newer for repository operations")
+        if key is not None and key not in self._version_check_cache:
+            # ponytail: clear at 128 contexts; use LRU if diverse environments churn.
+            if len(self._version_check_cache) >= 128:
+                self._version_check_cache.clear()
+            self._version_check_cache[key] = version
+
+    def _version_check_key(self) -> Optional[Tuple[Any, ...]]:
+        """Identify the executable and context of a minimum-version probe."""
+        executable = self.GIT_PYTHON_GIT_EXECUTABLE
+        if not executable or self._git_options or self._persistent_git_options:
+            return None
+        environment = {**os.environ, "LANGUAGE": "C", "LC_ALL": "C", **self._environment}
+        try:
+            cwd = os.path.realpath(self._working_dir or os.getcwd())
+            if not os.access(cwd, os.X_OK):
+                return None
+            resolved: Optional[str]
+            if os.path.isabs(executable):
+                resolved = executable
+            elif sys.platform == "win32":
+                # CreateProcess searches in the parent context, unlike execvpe.
+                return None
+            elif os.path.dirname(executable):
+                resolved = os.path.join(cwd, executable)
+            else:
+                path = environment.get("PATH")
+                path = os.defpath if path is None else path
+                resolved = shutil.which(
+                    executable, path=os.pathsep.join(os.path.join(cwd, p) for p in path.split(os.pathsep))
+                )
+                if resolved is None:
+                    return None
+            info = os.stat(resolved)
+        except OSError:
+            return None
+        return (
+            self._refresh_token,
+            type(self),
+            executable,
+            resolved,
+            cwd,
+            tuple(sorted(environment.items())),
+            (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns),
+        )
+
+    def _call_process_safe(
+        self,
+        method: str,
+        *args: Any,
+        _allow_hooks: bool = False,
+        _allow_network: bool = False,
+        _config: Sequence[str] = (),
+        **kwargs: Any,
+    ) -> Any:
+        """Run library-owned plumbing without introducing executable configuration.
+
+        Callers validate their operands and any forwarded options using the existing
+        command-specific guards. This does not restrict the public raw Git interface.
+        """
+        self._check_operand(method, "command")
+        if kwargs.get("shell"):
+            raise UnsafeOptionError("Library operations cannot run through a shell")
+        if _allow_hooks and method != "hook":
+            raise UnsafeOptionError("Only explicit hook operations may enable hooks")
+        insertion = kwargs.get("insert_kwargs_after")
+        if insertion is not None and not (
+            method == "remote" and args and args[0] == insertion and insertion in ("add", "set-url", "update")
+        ):
+            raise UnsafeOptionError("Library command options cannot be reordered past safety flags")
+        for setting in _config:
+            key, separator, value = setting.partition("=")
+            if not separator or (
+                key.lower() not in ("i18n.commitencoding", "diff.mnemonicprefix", "fetch.output", "core.abbrev")
+                and not (key in ("core.protectHFS", "core.protectNTFS") and value == "true")
+                and not (key == "protocol.file.allow" and value in ("always", "never", "user"))
+                and not (key in ("tar.tgz.command", "tar.tar.gz.command") and value == "git archive gzip")
+            ):
+                raise UnsafeOptionError(f"Unsupported internal Git configuration: {key!r}")
+        for arg in self._unpack_args([arg for arg in args if arg is not None]) + self.transform_kwargs(
+            **{key: value for key, value in kwargs.items() if key not in execute_kwargs}
+        ):
+            if "\0" in arg:
+                raise UnsafeOptionError("Git arguments cannot contain NUL bytes")
+        options = ["--no-pager", "--no-optional-locks"]
+        # These settings would become visible as user configuration in `config`.
+        if method != "config":
+            config = ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false"]
+            if not _allow_hooks:
+                config.append(f"core.hooksPath={os.devnull}")
+            for setting in [*config, *_config]:
+                options.extend(("-c", setting))
+        elif _config:
+            raise ValueError("Configuration queries must not include synthetic settings")
+        native = _backend.dispatch(self, method, args, kwargs, _config)
+        if native is not NotImplemented:
+            return native
+        self._require_version()
+        env = dict(kwargs.pop("env", {}) or {})
+        env.update(LC_ALL="C", LANGUAGE="C")
+        if not _allow_network:
+            env.update(GIT_NO_LAZY_FETCH="1", GIT_TERMINAL_PROMPT="0")
+        return self._call_process(
+            method,
+            *args,
+            _safe_git_options=options,
+            shell=False,
+            env=env,
+            **{key: value for key, value in kwargs.items() if key != "shell"},
+        )
+
     AutoInterrupt: TypeAlias = _AutoInterrupt
 
     CatFileContentStream: TypeAlias = _CatFileContentStream
@@ -1148,20 +1163,16 @@ class Git(metaclass=_GitMeta):
         self._persistent_git_options: List[str] = []
 
         # Extra environment variables to pass to git commands
-        self._environment: Dict[str, str] = {}
+        self._environment: Dict[str, Optional[str]] = {}
+        self._repo: Any = None  # Weak reference; the Repo owns native resources.
 
         # Cached version slots
-        self._version_info: Union[Tuple[int, ...], None] = None
-        self._version_info_token: object = None
+        self._version_info = None
+        self._version_info_token = None
 
         # Cached command slots
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
-
-    def __getattribute__(self, name: str) -> Any:
-        if name == "USE_SHELL":
-            _warn_use_shell(extra_danger=False)
-        return super().__getattribute__(name)
 
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was an object.
@@ -1232,7 +1243,7 @@ class Git(metaclass=_GitMeta):
             return self._version_info
 
         # Run "git version" and parse it.
-        process_version = self._call_process("version")
+        process_version = cast(str, self._call_process("version", shell=False))
         version_string = process_version.split(" ")[2]
         version_fields = version_string.split(".")[:4]
         leading_numeric_fields = itertools.takewhile(str.isdigit, version_fields)
@@ -1378,11 +1389,11 @@ class Git(metaclass=_GitMeta):
             Windows, the program parses the arguments itself, so multi-word strings can
             work but are not portable.
 
-            Avoid ``shell=True`` (and :attr:`Git.USE_SHELL`): this runs the command in
+            Avoid ``shell=True``: this runs the command in
             a shell, which is generally unsafe. The shell interprets metacharacters
             such as ``;``, ``|``, ``&``, ``$(...)``, ``$VAR``, ``%VAR%``, and ``^``
             (depending on the platform) as syntax. Any untrusted text in the command
-            can then execute arbitrary OS commands. See :attr:`Git.USE_SHELL`.
+            can then execute arbitrary OS commands.
 
             Producing a sequence automatically by :func:`shlex.split` and passing it
             as the command is far safer than ``shell=True``. But :func:`shlex.split`
@@ -1450,7 +1461,7 @@ class Git(metaclass=_GitMeta):
         :param shell:
             Whether to invoke commands through a shell
             (see :class:`Popen(..., shell=True) <subprocess.Popen>`).
-            If this is not ``None``, it overrides :attr:`USE_SHELL`.
+            Use a shell explicitly; the default is ``False``.
 
             Passing ``shell=True`` to this or any other GitPython function should be
             avoided, as it is unsafe under most circumstances. This is because it is
@@ -1517,16 +1528,18 @@ class Git(metaclass=_GitMeta):
 
         # Start the process.
         inline_env = env
-        env = os.environ.copy()
+        environment: Dict[str, Optional[str]] = dict(os.environ)
         # Attempt to force all output to plain ASCII English, which is what some parsing
         # code may expect.
         # According to https://askubuntu.com/a/311796, we are setting LANGUAGE as well
         # just to be sure.
-        env["LANGUAGE"] = "C"
-        env["LC_ALL"] = "C"
-        env.update(self._environment)
+        environment["LANGUAGE"] = "C"
+        environment["LC_ALL"] = "C"
+        environment.update(self._environment)
         if inline_env is not None:
-            env.update(inline_env)
+            environment.update(inline_env)
+        # Internal or per-call None overrides remove inherited variables.
+        env = {key: value for key, value in environment.items() if value is not None}
 
         if sys.platform == "win32":
             if kill_after_timeout is not None:
@@ -1541,12 +1554,7 @@ class Git(metaclass=_GitMeta):
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
-            # Get the value of USE_SHELL with no deprecation warning. Do this without
-            # warnings.catch_warnings, to avoid a race condition with application code
-            # configuring warnings. The value could be looked up in type(self).__dict__
-            # or Git.__dict__, but those can break under some circumstances. This works
-            # the same as self.USE_SHELL in more situations; see Git.__getattribute__.
-            shell = super().__getattribute__("USE_SHELL")
+            shell = False
         _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
@@ -1572,6 +1580,10 @@ class Git(metaclass=_GitMeta):
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
         else:
+            _backend.record("Git.execute", "CLI process")
+            owner = self._repo() if self._repo is not None else None
+            if owner is not None:
+                owner._gix_state = None
             # Replace with a typeguard for Popen[bytes]?
             proc.stdout = cast(BinaryIO, proc.stdout)
             proc.stderr = cast(BinaryIO, proc.stderr)
@@ -1692,7 +1704,7 @@ class Git(metaclass=_GitMeta):
         else:
             return stdout_value
 
-    def environment(self) -> Dict[str, str]:
+    def environment(self) -> Dict[str, Optional[str]]:
         return self._environment
 
     def update_environment(self, **kwargs: Any) -> Dict[str, Union[str, None]]:
@@ -1776,7 +1788,7 @@ class Git(metaclass=_GitMeta):
             for arg in arg_list:
                 outlist.extend(cls._unpack_args(arg))
         else:
-            outlist.append(str(arg_list))
+            outlist.append(os.fsdecode(arg_list) if isinstance(arg_list, os.PathLike) else str(arg_list))
 
         return outlist
 
@@ -1861,6 +1873,7 @@ class Git(metaclass=_GitMeta):
         """
         # Handle optional arguments prior to calling transform_kwargs.
         # Otherwise these'll end up in args, which is bad.
+        safe_git_options = kwargs.pop("_safe_git_options", ())
         exec_kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
         opts_kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
 
@@ -1894,12 +1907,14 @@ class Git(metaclass=_GitMeta):
         call.extend(self._git_options)
         self._git_options = ()
 
+        call.extend(safe_git_options)
+
         call.append(dashify(method))
         call.extend(args_list)
 
         return self.execute(call, **exec_kwargs)
 
-    def _parse_object_header(self, header_line: str) -> Tuple[str, str, int]:
+    def _parse_object_header(self, header_line: Union[str, bytes]) -> Tuple[str, str, int]:
         """
         :param header_line:
             A line of the form::
@@ -1912,6 +1927,8 @@ class Git(metaclass=_GitMeta):
         :raise ValueError:
             If the header contains indication for an error due to incorrect input sha.
         """
+        if isinstance(header_line, bytes):
+            header_line = header_line.decode("ascii", "replace")
         tokens = header_line.split()
         if len(tokens) != 3:
             if not tokens:
@@ -1926,42 +1943,56 @@ class Git(metaclass=_GitMeta):
             # END handle actual return value
         # END error handling
 
-        if len(tokens[0]) != 40:
+        if (
+            not re.fullmatch(r"[0-9a-fA-F]+", tokens[0])
+            or len(tokens[0]) % 2
+            or tokens[1] not in ("blob", "tree", "commit", "tag")
+            or not tokens[2].isdigit()
+        ):
             raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
     def _prepare_ref(self, ref: object) -> bytes:
-        # Required for command to separate refs on stdin, as bytes.
+        # `cat-file -Z` separates both requests and responses with NUL, so paths
+        # containing newlines cannot inject requests or desynchronize the process.
         if isinstance(ref, bytes):
-            # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text.
-            refstr: str = ref.decode("ascii")
+            refstr: str = ref.decode(defenc, "surrogateescape")
         elif not isinstance(ref, str):
             refstr = str(ref)  # Could be ref-object.
         else:
             refstr = ref
 
-        if not refstr.endswith("\n"):
-            refstr += "\n"
-        return refstr.encode(defenc)
+        if "\0" in refstr or refstr.startswith("-"):
+            raise UnsafeOptionError("Object queries cannot contain NUL or start with '-'")
+        return refstr.encode(defenc, "surrogateescape") + b"\0"
 
     def _get_persistent_cmd(self, attr_name: str, cmd_name: str, *args: Any, **kwargs: Any) -> "Git.AutoInterrupt":
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
 
-        options = {"istream": PIPE, "as_process": True}
+        options: Dict[str, Any] = {"istream": PIPE, "as_process": True}
         options.update(kwargs)
 
-        cmd = self._call_process(cmd_name, *args, **options)
+        cmd = self._call_process_safe(cmd_name, *args, **options)
         setattr(self, attr_name, cmd)
         cmd = cast("Git.AutoInterrupt", cmd)
         return cmd
 
-    def __get_object_header(self, cmd: "Git.AutoInterrupt", ref: Union[str, bytes]) -> Tuple[str, str, int]:
+    def __get_object_header(self, cmd: "Git.AutoInterrupt", request: bytes) -> Tuple[str, str, int]:
         if cmd.stdin and cmd.stdout:
-            cmd.stdin.write(self._prepare_ref(ref))
+            cmd.stdin.write(request)
             cmd.stdin.flush()
-            return self._parse_object_header(cmd.stdout.readline())
+            header = bytearray()
+            while True:
+                char = cmd.stdout.read(1)
+                if not char:
+                    cmd.wait()
+                    raise ValueError("Git closed the object stream before its response")
+                if char == b"\0":
+                    break
+                header.extend(char)
+            return self._parse_object_header(bytes(header))
         else:
             raise ValueError("cmd stdin was empty")
 
@@ -1976,8 +2007,12 @@ class Git(metaclass=_GitMeta):
         :return:
             (hexsha, type_string, size_as_int)
         """
-        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
-        return self.__get_object_header(cmd, ref)
+        request = self._prepare_ref(ref)
+        native = _backend.object_data(self, request[:-1])
+        if native is not NotImplemented:
+            return native
+        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True, Z=True)
+        return self.__get_object_header(cmd, request)
 
     def get_object_data(self, ref: Union[str, bytes]) -> Tuple[str, str, int, bytes]:
         """Similar to :meth:`get_object_header`, but returns object data as well.
@@ -2003,8 +2038,12 @@ class Git(metaclass=_GitMeta):
             This method is not threadsafe. You need one independent :class:`Git`
             instance per thread to be safe!
         """
-        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
-        hexsha, typename, size = self.__get_object_header(cmd, ref)
+        request = self._prepare_ref(ref)
+        native = _backend.object_data(self, request[:-1], stream=True)
+        if native is not NotImplemented:
+            return native
+        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True, Z=True)
+        hexsha, typename, size = self.__get_object_header(cmd, request)
         cmd_stdout = cmd.stdout if cmd.stdout is not None else io.BytesIO()
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd_stdout))
 

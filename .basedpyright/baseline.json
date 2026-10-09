@@ -8,75 +8,9 @@
           "endColumn": 45,
           "lineCount": 1
         }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 41,
-          "endColumn": 48,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 32,
-          "endColumn": 39,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportCallIssue",
-        "range": {
-          "startColumn": 25,
-          "endColumn": 46,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 30,
-          "endColumn": 39,
-          "lineCount": 1
-        }
-      }
-    ],
-    "./git/db.py": [
-      {
-        "code": "reportIncompatibleMethodOverride",
-        "range": {
-          "startColumn": 8,
-          "endColumn": 12,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportIncompatibleMethodOverride",
-        "range": {
-          "startColumn": 8,
-          "endColumn": 14,
-          "lineCount": 1
-        }
       }
     ],
     "./git/index/base.py": [
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 30,
-          "endColumn": 36,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 28,
-          "endColumn": 34,
-          "lineCount": 1
-        }
-      },
       {
         "code": "reportArgumentType",
         "range": {
@@ -186,14 +120,6 @@
           "endColumn": 25,
           "lineCount": 1
         }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 52,
-          "endColumn": 84,
-          "lineCount": 1
-        }
       }
     ],
     "./git/objects/tag.py": [
@@ -274,48 +200,12 @@
         }
       }
     ],
-    "./git/refs/log.py": [
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 30,
-          "endColumn": 34,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 17,
-          "endColumn": 22,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportArgumentType",
-        "range": {
-          "startColumn": 28,
-          "endColumn": 30,
-          "lineCount": 1
-        }
-      }
-    ],
     "./git/refs/reference.py": [
       {
         "code": "reportIncompatibleVariableOverride",
         "range": {
           "startColumn": 13,
           "endColumn": 17,
-          "lineCount": 1
-        }
-      }
-    ],
-    "./git/refs/symbolic.py": [
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 15,
-          "endColumn": 20,
           "lineCount": 1
         }
       }
@@ -338,49 +228,7 @@
         }
       }
     ],
-    "./git/remote.py": [
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      }
-    ],
     "./git/repo/base.py": [
-      {
-        "code": "reportReturnType",
-        "range": {
-          "startColumn": 15,
-          "endColumn": 28,
-          "lineCount": 1
-        }
-      },
       {
         "code": "reportTypedDictNotRequiredAccess",
         "range": {
@@ -442,26 +290,6 @@
         "range": {
           "startColumn": 51,
           "endColumn": 73,
-          "lineCount": 1
-        }
-      }
-    ],
-    "./git/repo/fun.py": [
-      {
-        "code": "reportReturnType",
-        "range": {
-          "startColumn": 11,
-          "endColumn": 20,
-          "lineCount": 1
-        }
-      }
-    ],
-    "./test/deprecation/test_basic.py": [
-      {
-        "code": "reportUnusedExpression",
-        "range": {
-          "startColumn": 12,
-          "endColumn": 62,
           "lineCount": 1
         }
       }

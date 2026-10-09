@@ -1,7 +1,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""General repository-related functions."""
+"""Repository and revision queries delegated to Git."""
 
 from __future__ import annotations
 
@@ -19,35 +19,26 @@ __all__ = [
 
 import os
 import os.path as osp
-from pathlib import Path
-import re
-import stat
-from string import digits
+import posixpath
+import tempfile
+from typing import Optional, TYPE_CHECKING, Union, overload
 
 from gitdb.exc import BadName, BadObject
 
+from git import _backend
 from git.cmd import Git
-from git.exc import GitCommandError, WorkTreeRepositoryUnsupported
+from git.compat import defenc
+from git.exc import GitCommandError
 from git.objects import Object
-from git.objects.util import parse_date
+from git.objects.base import IndexObject
 from git.refs import SymbolicReference
-from git.util import cygpath, bin_to_hex, hex_to_bin
-
-# Typing ----------------------------------------------------------------------
-
-from typing import Optional, TYPE_CHECKING, Union, cast, overload
-
 from git.types import AnyGitObject, Literal, PathLike
+from git.util import bin_to_hex, hex_to_bin, to_native_path_linux
 
 if TYPE_CHECKING:
     from gitdb.db import CompoundDB, LooseObjectDB
     from git.objects import Commit
-    from git.refs.reference import Reference
-    from git.refs.log import RefLog, RefLogEntry
-
     from .base import Repo
-
-# ----------------------------------------------------------------------------
 
 
 def touch(filename: str) -> str:
@@ -56,138 +47,39 @@ def touch(filename: str) -> str:
     return filename
 
 
+def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
+    """Resolve a repository directory or gitfile using the selected backend."""
+    path = osp.abspath(os.fspath(d))
+    if not osp.exists(path):
+        return None
+    try:
+        native = _backend.discover_repository(path, {})
+        if native is not NotImplemented:
+            return to_native_path_linux(os.fspath(native.git_dir()))
+        return Git()._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(path))
+    except GitCommandError:
+        return None
+
+
 def is_git_dir(d: PathLike) -> bool:
-    """This is taken from the git setup.c:is_git_directory function.
-
-    .. note::
-        This function recognizes repositories using reftable through their
-        compatibility files, but GitPython's direct reference access does not support
-        reftable.
-
-    :raise git.exc.WorkTreeRepositoryUnsupported:
-        If it sees a worktree directory. It's quite hacky to do that here, but at least
-        clearly indicates that we don't support it. There is the unlikely danger to
-        throw if we see directories which just look like a worktree dir, but are none.
-    """
-    if osp.isdir(d):
-        headref = osp.join(d, "HEAD")
-        if osp.islink(headref):
-            try:
-                valid_head = os.readlink(headref).startswith("refs/")
-            except OSError:
-                valid_head = False
-        else:
-            try:
-                with open(headref, "rb") as fp:
-                    head = fp.read(256)
-            except OSError:
-                valid_head = False
-            else:
-                valid_head = (head.startswith(b"ref:") and head[4:].lstrip().startswith(b"refs/")) or bool(
-                    re.match(rb"(?:[0-9A-Fa-f]{64}|[0-9A-Fa-f]{40})", head)
-                )
-
-        common_dir = os.getenv("GIT_COMMON_DIR")
-        if common_dir == "":
-            return False
-        if common_dir is None:
-            common_dir_file = Path(d) / "commondir"
-            try:
-                common_dir = os.fsdecode(common_dir_file.read_bytes()).rstrip("\r\n")
-            except FileNotFoundError:
-                if osp.lexists(common_dir_file):
-                    return False
-                common_dir = os.fspath(d)
-            except (OSError, UnicodeError):
-                return False
-            else:
-                if not common_dir:
-                    return False
-                try:
-                    common_dir = osp.realpath(osp.join(d, common_dir))
-                except (OSError, ValueError):
-                    return False
-
-        object_dir = os.getenv("GIT_OBJECT_DIRECTORY")
-        if object_dir is None:
-            object_dir = osp.join(common_dir, "objects")
-        if valid_head and osp.isdir(object_dir) and osp.isdir(osp.join(common_dir, "refs")):
-            return True
-        if osp.isfile(osp.join(d, "gitdir")) and osp.isfile(osp.join(d, "commondir")) and osp.isfile(headref):
-            raise WorkTreeRepositoryUnsupported(d)
-    return False
+    """Whether Git recognizes the directory as repository storage."""
+    return osp.isdir(d) and find_submodule_git_dir(d) is not None
 
 
 def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
-    """Search for a gitdir for this worktree."""
-    try:
-        statbuf = os.stat(dotgit)
-    except (FileNotFoundError, NotADirectoryError):
+    """Resolve an existing worktree gitfile without parsing its contents."""
+    if not osp.isfile(dotgit):
         return None
-    if not stat.S_ISREG(statbuf.st_mode) or statbuf.st_size > (1 << 20):
-        return None
-
-    try:
-        with open(dotgit, "rb") as fp:
-            content_bytes = fp.read(statbuf.st_size)
-        if len(content_bytes) != statbuf.st_size:
-            return None
-        content = os.fsdecode(content_bytes).rstrip("\r\n")
-    except (OSError, UnicodeError):
-        return None
-    return content[8:] if len(content) >= 9 and content.startswith("gitdir: ") else None
-
-
-def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
-    """Search for a submodule repo."""
-    if is_git_dir(d):
-        return d
-
-    path = find_worktree_git_dir(d)
-    if path is None:
-        return None
-
-    if Git.is_cygwin():
-        # Cygwin creates submodules prefixed with `/cygdrive/...`.
-        # Cygwin git understands Cygwin paths much better than Windows ones.
-        # Also the Cygwin tests are assuming Cygwin paths.
-        path = cygpath(path, expand_vars=False)
-    if not osp.isabs(path):
-        path = osp.normpath(osp.join(osp.dirname(d), path))
-    return path if is_git_dir(path) else None
+    result = find_submodule_git_dir(dotgit)
+    return os.fspath(result) if result is not None else None
 
 
 def short_to_long(odb: Union["CompoundDB", "LooseObjectDB"], hexsha: str) -> Optional[bytes]:
-    """
-    :return:
-        Long hexadecimal sha1 from the given less than 40 byte hexsha, or ``None`` if no
-        candidate could be found.
-
-    :param hexsha:
-        hexsha with less than 40 bytes.
-    """
+    """Resolve an abbreviated object ID using the selected object database."""
     try:
         return bin_to_hex(odb.partial_to_complete_sha_hex(hexsha))
     except BadObject:
         return None
-    # END exception handling
-
-
-def _describe_to_long(repo: "Repo", name: str) -> Optional[bytes]:
-    """Resolve git-describe style names to the abbreviated object they contain."""
-    match = re.match(r"^.+-\d+-g([0-9A-Fa-f]{4,40})(?:-dirty)?$", name)
-    if match is None:
-        match = re.match(r"^.+-g([0-9A-Fa-f]{4,40})(?:-dirty)?$", name)
-    if match is None:
-        match = re.match(r"^([0-9A-Fa-f]{4,40})-dirty$", name)
-    if match is None:
-        return None
-    # END handle match
-
-    hexsha = match.group(1)
-    if len(hexsha) == 40:
-        return hexsha.encode("ascii")
-    return short_to_long(repo.odb, hexsha)
 
 
 @overload
@@ -199,496 +91,94 @@ def name_to_object(repo: "Repo", name: str, return_ref: Literal[True]) -> Union[
 
 
 def name_to_object(repo: "Repo", name: str, return_ref: bool = False) -> Union[AnyGitObject, SymbolicReference]:
-    """
-    :return:
-        Object specified by the given name - hexshas (short and long) as well as
-        references are supported.
-
-    :param return_ref:
-        If ``True``, and name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise :exc:`~gitdb.exc.BadObject` or
-        :exc:`~gitdb.exc.BadName`.
-    """
-    hexsha: Union[None, str, bytes] = None
-
-    # Is it a hexsha? Try the most common ones, which is 7 to 40.
-    if repo.re_hexsha_shortened.match(name):
-        if len(name) != 40:
-            # Find long sha for short sha.
-            hexsha = short_to_long(repo.odb, name)
-        else:
-            hexsha = name
-        # END handle short shas
-    # END find sha if it matches
-
-    # If we couldn't find an object for what seemed to be a short hexsha, try to find it
-    # as reference anyway, it could be named 'aaa' for instance.
-    if hexsha is None:
-        for base in (
-            "%s",
-            "refs/%s",
-            "refs/tags/%s",
-            "refs/heads/%s",
-            "refs/remotes/%s",
-            "refs/remotes/%s/HEAD",
-        ):
-            try:
-                hexsha = SymbolicReference.dereference_recursive(repo, base % name)
-                if return_ref:
-                    return SymbolicReference(repo, base % name)
-                # END handle symbolic ref
-                break
-            except ValueError:
-                pass
-        # END for each base
-    # END handle hexsha
-
-    if hexsha is None:
-        hexsha = _describe_to_long(repo, name)
-    # END handle describe output
-
-    # Didn't find any ref, this is an error.
-    if return_ref:
-        raise BadObject("Couldn't find reference named %r" % name)
-    # END handle return ref
-
-    # Tried everything ? fail.
-    if hexsha is None:
-        raise BadName(name)
-    # END assert hexsha was found
-
-    return Object.new_from_sha(repo, hex_to_bin(hexsha))
+    """Resolve a revision, optionally returning its fully qualified reference."""
+    name = Git._check_operand(name, "revision")
+    if not return_ref:
+        return rev_parse(repo, name)
+    try:
+        path = repo.git._call_process_safe(
+            "rev_parse", "--symbolic-full-name", "--verify", "--quiet", "--end-of-options", name
+        )
+    except GitCommandError as exc:
+        if exc.status != 1:
+            raise
+        raise BadObject(name) from exc
+    if not path:
+        raise BadObject(name)
+    SymbolicReference._check_ref_name_valid(path)
+    return SymbolicReference.from_path(repo, path)
 
 
 def deref_tag(tag: AnyGitObject) -> AnyGitObject:
-    """Recursively dereference a tag and return the resulting object."""
-    while True:
-        try:
-            tag = tag.object
-        except AttributeError:
-            break
-    # END dereference tag
-    return tag
+    """Return the object obtained by peeling tags through Git."""
+    return rev_parse(tag.repo, tag.hexsha + "^{}") if tag.type == "tag" else tag
 
 
 def to_commit(obj: AnyGitObject) -> "Commit":
-    """Convert the given object to a commit if possible and return it."""
-    if obj.type == "tag":
-        obj = deref_tag(obj)
-
+    """Convert an object or annotated tag to a commit."""
+    obj = deref_tag(obj)
     if obj.type != "commit":
         raise ValueError("Cannot convert object %r to type commit" % obj)
-    # END verify type
     return obj
 
 
-def _object_from_hexsha(repo: "Repo", hexsha: str) -> AnyGitObject:
-    return Object.new_from_sha(repo, hex_to_bin(hexsha))
-
-
-def _current_reflog_ref(repo: "Repo") -> SymbolicReference:
-    try:
-        return repo.head.ref
-    except TypeError:
-        return repo.head
-    # END handle detached head
-
-
-def _common_reflog_path(repo: "Repo", ref: SymbolicReference) -> Optional[str]:
-    if repo.common_dir == repo.git_dir:
-        return None
-    # END handle normal repository
-    return SymbolicReference._get_validated_path(osp.join(repo.common_dir, "logs"), ref.path)
-
-
-def _ref_log(repo: "Repo", ref: SymbolicReference) -> "RefLog":
-    try:
-        return ref.log()
-    except FileNotFoundError:
-        common_path = _common_reflog_path(repo, ref)
-        if common_path and osp.isfile(common_path):
-            from git.refs.log import RefLog
-
-            return RefLog.from_file(common_path)
-        # END handle linked-worktree branch logs
-        try:
-            if ref.path == repo.head.ref.path:
-                return repo.head.log()
-            # END handle linked-worktree current branch logs
-        except TypeError:
-            pass
-        # END handle detached head
-        raise
-    # END handle missing branch log
-
-
-def _ref_log_entry(repo: "Repo", ref: SymbolicReference, index: int) -> "RefLogEntry":
-    try:
-        return ref.log_entry(index)
-    except FileNotFoundError:
-        common_path = _common_reflog_path(repo, ref)
-        if common_path and osp.isfile(common_path):
-            from git.refs.log import RefLog
-
-            return RefLog.entry_at(common_path, index)
-        # END handle linked-worktree branch logs
-        try:
-            if ref.path == repo.head.ref.path:
-                return repo.head.log_entry(index)
-            # END handle linked-worktree current branch logs
-        except TypeError:
-            pass
-        # END handle detached head
-        raise
-    # END handle missing branch log
-
-
-def _find_reflog_entry_by_date(repo: "Repo", ref: SymbolicReference, spec: str) -> str:
-    try:
-        timestamp, _offset = parse_date(spec)
-    except ValueError as e:
-        raise NotImplementedError("Support for additional @{...} modes not implemented") from e
-    # END handle unsupported dates
-    log = _ref_log(repo, ref)
-    if not log:
-        raise IndexError("Invalid revlog date: %s" % spec)
-    # END handle empty log
-
-    for entry in reversed(log):
-        if entry.time[0] <= timestamp:
-            return entry.newhexsha
-        # END found candidate
-    # END for each entry
-    return log[0].newhexsha
-
-
-def _previous_checked_out_branch(repo: "Repo", nth: int) -> AnyGitObject:
-    if nth <= 0:
-        raise ValueError("Invalid previous checkout selector: -%i" % nth)
-    # END handle invalid input
-
-    seen = 0
-    for entry in reversed(_ref_log(repo, repo.head)):
-        message = entry.message or ""
-        prefix = "checkout: moving from "
-        if not message.startswith(prefix):
-            continue
-        # END skip non-checkouts
-
-        previous_branch = message[len(prefix) :].split(" to ", 1)[0]
-        seen += 1
-        if seen == nth:
-            return name_to_object(repo, previous_branch)
-        # END found selector
-    # END for each entry
-    raise IndexError("Invalid previous checkout selector: -%i" % nth)
-
-
-def _tracking_branch_object(repo: "Repo", ref: Optional[SymbolicReference]) -> AnyGitObject:
-    from git.refs.head import Head
-
-    if ref is None:
-        try:
-            head = repo.active_branch
-        except TypeError as e:
-            raise BadName("@{upstream}") from e
-    elif isinstance(ref, Head):
-        head = ref
-    elif os.fspath(ref.path).startswith("refs/heads/"):
-        head = Head(repo, ref.path)
-    else:
-        raise BadName("%s@{upstream}" % ref.name)
-    # END handle head
-
-    tracking_branch = head.tracking_branch()
-    if tracking_branch is None:
-        raise BadName("%s@{upstream}" % head.name)
-    # END handle missing upstream
-    return tracking_branch.commit
-
-
-def _apply_reflog(repo: "Repo", ref: Optional[SymbolicReference], content: str) -> AnyGitObject:
-    if content.startswith("+"):
-        content = content[1:]
-    # END handle explicit positive sign
-
-    if content.startswith("-"):
-        if ref is not None:
-            raise ValueError("Previous checkout selectors do not take an explicit ref")
-        if content == "-0":
-            raise ValueError("Negative zero is invalid in reflog selector")
-        # END handle invalid negative zero
-        try:
-            return _previous_checked_out_branch(repo, int(content[1:]))
-        except ValueError as e:
-            raise ValueError("Invalid previous checkout selector: %s" % content) from e
-    # END handle previous checkout branch
-
-    content_lower = content.lower()
-    if content_lower in ("u", "upstream", "push"):
-        return _tracking_branch_object(repo, ref)
-    # END handle sibling branches
-
-    ref = ref or _current_reflog_ref(repo)
-    try:
-        entry_no = int(content)
-    except ValueError:
-        hexsha = _find_reflog_entry_by_date(repo, ref, content)
-    else:
-        if entry_no >= 100000000:
-            hexsha = _find_reflog_entry_by_date(repo, ref, "%s +0000" % entry_no)
-        elif entry_no == 0:
-            return ref.commit
-        else:
-            try:
-                entry = _ref_log_entry(repo, ref, -(entry_no + 1))
-            except IndexError as e:
-                raise IndexError("Invalid revlog index: %i" % entry_no) from e
-            # END handle index out of bound
-            hexsha = entry.newhexsha
-        # END handle offset or date-like timestamp
-    # END handle content
-    return _object_from_hexsha(repo, hexsha)
-
-
-def _find_closing_brace(rev: str, start: int) -> int:
-    depth = 1
-    escaped = False
-    for idx in range(start + 1, len(rev)):
-        char = rev[idx]
-        if escaped:
-            escaped = False
-        elif char == "\\":
-            escaped = True
-        elif char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return idx
-            # END found end
-        # END handle char
-    # END for each char
-    raise ValueError("Missing closing brace to define type in %s" % rev)
-
-
-def _find_commit_by_message(repo: "Repo", rev: Optional[AnyGitObject], pattern: str) -> AnyGitObject:
-    if not pattern:
-        raise ValueError("Revision search requires a pattern")
-    if pattern.startswith("!") and not pattern.startswith(("!-", "!!")):
-        raise ValueError("Need one character after /!, typically -")
-
-    # Git's native regular expressions avoid Python's exponential backtracking,
-    # and its history walk does not deserialize every visited commit in Python.
-    search = ":/" + pattern if rev is None else "%s^{/%s}" % (to_commit(rev).hexsha, pattern)
-    try:
-        # The fixed prefix prevents options without requiring Git 2.30's
-        # --end-of-options support in rev-parse.
-        hexsha = repo.git.rev_parse("--verify", search)
-    except GitCommandError as e:
-        # Git does not distinguish invalid regexes from searches with no match.
-        raise BadName("No commit found matching message pattern %r" % pattern) from e
-    return _object_from_hexsha(repo, hexsha)
-
-
-def _index_lookup(repo: "Repo", spec: str) -> AnyGitObject:
-    if not spec:
-        raise ValueError("':' must be followed by a path")
-    # END handle empty lookup
-
-    stage = 0
-    path = spec
-    if len(spec) >= 2 and spec[1] == ":" and spec[0] in "0123":
-        stage = int(spec[0])
-        path = spec[2:]
-    # END handle stage
-
-    try:
-        return repo.index.entries[(path, stage)].to_blob(repo)
-    except KeyError as e:
-        raise BadName("Path %r did not exist in the index at stage %i" % (path, stage)) from e
-
-
-def _tree_lookup(obj: AnyGitObject, path: str) -> AnyGitObject:
-    if obj.type != "tree":
-        obj = to_commit(obj).tree
-    # END get tree
-    if not path:
-        return obj
-    return obj[path]
-
-
-def _peel(obj: AnyGitObject, output_type: str, repo: "Repo", rev: str) -> AnyGitObject:
-    if output_type.startswith("/"):
-        return _find_commit_by_message(repo, obj, output_type[1:])
-    if output_type == "":
-        return deref_tag(obj) if obj.type == "tag" else obj
-    if output_type == "object":
-        return obj
-    if output_type == "commit":
-        return to_commit(obj)
-    if output_type == "tree":
-        return to_commit(obj).tree if obj.type != "tree" else obj
-    if output_type == "blob":
-        obj = deref_tag(obj) if obj.type == "tag" else obj
-        if obj.type == output_type:
-            return obj
-        # END handle matching type
-        raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
-    if output_type == "tag":
-        if obj.type == output_type:
-            return obj
-        # END handle matching type
-        raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
-    # END handle known types
-    raise ValueError("Invalid output type: %s ( in %s )" % (output_type, rev))
-
-
-def _first_rev_token(rev: str) -> Optional[int]:
-    for idx, char in enumerate(rev):
-        if char in "^~:":
-            return idx
-        if char == "@":
-            next_char = rev[idx + 1] if idx + 1 < len(rev) else None
-            if idx == 0 and next_char in (None, "^", "~", ":", "{"):
-                return idx
-            if next_char == "{":
-                return idx
-            # END handle reflog selector
-        # END handle at symbol
-    # END for each char
-    return None
-
-
 def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
-    """Parse a revision string. Like :manpage:`git-rev-parse(1)`.
+    """Resolve a Git revision to an object using Git's native revision grammar.
 
-    :return:
-        `~git.objects.base.Object` at the given revision.
-
-        This may be any type of git object:
-
-        * :class:`Commit <git.objects.commit.Commit>`
-        * :class:`TagObject <git.objects.tag.TagObject>`
-        * :class:`Tree <git.objects.tree.Tree>`
-        * :class:`Blob <git.objects.blob.Blob>`
-
-    :param rev:
-        :manpage:`git-rev-parse(1)`-compatible revision specification as string.
-        Please see :manpage:`git-rev-parse(1)` for details.
-
-        Commit message searches use Git's native extended regular expressions.
-        Invalid search expressions and searches without a match both raise
-        :exc:`~gitdb.exc.BadName`.
-
-    :raise gitdb.exc.BadObject:
-        If the given revision could not be found.
-
-    :raise ValueError:
-        If `rev` couldn't be parsed.
-
-    :raise IndexError:
-        If an invalid reflog index is specified.
+    Invalid or missing revisions raise :class:`gitdb.exc.BadName`. Option-like
+    revisions and embedded command delimiters are rejected before invoking Git.
     """
-    if rev.startswith(":/"):
-        return _find_commit_by_message(repo, None, rev[2:])
-    if rev.startswith(":"):
-        return _index_lookup(repo, rev[1:])
-    # END handle top-level colon modes
-
-    obj: Optional[AnyGitObject] = None
-    ref = None
-    lr = len(rev)
-    first_token = _first_rev_token(rev)
-    if first_token is None:
-        return name_to_object(repo, rev)
-    # END handle plain name
-
-    if first_token == 0:
-        if rev[0] != "@":
-            raise ValueError("Revision specifier must start with an object name: %s" % rev)
-        # END handle invalid leading token
-        ref = _current_reflog_ref(repo)
-        obj = ref.commit
-        start = 0 if rev.startswith("@{") else 1
-    else:
-        if rev[first_token] == "@":
-            ref = cast("Reference", name_to_object(repo, rev[:first_token], return_ref=True))
-            obj = ref.commit
-        else:
-            obj = name_to_object(repo, rev[:first_token])
-        # END handle anchor
-        start = first_token
-    # END initialize anchor
-
-    while start < lr:
-        token = rev[start]
-
-        if token == "@":
-            if start + 1 >= lr or rev[start + 1] != "{":
-                raise ValueError("Invalid @ token in revision specifier: %s" % rev)
-            # END handle invalid @
-            end = _find_closing_brace(rev, start + 1)
-            obj = _apply_reflog(repo, ref if first_token != 0 and start == first_token else None, rev[start + 2 : end])
-            ref = None
-            start = end + 1
-            continue
-        # END handle reflog
-
-        if token == ":":
-            return _tree_lookup(obj, rev[start + 1 :])
-        # END handle path
-
-        start += 1
-
-        if token == "^" and start < lr and rev[start] == "{":
-            end = _find_closing_brace(rev, start)
-            obj = _peel(obj, rev[start + 1 : end], repo, rev)
-            ref = None
-            start = end + 1
-            continue
-        # END parse type
-
-        num = 0
-        found_digit = False
-        while start < lr:
-            if rev[start] in digits:
-                num = num * 10 + int(rev[start])
-                start += 1
-                found_digit = True
+    rev = Git._check_operand(rev, "revision")
+    native = _backend.revision_info(repo.git, rev) if ":" in rev else NotImplemented
+    try:
+        oid = (
+            native[0]
+            if native is not NotImplemented
+            else repo.git._call_process_safe("rev_parse", "--verify", "--quiet", "--end-of-options", rev)
+        )
+    except GitCommandError as exc:
+        if exc.status != 1 and "Invalid regular expression" not in exc.stderr:
+            raise
+        raise BadName(rev) from exc
+    if not repo.re_hexsha_only.fullmatch(oid):
+        raise BadName(rev)
+    obj = Object.new_from_sha(repo, hex_to_bin(oid))
+    if isinstance(obj, IndexObject) and ":" in rev:
+        if native is not NotImplemented:
+            if native[1] is not None:
+                path_bytes, obj.mode = native[1]
+                path = path_bytes.decode(defenc, "surrogateescape")
+                obj.path = posixpath.normpath(path) if path else ""
+            return obj
+        # Git resolves the mode, including index stages and executable/symlink
+        # entries. No object storage or revision grammar is decoded in Python.
+        with tempfile.TemporaryFile() as stream:
+            stream.write(rev.encode(defenc, "surrogateescape") + b"\0")
+            stream.seek(0)
+            mode = repo.git._call_process_safe("cat_file", "--batch-check=%(objectmode)", "-Z", istream=stream).strip(
+                "\0"
+            )
+        if mode:
+            obj.mode = int(mode, 8)
+            if rev.startswith(":"):
+                # The only remaining blob/tree context is an index entry.
+                path = rev[3:] if len(rev) > 2 and rev[1] in "0123" and rev[2] == ":" else rev[1:]
+                obj.path = posixpath.normpath(path) if path else ""
             else:
-                break
-            # END handle number
-        # END number parse loop
-
-        if not found_digit:
-            num = 1
-        # END set default num
-
-        try:
-            if token == "~":
-                obj = to_commit(obj)
-                for _ in range(num):
-                    obj = obj.parents[0]
-                # END for each history item to walk
-            elif token == "^":
-                obj = to_commit(obj)
-                if num == 0:
-                    pass
-                else:
-                    obj = obj.parents[num - 1]
-                # END handle parent
-            else:
-                raise ValueError("Invalid token: %r" % token)
-            # END end handle tag
-        except (IndexError, AttributeError) as e:
-            raise BadName(
-                f"Invalid revision spec '{rev}' - not enough parent commits to reach '{token}{int(num)}'"
-            ) from e
-        # END exception handling
-    # END parse loop
-
-    if obj is None:
-        raise ValueError("Revision specifier could not be parsed: %s" % rev)
-
+                # Git has no path format atom. Ask it which colon follows a
+                # tree-ish; earlier colons can belong to commit-message regexes.
+                for index, char in enumerate(rev):
+                    if char != ":":
+                        continue
+                    try:
+                        repo.git._call_process_safe(
+                            "rev_parse", "--verify", "--quiet", "--end-of-options", rev[:index] + "^{tree}"
+                        )
+                    except GitCommandError as exc:
+                        if exc.status != 1:
+                            raise
+                        continue
+                    path = rev[index + 1 :]
+                    obj.path = posixpath.normpath(path) if path else ""
+                    break
     return obj

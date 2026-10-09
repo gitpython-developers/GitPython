@@ -3,133 +3,31 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Parser for reading and writing configuration files."""
+"""Git configuration access through ``git config``."""
 
 __all__ = ["GitConfigParser", "SectionConstraint"]
 
-import abc
 import configparser as cp
-import fnmatch
-import inspect
-import logging
 import os
 import os.path as osp
 import re
 import sys
-from functools import wraps
-from io import BufferedReader, IOBase
-
-# typing-------------------------------------------------------
-from typing import (
-    IO,
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    OrderedDict,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-    cast,
-)
+import tempfile
+from contextlib import contextmanager
+from typing import Any, Dict, Generic, Iterator, List, OrderedDict, Sequence, Tuple, TypeVar, Union, TYPE_CHECKING
 
 from git.compat import defenc, force_text
+from git.exc import GitCommandError
 from git.types import _T, ConfigLevels_Tup, Lit_config_levels, PathLike, assert_never
-from git.util import LockFile
 
 if TYPE_CHECKING:
     from io import BytesIO
-
     from git.repo.base import Repo
 
 T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
 T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool, None)
-
 OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]
-
-# -------------------------------------------------------------
-
-_logger = logging.getLogger(__name__)
-
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
-"""The configuration level of a configuration file."""
-
-CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeif )\"(gitdir|gitdir/i|onbranch|hasconfig:remote\.\*\.url):(.+)\"")
-"""Section pattern to detect conditional includes.
-
-See: https://git-scm.com/docs/git-config#_conditional_includes
-"""
-
-UNSAFE_CONFIG_CHARS_RE = re.compile(r"[\r\n\x00]")
-"""Characters that cannot be safely written in config names or values."""
-
-VALID_CONFIG_OPTION_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
-"""Pattern for option names that can be written without changing config syntax."""
-
-
-class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
-    """Utility class wrapping base-class methods into decorators that assure read-only
-    properties."""
-
-    def __new__(cls, name: str, bases: Tuple, clsdict: Dict[str, Any]) -> "MetaParserBuilder":
-        """Equip all base-class methods with a needs_values decorator, and all non-const
-        methods with a :func:`set_dirty_and_flush_changes` decorator in addition to
-        that.
-        """
-        kmm = "_mutating_methods_"
-        if kmm in clsdict:
-            mutating_methods = clsdict[kmm]
-            for base in bases:
-                methods = (t for t in inspect.getmembers(base, inspect.isroutine) if not t[0].startswith("_"))
-                for method_name, method in methods:
-                    if method_name in clsdict:
-                        continue
-                    method_with_values = needs_values(method)
-                    if method_name in mutating_methods:
-                        method_with_values = set_dirty_and_flush_changes(method_with_values)
-                    # END mutating methods handling
-
-                    clsdict[method_name] = method_with_values
-                # END for each name/method pair
-            # END for each base
-        # END if mutating methods configuration is set
-
-        new_type = super().__new__(cls, name, bases, clsdict)
-        return new_type
-
-
-def needs_values(func: Callable[..., _T]) -> Callable[..., _T]:
-    """Return a method for ensuring we read values (on demand) before we try to access
-    them."""
-
-    @wraps(func)
-    def assure_data_present(self: "GitConfigParser", *args: Any, **kwargs: Any) -> _T:
-        self.read()
-        return func(self, *args, **kwargs)
-
-    # END wrapper method
-    return assure_data_present
-
-
-def set_dirty_and_flush_changes(non_const_func: Callable[..., _T]) -> Callable[..., _T]:
-    """Return a method that checks whether given non constant function may be called.
-
-    If so, the instance will be set dirty. Additionally, we flush the changes right to
-    disk.
-    """
-
-    def flush_changes(self: "GitConfigParser", *args: Any, **kwargs: Any) -> _T:
-        rval = non_const_func(self, *args, **kwargs)
-        self._dirty = True
-        self.write()
-        return rval
-
-    # END wrapper method
-    flush_changes.__name__ = non_const_func.__name__
-    return flush_changes
 
 
 class SectionConstraint(Generic[T_ConfigParser]):
@@ -146,6 +44,10 @@ class SectionConstraint(Generic[T_ConfigParser]):
 
     _valid_attrs_ = (
         "get_value",
+        "get_values",
+        "add_value",
+        "items",
+        "items_all",
         "set_value",
         "get",
         "set",
@@ -291,60 +193,19 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         )
 
 
-class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
-    """Implements specifics required to read git style configuration files.
+class GitConfigParser:
+    """Read and modify Git configuration using Git's parser and file locking.
 
-    This variation behaves much like the :manpage:`git-config(1)` command, such that the
-    configuration will be read on demand based on the filepath given during
-    initialization.
+    File paths, byte streams, and lists of sources are accepted for reading. Writers
+    operate on one source, updating it immediately. Git locks each mutation; a writer
+    does not reserve a lifetime lock. Git canonicalizes enumerated section/option
+    names, while preserving subsection case and duplicate values.
 
-    The changes will automatically be written once the instance goes out of scope, but
-    can be triggered manually as well.
-
-    The configuration file will be locked if you intend to change values preventing
-    other instances to write concurrently.
-
-    :note:
-        Section and option names are case-insensitive; quoted subsection names are
-        case-sensitive. Names retain their first spelling when enumerated or written.
-        Case variants are merged, preserving all values in the order they are read.
-
-    :note:
-        If used as a context manager, this will release the locked file.
-
-    :note:
-        Options without a value are stored as ``None`` and written without ``=``.
-        :meth:`get_value` and :meth:`get_values` return an empty string for them,
-        while :meth:`getboolean` returns ``True``. An explicit empty value is
-        stored as an empty string and reads as ``False`` with :meth:`getboolean`.
+    Empty sections, raw configuration parsing/serialization, and writing valueless
+    options are not supported. Existing valueless options remain readable.
     """
 
-    # { Configuration
-    t_lock = LockFile
-    """The lock type determines the type of lock to use in new configuration readers.
-
-    They must be compatible to the :class:`~git.util.LockFile` interface.
-    A suitable alternative would be the :class:`~git.util.BlockingLockFile`.
-    """
-
-    re_comment = re.compile(r"^\s*[#;]")
-    # } END configuration
-
-    optvalueonly_source = r"\s*(?P<option>[^:=\s#;][^:=#;]*)"
-
-    OPTVALUEONLY = re.compile(optvalueonly_source)
-
-    # The option name class [^:=#;]* already consumes any spaces up to the ":" or "=",
-    # so a second \s* before the indicator would overlap it and backtrack quadratically
-    # on a line that never reaches an indicator (for example a key followed by a long
-    # whitespace run). Drop the redundant \s*; the name is right-stripped after parsing.
-    OPTCRE = re.compile(optvalueonly_source + r"(?P<vi>[:=])\s*" + r"(?P<value>.*)$")
-
-    del optvalueonly_source
-
-    _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
-    """Names of :class:`~configparser.RawConfigParser` methods able to change the
-    instance."""
+    BOOLEAN_STATES = cp.RawConfigParser.BOOLEAN_STATES
 
     def __init__(
         self,
@@ -354,654 +215,206 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         config_level: Union[Lit_config_levels, None] = None,
         repo: Union["Repo", None] = None,
     ) -> None:
-        """Initialize a configuration reader to read the given `file_or_files` and to
-        possibly allow changes to it by setting `read_only` False.
-
-        :param file_or_files:
-            A file path or file object, or a sequence of possibly more than one of them.
-
-        :param read_only:
-            If ``True``, the ConfigParser may only read the data, but not change it.
-            If ``False``, only a single file path or file object may be given. We will
-            write back the changes when they happen, or when the ConfigParser is
-            released. This will not happen if other configuration files have been
-            included.
-
-        :param merge_includes:
-            If ``True``, we will read files mentioned in ``[include]`` sections and
-            merge their contents into ours. This makes it impossible to write back an
-            individual configuration file. Thus, if you want to modify a single
-            configuration file, turn this off to leave the original dataset unaltered
-            when reading it.
-
-        :param repo:
-            Reference to repository to use if ``[includeIf]`` sections are found in
-            configuration files.
-        """
-        cp.RawConfigParser.__init__(self, dict_type=cast(Any, _OMD), allow_no_value=True)
-        self._dict: Callable[..., _OMD]
-        self._defaults: _OMD
-        self._sections: _OMD
-
-        # Used in Python 3. Needs to stay in sync with sections for underlying
-        # implementation to work.
-        if not hasattr(self, "_proxies"):
-            self._proxies = self._dict()
-
-        if file_or_files is not None:
-            self._file_or_files: Union[PathLike, "BytesIO", Sequence[Union[PathLike, "BytesIO"]]] = file_or_files
-        else:
-            if config_level is None:
-                if read_only:
-                    self._file_or_files = [
-                        get_config_path(cast(Lit_config_levels, f)) for f in CONFIG_LEVELS if f != "repository"
-                    ]
-                else:
-                    raise ValueError("No configuration level or configuration files specified")
+        if file_or_files is None:
+            if config_level is not None:
+                file_or_files = get_config_path(config_level)
+            elif read_only:
+                file_or_files = [get_config_path(level) for level in CONFIG_LEVELS if level != "repository"]
             else:
-                self._file_or_files = [get_config_path(config_level)]
-
+                raise ValueError("No configuration level or configuration files specified")
+        if isinstance(file_or_files, Sequence) and not isinstance(file_or_files, (str, os.PathLike)):
+            file_or_files = list(file_or_files)
+        if not read_only and isinstance(file_or_files, (list, tuple)):
+            raise ValueError("Configuration writers require a single file or stream")
+        self._file_or_files = file_or_files
         self._read_only = read_only
-        self._dirty = False
-        self._is_initialized = False
         self._merge_includes = merge_includes
         self._repo = repo
-        self._lock: Union["LockFile", None] = None
-        self._acquire_lock()
+        self._is_initialized = False
+        self._sections = _OMD()
 
-    def _acquire_lock(self) -> None:
-        if not self._read_only:
-            if not self._lock:
-                if isinstance(self._file_or_files, (str, os.PathLike)):
-                    file_or_files = self._file_or_files
-                elif isinstance(self._file_or_files, (tuple, list, Sequence)):
-                    raise ValueError(
-                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed"
-                    )
-                else:
-                    file_or_files = self._file_or_files.name
-
-                # END get filename from handle/stream
-                # Initialize lock base - we want to write.
-                self._lock = self.t_lock(file_or_files)
-            # END lock check
-
-            self._lock._obtain_lock()
-        # END read-only check
-
-    def __del__(self) -> None:
-        """Write pending changes if required and release locks."""
-        # NOTE: Only consistent in Python 2.
-        self.release()
+    @property
+    def read_only(self) -> bool:
+        return self._read_only
 
     def __enter__(self) -> "GitConfigParser":
-        self._acquire_lock()
         return self
 
     def __exit__(self, *args: Any) -> None:
         self.release()
 
     def release(self) -> None:
-        """Flush changes and release the configuration write lock. This instance must
-        not be used anymore afterwards.
+        """Changes are already flushed by each mutation."""
 
-        In Python 3, it's required to explicitly release locks and flush changes, as
-        ``__del__`` is not called deterministically anymore.
-        """
-        # Checking for the lock here makes sure we do not raise during write()
-        # in case an invalid parser was created who could not get a lock.
-        if self.read_only or (self._lock and not self._lock._has_lock()):
+    def write(self) -> None:
+        """Flush hook for subclasses; Git has already written each change."""
+        self._assure_writable("write")
+
+    def _assure_writable(self, method: str) -> None:
+        if self.read_only:
+            raise OSError("Cannot modify a read-only configuration: %s" % method)
+
+    @contextmanager
+    def _source(self, source: Any, writing: bool = False) -> Iterator[str]:
+        if isinstance(source, (str, os.PathLike)):
+            path = osp.abspath(source)
+            if "\0" in path:
+                raise ValueError("Configuration paths must not contain NUL")
+            yield path
             return
+        # Streams carry bytes only; Git owns parsing and serialization.
+        position = source.tell()
+        source.seek(0)
+        data = source.read()
+        source.seek(position)
+        if not isinstance(data, bytes):
+            raise TypeError("Configuration streams must contain bytes")
+        with tempfile.TemporaryDirectory(prefix="gitpython-config-") as directory:
+            path = osp.join(directory, "config")
+            with open(path, "wb") as stream:
+                stream.write(data)
+            yield path
+            if writing:
+                with open(path, "rb") as stream:
+                    data = stream.read()
+                source.seek(0)
+                source.write(data)
+                source.truncate()
+                source.seek(0)
 
+    def _git(self) -> Any:
+        from git.cmd import Git
+
+        if self._repo is not None:
+            command = getattr(self._repo, "git", None)
+            if command is not None:
+                return command
+            return Git(self._repo.working_dir)
+        return Git()
+
+    def _call_config(self, filename: str, *args: str, **kwargs: Any) -> Any:
         try:
-            self.write()
-        except OSError:
-            _logger.error("Exception during destruction of GitConfigParser", exc_info=True)
-        except ReferenceError:
-            # This happens in Python 3... and usually means that some state cannot be
-            # written as the sections dict cannot be iterated. This usually happens when
-            # the interpreter is shutting down. Can it be fixed?
-            pass
-        finally:
-            if self._lock is not None:
-                self._lock._release_lock()
+            return self._git()._call_process_safe("config", *args, **kwargs)
+        except GitCommandError as error:
+            # git-config documents statuses 3 and 4 for malformed/unwritable
+            # files. Reads use the generic fatal status, so recognize only its
+            # explicit config diagnostics in the fixed C locale.
+            if error.status == 3 or (error.status == 128 and "fatal: bad config line " in error.stderr):
+                raise cp.ParsingError(filename) from error
+            if (
+                error.status == 4
+                or (error.status == 255 and "could not lock config file " in error.stderr)
+                or (
+                    error.status == 128
+                    and any(message in error.stderr for message in ("unable to read config file", "unable to access"))
+                )
+            ):
+                raise OSError(error.stderr) from error
+            raise
 
-    def optionxform(self, optionstr: str) -> str:
-        """Do not transform options in any way when writing."""
-        return optionstr
+    @staticmethod
+    def _section_name(section: str) -> str:
+        """Convert the public ``section "subsection"`` spelling to a Git key prefix."""
+        if not isinstance(section, str) or any(c in section for c in "\0\r\n"):
+            raise ValueError("Invalid configuration section name")
+        match = re.fullmatch(r'([A-Za-z0-9][A-Za-z0-9.-]*)(?:[ \t]+"((?:[^"\\]|\\.)*)")?', section)
+        if match is None:
+            raise ValueError("Invalid configuration section name: %r" % section)
+        base, subsection = match.groups()
+        if subsection is None:
+            return base.lower()
+        subsection = re.sub(r"\\(.)", r"\1", subsection)
+        return base.lower() + "." + subsection
 
-    def _read(self, fp: Union[BufferedReader, IO[bytes]], fpname: str) -> None:
-        """Originally a direct copy of the Python 2.4 version of
-        :meth:`RawConfigParser._read <configparser.RawConfigParser._read>`, to ensure it
-        uses ordered dicts.
+    @classmethod
+    def _key(cls, section: str, option: str) -> str:
+        if not isinstance(option, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9-]*", option):
+            raise ValueError("Invalid Git configuration option name: %r" % option)
+        return cls._section_name(section) + "." + option.lower()
 
-        The ordering bug was fixed in Python 2.4, and dict itself keeps ordering since
-        Python 3.7. This has some other changes, especially that it ignores initial
-        whitespace, since git uses tabs. (Big comments are removed to be more compact.)
-        """
-        cursect = None  # None, or a dictionary.
-        optname = None
-        lineno = 0
-        is_multi_line = False
-        e = None  # None, or an exception.
+    @staticmethod
+    def _public_section(prefix: str) -> str:
+        section, separator, subsection = prefix.partition(".")
+        if not separator:
+            return section
+        return section + ' "' + subsection.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
-        def string_decode(v: str) -> str:
-            if v and v.endswith("\\"):
-                v = v[:-1]
-            # END cut trailing escapes to prevent decode error
-
-            escapes = {"b": "\b", "n": "\n", "r": "\r", "t": "\t", '"': '"', "\\": "\\"}
-            return re.sub(r"\\(.)", lambda match: escapes.get(match.group(1), match.group(0)), v)
-
-        # END string_decode
-
-        def is_line_continuation(value: str) -> bool:
-            quoted = escaped = False
-            for char in value:
-                if escaped:
-                    escaped = False
-                elif char == "\\":
-                    escaped = True
-                elif char == '"':
-                    quoted = not quoted
-                elif char in "#;" and not quoted:
-                    return False
-            return escaped
-
-        def strip_inline_comment(value: str) -> Tuple[str, bool]:
-            """Cut an unquoted ``#`` or ``;`` comment and report whether a quote is open.
-
-            Quoting and backslash escapes are honoured, so a ``#`` inside a quoted
-            value is literal and an unterminated quote swallows the rest of the line.
-            """
-            quoted = escaped = False
-            for index, char in enumerate(value):
-                if escaped:
-                    escaped = False
-                elif char == "\\":
-                    escaped = True
-                elif char == '"':
-                    quoted = not quoted
-                elif char in "#;" and not quoted:
-                    return value[:index], False
-            return value, quoted
-
-        def parse_value(value: str) -> str:
-            parsed: List[str] = []
-            whitespace: List[str] = []
-            quoted = escaped = False
-            escapes = {"b": "\b", "n": "\n", "t": "\t", '"': '"', "\\": "\\"}
-            for char in value:
-                if escaped:
-                    parsed.append(escapes.get(char, "\\" + char))
-                    escaped = False
-                    continue
-                if char.isspace() and not quoted:
-                    if parsed:
-                        whitespace.append(char)
-                    continue
-                if char in "#;" and not quoted:
-                    break
-                parsed.extend(whitespace)
-                whitespace.clear()
-                if char == "\\":
-                    escaped = True
-                elif char == '"':
-                    quoted = not quoted
-                else:
-                    parsed.append(char)
-            return "".join(parsed)
-
-        while True:
-            # We assume to read binary!
-            raw_line = fp.readline()
-            if not raw_line:
-                break
-            if lineno == 0 and raw_line.startswith(b"\xef\xbb\xbf"):
-                # A UTF-8 BOM is not part of the content. git skips it, so a
-                # config file written by a Windows editor still parses.
-                raw_line = raw_line[3:]
-            line = raw_line.decode(defenc)
-            lineno = lineno + 1
-            # Comment or blank line?
-            if line.strip() == "" or self.re_comment.match(line):
-                continue
-            if line.split(None, 1)[0].lower() == "rem" and line[0] in "rR":
-                # No leading whitespace.
-                continue
-
-            # Is it a section header?
-            mo = self.SECTCRE.match(line.strip())
-            if not is_multi_line and mo:
-                sectname: str = mo.group("header").strip()
-                if sectname in self._sections:
-                    cursect = self._sections[sectname]
-                elif sectname == cp.DEFAULTSECT:
-                    cursect = self._defaults
-                else:
-                    cursect = self._dict((("__name__", sectname),))
-                    self._sections[sectname] = cursect
-                    self._proxies[sectname] = None
-                # So sections can't start with a continuation line.
-                optname = None
-            # No section header in the file?
-            elif cursect is None:
-                raise cp.MissingSectionHeaderError(fpname, lineno, line)
-            # An option line?
-            elif not is_multi_line:
-                mo = self.OPTCRE.match(line)
-                if mo:
-                    # We might just have handled the last line, which could contain a quotation we want to remove.
-                    optname, vi, optval = mo.group("option", "vi", "value")
-                    optname = self.optionxform(optname.rstrip())
-
-                    optval, quote_open = strip_inline_comment(optval)
-                    optval = optval.strip()
-
-                    if len(optval) < 2 or optval[0] != '"':
-                        # Does not open quoting.
-                        # A value ending in an odd number of backslashes
-                        # continues on the next line, exactly as git does: the
-                        # final backslash and the newline are removed and the
-                        # next line is appended before the complete value is
-                        # parsed. An even number means the last backslash is
-                        # escaped and the value ends there.
-                        continued = False
-                        while True:
-                            if not is_line_continuation(optval):
-                                break
-                            continuation = fp.readline()
-                            if not continuation:
-                                # Backslash at end of file: git drops it.
-                                optval = optval[:-1]
-                                break
-                            lineno = lineno + 1
-                            joined = continuation.decode(defenc)
-                            while joined.endswith("\n") or joined.endswith("\r"):
-                                joined = joined[:-1]
-                            optval = optval[:-1] + joined
-                            continued = True
-                        if continued:
-                            optval = parse_value(optval)
-                    elif quote_open:
-                        # Opens quoting and does not close: appears to start multi-line quoting.
-                        is_multi_line = True
-                        optval = string_decode(optval[1:])
-                    elif re.search(r'(?:^|[^\\])(?:\\\\)*"', optval[1:-1]):
-                        # Preserve values containing additional unescaped quotes.
-                        pass
-                    else:
-                        # Opens and closes quoting.
-                        optval = string_decode(optval[1:-1])
-
-                    # Preserves multiple values for duplicate optnames.
-                    cursect.add(optname, optval)
-                else:
-                    # A valueless option is an implicit boolean true, not an empty value.
-                    mo = self.OPTVALUEONLY.fullmatch(line)
-                    if mo:
-                        optname = self.optionxform(mo.group("option").rstrip())
-                        cursect.add(optname, None)
-                    else:
-                        if not e:
-                            e = cp.ParsingError(fpname)
-                        e.append(lineno, repr(line))
-                    continue
-            else:
-                line = line.rstrip()
-                if line.endswith('"'):
-                    is_multi_line = False
-                    line = line[:-1]
-                # END handle quotations
-                optval = cursect.getlast(optname)
-                cursect.setlast(optname, optval + string_decode(line))
-            # END parse section or option
-        # END while reading
-
-        # If any parsing errors occurred, raise an exception.
-        if e:
-            raise e
-
-    def _has_includes(self) -> Union[bool, int]:
-        return self._merge_includes and len(self._included_paths())
-
-    def _included_paths(self) -> List[Tuple[str, str]]:
-        """List all paths that must be included to configuration.
-
-        :return:
-            The list of paths, where each path is a tuple of (option, value).
-        """
-
-        def _all_items(section: str) -> List[Tuple[str, str]]:
-            """Return all (key, value) pairs for a section, including duplicate keys."""
-            return [
-                (key, value)
-                for key, values in self._sections[section].items_all()
-                if key != "__name__"
-                for value in values
-                if value is not None
-            ]
-
-        paths = []
-
-        for section in self.sections():
-            normalized_section = _normalize_name(section)
-            if normalized_section == "include":
-                paths += _all_items(section)
-
-            match = CONDITIONAL_INCLUDE_REGEXP.search(normalized_section)
-            if match is None or self._repo is None:
-                continue
-
-            keyword = match.group(1)
-            value = match.group(2).strip()
-
-            if keyword in ["gitdir", "gitdir/i"]:
-                value = osp.expanduser(value)
-                git_dir = os.fspath(self._repo.git_dir) if self._repo.git_dir else None
-                if sys.platform == "win32":
-                    git_dir = git_dir.replace("\\", "/") if git_dir else None
-
-                drive, _tail = osp.splitdrive(value)
-                if not drive and not any(value.startswith(s) for s in ["./", "/"]):
-                    value = "**/" + value
-                if value.endswith("/"):
-                    value += "**"
-
-                # Ensure that glob is always case insensitive if required.
-                if keyword.endswith("/i"):
-                    value = re.sub(
-                        r"[a-zA-Z]",
-                        lambda m: f"[{m.group().lower()!r}{m.group().upper()!r}]",
-                        value,
-                    )
-                if git_dir and fnmatch.fnmatchcase(git_dir, value):
-                    paths += _all_items(section)
-
-            elif keyword == "onbranch":
-                try:
-                    branch_name = self._repo.active_branch.name
-                except TypeError:
-                    # Ignore section if active branch cannot be retrieved.
-                    continue
-
-                if fnmatch.fnmatchcase(branch_name, value):
-                    paths += _all_items(section)
-            elif keyword == "hasconfig:remote.*.url":
-                for remote in self._repo.remotes:
-                    if fnmatch.fnmatchcase(remote.url, value):
-                        paths += _all_items(section)
-                        break
-        return paths
-
-    def read(self) -> None:  # type: ignore[override]
-        """Read the data stored in the files we have been initialized with.
-
-        This will ignore files that cannot be read, possibly leaving an empty
-        configuration.
-
-        :raise IOError:
-            If a file cannot be handled.
-        """
+    def read(self) -> None:
+        """Load values from Git's NUL-delimited output, including Git-resolved includes."""
         if self._is_initialized:
             return
+        sources: Any = self._file_or_files
+        if not isinstance(sources, (list, tuple)):
+            sources = [sources]
+        sections = _OMD()
+        for source in sources:
+            if isinstance(source, (str, os.PathLike)) and not osp.exists(source):
+                continue
+            with self._source(source) as filename:
+                args = (
+                    "list",
+                    "--null",
+                    "--file",
+                    filename if isinstance(source, (str, os.PathLike)) else "-",
+                    "--includes" if self._merge_includes else "--no-includes",
+                )
+                if isinstance(source, (str, os.PathLike)):
+                    data = self._call_config(filename, *args, stdout_as_string=False)
+                else:
+                    with open(filename, "rb") as stream:
+                        data = self._call_config("<stream>", *args, istream=stream, stdout_as_string=False)
+            for record in data.split(b"\0"):
+                if not record:
+                    continue
+                key, separator, value = record.partition(b"\n")
+                prefix, option = key.decode(defenc).rsplit(".", 1)
+                section = self._public_section(prefix)
+                if section not in sections:
+                    sections[section] = _OMD()
+                sections[section].add(option, value.decode(defenc) if separator else None)
+        self._sections = sections
         self._is_initialized = True
 
-        files_to_read: List[Union[PathLike, IO]] = [""]
-        if isinstance(self._file_or_files, (str, os.PathLike)):
-            # For str or Path, as str is a type of Sequence.
-            files_to_read = [self._file_or_files]
-        elif not isinstance(self._file_or_files, (tuple, list, Sequence)):
-            # Could merge with above isinstance once runtime type known.
-            files_to_read = [self._file_or_files]
-        else:  # For lists or tuples.
-            files_to_read = list(self._file_or_files)
-        # END ensure we have a copy of the paths to handle
+    def sections(self) -> List[str]:
+        self.read()
+        return list(self._sections)
 
-        files_to_read = [osp.abspath(path) if isinstance(path, (str, os.PathLike)) else path for path in files_to_read]
+    def has_section(self, section: str) -> bool:
+        self.read()
+        return self._public_section(self._section_name(section)) in self._sections
 
-        seen = set(files_to_read)
-        num_read_include_files = 0
-        while files_to_read:
-            file_path = files_to_read.pop(0)
-            file_ok = False
+    def _section(self, section: str) -> Any:
+        self.read()
+        name = self._public_section(self._section_name(section))
+        if name not in self._sections:
+            raise cp.NoSectionError(section)
+        return self._sections[name]
 
-            if hasattr(file_path, "seek"):
-                # Must be a file-object.
-                # TODO: Replace cast with assert to narrow type, once sure.
-                file_path = cast(IO[bytes], file_path)
-                self._read(file_path, file_path.name)
-            else:
-                try:
-                    with open(file_path, "rb") as fp:
-                        file_ok = True
-                        self._read(fp, fp.name)
-                except OSError:
-                    continue
+    def options(self, section: str) -> List[str]:
+        return list(self._section(section))
 
-            # Read includes and append those that we didn't handle yet. We expect all
-            # paths to be normalized and absolute (and will ensure that is the case).
-            if self._has_includes():
-                for _, include_path in self._included_paths():
-                    if include_path.startswith("~"):
-                        include_path = osp.expanduser(include_path)
-                    if not osp.isabs(include_path):
-                        if not file_ok:
-                            continue
-                        # END ignore relative paths if we don't know the configuration file path
-                        file_path = cast(PathLike, file_path)
-                        assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
-                        include_path = osp.join(osp.dirname(file_path), include_path)
-                    # END make include path absolute
-                    include_path = osp.normpath(include_path)
-                    if include_path in seen or not os.access(include_path, os.R_OK):
-                        continue
-                    seen.add(include_path)
-                    # Insert included file to the top to be considered first.
-                    files_to_read.insert(0, include_path)
-                    num_read_include_files += 1
-                # END each include path in configuration file
-            # END handle includes
-        # END for each file object to read
+    def has_option(self, section: str, option: str) -> bool:
+        return self.has_section(section) and option in self._section(section)
 
-        # If there was no file included, we can safely write back (potentially) the
-        # configuration file without altering its meaning.
-        if num_read_include_files == 0:
-            self._merge_includes = False
-
-    def _write(self, fp: IO) -> None:
-        """Write an .ini-format representation of the configuration state in
-        git compatible format."""
-
-        def write_section(name: str, section_dict: _OMD) -> None:
-            fp.write(("[%s]\n" % name).encode(defenc))
-
-            values: List[Any]
-            v: Any
-            for key, values in section_dict.items_all():
-                if key == "__name__":
-                    continue
-
-                for v in values:
-                    if v is None:
-                        fp.write(("\t%s\n" % key).encode(defenc))
-                        continue
-                    value = self._value_to_string(v)
-                    if any(char in value for char in '\n\t\b\\"#;') or value[:1].isspace() or value[-1:].isspace():
-                        value = value.replace("\\", "\\\\").replace('"', '\\"')
-                        value = '"%s\\\n"' % value.replace("\n", "\\n").replace("\t", "\\t").replace("\b", "\\b")
-                    fp.write(("\t%s = %s\n" % (key, value)).encode(defenc))
-                # END if key is not __name__
-
-        # END section writing
-
-        if self._defaults:
-            write_section(cp.DEFAULTSECT, self._defaults)
-        value: _OMD
-
-        for name, value in self._sections.items():
-            write_section(name, value)
-
-    def items(self, section_name: str) -> List[Tuple[str, Union[str, None]]]:  # type: ignore[override]
-        """:return: list((option, value), ...) pairs of all items in the given section"""
-        return [(k, v) for k, v in super().items(section_name) if k != "__name__"]
-
-    def items_all(self, section_name: str) -> List[Tuple[str, List[Union[str, None]]]]:
-        """:return: list((option, [values...]), ...) pairs of all items in the given section"""
-        rv = _OMD(self._defaults)
-
-        for k, vs in self._sections[section_name].items_all():
-            if k == "__name__":
-                continue
-
-            if k in rv and rv.getall(k) == vs:
-                continue
-
-            for v in vs:
-                rv.add(k, v)
-
-        return rv.items_all()
-
-    @needs_values
-    def write(self) -> None:
-        """Write changes to our file, if there are changes at all.
-
-        :raise IOError:
-            If this is a read-only writer instance or if we could not obtain a file
-            lock.
-        """
-        self._assure_writable("write")
-        if not self._dirty:
-            return
-
-        if isinstance(self._file_or_files, (list, tuple)):
-            raise AssertionError(
-                "Cannot write back if there is not exactly a single file to write to, have %i files"
-                % len(self._file_or_files)
-            )
-        # END assert multiple files
-
-        if self._has_includes():
-            _logger.debug(
-                "Skipping write-back of configuration file as include files were merged in."
-                + "Set merge_includes=False to prevent this."
-            )
-            return
-        # END stop if we have include files
-
-        sections: List[_OMD] = [self._defaults]
-        section: _OMD
-        stored_section: _OMD
-        values: List[Any]
-        raw_value: Any
-        for _, stored_section in self._sections.items():
-            sections.append(stored_section)
-        for section in sections:
-            for key, values in section.items_all():
-                if key != "__name__":
-                    for raw_value in values:
-                        if raw_value is None:
-                            continue
-                        if "\r" in self._value_to_string(raw_value) or "\x00" in self._value_to_string(raw_value):
-                            raise ValueError("Git config values must not contain CR or NUL")
-
-        fp = self._file_or_files
-
-        # We have a physical file on disk, so get a lock.
-        is_file_lock = isinstance(fp, (str, os.PathLike, IOBase))  # TODO: Use PathLike (having dropped 3.5).
-        if is_file_lock and self._lock is not None:  # Else raise error?
-            self._lock._obtain_lock()
-
-        if not hasattr(fp, "seek"):
-            fp = cast(PathLike, fp)
-            with open(fp, "wb") as fp_open:
-                self._write(fp_open)
-        else:
-            fp = cast("BytesIO", fp)
-            fp.seek(0)
-            # Make sure we do not overwrite into an existing file.
-            if hasattr(fp, "truncate"):
-                fp.truncate()
-            self._write(fp)
-
-    def _assure_writable(self, method_name: str) -> None:
-        if self.read_only:
-            raise OSError(f"Cannot execute non-constant method {self}.{method_name}")
-
-    def add_section(self, section: "cp._SectionName") -> None:
-        """Assures added options will stay in order."""
-        self._assure_config_name_safe(section, "section")
-        return super().add_section(section)
-
-    @property
-    def read_only(self) -> bool:
-        """:return: ``True`` if this instance may change the configuration file"""
-        return self._read_only
-
-    def get_value(
-        self,
-        section: str,
-        option: str,
-        default: Union[int, float, str, bool, None] = None,
-    ) -> Union[int, float, str, bool]:
-        """Get an option's value.
-
-        If multiple values are specified for this option in the section, the last one
-        specified is returned.
-
-        :param default:
-            If not ``None``, the given default value will be returned in case the option
-            did not exist.
-
-        :return:
-            A properly typed value, either int, float, string or bool
-
-        :raise TypeError:
-            In case the value could not be understood.
-            Otherwise the exceptions known to the ConfigParser will be raised.
-        """
+    def get(self, section: str, option: str, *, raw: bool = False, vars: Any = None, **kwargs: Any) -> Any:
         try:
-            valuestr = self.get(section, option)
-        except Exception:
-            if default is not None:
-                return default
+            values = self._section(section)
+            if option not in values:
+                raise cp.NoOptionError(option, section)
+            return values[option]
+        except (cp.NoSectionError, cp.NoOptionError):
+            if "fallback" in kwargs:
+                return kwargs["fallback"]
             raise
 
-        return self._string_to_value(valuestr)
+    def getint(self, section: str, option: str) -> int:
+        return int(self.get(section, option))
 
-    def get_values(
-        self,
-        section: str,
-        option: str,
-        default: Union[int, float, str, bool, None] = None,
-    ) -> List[Union[int, float, str, bool]]:
-        """Get an option's values.
+    def getfloat(self, section: str, option: str) -> float:
+        return float(self.get(section, option))
 
-        If multiple values are specified for this option in the section, all are
-        returned.
-
-        :param default:
-            If not ``None``, a list containing the given default value will be returned
-            in case the option did not exist.
-
-        :return:
-            A list of properly typed values, either int, float, string or bool
-
-        :raise TypeError:
-            In case the value could not be understood.
-            Otherwise the exceptions known to the ConfigParser will be raised.
-        """
-        try:
-            self.sections()
-            lst = self._sections[section].getall(option)
-        except Exception:
-            if default is not None:
-                return [default]
-            raise
-
-        return [self._string_to_value(valuestr) for valuestr in lst]
-
-    def _convert_to_boolean(self, value: Union[str, None]) -> bool:
+    def getboolean(self, section: str, option: str) -> bool:
+        value = self.get(section, option)
         if value is None:
             return True
         if value == "":
@@ -1011,166 +424,97 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         except KeyError:
             raise ValueError("Not a boolean: %s" % value) from None
 
-    def _string_to_value(self, valuestr: Union[str, None]) -> Union[int, float, str, bool]:
-        if valuestr is None:
+    def items(self, section: str) -> List[Tuple[str, Any]]:
+        return self._section(section).items()
+
+    def items_all(self, section: str) -> List[Tuple[str, List[Any]]]:
+        return self._section(section).items_all()
+
+    @staticmethod
+    def _string_to_value(value: Any) -> Any:
+        if value is None:
             return ""
-        types = (int, float)
-        for numtype in types:
+        for conversion in (int, float):
             try:
-                val = numtype(valuestr)
-                # truncated value ?
-                if val != float(valuestr):
-                    continue
-                return val
-            except (ValueError, TypeError):
-                continue
-        # END for each numeric type
-
-        # Try boolean values as git uses them.
-        vl = valuestr.lower()
-        if vl in ("false", "no", "off"):
+                converted = conversion(value)
+                if converted == float(value):
+                    return converted
+            except (TypeError, ValueError):
+                pass
+        if value.lower() in ("false", "no", "off"):
             return False
-        if vl in ("true", "yes", "on"):
+        if value.lower() in ("true", "yes", "on"):
             return True
+        return value
 
-        if not isinstance(valuestr, str):
-            raise TypeError(
-                "Invalid value type: only int, long, float and str are allowed",
-                valuestr,
-            )
+    def get_value(self, section: str, option: str, default: Any = None) -> Any:
+        try:
+            return self._string_to_value(self.get(section, option))
+        except (cp.NoSectionError, cp.NoOptionError):
+            if default is not None:
+                return default
+            raise
 
-        return valuestr
+    def get_values(self, section: str, option: str, default: Any = None) -> List[Any]:
+        try:
+            self.get(section, option)
+            return [self._string_to_value(value) for value in self._section(section).getall(option)]
+        except (cp.NoSectionError, cp.NoOptionError):
+            if default is not None:
+                return [default]
+            raise
 
-    def _value_to_string(self, value: Union[str, bytes, int, float, bool]) -> str:
-        if isinstance(value, (int, float, bool)):
-            return str(value)
-        return force_text(value)
+    def _mutate(self, operation: str, *args: str) -> None:
+        self._assure_writable(operation)
+        with self._source(self._file_or_files, writing=True) as filename:
+            self._call_config(filename, operation, "--file", filename, *args)
+        self._is_initialized = False
+        self.write()
 
-    def _value_to_string_safe(self, value: Union[str, bytes, int, float, bool]) -> str:
-        value_str = self._value_to_string(value)
-        if UNSAFE_CONFIG_CHARS_RE.search(value_str):
-            raise ValueError("Git config values must not contain CR, LF, or NUL")
-        return value_str
+    @staticmethod
+    def _value(value: Any) -> str:
+        if value is None:
+            raise ValueError("Writing valueless Git configuration options is unsupported")
+        value = str(value) if isinstance(value, (int, float, bool)) else force_text(value)
+        if any(c in value for c in "\0\r"):
+            raise ValueError("Git configuration values must not contain CR or NUL")
+        return value
 
-    def _assure_config_name_safe(self, name: "cp._SectionName", label: str) -> None:
-        if isinstance(name, str) and UNSAFE_CONFIG_CHARS_RE.search(name):
-            raise ValueError("Git config %s names must not contain CR, LF, or NUL" % label)
-        if label == "option" and isinstance(name, str) and not VALID_CONFIG_OPTION_NAME_RE.fullmatch(name):
-            raise ValueError("Git config option names may contain only letters, digits, '-', '_', or '.'")
-        if label == "section" and isinstance(name, str):
-            in_quotes = False
-            escaped = False
-            for index, char in enumerate(name):
-                if escaped:
-                    escaped = False
-                elif in_quotes and char == "\\":
-                    escaped = True
-                elif char == '"':
-                    if not in_quotes and (index == 0 or name[index - 1] not in " \t"):
-                        raise ValueError("Git config quoted subsection names must begin after whitespace")
-                    in_quotes = not in_quotes
-                elif char == "]" and not in_quotes:
-                    raise ValueError("Git config section names must not contain an unquoted closing bracket")
-            if in_quotes:
-                raise ValueError("Git config section names must not contain an unterminated quote")
-
-    @needs_values
-    @set_dirty_and_flush_changes
-    def set(
-        self,
-        section: str,
-        option: str,
-        value: Union[str, bytes, int, float, bool, None] = None,
-    ) -> None:
-        self._assure_config_name_safe(section, "section")
-        self._assure_config_name_safe(option, "option")
-        if value is not None:
-            value = self._value_to_string_safe(value)
-        return super().set(section, option, value)
-
-    @needs_values
-    @set_dirty_and_flush_changes
-    def set_value(self, section: str, option: str, value: Union[str, bytes, int, float, bool]) -> "GitConfigParser":
-        """Set the given option in section to the given value.
-
-        This will create the section if required, and will not throw as opposed to the
-        default ConfigParser ``set`` method.
-
-        :param section:
-            Name of the section in which the option resides or should reside.
-
-        :param option:
-            Name of the options whose value to set.
-
-        :param value:
-            Value to set the option to. It must be a string or convertible to a string.
-
-        :return:
-            This instance
-        """
-        self._assure_config_name_safe(section, "section")
-        self._assure_config_name_safe(option, "option")
-        value_str = self._value_to_string_safe(value)
+    def set(self, section: str, option: str, value: Any = None) -> None:
+        self._assure_writable("set")
         if not self.has_section(section):
-            self.add_section(section)
-        super().set(section, option, value_str)
+            raise cp.NoSectionError(section)
+        self.set_value(section, option, value)
+
+    def set_value(self, section: str, option: str, value: Any) -> "GitConfigParser":
+        key = self._key(section, option)
+        self._mutate("set", "--all", "--", key, self._value(value))
         return self
 
-    @needs_values
-    @set_dirty_and_flush_changes
-    def add_value(self, section: str, option: str, value: Union[str, bytes, int, float, bool]) -> "GitConfigParser":
-        """Add a value for the given option in section.
-
-        This will create the section if required, and will not throw as opposed to the
-        default ConfigParser ``set`` method. The value becomes the new value of the
-        option as returned by :meth:`get_value`, and appends to the list of values
-        returned by :meth:`get_values`.
-
-        :param section:
-            Name of the section in which the option resides or should reside.
-
-        :param option:
-            Name of the option.
-
-        :param value:
-            Value to add to option. It must be a string or convertible to a string.
-
-        :return:
-            This instance
-        """
-        self._assure_config_name_safe(section, "section")
-        self._assure_config_name_safe(option, "option")
-        value_str = self._value_to_string_safe(value)
-        if not self.has_section(section):
-            self.add_section(section)
-        self._sections[section].add(option, value_str)
+    def add_value(self, section: str, option: str, value: Any) -> "GitConfigParser":
+        key = self._key(section, option)
+        self._mutate("set", "--append", "--", key, self._value(value))
         return self
+
+    def remove_option(self, section: str, option: str) -> bool:
+        self._assure_writable("remove_option")
+        if not self.has_option(section, option):
+            return False
+        self._mutate("unset", "--all", "--", self._key(section, option))
+        return True
+
+    def remove_section(self, section: str) -> bool:
+        self._assure_writable("remove_section")
+        if not self.has_section(section):
+            return False
+        self._mutate("remove-section", "--", self._section_name(section))
+        return True
 
     def rename_section(self, section: str, new_name: str) -> "GitConfigParser":
-        """Rename the given section to `new_name`.
-
-        :raise ValueError:
-            If:
-
-            * `section` doesn't exist.
-            * A section with `new_name` does already exist.
-
-        :return:
-            This instance
-        """
+        self._assure_writable("rename_section")
         if not self.has_section(section):
-            raise ValueError("Source section '%s' doesn't exist" % section)
-        self._assure_config_name_safe(new_name, "section")
+            raise ValueError("Source section %r does not exist" % section)
         if self.has_section(new_name):
-            raise ValueError("Destination section '%s' already exists" % new_name)
-
-        super().add_section(new_name)
-        new_section = self._sections[new_name]
-        for k, vs in self.items_all(section):
-            new_section.setall(k, vs)
-        # END for each value to copy
-
-        # This call writes back the changes, which is why we don't have the respective
-        # decorator.
-        self.remove_section(section)
+            raise ValueError("Destination section %r already exists" % new_name)
+        self._mutate("rename-section", "--", self._section_name(section), self._section_name(new_name))
         return self

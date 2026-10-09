@@ -23,7 +23,7 @@ from git.exc import (
 )
 from git.util import remove_password_if_present
 
-from test.lib import TestBase
+from test.lib import TestCase
 
 
 _cmd_argvs = (
@@ -58,7 +58,7 @@ _streams_n_substrings = (
 
 
 @ddt.ddt
-class TExc(TestBase):
+class TExc(TestCase):
     def test_ExceptionsHaveBaseClass(self):
         from git.exc import GitError
 

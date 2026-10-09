@@ -31,6 +31,19 @@ Attributing AI assistance in commit metadata, for example with a `Co-authored-by
 trailer, is welcome but not required. Code is reviewed the same way regardless of its
 origin.
 
+## Temporary test directories
+
+Use `test.cleanup.TemporaryDirectory` for isolated temporary directories and
+`test.cleanup.cleanup_directory` when disposing of directories created by test
+fixtures. Close repository handles before removing their files. Cleanup is
+best-effort: it logs filesystem errors, removes whatever it can, and leaves
+locked files behind without failing or skipping a test. The shared writable
+repository decorators still keep failed tests' directories for debugging.
+
+Deletions and renames that exercise library behavior or prepare a fixture for
+reuse must remain strict. If a cached fixture cannot be cleaned up, rebuild it
+at a fresh location before handing it to another test.
+
 ## Fuzzing Test Specific Documentation
 
 For details related to contributing to the fuzzing test suite and OSS-Fuzz integration, please 
