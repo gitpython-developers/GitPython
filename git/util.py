@@ -29,23 +29,45 @@ __all__ = [
 if sys.platform == "win32":
     __all__.append("to_native_path_windows")
 
-from abc import abstractmethod
 import contextlib
-from functools import wraps
 import getpass
 import logging
 import ntpath
 import os
 import os.path as osp
-from pathlib import Path
 import platform
 import re
 import shutil
 import stat
 import subprocess
 import time
-from urllib.parse import urlsplit, urlunsplit
 import warnings
+from abc import abstractmethod
+from functools import wraps
+from pathlib import Path
+
+# typing ---------------------------------------------------------
+from typing import (
+    IO,
+    TYPE_CHECKING,
+    Any,
+    AnyStr,
+    Callable,
+    Dict,
+    Generator,
+    Iterator,
+    List,
+    Optional,
+    Pattern,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
+from urllib.parse import urlsplit, urlunsplit
 
 # NOTE: Unused imports can be improved now that CI testing has fully resumed. Some of
 # these be used indirectly through other GitPython modules, which avoids having to write
@@ -64,29 +86,6 @@ from gitdb.util import (
     to_hex_sha,  # noqa: F401
 )
 
-# typing ---------------------------------------------------------
-
-from typing import (
-    Any,
-    AnyStr,
-    Callable,
-    Dict,
-    Generator,
-    IO,
-    Iterator,
-    List,
-    Optional,
-    Pattern,
-    Sequence,
-    Tuple,
-    TYPE_CHECKING,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
-
 if TYPE_CHECKING:
     from git.cmd import Git
     from git.config import GitConfigParser, SectionConstraint
@@ -94,9 +93,9 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
 
 from git.types import (
+    HSH_TD,
     Files_TD,
     Has_id_attribute,
-    HSH_TD,
     Literal,
     PathLike,
     Protocol,
@@ -385,12 +384,27 @@ _HFS_IGNORABLES = str.maketrans(
     "", "", "\u200c\u200d\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u206a\u206b\u206c\u206d\u206e\u206f\ufeff"
 )
 
+# Match Git's is_ntfs_dotgitmodules in path.c on a lowercased, trimmed name.
+# Besides gitmod~1..4, fallback aliases have exactly eight ASCII characters:
+# a shrinking prefix of "gi7eba", "~", and digits with no leading zero.
+# Explicit digit counts avoid accepting shorter/longer names or Unicode digits.
+_NTFS_DOTGITMODULES_SHORT_NAME = re.compile(
+    r"(?:gitmod~[1-4]|gi7eba~[1-9]|gi7eb~[1-9][0-9]|gi7e~[1-9][0-9]{2}|"
+    r"gi7~[1-9][0-9]{3}|gi~[1-9][0-9]{4}|g~[1-9][0-9]{5}|~[1-9][0-9]{6})"
+)
 
-def _validate_repo_path(path: PathLike) -> None:
+
+def _validate_repo_path(path: PathLike, mode: Union[int, None] = None) -> None:
     """Reject unsafe tree/index paths without normalizing away their components.
 
     Protect Git metadata aliases on NTFS and HFS even when writing on another
     platform. Other POSIX filename characters, including newlines, remain valid.
+
+    :param mode:
+        Mode of the index or tree entry the path belongs to, where one is known.
+        Git refuses a symbolic link that aliases ``.gitmodules``, since the
+        submodule configuration would then be read through the link, so that
+        name is only rejected once the mode says the entry is a link.
     """
     name = os.fspath(path)
     if not name or "\0" in name or ntpath.splitdrive(name)[0] or name.startswith("/"):
@@ -406,6 +420,13 @@ def _validate_repo_path(path: PathLike) -> None:
             hfs_name = part.translate(_HFS_IGNORABLES).lower()
             if ntfs_name in (".git", "git~1") or hfs_name == ".git":
                 raise ValueError("Repository path aliases Git metadata: %r" % name)
+            if mode is not None and stat.S_ISLNK(mode):
+                if (
+                    ntfs_name == ".gitmodules"
+                    or hfs_name == ".gitmodules"
+                    or _NTFS_DOTGITMODULES_SHORT_NAME.fullmatch(ntfs_name) is not None
+                ):
+                    raise ValueError("Symbolic link aliases the submodule configuration: %r" % name)
 
 
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:

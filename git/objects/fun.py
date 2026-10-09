@@ -39,11 +39,11 @@ EntryTupOrNone = Union[EntryTup, None]
 # ---------------------------------------------------
 
 
-def _validate_tree_entry_name(name: str) -> None:
+def _validate_tree_entry_name(name: str, mode: Union[int, None] = None) -> None:
     if "/" in name:
         raise ValueError("Tree entry names must not contain '/' characters")
     # A tree name is a component, not a rooted path; a colon cannot select a drive.
-    _validate_repo_path("tree/" + name)
+    _validate_repo_path("tree/" + name, mode)
 
 
 def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
@@ -82,7 +82,7 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
             name_bytes = name.encode(defenc)
         else:
             name_bytes = name  # type: ignore[unreachable]  # check runtime types - is always str?
-        _validate_tree_entry_name(safe_decode(name_bytes))
+        _validate_tree_entry_name(safe_decode(name_bytes), mode)
         write(b"".join((mode_str, b" ", name_bytes, b"\0", binsha)))
     # END for each item
 
@@ -112,7 +112,7 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
         if name_end < 0 or name_end + 21 > len(data):
             raise ValueError("Truncated tree entry")
         name = safe_decode(bytes(data[mode_end + 1 : name_end]))
-        _validate_tree_entry_name(name)
+        _validate_tree_entry_name(name, mode)
         offset = name_end + 21
         out.append((bytes(data[name_end + 1 : offset]), mode, name))
     return out

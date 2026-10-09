@@ -138,6 +138,113 @@ class TestTree(TestBase):
         with pytest.raises(ValueError):
             tree_to_stream([(b"a" * 20, 0o100644, name)], BytesIO().write)
 
+    @ddt.data(
+        ".gitmodules",
+        ".GITMODULES",
+        ".gitmodules ",
+        ".gi\u200ctmodules",
+        "gitmod~1",
+        "gitmod~2",
+        "gitmod~3",
+        "GITMOD~4",
+        "gi7eba~1",
+        "GI7EBA~9",
+        "GI7EB~10",
+        "GI7EB~11",
+        "GI7EB~99",
+        "GI7E~100",
+        "GI7E~101",
+        "GI7E~999",
+        "GI7~1000",
+        "GI7~9999",
+        "GI~10000",
+        "GI~99999",
+        "G~100000",
+        "G~999999",
+        "~1000000",
+        "~9999999",
+        "Gi7Eb~42",
+        "gi7e~120",
+        "GITMOD~4 . ",
+        "GI7EB~10. ",
+        "GI7E~100:$DATA",
+        "~1000000 . :$DATA",
+    )
+    def test_gitmodules_symlink_entries_are_rejected(self, name):
+        """A symbolic link named like the submodule configuration would make Git read
+        it from outside the repository, so such an entry is refused in both
+        directions. A regular file with the same name is the normal case."""
+        symlink_mode = 0o120000
+        cache = []
+        with pytest.raises(ValueError):
+            TreeModifier(cache).add(b"a" * 20, symlink_mode, name)
+        assert not cache
+        with pytest.raises(ValueError):
+            tree_to_stream([(b"a" * 20, symlink_mode, name)], BytesIO().write)
+        raw = b"120000 " + name.encode() + b"\0" + b"a" * 20
+        with pytest.raises(ValueError):
+            tree_entries_from_data(raw)
+
+        TreeModifier(cache).add(b"a" * 20, 0o100644, name)
+        assert cache == [(b"a" * 20, 0o100644, name)]
+        data = BytesIO()
+        tree_to_stream(cache, data.write)
+        assert tree_entries_from_data(data.getvalue()) == cache
+
+    @ddt.data(
+        "gitmod~0",
+        "gitmod~5",
+        "gitmod~10",
+        "GI7EBA~",
+        "GI7EBA~0",
+        "GI7EBA~~1",
+        "GI7EBA~X",
+        "GI7EBA~10",
+        "Gx7EBA~1",
+        "GI7EBX~1",
+        "GI7EB~1",
+        "GI7EB~01",
+        "GI7EB~1X",
+        "GI7EB~100",
+        "GI7E~10",
+        "GI7E~010",
+        "GI7E~1000",
+        "GI7~100",
+        "GI7~0100",
+        "GI7~10000",
+        "GI~1000",
+        "GI~01000",
+        "GI~100000",
+        "G~10000",
+        "G~010000",
+        "G~1000000",
+        "~100000",
+        "~0100000",
+        "~10000000",
+        "GI7EBA~\u0661",
+        "GI7EB~1\uff10",
+        "GI7EB~10x",
+        "GI7EB~10.x",
+        " GI7EB~10",
+        "GI7EB~10\n",
+        "GI7EB~10\t",
+        "GI7EB~10x:$DATA",
+        ".gitmodules x",
+        ".gitmodules .x",
+        ".gitmodules,:$DATA",
+    )
+    def test_gitmodules_short_name_near_misses_round_trip(self, name):
+        """Only exact aliases are forbidden, and only for symbolic links."""
+        for mode in (0o100644, 0o120000):
+            cache = []
+            TreeModifier(cache).add(b"a" * 20, mode, name)
+            assert cache == [(b"a" * 20, mode, name)]
+            data = BytesIO()
+            tree_to_stream(cache, data.write)
+            raw = ("%o " % mode).encode() + name.encode() + b"\0" + b"a" * 20
+            assert data.getvalue() == raw
+            assert tree_entries_from_data(raw) == cache
+
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")
         num_recursive = 0
