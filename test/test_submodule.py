@@ -27,7 +27,7 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux, rmtree
+from git.util import cwd, join_path_native, to_native_path_linux, rmtree
 
 from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
@@ -1524,7 +1524,7 @@ class TestSubmodule(TestBase):
     # ACTUALLY skipped by git.util.rmtree (in local onerror function), called via
     # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1011.
     #
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    # @skipIf(sys.platform == "win32",
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
     #         "it is being used by another process: "
     #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa: E501
@@ -1537,7 +1537,7 @@ class TestSubmodule(TestBase):
         self._do_base_tests(rwrepo)
 
     @pytest.mark.xfail(
-        HIDE_WINDOWS_KNOWN_ERRORS,
+        sys.platform == "win32",
         reason=(
             '"The process cannot access the file because it is being used by another process"'
             + " on first call to rm.update"
@@ -2087,7 +2087,7 @@ class TestSubmodule(TestBase):
         assert len(repo.submodules) == 0
 
     @pytest.mark.xfail(
-        HIDE_WINDOWS_KNOWN_ERRORS,
+        sys.platform == "win32",
         reason=(
             '"The process cannot access the file because it is being used by another process"'
             + " on first call to sm.move"
@@ -2158,7 +2158,7 @@ class TestSubmodule(TestBase):
         assert sm_too.binsha != sm.binsha
 
     @pytest.mark.xfail(
-        HIDE_WINDOWS_KNOWN_ERRORS,
+        sys.platform == "win32",
         reason='"The process cannot access the file because it is being used by another process" on call to sm.move',
         raises=PermissionError,
     )
@@ -2590,7 +2590,7 @@ class TestSubmodule(TestBase):
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             sm = Submodule.add(parent, "new", "new", url)
 
-        assert sm.url == Git.polish_url(url, expand_vars=False)
+        assert sm.url == Git.polish_url(url)
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url(self, rw_repo):

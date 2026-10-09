@@ -12,13 +12,12 @@ import logging
 import os
 from subprocess import Popen
 from time import altzone, daylight, localtime, time, timezone
-import warnings
 import tempfile
 
 
 from git import _backend
 from git.cmd import Git
-from git.exc import GitCommandError, UnsafeOptionError
+from git.exc import BadObject, GitCommandError, UnsafeOptionError
 from git.diff import Diffable
 from git.util import Actor, Stats, finalize_process, hex_to_bin
 
@@ -269,9 +268,41 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
 
     def _set_cache_(self, attr: str) -> None:
         if attr in Commit.__slots__:
-            # Read the data in a chunk, its faster - then provide a file wrapper.
-            _binsha, _typename, self.size, stream = self.repo.odb.stream(self.binsha)
-            self._deserialize(BytesIO(stream.read()))
+            data = _backend.object_metadata(self.repo.git, self.hexsha, "commit")
+            if data is NotImplemented:
+                # Git has no formatted query that faithfully exposes every header.
+                try:
+                    raw = self.repo.git._call_process_safe(
+                        "cat_file", "commit", self.hexsha, stdout_as_string=False, strip_newline_in_stdout=False
+                    )
+                except GitCommandError as exc:
+                    raise BadObject(self.binsha) from exc
+                self._deserialize(BytesIO(raw))
+            else:
+                self.encoding = (data["encoding"] or self.default_encoding.encode()).decode("ascii")
+                self.tree = Tree(self.repo, bytes.fromhex(data["tree"]), Tree.tree_id << 12, "")
+                self.parents = tuple(type(self)(self.repo, bytes.fromhex(oid)) for oid in data["parents"])
+                for role in ("author", "committer"):
+                    signature = data[role]
+                    setattr(
+                        self,
+                        role,
+                        Actor(
+                            signature.name.decode(self.encoding, "replace"),
+                            signature.email.decode(self.encoding, "replace"),
+                        ),
+                    )
+                    setattr(self, "authored_date" if role == "author" else "committed_date", signature.time.seconds)
+                    setattr(self, role + "_tz_offset", -signature.time.offset)
+                self.message = data["message"].decode(self.encoding, "replace")
+                self.gpgsig = next(
+                    (
+                        value.rstrip(b"\n").decode(self.encoding, "ignore")
+                        for key, value in data["extra_headers"]
+                        if key == b"gpgsig"
+                    ),
+                    "",
+                )
         else:
             super()._set_cache_(attr)
         # END handle attrs
@@ -461,25 +492,6 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
             ).splitlines()
             text = process_lines(lines)
         return Stats._list_from_string(self.repo, text)
-
-    @property
-    def trailers(self) -> Dict[str, str]:
-        """Deprecated. Get the trailers of the message as a dictionary.
-
-        :note:
-            This property is deprecated, please use either :attr:`trailers_list` or
-            :attr:`trailers_dict`.
-
-        :return:
-            Dictionary containing whitespace stripped trailer information.
-            Only contains the latest instance of each trailer key.
-        """
-        warnings.warn(
-            "Commit.trailers is deprecated, use Commit.trailers_list or Commit.trailers_dict instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:
@@ -859,6 +871,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         return self
 
     def _deserialize(self, stream: BytesIO) -> "Commit":
+        """Decode CLI commit bytes where formatted Git queries cannot preserve metadata."""
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
@@ -896,7 +909,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         enc = next_line
         buf = enc.strip()
         while buf:
-            if buf[0:10] == b"encoding ":
+            if buf.startswith(b"encoding "):
                 self.encoding = buf[buf.find(b" ") + 1 :].decode(self.encoding, "ignore")
             elif buf[0:7] == b"gpgsig ":
                 sig_lines = [buf[buf.find(b" ") + 1 :] + b"\n"]
@@ -974,24 +987,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         :return:
             List of co-authors for this commit (as :class:`~git.util.Actor` objects).
         """
-        co_authors = []
-
-        if self.message:
-            # Scan line by line instead of matching `(.*) <(.*?)>` across the whole
-            # message. On a single trailer line that repeats " <" without ever closing
-            # a ">", greedy backtracking over each " <" made the regex run in O(n^2)
-            # time, so a large (fully attacker-controlled) commit message could stall
-            # any caller of this property. A trailer is "Co-authored-by: <name> <email>"
-            # with the email in the final angle brackets, so the name ends at the last
-            # " <" and the line ends at ">".
-            prefix = "Co-authored-by: "
-            for line in str(self.message).split("\n"):
-                if not line.startswith(prefix) or not line.endswith(">"):
-                    continue
-                identity = line[len(prefix) :]
-                separator = identity.rfind(" <")
-                if separator == -1:
-                    continue
-                co_authors.append(Actor(identity[:separator], identity[separator + 2 : -1]))
-
-        return co_authors
+        return [
+            Actor.from_string(value)
+            for key, value in self.trailers_list
+            if key.lower() == "co-authored-by" and " <" in value and value.endswith(">")
+        ]

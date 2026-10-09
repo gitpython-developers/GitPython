@@ -7,7 +7,6 @@ __all__ = ["DiffConstants", "NULL_TREE", "NULL_TREE_SHA", "INDEX", "Diffable", "
 
 import enum
 import re
-import warnings
 
 from git import _backend
 from git.cmd import Git, handle_process_output
@@ -595,24 +594,6 @@ class Diff:
     @property
     def rename_to(self) -> Optional[str]:
         return self.raw_rename_to.decode(defenc, "replace") if self.raw_rename_to else None
-
-    @property
-    def renamed(self) -> bool:
-        """Deprecated, use :attr:`renamed_file` instead.
-
-        :return:
-            ``True`` if the blob of our diff has been renamed
-
-        :note:
-            This property is deprecated.
-            Please use the :attr:`renamed_file` property instead.
-        """
-        warnings.warn(
-            "Diff.renamed is deprecated, use Diff.renamed_file instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.renamed_file
 
     @property
     def renamed_file(self) -> bool:

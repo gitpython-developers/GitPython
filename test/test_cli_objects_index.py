@@ -8,7 +8,7 @@ import pytest
 from gitdb.base import IStream
 
 from git import Actor, Commit, IndexFile, Repo, Tree
-from git.exc import HookExecutionError, UnmergedEntriesError, UnsafeOptionError
+from git.exc import GitCommandError, HookExecutionError, UnmergedEntriesError, UnsafeOptionError
 from git.index.typ import BaseIndexEntry, IndexEntry
 
 
@@ -35,7 +35,7 @@ def test_objects_index_commit_and_merge(repo):
     assert {blob.path for blob in tree.traverse() if blob.type == "blob"} == set(names)
     assert len(tree.binsha) == repo._oid_size
     index.write()
-    assert set(repo.index.entries) == {(name, 0) for name in names}
+    assert {(e.path, e.stage) for e in repo.index.iter_entries()} == {(name, 0) for name in names}
     actor = Actor("Example", "example@example.com")
     commit = index.commit("message without newline", author=actor, committer=actor, skip_hooks=True)
     assert repo.commit(commit.hexsha).message == "message without newline"
@@ -76,20 +76,19 @@ def test_index_stages_missing_objects_and_atomic_failure(repo):
     missing = b"a" * repo._oid_size
     for stage in (1, 2, 3):
         entry = BaseIndexEntry((0o100644, missing, stage << 12, "conflict"))
-        index.entries[(entry.path, stage)] = IndexEntry.from_base(entry)
+        index.add([IndexEntry.from_base(entry)], write=False)
     index.write()
-    assert {stage for path, stage in repo.index.entries} == {1, 2, 3}
+    assert {stage for path, stage in [(e.path, e.stage) for e in repo.index.iter_entries()]} == {1, 2, 3}
     before = Path(index.path).read_bytes()
     with pytest.raises(UnmergedEntriesError):
         index.write_tree()
-    index.entries.clear()
-    index.entries[("missing", 0)] = IndexEntry((0o100644, missing, 0, "missing"))
+    index.remove(".", r=True, force=True, write=False)
+    index.add([IndexEntry((0o100644, missing, 0, "missing"))], write=False)
     tree = index.write_tree()
     assert tree["missing"].binsha == missing
     assert Path(index.path).read_bytes() == before
-    index.entries[("../escape", 0)] = IndexEntry((0o100644, missing, 0, "../escape"))
     with pytest.raises(ValueError):
-        index.write()
+        index.add([IndexEntry((0o100644, missing, 0, "../escape"))])
     assert Path(index.path).read_bytes() == before
     assert not Path(str(index.path) + ".lock").exists()
 
@@ -103,12 +102,12 @@ def test_index_flags_are_preserved_until_path_is_staged(repo):
     repo.git.update_index("--skip-worktree", "--", "skip")
     before = repo.git.status(porcelain=True)
     index = repo.index
-    assert index.entries[("skip", 0)].skip_worktree
+    assert index.entry(*("skip", 0)).skip_worktree
     index.write()
     assert repo.git.status(porcelain=True) == before
     index.add(["intent"])
     assert "A  intent" in repo.git.status(porcelain=True)
-    assert repo.index.entries[("skip", 0)].skip_worktree
+    assert repo.index.entry(*("skip", 0)).skip_worktree
 
 
 def test_revision_injection_cannot_write_or_checkout(repo, tmp_path):
@@ -177,7 +176,7 @@ def test_git_index_storage_variants(repo, storage):
         repo.git.sparse_checkout("init", "--cone", "--sparse-index")
         repo.git.sparse_checkout("set", "inside")
     index = repo.index
-    assert set(index.entries) == {("inside/file", 0), ("outside/file", 0)}
+    assert {(e.path, e.stage) for e in index.iter_entries()} == {("inside/file", 0), ("outside/file", 0)}
     assert index.write_tree() == commit.tree
     (root / "inside/file").write_text("changed")
     index.add(["inside/file"])
@@ -195,3 +194,100 @@ def test_trailer_commands_are_not_executed(repo):
     with pytest.raises(UnsafeOptionError):
         Commit.create_from_tree(repo, repo.index.write_tree(), "message", trailers={"custom": "value"})
     assert not marker.exists()
+
+
+def test_pending_index_queries_removal_and_failed_update(repo):
+    root = Path(repo.working_tree_dir)
+    (root / "file").write_text("old")
+    index = repo.index
+    index.add(["file"])
+    published = Path(index.path).read_bytes()
+    original = index.entry("file")
+    (root / "file").write_text("new")
+    index.add(["file"], write=False)
+    pending = index.entry("file")
+    assert pending.binsha != original.binsha
+    assert not hasattr(index, "entries")
+    with pytest.raises(ValueError, match="Git did not retain"):
+        index.add([BaseIndexEntry((0o120000, pending.binsha, 0, ".gitmodules"))], write=False)
+    with pytest.raises(ValueError, match="Invalid index path"):
+        index.reset(index.write_tree().hexsha, paths=["file\0injected"])
+    assert index.entry("file") == pending
+    assert Path(index.path).read_bytes() == published
+    (root / "file").unlink()
+    assert list(index.checkout(["file"])) == ["file"]
+    assert (root / "file").read_text() == "new"
+    assert Path(index.path).read_bytes() == published
+    with pytest.raises(ValueError):
+        index.remove(["file"], working_tree=True, write=False)
+    index.remove(["file"], force=True, write=False)
+    with pytest.raises(KeyError):
+        index.entry("file")
+    assert Path(index.path).read_bytes() == published
+    index.write()
+    assert list(repo.index.iter_entries()) == []
+
+
+def test_malformed_index_failure_is_propagated(repo):
+    Path(repo.index.path).write_bytes(b"not an index")
+    with pytest.raises((ValueError, GitCommandError)):
+        list(repo.index.iter_entries())
+
+
+def test_failed_hook_retains_index_edit_without_advancing_head(repo):
+    if os.name == "nt":
+        pytest.skip("POSIX shell hook")
+    root = Path(repo.working_tree_dir)
+    (root / "file").write_text("old")
+    index = repo.index
+    index.add(["file"])
+    initial = index.commit("initial", skip_hooks=True)
+    virtual = IndexFile.from_tree(repo, initial.tree)
+    hook = Path(repo.git_dir, "hooks", "pre-commit")
+    hook.write_text("#!/bin/sh\nprintf changed > file\ngit add file\nexit 1\n")
+    hook.chmod(0o755)
+    with pytest.raises(HookExecutionError):
+        virtual.commit("must fail")
+    assert repo.head.commit == initial
+    assert virtual.entry("file").to_blob(repo).data_stream.read() == b"changed"
+    assert repo.index.entry("file").to_blob(repo).data_stream.read() == b"old"
+
+
+def test_commit_and_tag_metadata_preserves_encoding_signature_and_message(repo):
+    tree = repo.index.write_tree()
+    identity = b"M\xe9 <name@example.invalid> 1112911991 -0200"
+    message = "\nexact café\n\n".encode("latin1")
+    raw = (
+        b"tree "
+        + tree.hexsha.encode()
+        + b"\nauthor "
+        + identity
+        + b"\ncommitter "
+        + identity
+        + b"\nencoding ISO-8859-1\nmergetag object "
+        + tree.hexsha.encode()
+        + b"\n type tree\n tag merged\ngpgsig fake signature\n continuation\n\n"
+        + message
+    )
+    stored = repo.odb.store(IStream("commit", len(raw), BytesIO(raw)))
+    commit = Commit(repo, stored.binsha)
+    assert commit.author == Actor("Mé", "name@example.invalid")
+    assert commit.authored_date == 1112911991
+    assert commit.author_tz_offset == 7200
+    assert commit.encoding == "ISO-8859-1"
+    assert commit.gpgsig == "fake signature\ncontinuation"
+    assert commit.message == "\nexact café\n\n"
+    tag_raw = (
+        b"object " + commit.hexsha.encode() + b"\ntype commit\ntag arbitrary\n"
+        b"tagger Tagger <tag@example.invalid> 1112911991 +0200\n\n\nmessage\n\n"
+    )
+    stored = repo.odb.store(IStream("tag", len(tag_raw), BytesIO(tag_raw)))
+    from git import TagObject
+
+    tag = TagObject(repo, stored.binsha)
+    assert tag.object == commit
+    assert tag.tag == "arbitrary"
+    assert tag.tagger == Actor("Tagger", "tag@example.invalid")
+    assert tag.tagged_date == 1112911991
+    assert tag.tagger_tz_offset == -7200
+    assert tag.message == "\nmessage\n"

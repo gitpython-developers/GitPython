@@ -19,7 +19,7 @@ class Tutorials(TestBase):
     # call to it via git.objects.submodule.base.Submodule.remove
     # (at "handle separate bare repository"), line 1062.
     #
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    # @skipIf(sys.platform == "win32",
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa: E501
     @with_rw_directory
@@ -368,7 +368,7 @@ class Tutorials(TestBase):
         # The index contains all blobs in a flat list.
         assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == "blob"])
         # Access blob objects.
-        for (_path, _stage), _entry in index.entries.items():
+        for _entry in index.iter_entries():
             pass
         new_file_path = os.path.join(repo.working_tree_dir, "new-file-name")
         open(new_file_path, "w").close()

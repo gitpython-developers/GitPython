@@ -82,7 +82,7 @@ def test_native_repository_lifetime_and_refresh(repo, tmp_path):
     repo.git.commit("--allow-empty", "-m", "CLI", "--no-verify")
     assert repo.commit().message == "CLI\n"
     assert repo._gix_repository is handle
-    assert set(repo.index.entries) == {("file", 0)}
+    assert {(e.path, e.stage) for e in repo.index.iter_entries()} == {("file", 0)}
 
     with repo.config_writer() as writer:
         writer.set_value("core", "abbrev", "9")
@@ -240,13 +240,13 @@ def test_native_objects_trees_commits_and_index_reads(repo):
         path.parent.mkdir(exist_ok=True)
         path.write_bytes(name.encode())
     index = repo.index
-    # All setup has finished; these operations must succeed without a subprocess.
+    # Private index edits use Git; queries and tree construction remain native.
+    index.add(paths)
     with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
-        index.add(paths)
         tree = index.write_tree()
         assert {blob.path for blob in tree.traverse() if blob.type == "blob"} == set(paths)
         assert tree["file"].data_stream.read() == b"file"
-        assert set(repo.index.entries) == {(name, 0) for name in paths}
+        assert {(e.path, e.stage) for e in repo.index.iter_entries()} == {(name, 0) for name in paths}
         stream = IStream("blob", 4, BytesIO(b"data"))
         assert repo.odb.store(stream) is stream
         assert repo.odb.stream(stream.binsha).read(2) == b"da"

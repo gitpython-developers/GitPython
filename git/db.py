@@ -3,13 +3,12 @@
 
 """Git's object database, accessed exclusively through the Git command."""
 
-__all__ = ["GitCmdObjectDB", "GitDB"]
+__all__ = ["GitCmdObjectDB"]
 
 import tempfile
 from typing import Iterator, TYPE_CHECKING
 
 from gitdb.base import IStream, OInfo, OStream
-from gitdb.db import GitDB
 
 from git.compat import force_text
 from git.exc import BadObject, GitCommandError, UnsupportedOperation
@@ -21,11 +20,7 @@ if TYPE_CHECKING:
 
 
 class GitCmdObjectDB:
-    """Read and write objects through Git, independently of its storage format.
-
-    The deprecated :class:`GitDB` remains available for applications that require
-    its legacy compressed-object and custom-output-stream interfaces.
-    """
+    """Read and write objects through Git, independently of its storage format."""
 
     def __init__(self, root_path: PathLike, git: "Git") -> None:
         self._root_path = root_path
@@ -83,7 +78,7 @@ class GitCmdObjectDB:
         to a Python loose-object writer.
         """
         if istream.binsha is not None:
-            raise UnsupportedOperation("Precompressed object storage requires the deprecated GitDB backend")
+            raise UnsupportedOperation("Precompressed object storage is unsupported")
         typename = force_text(istream.type)
         if typename not in ("blob", "tree", "commit", "tag"):
             raise ValueError(f"Invalid object type: {typename!r}")

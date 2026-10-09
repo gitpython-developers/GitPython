@@ -306,7 +306,7 @@ class RootModule(Submodule):
                                     # A new remote would have no cached refs. Preserve
                                     # the existing refs and tracking configuration for
                                     # offline updates instead of replacing the remote.
-                                    previous_remote.set_url(git.Git.polish_url(sm.url, expand_vars=False))
+                                    previous_remote.set_url(git.Git.polish_url(sm.url))
                                 else:
                                     assert nn not in [r.name for r in rmts]
                                     smr = smm.create_remote(nn, sm.url)

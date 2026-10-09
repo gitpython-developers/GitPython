@@ -51,8 +51,10 @@ API changes
 * ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
   writes, existence checks, and enumeration use Git, including packed objects.
   Precompressed input streams and custom object-output writers are unsupported.
-  The deprecated ``GitDB`` remains explicitly selectable with its existing
-  warning and limitations; ``gitdb`` remains a dependency for shared types.
+  ``GitDB`` exports and backend selection are removed. ``odbt`` accepts only
+  ``GitCmdObjectDB`` and its subclasses, rejecting unsupported types before
+  initialization or cloning. Remove ``odbt=GitDB`` or select ``GitCmdObjectDB``.
+  ``gitdb`` remains a dependency for shared types and utilities.
 * ``Repo.object_format`` and ``Repo.ref_format`` report Git's storage formats.
   ``Repo.alternates`` is read-only and reports effective absolute alternate
   directories, including environment and transitive alternates. Direct editing
@@ -98,6 +100,52 @@ API changes
   incompatible URLs, branches, and clone-only options are rejected before mutation.
   Fetch/pull results are derived from command output rather than ``FETCH_HEAD``
   file parsing. Revision strings follow Git's native revision grammar.
+
+* ``IndexFile.entries`` is removed. Use ``iter_entries()`` for immutable query
+  records, ``entry(path, stage=0)`` for exact lookup (missing entries raise
+  ``KeyError``), ``add()``, and ``remove()`` for edits. Python retains only opaque
+  index-file bytes for deferred/virtual indexes. Git edits private files and
+  validates readback before atomic publication. ``add(write=False)`` and
+  ``resolve_blobs()`` retain deferred edits; ``remove(..., write=False)`` now does
+  too, unless ``working_tree=True``. ``write(file_path)`` publishes to an alternate
+  path. Checkout and diff use pending bytes. Git owns versions, flags, sparse and
+  split indexes; deferred split snapshots are made standalone through Git.
+  Ordinary failed index edits preserve pending and published state. Worktree,
+  object storage and hook side effects are not rolled back. Commit hooks see the
+  materialized index; their index edits survive failures without advancing HEAD.
+  Binary-parser tests and duplicate filename-rejection matrices are replaced by
+  happy paths, Python glue failures and representative compatibility regressions.
+  Historical timing-only tests are removed; the maintained backend benchmark
+  checks result parity and CLI budgets.
+* Commit/tag metadata uses structured Gix decoders when the Gix backend supports
+  the repository. The CLI backend retains raw decoding because Git has no faithful
+  formatted query for all commit headers or arbitrary tag objects. ``gpgsig``
+  remains readable. The small ``Actor.from_string()`` and
+  ``parse_actor_and_date()`` identity helpers remain supported.
+* ``parse_date()`` delegates text syntax and timezone interpretation to Git;
+  aware datetimes retain direct conversion and invalid inputs raise ``ValueError``.
+  ISO/RFC dates now apply their timezone to the UTC timestamp, correcting the
+  previous behavior. Dates without a zone use Git's local timezone, and accepted
+  date syntax follows the installed Git version. Use an explicit timezone for
+  reproducible results. ``co_authors`` now uses Git's final trailer block rather
+  than scanning arbitrary message lines; use a valid trailer block after a blank
+  line.
+* Removed deprecated APIs: ``Git.USE_SHELL`` (explicit ``Git.execute(shell=...)``
+  remains), ``Diff.renamed`` (use ``renamed_file``), ``Commit.trailers`` (use
+  ``trailers_list`` or ``trailers_dict``), ``Actor.name_email_regex`` (use
+  ``Actor.from_string``), ``git.util.Iterable`` (use ``IterableObj``),
+  ``git.compat.is_win/is_posix/is_darwin`` (use ``os.name``/``sys.platform``), and
+  ``git.types.Lit_commit_ish`` (use ``Literal["commit", "tag"]`` or
+  ``GitObjectTypeString``). Top-level typing exports and private module aliases
+  are removed; import from ``typing`` or the owning module. ``git.util`` now
+  exposes the actual utility module. Abstract ``Traversable.traverse`` and
+  ``list_traverse`` raise ``NotImplementedError``; use concrete implementations.
+* Paths and URLs no longer expand ``$VAR``/``%VAR%`` automatically. Removed
+  ``expand_vars`` switches from ``Repo``, ``Repo.init``, ``expand_path``,
+  ``cygpath`` and ``Git.polish_url``. Expand explicitly with
+  ``os.path.expandvars`` if wanted; initial ``~`` expansion remains.
+  ``HIDE_WINDOWS_KNOWN_ERRORS`` and ``HIDE_WINDOWS_FREEZE_ERRORS`` are removed.
+  ``rmtree`` propagates filesystem errors rather than raising ``SkipTest``.
 
 3.2.1
 =====

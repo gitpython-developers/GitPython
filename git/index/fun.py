@@ -27,10 +27,10 @@ def hook_path(name: str, git_dir: PathLike) -> str:
 
 
 def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
-    """Run a native Git hook, ignoring missing hooks."""
+    """Run a Git commit hook, ignoring missing hooks."""
     Git._check_operand(name, "hook name")
     if name not in ("pre-commit", "commit-msg", "post-commit"):
-        raise ValueError("Only native commit hooks are supported")
+        raise ValueError("Only commit hooks are supported")
     try:
         index.repo.git._call_process_safe(
             "hook",

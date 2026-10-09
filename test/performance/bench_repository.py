@@ -41,7 +41,7 @@ def browse(repo):
 
 
 def index(repo):
-    return sorted([path, stage, entry.mode, entry.hexsha] for (path, stage), entry in repo.index.entries.items())
+    return sorted([entry.path, entry.stage, entry.mode, entry.hexsha] for entry in repo.index.iter_entries())
 
 
 def submodules(repo):

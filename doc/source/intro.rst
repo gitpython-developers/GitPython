@@ -6,7 +6,7 @@ Overview / Install
 
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
 
-It provides Python objects for repository data and delegates Git operations to the Git executable. The default backend supports both SHA-1 and SHA-256 object IDs and both files and reftable reference storage. The legacy pure-Python GitDB backend remains available but is deprecated.
+It provides Python objects for repository data and delegates Git operations to the Git executable. The default backend supports both SHA-1 and SHA-256 object IDs and both files and reftable reference storage. The legacy pure-Python GitDB backend is removed.
 
 The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.
 
@@ -15,7 +15,7 @@ Requirements
 
 * `Python`_ >= 3.8
 * `Git`_ 2.52 or newer
-* `GitDB`_ - shared data types and the deprecated legacy object database
+* `GitDB`_ - shared data types and utilities
 * `typing_extensions`_ >= 3.7.3.4 (if python < 3.10)
 
 .. _Python: https://www.python.org

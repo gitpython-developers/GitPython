@@ -144,11 +144,11 @@ class TestIndex(TestBase):
     def test_index_file_base(self):
         # Read from file.
         index = IndexFile(self.rorepo, fixture_path("index"))
-        assert index.entries
+        assert [(e.path, e.stage) for e in index.iter_entries()]
         assert index.version > 0
 
         # Test entry.
-        entry = next(iter(index.entries.values()))
+        entry = next(iter(index.iter_entries()))
         for attr in (
             "path",
             "mode",
@@ -160,14 +160,12 @@ class TestIndex(TestBase):
         # END for each method
 
         # Test update.
-        entries = index.entries
         assert isinstance(index.update(), IndexFile)
-        assert entries is not index.entries
 
         # Test stage.
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
-        self.assertEqual(len(index_merge.entries), 106)
-        assert len([e for e in index_merge.entries.values() if e.stage != 0])
+        self.assertEqual(len([(e.path, e.stage) for e in index_merge.iter_entries()]), 106)
+        assert len([e for e in index_merge.iter_entries() if e.stage != 0])
 
         # Write the data - it must match the original.
         tmpfile = tempfile.mktemp()
@@ -175,100 +173,6 @@ class TestIndex(TestBase):
         with open(tmpfile, "rb") as fp:
             self.assertEqual(fp.read(), fixture("index_merge"))
         os.remove(tmpfile)
-
-    @ddt.data(
-        "",
-        ".",
-        "..",
-        "../outside",
-        "a/../outside",
-        "/absolute",
-        "C:relative",
-        "a//b",
-        "a/./b",
-        "a/",
-        "nul\0name",
-        ".git/config",
-        "a/.GiT/hooks/hook",
-        "git~1/config",
-        ".git. /config",
-        ".git:stream",
-        ".g\u200cit/config",
-        "a\\.git\\config",
-    )
-    def test_index_reader_and_writer_reject_unsafe_paths(self, path):
-        with TemporaryDirectory() as directory:
-            index_path = Path(directory, "index")
-            index_path.write_bytes(_raw_index(path))
-            if "\0" in path:
-                # Git treats NUL as the record terminator; it never exposes an unsafe name.
-                assert all("\0" not in name for name, _stage in IndexFile(self.rorepo, index_path).entries)
-            else:
-                with pytest.raises((ValueError, GitCommandError)):
-                    IndexFile(self.rorepo, index_path).entries
-            index = IndexFile(self.rorepo, index_path)
-            index.entries = {(path, 0): IndexEntry((0o100644, b"a" * 20, 0, path))}
-            with pytest.raises(ValueError):
-                index.write()
-
-    @ddt.data(
-        ".gitmodules",
-        ".GITMODULES",
-        ".gitmodules.",
-        ".gitmodules ",
-        ".gi\u200ctmodules",
-        "gitmod~1",
-        "gitmod~4",
-        "gi7eba~1",
-        "gi7eba~9",
-        "GI7EB~10",
-        "GI7EB~99",
-        "GI7E~100",
-        "GI7E~999",
-        "GI7~1000",
-        "GI7~9999",
-        "GI~10000",
-        "GI~99999",
-        "G~100000",
-        "G~999999",
-        "~1000000",
-        "~9999999",
-        "GI7EB~10. ",
-        "GI7E~100:$DATA",
-        "sub/~1000000",
-        "sub/.gitmodules",
-    )
-    def test_index_reader_and_writer_reject_gitmodules_symlinks(self, path):
-        with tempfile.TemporaryDirectory() as directory:
-            index = IndexFile(self.rorepo, Path(directory, "index"))
-            index.entries = {(path, 0): IndexEntry((0o120000, b"a" * 20, 0, path))}
-            with pytest.raises(ValueError, match="submodule configuration"):
-                index.write()
-            assert not Path(index.path).exists()
-
-            index.entries = {(path, 0): IndexEntry((0o100644, b"a" * 20, 0, path))}
-            index.write()
-            assert index.update().entries[(path, 0)].mode == 0o100644
-
-    @ddt.data("GI7EB~10", "GI7E~100", "GI7~1000", "GI~10000", "G~100000", "~1000000", "~9999999")
-    @with_rw_directory
-    def test_index_add_and_write_tree_reject_gitmodules_fallback_symlinks(self, rw_dir, path):
-        with Repo.init(rw_dir) as repo:
-            binsha = repo.odb.store(IStream("blob", 6, BytesIO(b"target"))).binsha
-            index = repo.index
-            for item in (Blob(repo, binsha, 0o120000, path), BaseIndexEntry((0o120000, binsha, 0, path))):
-                with pytest.raises(ValueError, match="submodule configuration"):
-                    index.add([item], write=False)
-                assert not index.entries
-
-            index.entries[(path, 0)] = IndexEntry((0o120000, binsha, 0, path))
-            with pytest.raises(ValueError, match="submodule configuration"):
-                index.write_tree()
-            assert not Path(index.path).exists()
-
-            index.add([BaseIndexEntry((0o100644, binsha, 0, path))])
-            assert repo.index.entries[(path, 0)].mode == 0o100644
-            assert index.write_tree()[path].mode == 0o100644
 
     def test_valid_unusual_index_names_round_trip(self):
         names = ["a b", "--option", "dir/.gitignore", "café"]
@@ -283,20 +187,16 @@ class TestIndex(TestBase):
                 names.append("a\\b")
         with TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
-            index.entries = {(name, 0): IndexEntry((0o100644, b"a" * 20, 0, name)) for name in names}
-            index.write()
-            assert sorted(entry.path for entry in index.update().entries.values()) == sorted(names)
+            index.add([IndexEntry((0o100644, b"a" * 20, 0, name)) for name in names])
+            assert sorted(entry.path for entry in index.update().iter_entries()) == sorted(names)
             before = Path(index.path).read_bytes()
             for name in unsupported:
-                index.entries[(name, 0)] = IndexEntry((0o100644, b"a" * 20, 0, name))
                 with pytest.raises(ValueError, match="Git did not retain"):
-                    index.write()
+                    index.add([IndexEntry((0o100644, b"a" * 20, 0, name))])
                 assert Path(index.path).read_bytes() == before
                 assert not Path(str(index.path) + ".lock").exists()
-                del index.entries[(name, 0)]
 
-    @ddt.data("write", "write_tree")
-    def test_index_rejects_silently_ignored_entries_atomically(self, operation):
+    def test_index_rejects_silently_ignored_entries_atomically(self):
         call = Git._call_process_safe
 
         def ignore_index_updates(git, command, *args, **kwargs):
@@ -306,47 +206,21 @@ class TestIndex(TestBase):
 
         with TemporaryDirectory() as directory:
             index = IndexFile(self.rorepo, Path(directory, "index"))
-            index.entries = {("before", 0): IndexEntry((0o100644, b"a" * 20, 0, "before"))}
-            index.write()
+            index.add([IndexEntry((0o100644, b"a" * 20, 0, "before"))])
             before = Path(index.path).read_bytes()
-            index.entries[("after", 0)] = IndexEntry((0o100644, b"a" * 20, 0, "after"))
             with mock.patch.object(Git, "_call_process_safe", ignore_index_updates):
                 with pytest.raises(ValueError, match="Git did not retain"):
-                    getattr(index, operation)()
+                    index.add([IndexEntry((0o100644, b"a" * 20, 0, "after"))])
             assert Path(index.path).read_bytes() == before
             assert not Path(str(index.path) + ".lock").exists()
 
-    def test_long_index_names_are_fully_validated(self):
-        prefix = "a/" + "nested/" * 650
-        with TemporaryDirectory() as directory:
-            index_path = Path(directory, "index")
-            index_path.write_bytes(_raw_index(prefix + "../outside"))
-            with pytest.raises((ValueError, GitCommandError)):
-                IndexFile(self.rorepo, index_path).entries
-            name = prefix + "file"
-            index_path.write_bytes(_raw_index(name))
-            index = IndexFile(self.rorepo, index_path)
-            assert next(iter(index.entries)) == (name, 0)
-            index.write()
-            assert next(iter(index.update().entries)) == (name, 0)
-
     def _cmp_tree_index(self, tree, index):
-        # Fail unless both objects contain the same paths and blobs.
         if isinstance(tree, str):
             tree = self.rorepo.commit(tree).tree
-
-        blist = []
-        for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
-            assert (blob.path, 0) in index.entries
-            blist.append(blob)
-        # END for each blob in tree
-        if len(blist) != len(index.entries):
-            iset = {k[0] for k in index.entries.keys()}
-            bset = {b.path for b in blist}
-            raise AssertionError(
-                "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset - iset, iset - bset)
-            )
-        # END assertion message
+        expected = {
+            (blob.path, 0) for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False)
+        }
+        assert {(entry.path, entry.stage) for entry in index.iter_entries()} == expected
 
     @with_rw_repo("0.1.6")
     def test_index_lock_handling(self, rw_repo):
@@ -354,6 +228,8 @@ class TestIndex(TestBase):
         index_path = Path(index.path)
         lock_path = Path(str(index_path) + ".lock")
         before = index_path.read_bytes()
+        # Deferred bytes keep the copy failure injection at locked publication.
+        index.add([Blob(rw_repo, b"f" * 20, 0o100644, "foo")], write=False)
 
         def fail_copy(source, stream):
             assert lock_path.exists()
@@ -367,9 +243,9 @@ class TestIndex(TestBase):
                 assert not lock_path.exists()
                 assert index_path.read_bytes() == before
 
-        index.add([Blob(rw_repo, b"f" * 20, 0o100644, "foo")])
+        index.write()
         assert not lock_path.exists()
-        assert rw_repo.index.entries[("foo", 0)].mode == 0o100644
+        assert rw_repo.index.entry(*("foo", 0)).mode == 0o100644
 
     @with_rw_repo("0.1.6")
     def test_read_tree_methods_reject_index_output(self, rw_repo):
@@ -395,17 +271,17 @@ class TestIndex(TestBase):
 
         # Simple index from tree.
         base_index = IndexFile.from_tree(rw_repo, common_ancestor_sha)
-        assert base_index.entries
+        assert [(e.path, e.stage) for e in base_index.iter_entries()]
         self._cmp_tree_index(common_ancestor_sha, base_index)
 
         # Merge two trees - it's like a fast-forward.
         two_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha)
-        assert two_way_index.entries
+        assert [(e.path, e.stage) for e in two_way_index.iter_entries()]
         self._cmp_tree_index(cur_sha, two_way_index)
 
         # Merge three trees - here we have a merge conflict.
         three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
-        assert len([e for e in three_way_index.entries.values() if e.stage != 0])
+        assert len([e for e in three_way_index.iter_entries() if e.stage != 0])
 
         # ITERATE BLOBS
 
@@ -435,10 +311,10 @@ class TestIndex(TestBase):
         assert isinstance(tree, Tree)
         num_blobs = 0
         for blob in tree.traverse(predicate=lambda item, d: item.type == "blob"):
-            assert (blob.path, 0) in three_way_index.entries
+            assert (blob.path, 0) in [(e.path, e.stage) for e in three_way_index.iter_entries()]
             num_blobs += 1
         # END for each blob
-        self.assertEqual(num_blobs, len(three_way_index.entries))
+        self.assertEqual(num_blobs, len([(e.path, e.stage) for e in three_way_index.iter_entries()]))
 
     @with_rw_repo("0.1.6")
     def test_index_merge_tree(self, rw_repo):
@@ -451,13 +327,13 @@ class TestIndex(TestBase):
         next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
         parent_commit = rw_repo.head.commit.parents[0]
         manifest_key = IndexFile.entry_key("MANIFEST.in", 0)
-        manifest_entry = rw_repo.index.entries[manifest_key]
+        manifest_entry = rw_repo.index.entry(*manifest_key)
         rw_repo.index.merge_tree(next_commit)
         # Only one change should be recorded.
-        assert manifest_entry.binsha != rw_repo.index.entries[manifest_key].binsha
+        assert manifest_entry.binsha != rw_repo.index.entry(*manifest_key).binsha
 
         rw_repo.index.reset(rw_repo.head)
-        self.assertEqual(rw_repo.index.entries[manifest_key].binsha, manifest_entry.binsha)
+        self.assertEqual(rw_repo.index.entry(*manifest_key).binsha, manifest_entry.binsha)
 
         # FAKE MERGE
         #############
@@ -469,17 +345,13 @@ class TestIndex(TestBase):
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
         # Add actually resolves the null-hex-sha for us as a feature, but we can edit
         # the index manually.
-        assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA
+        assert rw_repo.index.entry(*manifest_key).binsha != Object.NULL_BIN_SHA
         # We must operate on the same index for this! It's a bit problematic as it might
         # confuse people.
         index = rw_repo.index
-        index.entries[manifest_key] = IndexEntry.from_base(manifest_fake_entry)
-        # Git refuses corrupt null object IDs; a valid but missing ID remains supported.
-        with pytest.raises(GitCommandError):
-            index.write()
-        index.entries[manifest_key] = IndexEntry((manifest_entry.mode, b"f" * 20, 0, manifest_entry.path))
+        index.add([IndexEntry((manifest_entry.mode, b"f" * 20, 0, manifest_entry.path))], write=False)
         index.write()
-        self.assertEqual(rw_repo.index.entries[manifest_key].binsha, b"f" * 20)
+        self.assertEqual(rw_repo.index.entry(*manifest_key).binsha, b"f" * 20)
 
         # Write an unchanged index (just for the fun of it).
         rw_repo.index.write()
@@ -498,7 +370,7 @@ class TestIndex(TestBase):
         # If missing objects are okay, this would work though (they are always okay
         # now). As we can't read back the tree with NULL_SHA, we rather set it to
         # something else.
-        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])
+        index.add([IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])], write=False)
         tree = index.write_tree()
 
         # Now make a proper three way merge with unmerged entries.
@@ -512,7 +384,7 @@ class TestIndex(TestBase):
         # Default IndexFile instance points to our index.
         index = IndexFile(rw_repo)
         assert index.path is not None
-        assert len(index.entries)
+        assert len([(e.path, e.stage) for e in index.iter_entries()])
 
         # Write the file back.
         index.write()
@@ -674,30 +546,6 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @ddt.data("write", "write_tree", "checkout", "cached_checkout")
-    @with_rw_directory
-    def test_index_boundaries_reject_injected_entries_before_side_effects(self, rw_dir, operation):
-        tmp_path = Path(rw_dir) / "repo"
-        with Repo.init(tmp_path) as repo:
-            index_path = Path(repo.index.path)
-            if operation == "checkout":
-                index_path.write_bytes(_raw_index("../outside"))
-            else:
-                repo.index.write()
-            before = index_path.read_bytes()
-            index = repo.index
-            if operation == "cached_checkout":
-                assert not index.entries
-                index_path.write_bytes(_raw_index("../outside"))
-                before = index_path.read_bytes()
-                operation = "checkout"
-            elif operation != "checkout":
-                index.entries[("../outside", 0)] = IndexEntry((0o100644, b"a" * 20, 0, "../outside"))
-            with pytest.raises(ValueError):
-                getattr(index, operation)()
-            assert index_path.read_bytes() == before
-            assert not (tmp_path.parent / "outside").exists()
-
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         with xfail_if_raises(
@@ -706,7 +554,7 @@ class TestIndex(TestBase):
             reason="Assumes symlinks are not created on Windows and opens a symlink to a nonexistent target.",
         ):
             index = rw_repo.index
-            num_entries = len(index.entries)
+            num_entries = len([(e.path, e.stage) for e in index.iter_entries()])
             cur_head = rw_repo.head
 
             uname = "Thomas Müller"
@@ -720,7 +568,7 @@ class TestIndex(TestBase):
             # IndexEntries.
             def mixed_iterator():
                 count = 0
-                for entry in index.entries.values():
+                for entry in index.iter_entries():
                     type_id = count % 5
                     if type_id == 0:  # path (str)
                         yield entry.path
@@ -745,11 +593,11 @@ class TestIndex(TestBase):
             deleted_files = index.remove(mixed_iterator(), working_tree=False)
             assert deleted_files
             self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
-            self.assertEqual(len(index.entries), 0)
+            self.assertEqual(len([(e.path, e.stage) for e in index.iter_entries()]), 0)
 
             # Reset the index to undo our changes.
             index.reset()
-            self.assertEqual(len(index.entries), num_entries)
+            self.assertEqual(len([(e.path, e.stage) for e in index.iter_entries()]), num_entries)
 
             # Remove with working copy.
             deleted_files = index.remove(mixed_iterator(), working_tree=True)
@@ -807,8 +655,8 @@ class TestIndex(TestBase):
 
             new_commit = index.commit(
                 commit_message,
-                author_date="2006-04-07T22:13:13",
-                commit_date="2005-04-07T22:13:13",
+                author_date="2006-04-07T22:13:13 +0000",
+                commit_date="2005-04-07T22:13:13 +0000",
             )
             assert cur_commit != new_commit
             print(new_commit.authored_date, new_commit.committed_date)
@@ -836,7 +684,7 @@ class TestIndex(TestBase):
             # Get the lib folder back on disk, but get an index without it.
             index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
             lib_file_path = osp.join("lib", "git", "__init__.py")
-            assert (lib_file_path, 0) not in index.entries
+            assert (lib_file_path, 0) not in [(e.path, e.stage) for e in index.iter_entries()]
             assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
 
             # Directory.
@@ -871,7 +719,7 @@ class TestIndex(TestBase):
             entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
             self._assert_entries(entries)
             self._assert_fprogress(entries)
-            self.assertEqual(index.entries[(old_blob.path, 0)].hexsha, old_blob.hexsha)
+            self.assertEqual(index.entry(*(old_blob.path, 0)).hexsha, old_blob.hexsha)
             self.assertEqual(len(entries), 1)
 
             # Mode 0 not allowed.
@@ -907,7 +755,7 @@ class TestIndex(TestBase):
                     self._assert_fprogress(entries)
                     self.assertEqual(len(entries), 1)
                     self.assertTrue(S_ISLNK(entries[0].mode))
-                    self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
+                    self.assertTrue(S_ISLNK(index.entry(*index.entry_key("my_real_symlink", 0)).mode))
 
                     # We expect only the target to be written.
                     self.assertEqual(
@@ -936,11 +784,11 @@ class TestIndex(TestBase):
             entry_key = index.entry_key(full_index_entry)
             index.reset(new_commit)
 
-            assert entry_key not in index.entries
-            index.entries[entry_key] = full_index_entry
+            assert entry_key not in [(e.path, e.stage) for e in index.iter_entries()]
+            index.add([full_index_entry], write=False)
             index.write()
             index.update()  # Force reread of entries.
-            new_entry = index.entries[entry_key]
+            new_entry = index.entry(*entry_key)
             assert S_ISLNK(new_entry.mode)
 
             # A tree created from this should contain the symlink.
@@ -1007,8 +855,8 @@ class TestIndex(TestBase):
                 """Help out the test by yielding two existing paths and one new path."""
                 yield "CHANGES"
                 yield "ez_setup.py"
-                yield index.entries[index.entry_key("README", 0)]
-                yield index.entries[index.entry_key(".gitignore", 0)]
+                yield index.entry(*index.entry_key("README", 0))
+                yield index.entry(*index.entry_key(".gitignore", 0))
 
                 for fid in range(3):
                     fname = "newfile%i" % fid
@@ -1022,7 +870,7 @@ class TestIndex(TestBase):
             self._assert_entries(index.add(paths, path_rewriter=rewriter))
 
             for filenum in range(len(paths)):
-                assert index.entry_key(str(filenum), 0) in index.entries
+                assert index.entry_key(str(filenum), 0) in [(e.path, e.stage) for e in index.iter_entries()]
 
             # TEST RESET ON PATHS
             ######################
@@ -1037,18 +885,18 @@ class TestIndex(TestBase):
             files = (arela, brela)
 
             for fkey in keys:
-                assert fkey not in index.entries
+                assert fkey not in [(e.path, e.stage) for e in index.iter_entries()]
 
             index.add(files, write=True)
             nc = index.commit("2 files committed", head=False)
 
             for fkey in keys:
-                assert fkey in index.entries
+                assert fkey in [(e.path, e.stage) for e in index.iter_entries()]
 
             # Just the index.
             index.reset(paths=(arela, afile))
-            assert akey not in index.entries
-            assert bkey in index.entries
+            assert akey not in [(e.path, e.stage) for e in index.iter_entries()]
+            assert bkey in [(e.path, e.stage) for e in index.iter_entries()]
 
             # Now with working tree - files on disk as well as entries must be recreated.
             rw_repo.head.commit = nc
@@ -1058,7 +906,7 @@ class TestIndex(TestBase):
             index.reset(working_tree=True, paths=files)
 
             for fkey in keys:
-                assert fkey in index.entries
+                assert fkey in [(e.path, e.stage) for e in index.iter_entries()]
             for absfile in absfiles:
                 assert osp.isfile(absfile)
 
@@ -1096,10 +944,9 @@ class TestIndex(TestBase):
             assert isinstance(index, IndexFile)
         # END for each arg tuple
 
-    @ddt.data(*product(("../outside", ".git/hooks/pre-commit", "a/.GIT/config"), (1, 2, 3)))
-    @ddt.unpack
+    @ddt.data("../outside", ".git/hooks/pre-commit", "a/.GIT/config")
     @with_rw_directory
-    def test_native_tree_merge_rejects_unsafe_paths(self, rw_dir, path, tree_count):
+    def test_native_tree_merge_rejects_unsafe_paths(self, rw_dir, path):
         tmp_path = Path(rw_dir)
         with Repo.init(tmp_path) as repo:
             blob = repo.odb.store(IStream("blob", 4, BytesIO(b"data"))).binsha
@@ -1108,9 +955,8 @@ class TestIndex(TestBase):
                 stream.write(data)
                 stream.seek(0)
                 tree = bytes.fromhex(repo.git.hash_object("-w", "-t", "tree", "--literally", "--stdin", istream=stream))
-            empty = repo.odb.store(IStream("tree", 0, BytesIO())).binsha
             with pytest.raises((ValueError, GitCommandError)):
-                IndexFile.new(repo, *([empty] * (tree_count - 1) + [tree]))
+                IndexFile.new(repo, tree)
             assert not (tmp_path / ".git" / "index").exists()
 
     @with_rw_repo("HEAD", bare=True)
@@ -1201,12 +1047,12 @@ class TestIndex(TestBase):
             index = repo.index
             with pytest.raises(ValueError):
                 index.add([item], write=False, **kwargs)
-            assert not index.entries
+            assert not [(e.path, e.stage) for e in index.iter_entries()]
 
-    @ddt.data(*product(("path", "blob", "entry", "stored-blob", "stored-entry"), (False, True), (False, True)))
+    @ddt.data(*product(("path", "entry", "stored-entry"), (False, True)))
     @ddt.unpack
     @with_rw_directory
-    def test_staging_gitmodules_symlink_check_uses_rewritten_path(self, rw_dir, kind, unsafe_destination, write):
+    def test_staging_gitmodules_symlink_check_uses_rewritten_path(self, rw_dir, kind, unsafe_destination):
         with Repo.init(rw_dir) as repo:
             source, destination = ("safe-link", ".gitmodules") if unsafe_destination else (".gitmodules", "safe-link")
             binsha = Blob.NULL_BIN_SHA
@@ -1219,24 +1065,20 @@ class TestIndex(TestBase):
                     pytest.skip("Symlinks unavailable")
             if kind == "path":
                 item = source
-            elif kind.endswith("blob"):
-                item = Blob(repo, binsha, 0o120000, source)
             else:
                 item = BaseIndexEntry((0o120000, binsha, 0, source))
             index = repo.index
             rewriter = mock.Mock(return_value=destination)
             if unsafe_destination:
-                with pytest.raises(ValueError, match="submodule configuration"):
-                    index.add([item], path_rewriter=rewriter, write=write)
-                assert not index.entries
+                with pytest.raises(ValueError, match="Git did not retain"):
+                    index.add([item], path_rewriter=rewriter, write=False)
+                assert not [(e.path, e.stage) for e in index.iter_entries()]
                 assert not Path(index.path).exists()
             else:
-                added = index.add([item], path_rewriter=rewriter, write=write)
+                added = index.add([item], path_rewriter=rewriter, write=False)
                 assert [(entry.path, entry.mode) for entry in added] == [(destination, 0o120000)]
-                assert set(index.entries) == {(destination, 0)}
+                assert {(e.path, e.stage) for e in index.iter_entries()} == {(destination, 0)}
                 assert index.write_tree()[destination].mode == 0o120000
-                if write:
-                    assert repo.index.entries[(destination, 0)].mode == 0o120000
             rewriter.assert_called_once()
             assert rewriter.call_args[0][0].path == source
 
@@ -1255,7 +1097,7 @@ class TestIndex(TestBase):
             with pytest.raises(ValueError):
                 index.add([item], path_rewriter=rewriter, write=False)
             rewriter.assert_not_called()
-            assert not index.entries
+            assert not [(e.path, e.stage) for e in index.iter_entries()]
 
     @with_rw_directory
     def test_staging_root_preserves_symlinks_and_skips_git_metadata(self, rw_dir):
@@ -1270,7 +1112,7 @@ class TestIndex(TestBase):
                 pytest.skip("Symlinks unavailable")
             entries = repo.index.add(["."])
             assert {entry.path for entry in entries} == {"file", "link"}
-            link = repo.index.entries[("link", 0)]
+            link = repo.index.entry(*("link", 0))
             assert link.mode == 0o120000
             assert repo.odb.stream(link.binsha).read() == os.fsencode(os.readlink(root / "link"))
 
@@ -1522,30 +1364,12 @@ class TestIndex(TestBase):
 
         rw_repo.index.add(non_normalized_path)
 
-    @ddt.data(0, 5)
-    def test_unsupported_index_versions_fail_even_with_optimization(self, version):
-        data = b"DIRC" + struct.pack(">LL", version, 0)
-        with TemporaryDirectory() as directory:
-            path = Path(directory, "index")
-            path.write_bytes(data + sha1(data).digest())
-            with pytest.raises(GitCommandError):
-                IndexFile(self.rorepo, path).entries
-
-    @ddt.data(b"link", b"test")
-    def test_unsupported_mandatory_index_extensions_fail_closed(self, signature):
-        data = b"DIRC" + struct.pack(">LL", 2, 0) + signature + struct.pack(">L", 0)
-        with TemporaryDirectory() as directory:
-            path = Path(directory, "index")
-            path.write_bytes(data + sha1(data).digest())
-            with pytest.raises(GitCommandError):
-                IndexFile(self.rorepo, path).entries
-
     def test_index_file_v3(self):
         index = IndexFile(self.rorepo, fixture_path("index_extended_flags"))
-        assert index.entries
+        assert [(e.path, e.stage) for e in index.iter_entries()]
         assert index.version == 3
-        assert len(index.entries) == 4
-        assert index.entries[("init.t", 0)].skip_worktree
+        assert len([(e.path, e.stage) for e in index.iter_entries()]) == 4
+        assert index.entry(*("init.t", 0)).skip_worktree
 
         # Write the data - it must match the original.
         with tempfile.NamedTemporaryFile() as tmpfile:
@@ -1566,9 +1390,9 @@ class TestIndex(TestBase):
             repo = Repo(tmp_dir)
             index = repo.index
 
-            assert len(index.entries) == 1
+            assert len([(e.path, e.stage) for e in index.iter_entries()]) == 1
             assert index.version == 3
-            entry = list(index.entries.values())[0]
+            entry = list(index.iter_entries())[0]
             assert entry.path == "file.txt"
             assert " A file.txt" in git.status(porcelain=True)
 

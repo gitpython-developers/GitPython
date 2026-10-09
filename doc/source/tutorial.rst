@@ -341,7 +341,7 @@ As trees allow direct access to their intermediate child entries only, use the t
 
 The Index Object
 ****************
-The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. You may access and manipulate semantic entries (mode, object ID, path, and stage) using the :class:`IndexFile <git.index.base.IndexFile>` object. Git reads and writes the underlying index; raw stat fields and binary index extensions are not exposed.
+The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. Use :meth:`IndexFile.iter_entries <git.index.base.IndexFile.iter_entries>` and :meth:`IndexFile.entry <git.index.base.IndexFile.entry>` to query immutable entry records (mode, object ID, path, and stage); use ``add`` and ``remove`` to edit them. Deferred edits retain opaque index-file bytes. Git reads and writes the underlying index; raw stat fields and binary index extensions are not exposed.
 Modify the index with ease
 
 .. literalinclude:: ../../test/test_docs.py
@@ -522,20 +522,9 @@ resolves abbreviated object IDs through persistent ``git cat-file`` processes::
     # Equivalent explicit selection:
     repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
 
-GitDB
-=====
-.. warning::
-   The pure-Python ``GitDB`` backend is deprecated due to security and performance
-   issues. Its object parsers can exhaust resources or return incorrect object
-   data when processing untrusted repositories. Do not use it for untrusted data.
-
-Selecting ``odbt=GitDB`` (including a subclass) emits a ``DeprecationWarning``.
-To migrate, remove ``odbt=GitDB`` or replace it with ``odbt=GitCmdObjectDB`` when
-opening, initializing, or cloning a repository. The deprecated backend remains
-available for compatibility; deprecation does not fix its parsing issues.
-
-The ``gitdb`` package remains a dependency because GitPython still uses its shared
-types and utilities.
+Only ``GitCmdObjectDB`` and subclasses can be selected through ``odbt``. The
+legacy ``GitDB`` backend is removed. The ``gitdb`` package remains a dependency
+for shared types and utilities.
 
 Git Command Debugging and Customization
 ***************************************

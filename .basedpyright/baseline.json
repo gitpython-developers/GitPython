@@ -228,24 +228,6 @@
         }
       }
     ],
-    "./git/remote.py": [
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      },
-      {
-        "code": "reportAttributeAccessIssue",
-        "range": {
-          "startColumn": 26,
-          "endColumn": 38,
-          "lineCount": 1
-        }
-      }
-    ],
     "./git/repo/base.py": [
       {
         "code": "reportTypedDictNotRequiredAccess",
@@ -308,16 +290,6 @@
         "range": {
           "startColumn": 51,
           "endColumn": 73,
-          "lineCount": 1
-        }
-      }
-    ],
-    "./test/deprecation/test_basic.py": [
-      {
-        "code": "reportUnusedExpression",
-        "range": {
-          "startColumn": 12,
-          "endColumn": 62,
           "lineCount": 1
         }
       }

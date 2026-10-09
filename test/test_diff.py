@@ -128,7 +128,7 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         self.assertTrue(diff.renamed_file)
-        self.assertTrue(diff.renamed)
+        self.assertTrue(diff.renamed_file)
         self.assertEqual(diff.rename_from, "Jérôme")
         self.assertEqual(diff.rename_to, "müller")
         self.assertEqual(diff.raw_rename_from, b"J\xc3\xa9r\xc3\xb4me")
@@ -140,7 +140,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
         self.assertIsNotNone(diff.renamed_file)
-        self.assertIsNotNone(diff.renamed)
+        self.assertIsNotNone(diff.renamed_file)
         self.assertEqual(diff.rename_from, "this")
         self.assertEqual(diff.rename_to, "that")
         self.assertEqual(diff.change_type, "R")

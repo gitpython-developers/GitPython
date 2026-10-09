@@ -42,6 +42,36 @@ provide general Git-path resolution. A `native` counter must represent a
 Gix-backed operation, and backend timings include its Python glue and any CLI
 fallbacks.
 
+## Index and object metadata lifecycle
+
+`IndexFile` queries immutable entry records; it does not retain a parsed index.
+Deferred/virtual state consists of opaque file bytes, materialized before Git
+operates and read back only after success. Private edits use Git because native
+bindings cannot load an arbitrary existing index (GIX-3) or validate a checked
+batch of paths (GIX-26). Split snapshots become standalone through Git and regain
+split publication through Git. Native default-index queries, fresh v2 indexes
+and verified tree construction remain supported. Backend coverage must count
+these editing fallbacks.
+
+Commit metadata uses `Repository.find_commit().decode()` plus structured
+`Commit.author()`/`committer()` signatures. Tag metadata uses
+`Repository.find_tag().decode()` and `Tag.tagger()`. Decoded extra headers retain
+`gpgsig`. Raw Gix object bytes are used only for object streams. If repository
+capabilities require CLI fallback, metadata uses `git cat-file`: general formatted
+Git queries cannot faithfully expose all signature headers or arbitrary tags.
+The bounded public identity helpers remain Python glue. Human date parsing uses
+Git until GIX-27 is exposed; trailer extraction already uses Git.
+
+Benchmark remeasurement on 2026-10-09 used the same fixed SHA-1/files fixture
+`6ba2c0a2f9ee7feffd7e079621c4845820180c9a`. All 14 result digests match between
+CLI and Gix. Gix still uses 1 CLI process for the complete read journey, 0 for
+index reads and commit history, 1 for patch diffs/opening, and 3 for discovery.
+The CLI journey now uses 73 launches, including 26 for the 25-commit history;
+raw metadata queries preserve exact bytes. Existing Gix budgets remain valid.
+The `--fast` timing samples ran alongside validation and have substantial jitter;
+use their digests/counts, not their wall times, as evidence for this migration.
+These read-only budgets make no claim that index editing is native.
+
 ## Install and test without package indexes
 
 The prepared environments in this checkout are `.venv` (CLI) and `.tox/gix`
@@ -186,8 +216,8 @@ repository-format validation gap.
 | `Commit.iter_items`, `Repo.iter_commits` | First-parent walks and a single tip | General history ordering; GIX-8 |
 | Index entry reads, `ls_files` | Stage/mode/OID/path and exposed index flags | Custom and sparse indexes; GIX-3/4 |
 | `IndexFile.version`, `update_index` query | Native index version | Actual `update-index` mutations |
-| `IndexFile.write` and index persistence | Edit a private native index, publish through the existing lock | Custom, sparse, split, non-v2, unmerged, overlapping, or null-ID entries; GIX-3/4/13 |
-| ODB `store`, managed `hash_object` | Native object hashing/writing with byte-fidelity preflight | Large/nonseekable input and changed serialization; GIX-2/5 |
+| Index editing and `IndexFile.write` | Opaque byte snapshots; atomic locked publication | Private-file edits always use Git: arbitrary native index loading and strict pathname validation are missing; GIX-3/4/13/26 |
+| ODB `store`, managed `hash_object` | Native object hashing/writing with byte-fidelity preflight | Tags, large/nonseekable input and changed serialization; GIX-2/5/28 |
 | `IndexFile.write_tree` | Native tree editor with child-kind and null-ID validation | Missing non-gitlink children, invalid entries; GIX-7/24 |
 | Tree serialization, `mktree` | Native tree editor with child-kind and null-ID validation | Missing children, unsupported or invalid entries; GIX-7/24 |
 | Fresh index preparation, `read_tree` | Empty index or index from one tree | Existing index, merges, non-v2 selection; GIX-13 |
@@ -738,6 +768,10 @@ identify the historical fixture where needed.
 | GIX-23 | Missing API | No hook lookup or execution API is bound in GixPython 0.1.0. The removed absence fast path read config through Gix but used Python `os.stat()` to declare success. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops. A Python filesystem check is not a Gix implementation. |
 | GIX-24 | Bug | In both object formats, `new_commit_as()` accepts a blob as the tree or a parent where `git commit-tree` rejects it. Tree-editor `upsert()`/`write()` accepts object IDs whose actual kinds disagree with blob/tree/gitlink modes; `git mktree --missing` rejects all three tested mismatches. `edit_references_as()` accepts a blob target under `refs/heads/`, rejected by `git update-ref`. | Provide checked commit/tree construction and reference edits, at least in Git-strict mode. Match Git's kind and direct-branch target validation before writing and under the required ref locks, including its distinct handling of symbolic aliases. Existing `_commit_tree`, `_write_tree` and `_update_ref` guards query Gix headers and select CLI on invalid inputs; they do not replace Gix writes with Python. |
 | GIX-25 | Bug; missing API | After `git symbolic-ref refs/heads/dangling refs/heads/missing`, `Repository.references().all()` enumerates the dangling name, while `git for-each-ref --format=%(refname)` omits it. Valid symbolic aliases must remain present. Both SHA-1 and SHA-256 probes reproduce this difference. | Expose Git-compatible enumeration with the same dangling-reference and diagnostic behavior, retaining the raw iterator for callers that need it. `_for_each_ref` forces Gix to resolve symbolic targets and falls back to Git on failure; keep that fallback until a compatible Gix API/mode is verified. |
+| GIX-26 | Bug; missing API | `dangerously_push_entry(IndexStat(), oid, 0, 0o120000, b".gitmodules")`, followed by `sort_entries()`, `verify_entries()` and `write()`, succeeds and retains the unsafe symlink. Protected Git `update-index -z --index-info` ignores it with exit 0 and `Ignoring path .gitmodules`; protected `read-tree` rejects it. The native fresh `index_from_tree` also rejects it. | A Git-strict checked index batch editor that validates names/modes, preserves metadata and reports rejected records. `verify_entries()` verifies ordering, not pathname safety. All private-index edits use Git with `core.protectHFS=true` and `core.protectNTFS=true`, followed by requested-entry readback; no Python dictionary reconstruction or native dangerous insertion remains. |
+| GIX-27 | Missing API | `gix.Time` exposes seconds/offset but no human date parser in GixPython 0.1.0. | Bind Git-compatible textual date parsing with timezone semantics. `parse_date()` uses `git var GIT_AUTHOR_IDENT` with fixed identity and per-command date, then adapts the normalized timestamp/offset. |
+| GIX-28 | Bug; missing API | GixPython 0.1.0 on Gitoxide `f819565c2c4c56619c4888acef6cf3b8144cbccb` stores `object <blob>\ntype blob\ntag invalid\n\nmessage\n` through `write_object("tag", data)`. Git 2.54.0 rejects the same payload through `hash-object -t tag -w --stdin` with `missingTaggerEntry`. Byte-preserving native readback does not establish Git's validation. | Expose a Git-strict tag writer or validation API. Managed tag hashing/storage uses Git before any native write; `test_tag_storage_rejects_missing_tagger` verifies failure and absence from storage. Keep the bug open until upstream validation is verified. |
+
 
 Windows reproduction for GIX-14 uses CPython 3.12.13, Git
 2.55.0.windows.3 and the released GixPython 0.1.0 source distribution with

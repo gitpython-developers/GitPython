@@ -694,7 +694,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             except KeyError:
                 # Could only be in index.
                 index = repo.index
-                entry = index.entries[index.entry_key(path, 0)]
+                entry = index.entry(path)
                 sm.binsha = entry.binsha
                 return sm
             # END handle exceptions
@@ -837,7 +837,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END verify url
 
         ## See #525 for ensuring git URLs in config-files are valid under Windows.
-        url = Git.polish_url(url, expand_vars=False)
+        url = Git.polish_url(url)
 
         # It's important to add the URL to the parent config, to let `git submodule` know.
         # Otherwise there is a '-' character in front of the submodule listing:
@@ -1297,9 +1297,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END handle target files
 
         index = self.repo.index
-        tekey = index.entry_key(module_checkout_path, 0)
-        # if the target item already exists, fail
-        if configuration and tekey in index.entries:
+        # Fail if the target already has an entry.
+        if configuration and any(e.path == module_checkout_path and e.stage == 0 for e in index.iter_entries()):
             raise ValueError("Index entry for target path did already exist")
         # END handle index key already there
 
@@ -1356,11 +1355,10 @@ class Submodule(IndexObject, TraversableIterableObj):
         try:
             if configuration:
                 try:
-                    ekey = index.entry_key(self.path, 0)
-                    entry = index.entries[ekey]
-                    del index.entries[ekey]
+                    entry = index.entry(self.path)
+                    index.remove(self.path, write=False, force=True)
                     nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
-                    index.entries[tekey] = nentry
+                    index.add([nentry], write=False)
                 except KeyError as e:
                     raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path)) from e
                 # END handle submodule doesn't exist
@@ -1569,7 +1567,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             # First the index-entry.
             parent_index = self.repo.index
             try:
-                del parent_index.entries[parent_index.entry_key(self.path, 0)]
+                parent_index.entry(self.path)
+                parent_index.remove(self.path, write=False, force=True)
             except KeyError:
                 pass
             # END delete entry
@@ -1922,7 +1921,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             except KeyError:
                 # Try the index, maybe it was just added.
                 try:
-                    entry = index.entries[index.entry_key(p, 0)]
+                    entry = index.entry(p)
                     sm = Submodule(repo, entry.binsha, entry.mode, entry.path)
                 except KeyError:
                     # The submodule doesn't exist, probably it wasn't removed from the

@@ -11,17 +11,6 @@ permissions:
 
 jobs:
   test:
-    strategy:
-      matrix:
-        selection: [fast, perf]
-        include:
-        - selection: fast
-          additional-pytest-args: --ignore=test/performance
-        - selection: perf
-          additional-pytest-args: test/performance
-
-      fail-fast: false
-
     runs-on: windows-latest
 
     env:
@@ -149,6 +138,6 @@ jobs:
         python --version
         python -c 'import os, sys; print(f"{sys.platform=}, {os.name=}")'
 
-    - name: Test with pytest (${{ matrix.additional-pytest-args }})
+    - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv ${{ matrix.additional-pytest-args }}
+        pytest --color=yes -p no:sugar --instafail -vv

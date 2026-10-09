@@ -18,7 +18,7 @@ from git import Repo
 from git.objects import Blob, Commit, TagObject, Tree
 import git.objects.base as base
 from git.objects.util import get_object_type_by_name
-from git.util import HIDE_WINDOWS_FREEZE_ERRORS, hex_to_bin
+from git.util import hex_to_bin
 
 from test.lib import TestBase as _TestBase, with_rw_and_rw_remote_repo, with_rw_repo
 
@@ -126,7 +126,7 @@ class TestBase(_TestBase):
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
         assert osp.isdir(rw_repo.working_dir)
 
-    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
+    @skipIf(sys.platform == "win32", "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")

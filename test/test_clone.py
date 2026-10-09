@@ -425,7 +425,7 @@ class TestClone(TestBase):
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             cloned = Repo.clone_from(url, pathlib.Path(rw_dir) / "clone")
 
-        assert cloned.remotes.origin.url == Git.polish_url(str(url), expand_vars=False)
+        assert cloned.remotes.origin.url == Git.polish_url(str(url))
 
     def test_clone_from_checks_polished_url_for_unsafe_protocol(self):
         with mock.patch.object(Git, "polish_url", return_value="ext::command"):
@@ -439,7 +439,7 @@ class TestClone(TestBase):
         urls = ["$GITPYTHON_TEST_SECRET/repo", "user@example.com:$GITPYTHON_TEST_SECRET/repo"]
         with mock.patch.dict(os.environ, {"GITPYTHON_TEST_SECRET": "sensitive-value"}):
             for url in urls:
-                assert Git.polish_url(url, is_cygwin=True, expand_vars=False) == url
+                assert Git.polish_url(url, is_cygwin=True) == url
 
     def test_clone_from_unsafe_protocol_allowed(self):
         with TemporaryDirectory() as tdir:

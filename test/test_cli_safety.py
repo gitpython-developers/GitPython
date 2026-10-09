@@ -11,13 +11,19 @@ from gitdb import IStream
 from gitdb.db import LooseObjectDB
 
 from git import Actor, Git, Repo
-from git.exc import UnsafeOptionError, UnsupportedOperation
+from git.exc import GitCommandError, UnsafeOptionError, UnsupportedOperation
 
 
 @pytest.fixture(params=[("sha1", "files"), ("sha1", "reftable"), ("sha256", "files"), ("sha256", "reftable")])
 def repo(tmp_path, request):
     object_format, ref_format = request.param
     with Repo.init(tmp_path / "repo", object_format=object_format, ref_format=ref_format) as repo:
+        yield repo
+
+
+@pytest.fixture
+def plain_repo(tmp_path):
+    with Repo.init(tmp_path / "repo") as repo:
         yield repo
 
 
@@ -33,6 +39,19 @@ def test_default_database_never_uses_python_storage(repo):
     assert not repo.odb.has_object(bytes(repo._oid_size))
 
 
+def test_tag_storage_rejects_missing_tagger(plain_repo):
+    repo = plain_repo
+    blob = repo.odb.store(IStream("blob", 1, BytesIO(b"x")))
+    raw = b"object " + blob.hexsha + b"\ntype blob\ntag invalid\n\nmessage\n"
+    with tempfile.TemporaryFile() as stream:
+        stream.write(raw)
+        stream.seek(0)
+        oid = repo.git.hash_object("-t", "tag", "--literally", "--stdin", istream=stream)
+    with pytest.raises(GitCommandError, match="missingTaggerEntry"):
+        repo.odb.store(IStream("tag", len(raw), BytesIO(raw)))
+    assert not repo.odb.has_object(bytes.fromhex(oid))
+
+
 def test_batch_queries_cannot_inject_a_second_request(repo):
     payload = b"contents\0\n"
     stored = repo.odb.store(IStream("blob", len(payload), BytesIO(payload)))
@@ -45,7 +64,8 @@ def test_batch_queries_cannot_inject_a_second_request(repo):
 
 
 @pytest.mark.parametrize("query", ["HEAD\0HEAD", "--batch-all-objects"])
-def test_batch_injection_rejected_before_process_start(repo, query):
+def test_batch_injection_rejected_before_process_start(plain_repo, query):
+    repo = plain_repo
     with patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as execute:
         with pytest.raises(UnsafeOptionError):
             repo.git.get_object_header(query)
@@ -53,14 +73,16 @@ def test_batch_injection_rejected_before_process_start(repo, query):
 
 
 @pytest.mark.parametrize("kind,size,data", [("--literally", 0, b""), ("blob", -1, b""), ("blob", 3, b"x")])
-def test_invalid_object_stream_does_not_start_git(repo, kind, size, data):
+def test_invalid_object_stream_does_not_start_git(plain_repo, kind, size, data):
+    repo = plain_repo
     with patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as execute:
         with pytest.raises(ValueError):
             repo.odb.store(IStream(kind, size, BytesIO(data)))
         execute.assert_not_called()
 
 
-def test_library_calls_reject_shell_and_executable_configuration(repo):
+def test_library_calls_reject_shell_and_executable_configuration(plain_repo):
+    repo = plain_repo
     with patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as execute:
         for options in (
             {"shell": True},
@@ -73,7 +95,8 @@ def test_library_calls_reject_shell_and_executable_configuration(repo):
         execute.assert_not_called()
 
 
-def test_managed_commands_disable_implicit_execution(repo):
+def test_managed_commands_disable_implicit_execution(plain_repo):
+    repo = plain_repo
     repo.git.version_info
     with patch.object(Git, "execute", return_value="") as execute:
         repo.git._call_process_safe("status")
@@ -143,3 +166,31 @@ def test_raw_command_interface_keeps_its_passthrough_contract():
         "--setting=value",
         "--arbitrary",
     ]
+
+
+def test_removed_object_backend_is_rejected_before_mutation(tmp_path):
+    destination = tmp_path / "must-not-exist"
+    for operation in (
+        lambda: Repo(destination, odbt=LooseObjectDB),
+        lambda: Repo.init(destination, odbt=LooseObjectDB),
+        lambda: Repo.clone_from("unused", destination, odbt=LooseObjectDB),
+    ):
+        with patch.object(Git, "execute", side_effect=AssertionError("Git must not run")):
+            with pytest.raises(ValueError, match="GitCmdObjectDB"):
+                operation()
+        assert not destination.exists()
+
+
+def test_paths_use_literal_environment_syntax_and_expand_tilde(tmp_path, monkeypatch):
+    from git.util import expand_path
+
+    monkeypatch.setenv("GITPYTHON_LITERAL_PATH", "expanded")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    assert Path(expand_path("~/repo")) == tmp_path / "repo"
+    assert Path(expand_path(Path("~/repo"))) == tmp_path / "repo"
+    for name in ("$GITPYTHON_LITERAL_PATH", "%GITPYTHON_LITERAL_PATH%"):
+        destination = tmp_path / name
+        with Repo.init(destination) as repo:
+            assert Path(repo.working_tree_dir) == destination
+        assert Git.polish_url(name, is_cygwin=False) == name

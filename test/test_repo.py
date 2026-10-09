@@ -25,7 +25,6 @@ from git import (
     Git,
     GitCmdObjectDB,
     GitCommandError,
-    GitDB,
     Head,
     IndexFile,
     InvalidGitRepositoryError,
@@ -315,7 +314,7 @@ class TestRepo(TestBase):
         (git_dir / "objects").rename(object_dir)
 
         with cwd(tdir), mock.patch.dict(os.environ, {"GIT_DIR": "git", "GIT_OBJECT_DIRECTORY": "objects"}):
-            repo = Repo(odbt=GitDB)
+            repo = Repo()
 
         with repo:
             assert osp.samefile(repo.odb.root_path(), object_dir)
@@ -433,7 +432,7 @@ class TestRepo(TestBase):
         It should throw good errors.
         """
         # Entries should be empty.
-        self.assertEqual(len(repo.index.entries), 0)
+        self.assertEqual(len([(e.path, e.stage) for e in repo.index.iter_entries()]), 0)
 
         # head is accessible.
         assert repo.head
@@ -740,9 +739,18 @@ class TestRepo(TestBase):
             with self.assertRaises(UnsafeOptionError):
                 list(self.rorepo.iter_commits(f"--output={target}", max_count=1))
 
-    @mock.patch.object(Git, "_call_process")
-    def test_should_display_blame_information(self, git):
-        git.return_value = fixture("blame")
+    def test_should_display_blame_information(self):
+        original_call = Git._call_process
+        git = mock.Mock(return_value=fixture("blame"))
+
+        def blame_only(command, method, *args, **kwargs):
+            if method == "blame":
+                return git(method, *args, **kwargs)
+            return original_call(command, method, *args, **kwargs)
+
+        patcher = mock.patch.object(Git, "_call_process", blame_only)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         b = self.rorepo.blame("master", "lib/git.py")
         self.assertEqual(13, len(b))
         self.assertEqual(2, len(b[0]))
@@ -945,16 +953,6 @@ class TestRepo(TestBase):
         self.assertEqual(self.rorepo, self.rorepo)
         self.assertFalse(self.rorepo != self.rorepo)
         self.assertEqual(len({self.rorepo, self.rorepo}), 1)
-
-    @with_rw_directory
-    def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        with mock.patch.dict(os.environ, {"HOME": rw_dir}):
-            os.environ["HOME"] = rw_dir
-            Repo.init(osp.join("~", "test.git"), bare=True)
-
-        with mock.patch.dict(os.environ, {"FOO": rw_dir}):
-            os.environ["FOO"] = rw_dir
-            Repo.init(osp.join("$FOO", "test.git"), bare=True)
 
     def test_git_cmd(self):
         # Test CatFileContentStream, just to be very sure we have no fencepost errors.
@@ -1273,7 +1271,7 @@ class TestRepo(TestBase):
         # The loops below would easily create 500 handles if these would leak
         # (4 pipes + multiple mapped files).
         for _ in range(64):
-            for repo_type in (GitCmdObjectDB, GitDB):
+            for repo_type in (GitCmdObjectDB,):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
                 last_commit(repo, "HEAD", "test/test_base.py")
             # END for each repository type

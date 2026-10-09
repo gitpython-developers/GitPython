@@ -23,14 +23,14 @@ from test.lib import TestBase, with_rw_directory, with_rw_repo
 class TestFun(TestBase):
     @staticmethod
     def merge_trees(repo, trees):
-        return list(IndexFile.new(repo, *(tree.hex() for tree in trees)).entries.values())
+        return list(IndexFile.new(repo, *(tree.hex() for tree in trees)).iter_entries())
 
     def _assert_index_entries(self, entries, trees):
         index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t).decode("ascii")) for t in trees])
         assert entries
-        assert len(index.entries) == len(entries)
+        assert len([(e.path, e.stage) for e in index.iter_entries()]) == len(entries)
         for entry in entries:
-            assert (entry.path, entry.stage) in index.entries
+            assert (entry.path, entry.stage) in [(e.path, e.stage) for e in index.iter_entries()]
         # END assert entry matches fully
 
     def test_aggressive_tree_merge(self):

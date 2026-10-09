@@ -148,7 +148,6 @@ def test_implicit_cleanup_is_also_best_effort(tmp_path, locked_file, caplog):
 
 
 def test_public_rmtree_remains_strict(tmp_path, locked_file, monkeypatch):
-    monkeypatch.setattr(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", False)
     directory = tmp_path / "strict"
     directory.mkdir()
     (directory / "locked").touch()

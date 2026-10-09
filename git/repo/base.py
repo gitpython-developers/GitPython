@@ -16,12 +16,10 @@ import shlex
 import sys
 import tempfile
 from threading import RLock
-import warnings
 import weakref
 
 import gitdb
 import gitdb.util
-from gitdb.db.loose import LooseObjectDB
 from gitdb.exc import BadObject
 
 from git import _backend
@@ -138,7 +136,7 @@ class Repo:
     git_dir: PathLike
     """The ``.git`` repository directory."""
 
-    odb: Union[GitCmdObjectDB, LooseObjectDB, gitdb.GitDB]
+    odb: GitCmdObjectDB
 
     _common_dir: PathLike = ""
 
@@ -146,7 +144,6 @@ class Repo:
     re_whitespace = re.compile(r"\s+")
     re_hexsha_only = re.compile(r"^(?:[0-9A-Fa-f]{40}|[0-9A-Fa-f]{64})$")
     re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,64}$")
-    re_envvars = re.compile(r"(\$(\{\s?)?[a-zA-Z_]\w*(\}\s?)?|%\s?[a-zA-Z_]\w*\s?%)")
     re_author_committer_start = re.compile(r"^(author|committer)")
     re_tab_full_line = re.compile(r"^\t(.*)$")
 
@@ -238,9 +235,8 @@ class Repo:
     def __init__(
         self,
         path: Optional[PathLike] = None,
-        odbt: Type[Union[GitCmdObjectDB, LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
+        odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         search_parent_directories: bool = False,
-        expand_vars: bool = True,
         *,
         _env: Optional[Mapping[str, Optional[str]]] = None,
     ) -> None:
@@ -256,7 +252,7 @@ class Repo:
                 repo = Repo("/Users/mtrier/Development/git-python")
                 repo = Repo("/Users/mtrier/Development/git-python.git")
                 repo = Repo("~/Development/git-python.git")
-                repo = Repo("$REPOSITORIES/Development/git-python.git")
+                repo = Repo(os.path.expandvars("$REPOSITORIES/Development/git-python.git"))
                 repo = Repo(R"C:\Users\mtrier\Development\git-python\.git")
 
             - In *Cygwin*, `path` may be a ``cygdrive/...`` prefixed path.
@@ -267,9 +263,8 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data. The pure-Python ``GitDB`` backend is
-            deprecated due to security and performance issues. Use the default
-            :class:`~git.db.GitCmdObjectDB` instead.
+            used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
+            and its subclasses are supported.
 
         :param search_parent_directories:
             If ``True``, all parent directories will be searched for a valid repo as
@@ -288,6 +283,8 @@ class Repo:
 
         # Clones can clear inherited source-storage variables without changing the
         # process environment. Apply these overrides to discovery and later calls.
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
         environment = dict(_env or {})
         git_dir_env = environment.pop("GIT_DIR", os.getenv("GIT_DIR"))
         object_dir_env = environment.get("GIT_OBJECT_DIRECTORY", os.getenv("GIT_OBJECT_DIRECTORY"))
@@ -303,13 +300,7 @@ class Repo:
             # changing to Cygwin-style paths is the relevant operation.
             epath = cygpath(epath)
 
-        if expand_vars and re.search(self.re_envvars, epath):
-            warnings.warn(
-                "The use of environment variables in paths is deprecated"
-                + "\nfor security reasons and may be removed in the future!!",
-                stacklevel=1,
-            )
-        epath = expand_path(epath, expand_vars)
+        epath = expand_path(epath)
         if epath is not None:
             if not os.path.exists(epath):
                 raise NoSuchPathError(epath)
@@ -473,17 +464,7 @@ class Repo:
 
         # Special handling, in special times.
         rootpath = object_dir_env if object_dir_env is not None else osp.join(self.common_dir, "objects")
-        if issubclass(odbt, GitCmdObjectDB):
-            self.odb = odbt(rootpath, self.git)
-        else:
-            if issubclass(odbt, gitdb.GitDB):
-                warnings.warn(
-                    "GitDB is deprecated as a GitPython backend due to security and performance issues. "
-                    "Use the default GitCmdObjectDB backend instead.",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-            self.odb = odbt(rootpath)
+        self.odb = odbt(rootpath, self.git)
 
     def _get_gix_repository(
         self,
@@ -1570,8 +1551,7 @@ class Repo:
         cls,
         path: Union[PathLike, None] = None,
         mkdir: bool = True,
-        odbt: Type[Union[GitCmdObjectDB, LooseObjectDB, gitdb.GitDB]] = GitCmdObjectDB,
-        expand_vars: bool = True,
+        odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
@@ -1590,13 +1570,8 @@ class Repo:
         :param odbt:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
-            used to access all object data. The pure-Python ``GitDB`` backend is
-            deprecated; use the default :class:`~git.db.GitCmdObjectDB` instead.
-
-        :param expand_vars:
-            If specified, environment variables will not be escaped. This can lead to
-            information disclosure, allowing attackers to access the contents of
-            environment variables.
+            used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
+            and its subclasses are supported.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, such as ``--template`` and
@@ -1614,9 +1589,11 @@ class Repo:
                 options=Git._option_candidates([], kwargs),
                 unsafe_options=cls.unsafe_git_init_options,
             )
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
         cls.GitCommandWrapperType()._require_version()
         if path:
-            path = expand_path(path, expand_vars)
+            path = expand_path(path)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
@@ -1631,7 +1608,7 @@ class Repo:
         git: "Git",
         url: PathLike,
         path: PathLike,
-        odb_default_type: Type[Union[GitCmdObjectDB, LooseObjectDB, gitdb.GitDB]],
+        odb_default_type: Type[GitCmdObjectDB],
         progress: Union["RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None] = None,
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
@@ -1639,6 +1616,8 @@ class Repo:
         **kwargs: Any,
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
+        if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
+            raise ValueError("odbt must be GitCmdObjectDB or a subclass")
 
         # A clone creates a different repository. Do not inherit the source
         # repository's storage paths, including paths bound by Repo.__init__.
@@ -1670,12 +1649,12 @@ class Repo:
         clone_path = Git.polish_url(path) if Git.is_cygwin() and "bare" in kwargs else path
         sep_dir = kwargs.get("separate_git_dir")
         if sep_dir:
-            kwargs["separate_git_dir"] = Git.polish_url(os.fspath(sep_dir), expand_vars=False)
+            kwargs["separate_git_dir"] = Git.polish_url(os.fspath(sep_dir))
         multi = None
         if multi_options:
             multi = shlex.split(" ".join(multi_options))
 
-        clone_url = Git.polish_url(url, expand_vars=False)
+        clone_url = Git.polish_url(url)
         if not allow_unsafe_protocols:
             Git.check_unsafe_protocols(clone_url)
         if not allow_unsafe_options:
@@ -1732,7 +1711,7 @@ class Repo:
         # escape the backslashes. Hence we undo the escaping just to be sure.
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
-                writer.set_value("url", Git.polish_url(repo.remotes[0].url, expand_vars=False))
+                writer.set_value("url", Git.polish_url(repo.remotes[0].url))
         # END handle remote repo
         return repo
 
@@ -1776,7 +1755,7 @@ class Repo:
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned :class:`Repo` instance. The
-              pure-Python ``GitDB`` backend is deprecated; use the default
+              backend must be ``GitCmdObjectDB`` or its subclass; use the default
               :class:`~git.db.GitCmdObjectDB` instead.
             * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
               command.

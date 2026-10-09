@@ -33,7 +33,7 @@ from git import (
 )
 from git.cmd import Git
 from git.exc import UnsafeOptionError, UnsafeProtocolError
-from git.util import HIDE_WINDOWS_FREEZE_ERRORS, IterableList
+from git.util import IterableList
 from test.cleanup import TemporaryDirectory, cleanup_directory
 from test.lib import (
     GIT_DAEMON_PORT,
@@ -441,7 +441,7 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path, kill_after_timeout=10.0)
 
-    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
+    @skipIf(sys.platform == "win32", "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0

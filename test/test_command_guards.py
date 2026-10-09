@@ -246,6 +246,7 @@ def test_merge_base_distinguishes_unrelated_history_from_invalid_options(tmp_pat
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_move_checks_unsafe_options(tmp_path, option, dry_run, allow_unsafe_options):
     repo = Repo.init(tmp_path)
+    repo.index.write()
     repo.git.version_info
     with mock.patch.object(Git, "execute", return_value="Renaming source to destination\n") as run:
         kwargs = {option: "unused", "dry_run": dry_run}
@@ -253,8 +254,9 @@ def test_move_checks_unsafe_options(tmp_path, option, dry_run, allow_unsafe_opti
             assert repo.index.move(["source", "destination"], True, allow_unsafe_options=True, **kwargs) == [
                 ("source", "destination")
             ]
-            assert run.call_count == (1 if dry_run else 2)
-            for call in run.call_args_list:
+            moves = [call for call in run.call_args_list if "mv" in call.args[0]]
+            assert len(moves) == (1 if dry_run else 2)
+            for call in moves:
                 argv = call[0][0]
                 assert "-k" in argv
                 assert f"--{option.replace('_', '-')}=unused" in argv
