@@ -2,7 +2,8 @@
 
 Before starting work, read and follow [CONTRIBUTING.md](CONTRIBUTING.md),
 including the [Prevent agent impersonation](CONTRIBUTING.md#prevent-agent-impersonation)
-section governing identification when communicating through a person's account.
+section governing agent identification and separation of unaltered user statements
+when communicating through a person's account.
 
 # Commit messages
 

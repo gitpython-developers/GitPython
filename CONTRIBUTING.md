@@ -27,6 +27,13 @@ example in issue or PR descriptions and comments. AI assistance that does not re
 the person as the speaker, such as proofreading or wording polish, does not require
 identification.
 
+Even when identifying themselves, agents must not assert on a person's behalf that
+that person performed an action, such as reviewing or approving a PR. The person
+must make any such statement themselves. If it is included alongside agent-authored
+content, it must be supplied by the person and preserved verbatim in a clearly
+labeled, separate user-authored section. Agents must not draft, paraphrase, or embed
+such statements in their own narration.
+
 Attributing AI assistance in commit metadata, for example with a `Co-authored-by`
 trailer, is welcome but not required. Code is reviewed the same way regardless of its
 origin.
