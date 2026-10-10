@@ -1878,6 +1878,27 @@ class TestIndexCheckout:
             for name, data in files.items():
                 assert (tmp_path / name).read_bytes() == data
 
+    @pytest.mark.skipif(os.name == "nt", reason="Line feeds and quotes are not valid Windows filenames")
+    def test_checkout_sends_each_path_as_one_record(self, tmp_path):
+        with Repo.init(tmp_path) as repo:
+            nested = tmp_path / "nested"
+            nested.mkdir()
+            (nested / "first\noutside").write_bytes(b"nested")
+            (tmp_path / "outside").write_bytes(b"committed")
+            (tmp_path / '"quoted"').write_bytes(b"quoted")
+            repo.index.add(["nested", "outside", '"quoted"'])
+
+            (nested / "first\noutside").unlink()
+            (tmp_path / '"quoted"').unlink()
+            (tmp_path / "outside").write_bytes(b"local")
+
+            checked_out = {"nested/first\noutside", '"quoted"'}
+            assert set(repo.index.checkout(["nested", '"quoted"'], force=True)) == checked_out
+            assert (nested / "first\noutside").read_bytes() == b"nested"
+            assert (tmp_path / '"quoted"').read_bytes() == b"quoted"
+            # Neither "nested/first" nor "outside" was requested.
+            assert (tmp_path / "outside").read_bytes() == b"local"
+
 
 class TestIndexUtils:
     @pytest.mark.parametrize("file_path_type", [str, Path])

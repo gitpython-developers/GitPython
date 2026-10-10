@@ -1940,9 +1940,15 @@ class Git(metaclass=_GitMeta):
         else:
             refstr = ref
 
-        if not refstr.endswith("\n"):
-            refstr += "\n"
-        return refstr.encode(defenc)
+        # A line feed terminates a request, so one object name must be one line. An
+        # embedded one would queue a second request on the persistent command while
+        # only one response line is read back, leaving every later call one response
+        # behind, answered with the header of an object it did not ask for.
+        if refstr.endswith("\n"):
+            refstr = refstr[:-1]
+        if "\n" in refstr:
+            raise ValueError("Object name %r contains a line feed" % refstr)
+        return (refstr + "\n").encode(defenc)
 
     def _get_persistent_cmd(self, attr_name: str, cmd_name: str, *args: Any, **kwargs: Any) -> "Git.AutoInterrupt":
         cur_val = getattr(self, attr_name)
