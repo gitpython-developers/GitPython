@@ -1018,8 +1018,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         for numtype in types:
             try:
                 val = numtype(valuestr)
-                # truncated value ?
-                if val != float(valuestr):
+                # Reject NaN without coercing exact integer values to float.
+                if numtype is float and val != float(valuestr):
                     continue
                 return val
             except (ValueError, TypeError):
