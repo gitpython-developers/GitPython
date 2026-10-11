@@ -17,6 +17,7 @@ from gitdb import IStream
 
 from git import Actor, Commit, Repo
 from git.exc import UnsafeOptionError
+from git.index.typ import BaseIndexEntry
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 
@@ -165,6 +166,36 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.author_tz_offset, 14400, commit.author_tz_offset)
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
+
+    @with_rw_directory
+    def test_stats_preserve_filename_spaces(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        actor = Actor("Test", "test@example.com")
+        paths = ("name", " name", "name ", " name ", " ")
+        # Store blobs directly so trailing spaces work on Windows as well.
+        for multiplier, change_type in ((1, "A"), (2, "M")):
+            for count, path in enumerate(paths, 1):
+                data = b"line\n" * count * multiplier
+                blob = repo.odb.store(IStream("blob", len(data), BytesIO(data)))
+                repo.index.add([BaseIndexEntry((0o100644, blob.binsha, 0, path))])
+            commit = repo.index.commit("Update files", author=actor, committer=actor)
+            stats = commit.stats
+            assert stats.total == {"insertions": 15, "deletions": 0, "lines": 15, "files": 5}
+            assert stats.files == {
+                path: {"insertions": count, "deletions": 0, "lines": count, "change_type": change_type}
+                for count, path in enumerate(paths, 1)
+            }
+        empty_stats = repo.index.commit("No changes", author=actor, committer=actor).stats
+        assert empty_stats.files == {}
+        assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
+
+        repo.index.remove(list(paths))
+        removed_stats = repo.index.commit("Remove files", author=actor, committer=actor).stats
+        assert removed_stats.files == {
+            path: {"insertions": 0, "deletions": 2 * count, "lines": 2 * count, "change_type": "D"}
+            for count, path in enumerate(paths, 1)
+        }
+        assert removed_stats.total == {"insertions": 0, "deletions": 30, "lines": 30, "files": 5}
 
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
