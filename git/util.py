@@ -1382,7 +1382,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
 
         # Otherwise make a full name search.
         try:
-            getattr(self, cast(str, attr))  # Use cast to silence mypy.
+            self.__getattr__(cast(str, attr))  # Use cast to silence mypy.
             return True
         except (AttributeError, TypeError):
             return False
@@ -1394,7 +1394,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
             if getattr(item, self._id_attr) == attr:
                 return item
         # END for each item
-        return list.__getattribute__(self, attr)
+        raise AttributeError(f"No item found with id {attr}")
 
     def __getitem__(  # type: ignore[override]  # pyright: ignore[reportIncompatibleMethodOverride]
         self, index: Union[SupportsIndex, int, slice, str]
@@ -1405,7 +1405,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
             raise ValueError("Index should be an int or str")
         else:
             try:
-                return getattr(self, cast(str, index))
+                return self.__getattr__(cast(str, index))
             except AttributeError as e:
                 raise IndexError(f"No item found with id {self._prefix}{index}") from e
         # END handle getattr
