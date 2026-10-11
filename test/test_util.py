@@ -882,3 +882,40 @@ def test_iterable_list_name_lookup_ignores_list_attributes(name, prefix):
     assert name not in values
     with pytest.raises(IndexError, match="No item found with id"):
         values[name]
+
+
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+@pytest.mark.parametrize("relative", [True, False])
+def test_blocking_lock_waits_for_existing_holder(tmp_path, monkeypatch, path_type, relative):
+    monkeypatch.chdir(tmp_path)
+    path = path_type("resource" if relative else tmp_path / "resource")
+    owner = LockFile(path)
+    waiter = BlockingLockFile(path, check_interval_s=0.01, max_block_time_s=1)
+    owner._obtain_lock()
+    try:
+        with mock.patch.object(time, "sleep", side_effect=lambda _: owner._release_lock()) as sleep:
+            waiter._obtain_lock()
+            sleep.assert_called_once_with(0.01)
+        assert waiter._has_lock()
+    finally:
+        owner._release_lock()
+        waiter._release_lock()
+
+
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+def test_blocking_relative_lock_reports_timeout(tmp_path, monkeypatch, path_type):
+    monkeypatch.chdir(tmp_path)
+    owner = LockFile(path_type("resource"))
+    waiter = BlockingLockFile(path_type("resource"), max_block_time_s=0)
+    owner._obtain_lock()
+    try:
+        with pytest.raises(OSError, match="Waited .* seconds for lock"):
+            waiter._obtain_lock()
+    finally:
+        owner._release_lock()
+
+
+def test_blocking_lock_still_rejects_missing_directory(tmp_path):
+    waiter = BlockingLockFile(tmp_path / "missing" / "resource")
+    with pytest.raises(OSError, match="Directory containing the lockfile"):
+        waiter._obtain_lock()

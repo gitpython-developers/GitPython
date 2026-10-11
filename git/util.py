@@ -1310,7 +1310,7 @@ class BlockingLockFile(LockFile):
                 # synity check: if the directory leading to the lockfile is not
                 # readable anymore, raise an exception
                 curtime = time.time()
-                if not osp.isdir(osp.dirname(self._lock_file_path())):
+                if not osp.isdir(osp.dirname(self._lock_file_path()) or osp.curdir):
                     msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (
                         self._lock_file_path(),
                         curtime - starttime,
