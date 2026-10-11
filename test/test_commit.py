@@ -189,7 +189,10 @@ class TestCommit(TestCommitSerialization):
         assert empty_stats.files == {}
         assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
 
-        repo.index.remove(list(paths))
+        # Avoid filesystem path normalization of space-only names on Windows.
+        index = repo.index
+        index.entries.clear()
+        index.write()
         removed_stats = repo.index.commit("Remove files", author=actor, committer=actor).stats
         assert removed_stats.files == {
             path: {"insertions": 0, "deletions": 2 * count, "lines": 2 * count, "change_type": "D"}
