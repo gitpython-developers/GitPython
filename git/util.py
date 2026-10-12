@@ -1107,7 +1107,7 @@ class Stats:
                 "lines": insertions + deletions,
                 "change_type": change_type,
             }
-            hsh["files"][filename.strip()] = files_dict
+            hsh["files"][filename] = files_dict
         return Stats(hsh["total"], hsh["files"])
 
 
