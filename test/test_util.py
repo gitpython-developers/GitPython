@@ -873,7 +873,7 @@ def test_blocking_lock_waits_for_existing_holder(tmp_path, monkeypatch, path_typ
     waiter = BlockingLockFile(path, check_interval_s=0.01, max_block_time_s=1)
     owner._obtain_lock()
     try:
-        with mock.patch("git.util.time.sleep", side_effect=lambda _: owner._release_lock()) as sleep:
+        with mock.patch.object(time, "sleep", side_effect=lambda _: owner._release_lock()) as sleep:
             waiter._obtain_lock()
             sleep.assert_called_once_with(0.01)
         assert waiter._has_lock()
