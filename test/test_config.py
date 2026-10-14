@@ -37,6 +37,38 @@ class TestBase(TestCase):
             if osp.isfile(lfp):
                 raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
 
+    def test_integer_config_values_keep_precision(self):
+        for text, expected in (
+            ("9007199254740993", 9007199254740993),
+            ("9223372036854775807", 9223372036854775807),
+            ("-9007199254740993", -9007199254740993),
+        ):
+            with self.subTest(text=text):
+                config_file = io.BytesIO(("[limits]\nvalue = %s\n" % text).encode("ascii"))
+                config_file.name = "integer_precision.config"
+                with GitConfigParser(config_file) as config:
+                    value = config.get_value("limits", "value")
+                    self.assertEqual(value, expected)
+                    self.assertIs(type(value), int)
+                    self.assertEqual(config.get_values("limits", "value"), [expected])
+
+    def test_numeric_config_conversion_preserves_other_values(self):
+        for text, expected in (
+            ("11.11", 11.11),
+            ("1e3", 1000.0),
+            ("nan", "nan"),
+            ("NaN", "NaN"),
+            ("true", True),
+            ("false", False),
+        ):
+            with self.subTest(text=text):
+                config_file = io.BytesIO(("[values]\nvalue = %s\n" % text).encode("ascii"))
+                config_file.name = "numeric_conversion.config"
+                with GitConfigParser(config_file) as config:
+                    value = config.get_value("values", "value")
+                    self.assertEqual(value, expected)
+                    self.assertIs(type(value), type(expected))
+
     def _to_memcache(self, file_path):
         with open(file_path, "rb") as fp:
             sio = io.BytesIO(fp.read())
