@@ -1270,8 +1270,8 @@ class BlockingLockFile(LockFile):
     specified timeout.
 
     :note:
-        If the directory containing the lock was removed, an exception will be raised
-        during the blocking period, preventing hangs as the lock can never be obtained.
+        Only an existing lock causes retries. Other errors, including a removed or
+        unwritable parent directory, are raised immediately.
     """
 
     __slots__ = ("_check_interval", "_max_block_time")
@@ -1297,7 +1297,7 @@ class BlockingLockFile(LockFile):
 
     def _obtain_lock(self) -> None:
         """This method blocks until it obtained the lock, or raises :exc:`IOError` if it
-        ran out of time or if the parent directory was not available anymore.
+        ran out of time or lock creation failed for a reason other than an existing lock.
 
         If this method returns, you are guaranteed to own the lock.
         """
@@ -1307,10 +1307,14 @@ class BlockingLockFile(LockFile):
             try:
                 super()._obtain_lock()
             except OSError as e:
-                # synity check: if the directory leading to the lockfile is not
-                # readable anymore, raise an exception
+                # LockFile retains the creation error as the cause of its OSError.
+                # Only an existing lock is contention; other errors must not be retried.
+                if not isinstance(e.__cause__, FileExistsError):
+                    raise
+
+                # Abort if the directory containing the existing lock has disappeared.
                 curtime = time.time()
-                if not osp.isdir(osp.dirname(self._lock_file_path())):
+                if not osp.isdir(osp.dirname(self._lock_file_path()) or osp.curdir):
                     msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (
                         self._lock_file_path(),
                         curtime - starttime,

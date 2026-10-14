@@ -4,7 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import ast
-from datetime import datetime
+import errno
 import os
 import pathlib
 import pickle
@@ -14,6 +14,7 @@ import sys
 import tempfile
 import threading
 import time
+from datetime import datetime
 from unittest import SkipTest, mock
 
 import ddt
@@ -37,12 +38,11 @@ from git.util import (
     LockFile,
     cygpath,
     decygpath,
-    is_cygwin_git,
     get_user_id,
+    is_cygwin_git,
     remove_password_if_present,
     rmtree,
 )
-
 from test.lib import TestBase, requires_symlinks, with_rw_repo
 
 
@@ -882,3 +882,102 @@ def test_iterable_list_name_lookup_ignores_list_attributes(name, prefix):
     assert name not in values
     with pytest.raises(IndexError, match="No item found with id"):
         values[name]
+
+
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+@pytest.mark.parametrize("relative", [True, False])
+def test_blocking_lock_waits_for_existing_holder(tmp_path, monkeypatch, path_type, relative):
+    monkeypatch.chdir(tmp_path)
+    path = path_type("resource" if relative else tmp_path / "resource")
+    owner = LockFile(path)
+    waiter = BlockingLockFile(path, check_interval_s=0.01, max_block_time_s=1)
+    owner._obtain_lock()
+    try:
+        with mock.patch.object(time, "sleep", side_effect=lambda _: owner._release_lock()) as sleep:
+            waiter._obtain_lock()
+            sleep.assert_called_once_with(0.01)
+        assert waiter._has_lock()
+    finally:
+        owner._release_lock()
+        waiter._release_lock()
+
+
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+def test_blocking_relative_lock_reports_timeout(tmp_path, monkeypatch, path_type):
+    monkeypatch.chdir(tmp_path)
+    owner = LockFile(path_type("resource"))
+    waiter = BlockingLockFile(path_type("resource"), max_block_time_s=0)
+    owner._obtain_lock()
+    try:
+        with pytest.raises(OSError, match="Waited .* seconds for lock"):
+            waiter._obtain_lock()
+    finally:
+        owner._release_lock()
+
+
+def test_blocking_lock_still_rejects_missing_directory(tmp_path):
+    waiter = BlockingLockFile(tmp_path / "missing" / "resource")
+    with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+        with pytest.raises(OSError) as exc_info:
+            waiter._obtain_lock()
+        sleep.assert_not_called()
+    assert isinstance(exc_info.value.__cause__, FileNotFoundError)
+    assert not waiter._has_lock()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Lock creation uses CreateFileW on Windows")
+@pytest.mark.parametrize(
+    "error_number", [errno.EACCES, errno.ENOENT, errno.ENOTDIR, errno.EROFS, errno.ENOSPC, errno.EIO]
+)
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+@pytest.mark.parametrize("relative", [True, False])
+def test_blocking_lock_propagates_non_contention_errors(tmp_path, monkeypatch, error_number, path_type, relative):
+    monkeypatch.chdir(tmp_path)
+    path = path_type("resource" if relative else tmp_path / "resource")
+    waiter = BlockingLockFile(path)
+    error = OSError(error_number, os.strerror(error_number), waiter._lock_file_path())
+    with mock.patch.object(os, "open", side_effect=error) as open_lock:
+        with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+            with pytest.raises(OSError) as exc_info:
+                waiter._obtain_lock()
+            sleep.assert_not_called()
+        open_lock.assert_called_once()
+    assert exc_info.value.__cause__ is error
+    assert str(exc_info.value) == str(error)
+    assert not waiter._has_lock()
+    assert not os.path.lexists(waiter._lock_file_path())
+
+
+@pytest.mark.skipif(os.name != "posix", reason="Directory write permissions require POSIX")
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+def test_blocking_relative_lock_rejects_unwritable_cwd(tmp_path, monkeypatch, path_type):
+    monkeypatch.chdir(tmp_path)
+    original_mode = tmp_path.stat().st_mode
+    tmp_path.chmod(stat.S_IRUSR | stat.S_IXUSR)
+    try:
+        if os.access(".", os.W_OK):
+            pytest.skip("Current user can write to read-only directories")
+        assert os.path.isdir(".")
+        waiter = BlockingLockFile(path_type("resource"))
+        with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+            with pytest.raises(OSError) as exc_info:
+                waiter._obtain_lock()
+            sleep.assert_not_called()
+        assert isinstance(exc_info.value.__cause__, PermissionError)
+        assert not waiter._has_lock()
+    finally:
+        tmp_path.chmod(original_mode)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="Removing the current directory requires POSIX")
+@pytest.mark.parametrize("path_type", [str, pathlib.Path])
+def test_blocking_relative_lock_rejects_removed_cwd(tmp_path, monkeypatch, path_type):
+    monkeypatch.chdir(tmp_path)
+    tmp_path.rmdir()
+    waiter = BlockingLockFile(path_type("resource"))
+    with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+        with pytest.raises(OSError) as exc_info:
+            waiter._obtain_lock()
+        sleep.assert_not_called()
+    assert isinstance(exc_info.value.__cause__, FileNotFoundError)
+    assert not waiter._has_lock()

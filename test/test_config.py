@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import errno
 import glob
 import io
 import os
@@ -17,7 +18,7 @@ import pytest
 from git import GitConfigParser, Repo
 from git.compat import defenc
 from git.config import _OMD, cp
-from git.util import cwd, rmfile
+from git.util import BlockingLockFile, cwd, rmfile
 from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
 _tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
@@ -26,6 +27,23 @@ _tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
 def _rm_lock_files():
     for lfp in glob.glob(_tc_lock_fpaths):
         rmfile(lfp)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Lock creation uses CreateFileW on Windows")
+@pytest.mark.parametrize("error_number", [errno.EACCES, errno.ENOENT])
+def test_blocking_config_lock_propagates_non_contention_errors(tmp_path, monkeypatch, error_number):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(GitConfigParser, "t_lock", BlockingLockFile)
+    error = OSError(error_number, os.strerror(error_number), "config.lock")
+    with mock.patch.object(os, "open", side_effect=error) as open_lock:
+        with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+            with pytest.raises(OSError) as exc_info:
+                GitConfigParser("config", read_only=False)
+            sleep.assert_not_called()
+        open_lock.assert_called_once()
+    assert exc_info.value.__cause__ is error
+    assert str(exc_info.value) == str(error)
+    assert not (tmp_path / "config.lock").exists()
 
 
 class TestBase(TestCase):
