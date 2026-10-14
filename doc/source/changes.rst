@@ -10,7 +10,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-83vg-56qc-22m7
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.2.1
@@ -35,7 +35,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fx3j-rwgx-fr94
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.2.0
@@ -48,7 +48,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-59cr-6r3x-644w
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.62
@@ -60,7 +60,7 @@ A fixup release to avoid accidental removal of public class regex on Actor.
 It's now deprecated instead.
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.61
@@ -75,7 +75,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-239g-whfq-7xj9
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.60
@@ -92,7 +92,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-7833-fr7j-v32q
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.59
@@ -110,7 +110,7 @@ Security fixes for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-hmq2-w58f-27jc
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.58
@@ -124,7 +124,7 @@ A security fix for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-539m-9xh6-q6rr
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.57
@@ -137,7 +137,7 @@ A security fix for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-p538-c434-8v24
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.56
@@ -150,7 +150,7 @@ A security fix for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-94p4-4cq8-9g67
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.55
@@ -165,7 +165,7 @@ A security fix for
 * https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-fjr4-x663-mwxc
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.54
@@ -177,7 +177,7 @@ A security fix for
 https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-3rp5-jjmw-4wv2
 
 If you can, also try and provide feedback on the upcoming v4 branch
-https://github.com/gitpython-developers/GitPython/pull/2177 - patches welcome.
+https://github.com/gitpython-developers/GitPython/pull/2274 - patches welcome.
 
 See the following for all changes.
 https://github.com/gitpython-developers/GitPython/releases/tag/3.1.53
