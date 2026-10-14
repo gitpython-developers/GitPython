@@ -458,6 +458,41 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(cmt.author.name, "E.Azer Ko�o�o�oculu", cmt.author.name)
         self.assertEqual(cmt.author.email, "azer@kodfabrik.com", cmt.author.email)
 
+    def test_deserialization_declared_encoding(self):
+        # The "encoding" header names the encoding of the identity and message bytes.
+        data = (
+            b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
+            b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+            b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+            b"encoding ISO-8859-1\n"
+            b"\n"
+            b"R\xe9sum\xe9\n"
+        )
+        cmt = self.rorepo.commit()
+        cmt._deserialize(BytesIO(data))
+
+        self.assertEqual(cmt.encoding, "ISO-8859-1")
+        self.assertEqual(cmt.author.name, "André")
+        self.assertEqual(cmt.committer.name, "André")
+        self.assertEqual(cmt.message, "Résumé\n")
+
+    def test_deserialization_unknown_declared_encoding(self):
+        # An encoding Python has no text codec for falls back to the default encoding.
+        data = (
+            b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
+            b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+            b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+            b"encoding pony-speak\n"
+            b"\n"
+            b"R\xe9sum\xe9\n"
+        )
+        cmt = self.rorepo.commit()
+        cmt._deserialize(BytesIO(data))
+
+        self.assertEqual(cmt.encoding, cmt.default_encoding)
+        self.assertEqual(cmt.author.name, "Andr�")
+        self.assertEqual(cmt.message, "R�sum�\n")
+
     @with_rw_directory
     def test_identity_cannot_alter_headers(self, rw_dir):
         """A name or email must not add header lines or present another identity."""
