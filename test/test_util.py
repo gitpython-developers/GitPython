@@ -862,3 +862,23 @@ def test_mode_str_to_int_accepts_bytes():
     assert mode_str_to_int(b"100644") == 0o100644
     assert mode_str_to_int("644") == 0o644
     assert mode_str_to_int(b"120000") == 0o120000
+
+
+@pytest.mark.parametrize("name", ["sort", "count", "append", "_prefix", "__class__", "ordinary"])
+@pytest.mark.parametrize("prefix", ["", "refs/"])
+def test_iterable_list_name_lookup_ignores_list_attributes(name, prefix):
+    values = IterableList("name", prefix)
+    member = _Member(prefix + name)
+    values.append(member)
+
+    assert values[name] is member
+    assert name in values
+    assert member in values
+    assert values[0] is member
+    assert callable(values.append)
+    assert callable(values.sort)
+
+    del values[name]
+    assert name not in values
+    with pytest.raises(IndexError, match="No item found with id"):
+        values[name]
