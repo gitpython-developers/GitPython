@@ -896,8 +896,19 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         enc = next_line
         buf = enc.strip()
         while buf:
-            if buf[0:10] == b"encoding ":
-                self.encoding = buf[buf.find(b" ") + 1 :].decode(self.encoding, "ignore")
+            if buf[0:9] == b"encoding ":
+                raw_encoding = buf[9:]
+                try:
+                    # Codec names are ASCII, independent of the content encoding.
+                    encoding = raw_encoding.decode("ascii")
+                    # Probe one byte: decoding b"" skips the codec lookup entirely.
+                    b" ".decode(encoding, "replace")
+                except (LookupError, ValueError):
+                    # Reject malformed names and non-text codecs without changing
+                    # the current encoding (the default unless a valid header was read).
+                    _logger.error("Ignoring invalid commit encoding %r", raw_encoding)
+                else:
+                    self.encoding = encoding
             elif buf[0:7] == b"gpgsig ":
                 sig_lines = [buf[buf.find(b" ") + 1 :] + b"\n"]
                 is_next_header = False
