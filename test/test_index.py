@@ -1513,6 +1513,7 @@ class TestIndex(TestBase):
         repo = Repo.init(root / "repo")
         hooks_dir = root / "hooks"
         _make_hook(root, "fake-hook", "exit 0")
+        _make_hook(repo.working_dir, "fake-hook", "exit 0")
         system_root = root / "Windows"
         system_bash = system_root / "System32" / "bash.exe"
         git_executable = root / "Git" / "cmd" / "git.exe"
@@ -1521,24 +1522,37 @@ class TestIndex(TestBase):
             executable.parent.mkdir(parents=True)
             executable.touch()
             executable.chmod(0o755)
-        with repo.config_writer() as writer:
-            writer.set_value("core", "hooksPath", str(hooks_dir))
+
+        def command(hooks_path, exec_path):
+            with repo.config_writer() as writer:
+                writer.set_value("core", "hooksPath", hooks_path)
+            with mock.patch("git.index.fun.sys.platform", "win32"), mock.patch.object(
+                Git, "GIT_PYTHON_GIT_EXECUTABLE", "git"
+            ), mock.patch.dict(os.environ, {"SystemRoot": str(system_root)}), mock.patch(
+                "git.index.fun.os.get_exec_path", return_value=exec_path
+            ):
+                with mock.patch("git.index.fun.safer_popen") as popen, mock.patch(
+                    "git.index.fun.handle_process_output"
+                ):
+                    popen.return_value.returncode = 0
+                    run_commit_hook("fake-hook", repo.index)
+            return popen.call_args[0][0]
 
         # Model a normal Windows PATH: System32 (containing the WSL launcher) comes
         # before Git's cmd directory, while Git's Bash is not itself on PATH. This
         # exercises both Git-installation discovery and shell selection without
         # mocking either resolver's answer.
-        with mock.patch("git.index.fun.sys.platform", "win32"), mock.patch.object(
-            Git, "GIT_PYTHON_GIT_EXECUTABLE", "git"
-        ), mock.patch.dict(os.environ, {"SystemRoot": str(system_root)}), mock.patch(
-            "git.index.fun.os.get_exec_path", return_value=["", str(system_bash.parent), str(git_executable.parent)]
-        ):
-            with mock.patch("git.index.fun.safer_popen") as popen, mock.patch("git.index.fun.handle_process_output"):
-                popen.return_value.returncode = 0
-                run_commit_hook("fake-hook", repo.index)
-
-        command = popen.call_args[0][0]
-        self.assertEqual(command, [str(git_bash), "../hooks/fake-hook"])
+        with_git = ["", str(system_bash.parent), str(git_executable.parent)]
+        # A hook outside the working tree is passed by its absolute path: a relative
+        # one is resolved in Bash's own view of the filesystem, where a mount point
+        # (Git Bash's /tmp) can make ".." lead elsewhere.
+        self.assertEqual(command(str(hooks_dir), with_git), [str(git_bash), (hooks_dir / "fake-hook").as_posix()])
+        # A hook inside the working tree keeps its relative path.
+        self.assertEqual(command("hooks", with_git), [str(git_bash), "hooks/fake-hook"])
+        # So does one outside it for the bare fallback, which may be WSL's bash.exe,
+        # unable to open a Windows absolute path.
+        without_git = ["", str(system_bash.parent)]
+        self.assertEqual(command(str(hooks_dir), without_git), ["bash.exe", "../hooks/fake-hook"])
 
     @with_rw_directory
     def test_windows_bash_lookup_respects_explicit_current_directory_in_path(self, rw_dir):
@@ -1670,6 +1684,28 @@ class TestIndex(TestBase):
         index.commit("This should run the custom hook")
         output = Path(rw_repo.working_dir, "custom-hook-output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran custom hook\n")
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        raises=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_directory
+    def test_pre_commit_hook_outside_worktree(self, rw_dir):
+        repo = Repo.init(osp.join(rw_dir, "repo"))
+        hp = _make_hook(rw_dir, "pre-commit", "echo 'ran outside hook' >outside-hook-output.txt")
+
+        with repo.config_writer() as writer:
+            writer.set_value("core", "hooksPath", osp.dirname(hp))
+
+        repo.index.commit("This should run the hook outside the working tree")
+        output = Path(repo.working_dir, "outside-hook-output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran outside hook\n")
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,

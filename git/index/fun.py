@@ -198,6 +198,11 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         if sys.platform == "win32" and not _has_file_extension(hp):
             # Windows only uses extensions to determine how to open files
             # (doesn't understand shebangs). Try using bash to run the hook.
+            # Prefer Bash associated with GitPython's selected Git installation. If
+            # that layout is not recognized, use an explicitly configured non-system
+            # PATH entry. Preserve the bare fallback for installations that previously
+            # relied on WSL or another CreateProcess-resolved Bash.
+            found_bash = _git_for_windows_bash() or _which_from_path("bash.exe")
             try:
                 bash_hp = osp.relpath(hp, index.repo.working_dir)
             except ValueError:
@@ -205,12 +210,16 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
                 # an absolute path in this form, although a relative path is preferable
                 # because it also works with the Windows Subsystem for Linux wrapper.
                 bash_hp = hp
-            # Prefer Bash associated with GitPython's selected Git installation. If
-            # that layout is not recognized, use an explicitly configured non-system
-            # PATH entry. Preserve the bare fallback for installations that previously
-            # relied on WSL or another CreateProcess-resolved Bash.
-            bash_executable = _git_for_windows_bash() or _which_from_path("bash.exe") or "bash.exe"
-            cmd = [bash_executable, Path(bash_hp).as_posix()]
+            else:
+                # Bash resolves a relative path in its own view of the filesystem,
+                # which differs from Windows' across a mount point: Git Bash mounts
+                # the user's temporary directory as /tmp, so from a working tree
+                # there, ".." leads elsewhere. A path leaving the working tree is
+                # thus passed whole to a Bash found above, which accepts it; the
+                # bare fallback may be WSL's, which does not, and keeps it relative.
+                if found_bash and bash_hp.startswith(os.pardir + os.sep):
+                    bash_hp = hp
+            cmd = [found_bash or "bash.exe", Path(bash_hp).as_posix()]
 
         process = safer_popen(
             cmd + list(args),
