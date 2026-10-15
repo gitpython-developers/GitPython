@@ -493,6 +493,26 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(cmt.author.name, "Andr�")
         self.assertEqual(cmt.message, "R�sum�\n")
 
+    def test_deserialization_multiple_encoding_headers(self):
+        for headers in (
+            b"encoding utf-16-be\nencoding ISO-8859-1\n",
+            b"encoding ISO-8859-1\nencoding utf-\xff8\n",
+        ):
+            with self.subTest(headers=headers):
+                data = (
+                    b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
+                    b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+                    b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n" + headers + b"\n"
+                    b"R\xe9sum\xe9\n"
+                )
+                cmt = self.rorepo.commit()
+                cmt._deserialize(BytesIO(data))
+
+                self.assertEqual(cmt.encoding, "ISO-8859-1")
+                self.assertEqual(cmt.author.name, "André")
+                self.assertEqual(cmt.committer.name, "André")
+                self.assertEqual(cmt.message, "Résumé\n")
+
     @with_rw_directory
     def test_identity_cannot_alter_headers(self, rw_dir):
         """A name or email must not add header lines or present another identity."""
