@@ -267,7 +267,6 @@ class RootModule(Submodule):
                         # Relative urls are resolved against the superproject's remote,
                         # which is what the module's remotes hold.
                         sm_url = sm._resolved_url()
-                        psm_url = psm._resolved_url()
 
                         # Don't do anything if we already have the url we search in
                         # place.
@@ -281,28 +280,21 @@ class RootModule(Submodule):
 
                             if not dry_run:
                                 previous_remote = None
-                                for remote in rmts:
-                                    if remote.url == psm_url:
-                                        previous_remote = remote
-                                        break
-                                    # END if urls match
-                                # END for each remote
+                                if len(rmts) == 1:
+                                    previous_remote = rmts[0]
+                                else:
+                                    psm_url = psm._resolved_url()
+                                    for remote in rmts:
+                                        if remote.url == psm_url:
+                                            previous_remote = remote
+                                            break
+                                        # END if urls match
+                                    # END for each remote
 
-                                # If we didn't find a matching remote, but have exactly
-                                # one, we can safely use this one.
                                 if previous_remote is None:
-                                    if len(rmts) == 1:
-                                        previous_remote = rmts[0]
-                                    else:
-                                        # If we have not found any remote with the
-                                        # original URL we may not have a name. This is a
-                                        # special case, and its okay to fail here.
-                                        # Alternatively we could just generate a unique
-                                        # name and leave all existing ones in place.
-                                        raise InvalidGitRepositoryError(
-                                            "Couldn't find original remote-repo at url %r" % psm.url
-                                        )
-                                    # END handle one single remote
+                                    raise InvalidGitRepositoryError(
+                                        "Couldn't find original remote-repo at url %r" % psm.url
+                                    )
                                 # END handle check we found a remote
 
                                 if no_fetch:

@@ -53,6 +53,138 @@ def _patch_git_config(name, value):
         yield
 
 
+@pytest.mark.parametrize("state", ["unborn", "untracked", "detached"])
+@pytest.mark.parametrize("remote", [None, ".", "origin"], ids=["working-tree", "local-origin", "origin"])
+def test_add_relative_submodule_without_tracking_remote(tmp_path, state, remote):
+    with git.Repo.init(tmp_path / "parent") as parent:
+        if state != "unborn":
+            parent.index.commit("Initial commit")
+        if state == "detached":
+            parent.head.reference = parent.head.commit
+        base = tmp_path / "remote" if remote == "origin" else tmp_path / "parent"
+        if remote is not None:
+            parent.create_remote("origin", str(base) if remote == "origin" else ".")
+        with git.Repo.init(base / "source") as source:
+            source.git.symbolic_ref("HEAD", "refs/heads/master")
+            source.index.commit("Initial commit")
+            submodule = parent.create_submodule("module", "module", "./source")
+            assert submodule.url == "./source"
+            with submodule.module() as module:
+                assert module.head.commit == source.head.commit
+                assert Path(module.remotes.origin.url).samefile(source.working_tree_dir)
+            parent.index.commit("Add submodule")
+            submodule.remove(configuration=False)
+            submodule.update(init=True)
+            with submodule.module() as module:
+                assert module.head.commit == source.head.commit
+                assert Path(module.remotes.origin.url).samefile(source.working_tree_dir)
+
+
+@pytest.mark.parametrize("url", ["./source", "../source", "./../source"])
+def test_add_preserves_relative_url_on_cygwin(tmp_path, url):
+    with git.Repo.init(tmp_path / "parent") as parent, git.Repo.init(tmp_path / "source") as source:
+        source.index.commit("Initial commit")
+        with mock.patch.object(Submodule, "_clone_repo", return_value=source):
+            with mock.patch.object(Git, "is_cygwin", return_value=True):
+                submodule = parent.create_submodule("module", "module", url)
+        assert submodule.url == url
+        with submodule.config_reader() as reader:
+            assert reader.get_value("url") == url
+        with parent.config_reader() as reader:
+            assert reader.get_value('submodule "module"', "url") == url
+
+
+def test_update_resolves_local_relative_remote_once(tmp_path):
+    with git.Repo.init(tmp_path / "parent") as parent, git.Repo.init(tmp_path / "repos" / "child.git") as source:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        parent.create_remote("origin", "../repos/super.git")
+        parent.head.reference.set_tracking_branch(git.RemoteReference(parent, "refs/remotes/origin/master"))
+        submodule = Submodule(
+            parent,
+            source.head.commit.binsha,
+            name="module",
+            path="module",
+            url="../child.git",
+            branch_path="refs/heads/master",
+        )
+        submodule.update(init=True)
+        with submodule.module() as module:
+            assert module.head.commit == source.head.commit
+            assert Path(module.remotes.origin.url).samefile(source.working_tree_dir)
+            module.remotes.origin.fetch()
+
+
+@pytest.mark.parametrize("no_fetch", [False, True])
+def test_root_update_anchors_relative_remote_url(tmp_path, no_fetch):
+    with git.Repo.init(tmp_path / "repos" / "source.git") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        with git.Repo.clone_from(source.working_tree_dir, tmp_path / "repos" / "replacement.git") as replacement:
+            parent.create_remote("origin", "../repos/super.git")
+            submodule = parent.create_submodule("module", "module", source.working_tree_dir)
+            with submodule.config_writer() as writer:
+                writer.set_value("url", "../source.git")
+            previous = parent.index.commit("Record relative URL")
+            with submodule.config_writer() as writer:
+                writer.set_value("url", "../replacement.git")
+            parent.index.commit("Change relative URL")
+
+            RootModule(parent).update(previous_commit=previous, no_fetch=no_fetch)
+
+            with submodule.module() as module:
+                assert Path(module.remotes.origin.url).samefile(replacement.working_tree_dir)
+                assert module.head.commit == replacement.head.commit
+                module.remotes.origin.fetch()
+
+
+@pytest.mark.parametrize("no_fetch", [False, True])
+def test_root_update_uses_single_remote_without_resolving_old_url(tmp_path, no_fetch):
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        with git.Repo.clone_from(source.working_tree_dir, tmp_path / "replacement") as replacement:
+            parent.create_remote("origin", "../super.git")
+            submodule = parent.create_submodule("module", "module", source.working_tree_dir)
+            with submodule.config_writer() as writer:
+                writer.set_value("url", "../../lib.git")
+            previous = parent.index.commit("Record historical URL")
+            with submodule.config_writer() as writer:
+                writer.set_value("url", replacement.working_tree_dir)
+            parent.index.commit("Replace historical URL")
+
+            RootModule(parent).update(previous_commit=previous, no_fetch=no_fetch)
+
+            with submodule.module() as module:
+                assert Path(module.remotes.origin.url).samefile(replacement.working_tree_dir)
+                assert module.head.commit == replacement.head.commit
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_root_update_skips_old_url_resolution_when_remote_matches(tmp_path, dry_run):
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.index.commit("Initial commit")
+        submodule = parent.create_submodule("module", "module", source.working_tree_dir)
+        with submodule.config_writer() as writer:
+            writer.set_value("url", "../source")
+        previous = parent.index.commit("Record relative submodule URL")
+        with submodule.config_writer() as writer:
+            writer.set_value("url", Git.polish_url(source.working_tree_dir))
+        parent.index.commit("Use existing remote URL")
+
+        resolve_url = Submodule._resolved_url
+
+        def resolve_current_url(sm):
+            assert sm.url != "../source", "Previous URL does not need resolving"
+            return resolve_url(sm)
+
+        with mock.patch.object(Submodule, "_resolved_url", autospec=True, side_effect=resolve_current_url):
+            RootModule(parent).update(previous_commit=previous, no_fetch=True, dry_run=dry_run)
+        with submodule.module() as module:
+            assert module.remotes.origin.url == Git.polish_url(source.working_tree_dir)
+            assert module.head.commit == source.head.commit
+
+
 @pytest.mark.parametrize(
     "name", ["module", "$GITPYTHON_TEST_SECRET", "prefix-${GITPYTHON_TEST_SECRET}-suffix", "%GITPYTHON_TEST_SECRET%"]
 )
@@ -2437,6 +2569,9 @@ class TestSubmodule(TestBase):
             ("//share/super", "../../sub", "//sub"),
             ("foo/bar", "../sub", "foo/sub"),
             ("./foo", "../sub", "sub"),
+            ("./super.git", "../", ""),
+            ("ssh://host/org/super.git", "./", "ssh://host/org/super.git/"),
+            ("ssh://host/org/super.git", "../", "ssh://host/org/"),
             ("../foo/bar", "../sub", "../foo/sub"),
             ("ssh://host/org/super.git", ".sub", ".sub"),
             ("ssh://host/org/super.git", "https://other/sub", "https://other/sub"),
@@ -2459,23 +2594,27 @@ class TestSubmodule(TestBase):
             ("../planted", "ssh://git@host/org/planted"),
         ]:
             submodule = Submodule(parent, Submodule.NULL_BIN_SHA, name="module", path="module", url=url)
-            with mock.patch.object(Submodule, "_clone_repo", side_effect=AssertionError("stop")) as clone_repo:
+            with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("stop")) as clone_from:
                 with pytest.raises(AssertionError, match="stop"):
                     submodule.update(init=True)
-            assert clone_repo.call_args.args[1] == expected
+            assert clone_from.call_args.args[0] == expected
 
     @with_rw_directory
     def test_clone_repo_resolves_relative_url_against_tracking_remote(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         parent.index.commit("initial")
-        parent.create_remote("origin", "git@host:org/super.git")
-        parent.head.reference.set_tracking_branch(git.RemoteReference(parent, "refs/remotes/origin/main"))
+        parent.create_remote("origin", "git@host:other/super.git")
+        for remote_name in ("upstream", "team/upstream"):
+            parent.create_remote(remote_name, "git@host:org/super.git")
+            with parent.head.reference.config_writer() as writer:
+                writer.set_value("remote", remote_name)
+                writer.set_value("merge", "refs/heads/main")
 
-        for url, expected in [
-            ("./planted", "git@host:org/super.git/planted"),
-            ("../planted", "git@host:org/planted"),
-        ]:
-            with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("stop")) as clone_from:
-                with pytest.raises(AssertionError, match="stop"):
-                    Submodule._clone_repo(parent, url, "module", "module")
-            assert clone_from.call_args.args[0] == expected
+            for url, expected in [
+                ("./planted", "git@host:org/super.git/planted"),
+                ("../planted", "git@host:org/planted"),
+            ]:
+                with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("stop")) as clone_from:
+                    with pytest.raises(AssertionError, match="stop"):
+                        Submodule._clone_repo(parent, url, "module", "module")
+                assert clone_from.call_args.args[0] == expected
