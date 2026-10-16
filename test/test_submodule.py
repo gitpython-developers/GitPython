@@ -26,6 +26,7 @@ from git.exc import (
 )
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
+from git.objects.submodule.util import resolve_relative_url
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux
 
@@ -2416,3 +2417,65 @@ class TestSubmodule(TestBase):
 
         has_module = any(sm.name == "module" for sm in cloned_repo.submodules)
         assert has_module, "Relative submodule was not updated properly"
+
+    def test_resolve_relative_url_like_git(self):
+        # Expected values are what `git submodule init` records for the same pair.
+        cases = [
+            ("ssh://host/org/super.git", "./sub", "ssh://host/org/super.git/sub"),
+            ("ssh://host/org/super.git", "../sub", "ssh://host/org/sub"),
+            ("ssh://host:22/org/super.git", "../sub", "ssh://host:22/org/sub"),
+            ("git@host:org/super.git", "./sub", "git@host:org/super.git/sub"),
+            ("git@host:org/super.git", "../sub", "git@host:org/sub"),
+            ("git@host:org/super.git", "../../sub", "git@host:sub"),
+            ("https://host/org/super.git", "./sub/", "https://host/org/super.git/sub"),
+            ("https://host/org/super.git/", "././sub", "https://host/org/super.git/sub"),
+            ("https://host/org/super.git", ".././sub", "https://host/org/sub"),
+            ("https://host/org/super.git", "../../../sub", "https://sub"),
+            ("file:///srv/git/super.git", "../sub", "file:///srv/git/sub"),
+            ("/srv/git/super", "../sub", "/srv/git/sub"),
+            ("/srv/git/super", "../../../../sub", "sub"),
+            ("//share/super", "../../sub", "//sub"),
+            ("foo/bar", "../sub", "foo/sub"),
+            ("./foo", "../sub", "sub"),
+            ("../foo/bar", "../sub", "../foo/sub"),
+            ("ssh://host/org/super.git", ".sub", ".sub"),
+            ("ssh://host/org/super.git", "https://other/sub", "https://other/sub"),
+        ]
+        for remote_url, url, expected in cases:
+            assert resolve_relative_url(remote_url, url) == expected, (remote_url, url)
+
+        for remote_url, url in [("foo", "../../sub"), ("git@host:super.git", "../../../sub"), ("../foo", "../../sub")]:
+            with self.assertRaisesRegex(ValueError, "cannot strip one component"):
+                resolve_relative_url(remote_url, url)
+
+    @with_rw_directory
+    def test_update_resolves_relative_url_against_remote(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        parent.create_remote("origin", "ssh://git@host/org/super.git")
+        os.mkdir(osp.join(parent.working_tree_dir, "planted"))
+
+        for url, expected in [
+            ("./planted", "ssh://git@host/org/super.git/planted"),
+            ("../planted", "ssh://git@host/org/planted"),
+        ]:
+            submodule = Submodule(parent, Submodule.NULL_BIN_SHA, name="module", path="module", url=url)
+            with mock.patch.object(Submodule, "_clone_repo", side_effect=AssertionError("stop")) as clone_repo:
+                with pytest.raises(AssertionError, match="stop"):
+                    submodule.update(init=True)
+            assert clone_repo.call_args.args[1] == expected
+
+    @with_rw_directory
+    def test_clone_repo_resolves_relative_url_against_tracking_remote(self, rwdir):
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        parent.index.commit("initial")
+        parent.create_remote("origin", "git@host:org/super.git")
+        parent.head.reference.set_tracking_branch(git.RemoteReference(parent, "refs/remotes/origin/main"))
+
+        for url, expected in [
+            ("./planted", "git@host:org/super.git/planted"),
+            ("../planted", "git@host:org/planted"),
+        ]:
+            with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("stop")) as clone_from:
+                with pytest.raises(AssertionError, match="stop"):
+                    Submodule._clone_repo(parent, url, "module", "module")
+            assert clone_from.call_args.args[0] == expected

@@ -264,10 +264,14 @@ class RootModule(Submodule):
                         nn = "__new_origin__"
                         smm = sm.module()
                         rmts = smm.remotes
+                        # Relative urls are resolved against the superproject's remote,
+                        # which is what the module's remotes hold.
+                        sm_url = sm._resolved_url()
+                        psm_url = psm._resolved_url()
 
                         # Don't do anything if we already have the url we search in
                         # place.
-                        if len([r for r in rmts if r.url == sm.url]) == 0:
+                        if len([r for r in rmts if r.url == sm_url]) == 0:
                             progress.update(
                                 BEGIN | URLCHANGE,
                                 i,
@@ -278,7 +282,7 @@ class RootModule(Submodule):
                             if not dry_run:
                                 previous_remote = None
                                 for remote in rmts:
-                                    if remote.url == psm.url:
+                                    if remote.url == psm_url:
                                         previous_remote = remote
                                         break
                                     # END if urls match
@@ -305,10 +309,10 @@ class RootModule(Submodule):
                                     # A new remote would have no cached refs. Preserve
                                     # the existing refs and tracking configuration for
                                     # offline updates instead of replacing the remote.
-                                    previous_remote.set_url(git.Git.polish_url(sm.url, expand_vars=False))
+                                    previous_remote.set_url(git.Git.polish_url(sm_url, expand_vars=False))
                                 else:
                                     assert nn not in [r.name for r in rmts]
-                                    smr = smm.create_remote(nn, sm.url)
+                                    smr = smm.create_remote(nn, sm_url)
                                     smr.fetch(progress=progress)
 
                                     # If we have a tracking branch, it should be available

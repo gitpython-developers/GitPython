@@ -12,7 +12,6 @@ import re
 import shlex
 import stat
 import sys
-import urllib.parse
 import uuid
 from io import BytesIO
 from pathlib import Path
@@ -58,7 +57,9 @@ from git.util import (
 from .util import (
     SubmoduleConfigParser,
     find_first_remote_branch,
+    is_relative_url,
     mkhead,
+    resolve_relative_url,
     sm_name,
     sm_section,
 )
@@ -428,10 +429,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
 
-        if url.startswith("../"):
+        if is_relative_url(url):
             remote_name = cast("RemoteReference", repo.active_branch.tracking_branch()).remote_name
             repo_remote_url = repo.remote(remote_name).url
-            url = os.path.join(repo_remote_url, url)
+            url = resolve_relative_url(repo_remote_url, url)
 
         clone = git.Repo.clone_from(
             url,
@@ -982,13 +983,9 @@ class Submodule(IndexObject, TraversableIterableObj):
                     if not dry_run:
                         if no_fetch:
                             raise ValueError("Missing module at %r but fetching is disabled" % self.path) from None
-                        if self.url.startswith("."):
-                            url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
-                        else:
-                            url = self.url
                         mrepo = self._clone_repo(
                             self.repo,
-                            url,
+                            self._resolved_url(),
                             self.path,
                             self.name,
                             n=True,
@@ -1737,6 +1734,13 @@ class Submodule(IndexObject, TraversableIterableObj):
     def url(self) -> str:
         """:return: The url to the repository our submodule's repository refers to"""
         return self._url
+
+    def _resolved_url(self) -> str:
+        """:return: :attr:`url`, with a ``./`` or ``../`` prefix resolved against the
+        url of the superproject's ``origin`` remote the way git does"""
+        if not is_relative_url(self.url):
+            return self.url
+        return resolve_relative_url(self.repo.remotes.origin.url, self.url)
 
     @property
     def parent_commit(self) -> "Commit":
