@@ -111,7 +111,7 @@ html_theme_options = {}
 # This file should be a Windows icon file (.ico) being 16x16 or 32x32 pixels large.
 # html_favicon = None
 
-# Do not documento the attributes holidng a class's namespace. Their reprs embed
+# Do not document the attributes holding a class's namespace. Their reprs embed
 # frozensets whose order depends on string hashing, which makes the generated
 # HTML vary between builds.
 autodoc_default_options = {"exclude-members": "__dict__, __weakref__"}
