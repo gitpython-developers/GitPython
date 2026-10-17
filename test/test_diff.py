@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
+from io import BytesIO
 import os.path as osp
 import shutil
 import sys
@@ -12,10 +13,13 @@ import tempfile
 import ddt
 import pytest
 
-from git import NULL_TREE, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
+from gitdb.base import IStream
+
+from git import NULL_TREE, Blob, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
 from git.cmd import Git
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
+from git.index.typ import BaseIndexEntry
 
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
@@ -252,6 +256,19 @@ class TestDiff(TestBase):
         res = []
         Diff._handle_diff_line(output, None, res)
         self.assertEqual(len(res), 3)
+
+    @with_rw_directory
+    def test_diff_raw_paths_with_colon_or_line_feed(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        binsha = repo.odb.store(IStream(Blob.type, 1, BytesIO(b"x"))).binsha
+        fake_meta = ":100644 100644 %s %s M" % ("1" * 40, "2" * 40)
+        paths = [":planted", "docs/a\n" + fake_meta, "docs/b", "setup.py"]
+        repo.index.add([BaseIndexEntry((0o100644, binsha, 0, path)) for path in paths])
+        commit = repo.index.commit("paths")
+
+        diffs = commit.diff(NULL_TREE)
+        self.assertEqual([d.b_path for d in diffs], sorted(paths))
+        self.assertEqual({d.change_type for d in diffs}, {"A"})
 
     def test_empty_diff(self):
         res = []
