@@ -111,6 +111,11 @@ html_theme_options = {}
 # This file should be a Windows icon file (.ico) being 16x16 or 32x32 pixels large.
 # html_favicon = None
 
+# Do not documento the attributes holidng a class's namespace. Their reprs embed
+# frozensets whose order depends on string hashing, which makes the generated
+# HTML vary between builds.
+autodoc_default_options = {"exclude-members": "__dict__, __weakref__"}
+
 # Add any paths that contain custom static files (such as style sheets) here, relative
 # to this directory. They are copied after the builtin static files, so a file named
 # "default.css" will overwrite the builtin "default.css".
