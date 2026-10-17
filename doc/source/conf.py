@@ -112,9 +112,9 @@ html_theme_options = {}
 # html_favicon = None
 
 # Do not documento the attributes holidng a class's namespace. Their reprs embed
-+# frozensets whose order depends on string hashing, which makes the generated
-+# HTML vary between builds.
-+autodoc_default_options = {"exclude-members": "__dict__, __weakref__"}
+# frozensets whose order depends on string hashing, which makes the generated
+# HTML vary between builds.
+autodoc_default_options = {"exclude-members": "__dict__, __weakref__"}
 
 # Add any paths that contain custom static files (such as style sheets) here, relative
 # to this directory. They are copied after the builtin static files, so a file named
