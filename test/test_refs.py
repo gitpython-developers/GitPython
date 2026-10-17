@@ -7,10 +7,12 @@ import contextlib
 import os.path as osp
 import tempfile
 import unittest
+from io import BytesIO
 from itertools import chain
 from pathlib import Path
 from unittest.mock import patch
 
+from gitdb import IStream
 from gitdb.exc import BadName
 
 import git.refs as refs
@@ -138,6 +140,31 @@ class TestRefs(TestBase):
         assert isinstance(tagobj.tagger, Actor)
         tagger_name = tagobj.tagger.name
         assert tagger_name == "Michael Trier"
+
+    def test_tag_headers_split_at_line_feeds_only(self):
+        # A "tag" header value carrying a U+2028 (or any separator that
+        # str.splitlines() honors but git does not) must not shift the later
+        # headers. Git ends a header only at "\n", so GitPython must read the
+        # whole value as the tag name and the following line as the tagger,
+        # exactly as "git cat-file tag" does. See the TagObject parsing fix.
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with self._repo_with_initial_commit(Path(tmp_dir)) as repo:
+                commit_hexsha = repo.head.commit.hexsha
+                payload = (
+                    f"object {commit_hexsha}\n"
+                    "type commit\n"
+                    "tag v1 tagger Linus Torvalds <torvalds@linux-foundation.org> 1700000000 +0000\n"
+                    "tagger Mallory <m@evil.example> 1700000001 +0000\n"
+                    "\n"
+                    "release\n"
+                ).encode("utf-8")
+                istream = repo.odb.store(IStream("tag", len(payload), BytesIO(payload)))
+                tagobj = TagObject(repo, istream.binsha)
+
+                assert tagobj.tag == "v1 tagger Linus Torvalds <torvalds@linux-foundation.org> 1700000000 +0000"
+                assert tagobj.tagger.name == "Mallory"
+                assert tagobj.tagger.email == "m@evil.example"
+                assert tagobj.message == "release"
 
     def test_tags(self):
         # Tag refs can point to tag objects or to commits.

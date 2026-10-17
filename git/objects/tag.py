@@ -106,7 +106,16 @@ class TagObject(base.Object):
         """Cache all our attributes at once."""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
-            lines: List[str] = ostream.read().decode(defenc, "replace").splitlines()
+            # Git ends a header only at a line feed, but str.splitlines() also
+            # breaks at "\r", "\v", "\f", U+2028 and similar. Splitting a tag
+            # object that way lets an untrusted "tag" header containing such a
+            # character shift every later header by a line. Split at "\n" only,
+            # and drop the trailing empty element so tags that use line feeds
+            # parse exactly as before.
+            data = ostream.read().decode(defenc, "replace")
+            lines: List[str] = data.split("\n")
+            if lines and lines[-1] == "":
+                lines.pop()
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")
