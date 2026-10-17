@@ -6,6 +6,8 @@ __pycache__/
 .cache/
 .mypy_cache/
 .pytest_cache/
+tests/fixtures/generated-do-not-edit/
+tests/fixtures/generated-archives/*.tar
 
 # Transient editor files
 *.swp

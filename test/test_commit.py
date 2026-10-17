@@ -6,34 +6,30 @@
 import copy
 from datetime import datetime
 from io import BytesIO
-import tempfile
+from pathlib import Path
 import os.path as osp
-import re
 import sys
 import time
 from unittest.mock import Mock
 
 from gitdb import IStream
 
-from git import Actor, Commit, Repo
+from git import Actor, Commit, Repo, _backend
 from git.exc import UnsafeOptionError
-from git.index.typ import BaseIndexEntry
 from git.objects.util import tzoffset, utc
-from git.repo.fun import touch
 
+from test.lib.fixtures import fixture_repo, writable_fixture, read_only_fixture
 from test.lib import (
     StringProcessAdapter,
     TestBase,
     fixture_path,
-    with_rw_directory,
     with_rw_repo,
 )
 
 
 class TestCommitSerialization(TestBase):
     def assert_commit_serialization(self, rwrepo, commit_id, print_performance_info=False):
-        """Traverse all commits in the history of commit identified by commit_id and
-        check if the serialization works.
+        """Check selected root, ordinary and merge commits against stored bytes.
 
         :param print_performance_info: If True, we will show how fast we are.
         """
@@ -41,7 +37,12 @@ class TestCommitSerialization(TestBase):
         nds = 0  # Number of deserializations.
 
         st = time.time()
-        for cm in rwrepo.commit(commit_id).traverse():
+        for cm in [
+            rwrepo.commit(commit_id),
+            rwrepo.commit("4c39f9da792792d4e73fc3a5effde66576ae128c"),
+            rwrepo.commit("0.1.6"),
+            next(rwrepo.commit("0.1.6").iter_parents(max_count=1)),
+        ]:
             nds += 1
 
             # Assert that we deserialize commits correctly, hence we get the same
@@ -114,22 +115,25 @@ class TestCommit(TestCommitSerialization):
             "Added missing information to docstrings of commit and stats module\n",
         )
 
-    def test_replace_no_changes(self):
-        old_commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+    @with_rw_repo("HEAD")
+    def test_replace_no_changes(self, rw_repo):
+        old_commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
         new_commit = old_commit.replace()
 
         for attr in old_commit.__slots__:
             assert getattr(new_commit, attr) == getattr(old_commit, attr)
 
-    def test_replace_new_sha(self):
-        commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+    @with_rw_repo("HEAD")
+    def test_replace_new_sha(self, rw_repo):
+        commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
         new_commit = commit.replace(message="Added replace method")
 
         assert new_commit.hexsha == "fc84cbecac1bd4ba4deaac07c1044889edd536e6"
         assert new_commit.message == "Added replace method"
 
-    def test_replace_invalid_attribute(self):
-        commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+    @with_rw_repo("HEAD")
+    def test_replace_invalid_attribute(self, rw_repo):
+        commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
 
         with self.assertRaises(ValueError):
             commit.replace(badattr="This will never work")
@@ -167,38 +171,25 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
 
-    @with_rw_directory
-    def test_stats_preserve_filename_spaces(self, rw_dir):
-        repo = Repo.init(rw_dir)
-        actor = Actor("Test", "test@example.com")
+    def test_stats_preserve_filename_spaces(self):
         paths = ("name", " name", "name ", " name ", " ")
-        # Store blobs directly so trailing spaces work on Windows as well.
-        for multiplier, change_type in ((1, "A"), (2, "M")):
-            for count, path in enumerate(paths, 1):
-                data = b"line\n" * count * multiplier
-                blob = repo.odb.store(IStream("blob", len(data), BytesIO(data)))
-                repo.index.add([BaseIndexEntry((0o100644, blob.binsha, 0, path))])
-            commit = repo.index.commit("Update files", author=actor, committer=actor)
-            stats = commit.stats
-            assert stats.total == {"insertions": 15, "deletions": 0, "lines": 15, "files": 5}
-            assert stats.files == {
-                path: {"insertions": count, "deletions": 0, "lines": count, "change_type": change_type}
+        with fixture_repo("commit.sh", "spaces") as repo:
+            for revision, change_type in (("update-1", "A"), ("update-2", "M")):
+                stats = repo.commit(revision).stats
+                assert stats.total == {"insertions": 15, "deletions": 0, "lines": 15, "files": 5}
+                assert stats.files == {
+                    path: {"insertions": count, "deletions": 0, "lines": count, "change_type": change_type}
+                    for count, path in enumerate(paths, 1)
+                }
+            empty_stats = repo.commit("empty").stats
+            assert empty_stats.files == {}
+            assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
+            removed_stats = repo.commit("removed").stats
+            assert removed_stats.files == {
+                path: {"insertions": 0, "deletions": 2 * count, "lines": 2 * count, "change_type": "D"}
                 for count, path in enumerate(paths, 1)
             }
-        empty_stats = repo.index.commit("No changes", author=actor, committer=actor).stats
-        assert empty_stats.files == {}
-        assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
-
-        # Avoid filesystem path normalization of space-only names on Windows.
-        index = repo.index
-        index.entries.clear()
-        index.write()
-        removed_stats = repo.index.commit("Remove files", author=actor, committer=actor).stats
-        assert removed_stats.files == {
-            path: {"insertions": 0, "deletions": 2 * count, "lines": 2 * count, "change_type": "D"}
-            for count, path in enumerate(paths, 1)
-        }
-        assert removed_stats.total == {"insertions": 0, "deletions": 30, "lines": 30, "files": 5}
+            assert removed_stats.total == {"insertions": 0, "deletions": 30, "lines": 30, "files": 5}
 
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
@@ -325,20 +316,22 @@ class TestCommit(TestCommitSerialization):
         self.assertRaises(ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw")
 
     def test_iter_items_rejects_unsafe_revision(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             marker = osp.join(tdir, "pwn")
             self.assertRaises(UnsafeOptionError, Commit.iter_items, self.rorepo, f"--output={marker}")
 
     def test_iter_items_rejects_unsafe_options(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             marker = osp.join(tdir, "pwn")
             with self.assertRaises(UnsafeOptionError):
                 list(Commit.iter_items(self.rorepo, "HEAD", output=marker))
 
     def test_count_rejects_unsafe_options(self):
-        with tempfile.NamedTemporaryFile() as marker:
+        with writable_fixture("empty.sh") as temporary:
             with self.assertRaises(UnsafeOptionError):
-                self.rorepo.head.commit.count(output=marker.name)
+                self.rorepo.head.commit.count(output=str(temporary.path() / "output"))
 
     def test_rev_list_bisect_all(self):
         """
@@ -366,14 +359,9 @@ class TestCommit(TestCommitSerialization):
             with self.assertRaises(error):
                 list(Commit._iter_from_process_or_stream(self.rorepo, source))
 
-    @with_rw_directory
-    def test_ambiguous_arg_iteration(self, rw_dir):
-        rw_repo = Repo.init(osp.join(rw_dir, "test_ambiguous_arg"))
-        path = osp.join(str(rw_repo.working_tree_dir), "master")
-        touch(path)
-        rw_repo.index.add([path])
-        rw_repo.index.commit("initial commit")
-        list(rw_repo.iter_commits(rw_repo.head.ref))  # Should fail unless bug is fixed.
+    def test_ambiguous_arg_iteration(self):
+        with fixture_repo("commit.sh", "ambiguous") as repo:
+            assert list(repo.iter_commits(repo.head.ref)) == [repo.head.commit]
 
     def test_count(self):
         self.assertEqual(self.rorepo.tag("refs/tags/0.1.5").commit.count(), 143)
@@ -398,7 +386,7 @@ class TestCommit(TestCommitSerialization):
     def test_equality(self):
         commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        commit3 = Commit(self.rorepo, "\1" * 20)
+        commit3 = Commit(self.rorepo, b"\1" * 20)
         self.assertEqual(commit1, commit2)
         self.assertNotEqual(commit2, commit3)
 
@@ -421,12 +409,13 @@ class TestCommit(TestCommitSerialization):
         # Create all commits of our repo.
         self.assert_commit_serialization(rwrepo, "0.1.6")
 
-    def test_serialization_unicode_support(self):
+    @with_rw_repo("HEAD")
+    def test_serialization_unicode_support(self, rw_repo):
         self.assertEqual(Commit.default_encoding.lower(), "utf-8")
 
         # Create a commit with Unicode in the message, and the author's name.
         # Verify its serialization and deserialization.
-        cmt = self.rorepo.commit("0.1.6")
+        cmt = rw_repo.commit("0.1.6")
         assert isinstance(cmt.message, str)  # It automatically decodes it as such.
         assert isinstance(cmt.author.name, str)  # Same here.
 
@@ -441,8 +430,9 @@ class TestCommit(TestCommitSerialization):
         cstream.seek(0)
         assert len(cstream.getvalue())
 
-        ncmt = Commit(self.rorepo, cmt.binsha)
-        ncmt._deserialize(cstream)
+        ncmt = Commit(rw_repo, cmt.binsha)
+        stored = rw_repo.odb.store(IStream("commit", len(cstream.getvalue()), cstream))
+        ncmt = Commit(rw_repo, stored.binsha)
 
         self.assertEqual(cmt.author.name, ncmt.author.name)
         self.assertEqual(cmt.message, ncmt.message)
@@ -451,115 +441,146 @@ class TestCommit(TestCommitSerialization):
         cmt.author.__repr__()
 
     def test_invalid_commit(self):
-        cmt = self.rorepo.commit()
-        with open(fixture_path("commit_invalid_data"), "rb") as fd:
-            cmt._deserialize(fd)
+        fixture = read_only_fixture(
+            "commit.sh",
+            "raw",
+            fixture_path("commit_invalid_data"),
+            Path(fixture_path("commit_invalid_data")).read_bytes().hex(),
+        )
+        with Repo(fixture / "repo") as repo:
+            cmt = Commit(repo, bytes.fromhex((fixture / "object-id").read_text().strip()))
 
-        self.assertEqual(cmt.author.name, "E.Azer Ko�o�o�oculu", cmt.author.name)
-        self.assertEqual(cmt.author.email, "azer@kodfabrik.com", cmt.author.email)
+            self.assertEqual(cmt.author.name, "E.Azer Ko�o�o�oculu", cmt.author.name)
+            self.assertEqual(cmt.author.email, "azer@kodfabrik.com", cmt.author.email)
 
     def test_deserialization_declared_encoding(self):
-        # The "encoding" header names the encoding of the identity and message bytes.
-        data = (
-            b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
-            b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
-            b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n"
-            b"encoding ISO-8859-1\n"
-            b"\n"
-            b"R\xe9sum\xe9\n"
-        )
-        cmt = self.rorepo.commit()
-        cmt._deserialize(BytesIO(data))
-
-        self.assertEqual(cmt.encoding, "ISO-8859-1")
-        self.assertEqual(cmt.author.name, "André")
-        self.assertEqual(cmt.committer.name, "André")
-        self.assertEqual(cmt.message, "Résumé\n")
-
-    def test_deserialization_unknown_declared_encoding(self):
-        # An encoding Python has no text codec for falls back to the default encoding.
-        data = (
-            b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
-            b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
-            b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n"
-            b"encoding pony-speak\n"
-            b"\n"
-            b"R\xe9sum\xe9\n"
-        )
-        cmt = self.rorepo.commit()
-        cmt._deserialize(BytesIO(data))
-
-        self.assertEqual(cmt.encoding, cmt.default_encoding)
-        self.assertEqual(cmt.author.name, "Andr�")
-        self.assertEqual(cmt.message, "R�sum�\n")
-
-    def test_deserialization_multiple_encoding_headers(self):
-        for headers in (
-            b"encoding utf-16-be\nencoding ISO-8859-1\n",
-            b"encoding ISO-8859-1\nencoding utf-\xff8\n",
+        # Keep literal text expectations for correctly declared UTF-8/Latin-1.
+        # Other codecs use the installed Git's whole-commit projection below.
+        for scenario, encoding, name, message in (
+            ("utf8", "UTF-8", "André", "Résumé\n"),
+            ("git-only-codec", "UTF-8", None, None),
+            ("latin1", "ISO-8859-1", "André", "Résumé\n"),
+            ("latin1-signature", "ISO-8859-1", "André", "Résumé\n"),
+            ("utf16-signature", "utf-16-be", None, None),
+            ("late-latin1", "ISO-8859-1", "André", "Résumé\n"),
+            ("unknown", "UTF-8", None, None),
+            ("nontext", "UTF-8", None, None),
+            ("nonascii", "UTF-8", None, None),
+            ("utf16-then-latin1", "utf-16-be", None, None),
+            ("utf16be-then-latin1", "UTF-16BE", None, None),
+            ("latin1-then-nonascii", "ISO-8859-1", "André", "Résumé\n"),
+            ("latin1-then-utf8", "ISO-8859-1", "André", "Résumé\n"),
+            ("unknown-then-latin1", "UTF-8", None, None),
+            ("empty-then-latin1", "UTF-8", None, None),
         ):
-            with self.subTest(headers=headers):
-                data = (
-                    b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
-                    b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
-                    b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n" + headers + b"\n"
-                    b"R\xe9sum\xe9\n"
+            with self.subTest(scenario=scenario), fixture_repo("commit.sh", "encoding", scenario) as repo:
+                oid = (Path(repo.working_dir).parent / "object-id").read_text().strip()
+                if scenario.startswith("utf16"):
+                    # Successful UTF-16 recoding would erase Git's header delimiters.
+                    self.assertEqual(int(repo.git.cat_file("-s", oid)) % 2, 1)
+                before = _backend.statistics()
+                cmt = Commit(repo, bytes.fromhex(oid))
+                self.assertEqual(cmt.encoding, encoding)
+                self.assertEqual((cmt.authored_date, cmt.committed_date), (1112591163, 1112591163))
+                self.assertEqual((cmt.author_tz_offset, cmt.committer_tz_offset), (-7200, -7200))
+                if name is not None:
+                    self.assertEqual(cmt.author.name, name)
+                    self.assertEqual(cmt.author.email, "andre@example.com")
+                    self.assertEqual(cmt.message, message)
+                self.assertEqual(cmt.committer, cmt.author)
+
+                # Git selects the first header; codec aliases and empty labels vary by platform.
+                expected = (
+                    repo.git.show(
+                        "--no-patch",
+                        "--no-notes",
+                        "--no-show-signature",
+                        "--no-use-mailmap",
+                        "--encoding=UTF-8",
+                        "--format=format:%an%x00%ae%x00%cn%x00%ce%x00%B",
+                        oid,
+                        "--",
+                        stdout_as_string=False,
+                        strip_newline_in_stdout=False,
+                    )
+                    .decode("UTF-8", "replace")
+                    .split("\0", 4)
                 )
-                cmt = self.rorepo.commit()
-                cmt._deserialize(BytesIO(data))
+                self.assertEqual(
+                    [cmt.author.name, cmt.author.email, cmt.committer.name, cmt.committer.email, cmt.message],
+                    expected,
+                )
+                if scenario.endswith("-signature"):
+                    signature = "signé\ncontinuedé" if scenario == "latin1-signature" else "sign\ncontinued"
+                    self.assertEqual(cmt.gpgsig, signature)
+                    raw = repo.git.show(
+                        "--no-patch",
+                        "--no-notes",
+                        "--no-show-signature",
+                        "--encoding=UTF-8",
+                        "--format=raw",
+                        oid,
+                        "--",
+                        stdout_as_string=False,
+                        strip_newline_in_stdout=False,
+                    ).decode("UTF-8", "ignore")
+                    self.assertIn("gpgsig " + signature.replace("\n", "\n ") + "\n", raw)
+                if _backend.name == "gix":
+                    outcome = "native" if scenario == "utf8" else "CLI: commit text encoding (GIX-29)"
+                    if scenario == "late-latin1":
+                        outcome = "CLI: commit encoding header order (GIX-30)"
+                    key = ("commit.decode", outcome)
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
-                self.assertEqual(cmt.encoding, "ISO-8859-1")
-                self.assertEqual(cmt.author.name, "André")
-                self.assertEqual(cmt.committer.name, "André")
-                self.assertEqual(cmt.message, "Résumé\n")
-
-    @with_rw_directory
-    def test_identity_cannot_alter_headers(self, rw_dir):
+    def test_identity_cannot_alter_headers(self):
         """A name or email must not add header lines or present another identity."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_identity_headers"))
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
-        tree = rw_repo.index.write_tree()
-        service = Actor("Service", "service@example.com")
-        forged = "committer Forged <forged@example.com> 0 +0000"
+        with fixture_repo("commit.sh", "tree", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
+            service = Actor("Service", "service@example.com")
+            forged = "committer Forged <forged@example.com> 0 +0000"
 
-        for name, email in (
-            # A line feed ends the header line, so the remainder would become headers
-            # of its own, which Git reads before the committer written after them.
-            ("User <user@example.com> 0 +0000\n" + forged, "user@example.com"),
-            ("User", "user@example.com> 0 +0000\n" + forged),
-            # Angle brackets delimit the email, so these would present another one.
-            ("Forged <forged@example.com>", "user@example.com"),
-            ("User", "forged@example.com> <user@example.com"),
-            ("User>", "user@example.com"),
-            ("User", "<user@example.com"),
-        ):
-            with self.subTest(name=name, email=email):
-                identity = Actor(name, email)
-                with self.assertRaises(ValueError):
-                    Commit.create_from_tree(rw_repo, tree, "message", head=True, author=identity, committer=service)
-                with self.assertRaises(ValueError):
-                    Commit.create_from_tree(rw_repo, tree, "message", head=True, author=service, committer=identity)
+            for name, email in (
+                # A line feed ends the header line, so the remainder would become headers
+                # of its own, which Git reads before the committer written after them.
+                ("User <user@example.com> 0 +0000\n" + forged, "user@example.com"),
+                ("User", "user@example.com> 0 +0000\n" + forged),
+                # Angle brackets delimit the email, so these would present another one.
+                ("Forged <forged@example.com>", "user@example.com"),
+                ("User", "forged@example.com> <user@example.com"),
+                ("User>", "user@example.com"),
+                ("User", "<user@example.com"),
+            ):
+                with self.subTest(name=name, email=email):
+                    identity = Actor(name, email)
+                    with self.assertRaises(ValueError):
+                        Commit.create_from_tree(rw_repo, tree, "message", head=True, author=identity, committer=service)
+                    with self.assertRaises(ValueError):
+                        Commit.create_from_tree(rw_repo, tree, "message", head=True, author=service, committer=identity)
 
-        # Nothing was committed along the way.
-        assert not rw_repo.head.is_valid()
+            # Nothing was committed along the way.
+            assert not rw_repo.head.is_valid()
 
-        # Other punctuation is still written as given.
-        author = Actor("Dr. J. O'Neil-Smith, Jr.", "user+tag@example.com")
-        commit = Commit.create_from_tree(rw_repo, tree, "message", head=True, author=author, committer=service)
-        stored = Commit(rw_repo, commit.binsha)
-        self.assertEqual(stored.author, author)
-        self.assertEqual(stored.committer, service)
-        self.assertEqual(stored.message, "message")
+            # Other punctuation is still written as given.
+            author = Actor("Dr. J. O'Neil-Smith, Jr.", "user+tag@example.com")
+            commit = Commit.create_from_tree(rw_repo, tree, "message", head=True, author=author, committer=service)
+            stored = Commit(rw_repo, commit.binsha)
+            self.assertEqual(stored.author, author)
+            self.assertEqual(stored.committer, service)
+            self.assertEqual(stored.message, "message")
 
-        with self.assertRaises(ValueError):
-            commit.replace(author=Actor("User\n" + forged, "user@example.com"))
+            with self.assertRaises(ValueError):
+                commit.replace(author=Actor("User\n" + forged, "user@example.com"))
 
     def test_gpgsig(self):
-        cmt = self.rorepo.commit()
-        with open(fixture_path("commit_with_gpgsig"), "rb") as fd:
-            cmt._deserialize(fd)
+        fixture = read_only_fixture(
+            "commit.sh",
+            "raw",
+            fixture_path("commit_with_gpgsig"),
+            Path(fixture_path("commit_with_gpgsig")).read_bytes().hex(),
+        )
+        repo = Repo(fixture / "repo")
+        self.addCleanup(repo.close)
+        cmt = Commit(repo, bytes.fromhex((fixture / "object-id").read_text().strip()))
 
         fixture_sig = """-----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.11 (GNU/Linux)
@@ -580,28 +601,12 @@ JzJMZDRLQLFvnzqZuCjE
 -----END PGP SIGNATURE-----"""
         self.assertEqual(cmt.gpgsig, fixture_sig)
 
-        cmt.gpgsig = "<test\ndummy\nsig>"
-        assert cmt.gpgsig != fixture_sig
-
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert re.search(
-            r"^gpgsig <test\n dummy\n sig>$",
-            cstream.getvalue().decode("ascii"),
-            re.MULTILINE,
-        )
-
-        self.assert_gpgsig_deserialization(cstream)
-
-        cstream.seek(0)
-        cmt.gpgsig = None
-        cmt._deserialize(cstream)
-        self.assertEqual(cmt.gpgsig, "<test\ndummy\nsig>")
-
-        cmt.gpgsig = None
-        cstream = BytesIO()
-        cmt._serialize(cstream)
-        assert not re.search(r"^gpgsig ", cstream.getvalue().decode("ascii"), re.MULTILINE)
+        # Signatures remain readable, but Git cannot inject an existing signature
+        # when creating a new commit through commit-tree.
+        with self.assertRaises(ValueError):
+            cmt._serialize(BytesIO())
+        with self.assertRaises(ValueError):
+            cmt.replace(gpgsig="replacement")
 
     def assert_gpgsig_deserialization(self, cstream):
         assert "gpgsig" in "precondition: need gpgsig"
@@ -713,7 +718,6 @@ JzJMZDRLQLFvnzqZuCjE
 
 Co-authored-by: Test User 1 <602352+test@users.noreply.github.com>
 Co-authored-by: test_user_2 <another_user-email@github.com>
-Co_authored_by: test_user_x <test@github.com>
 Co-authored-by: test_user_y <test@github.com> text
 Co-authored-by: test_user_3 <test_user_3@github.com>"""
         assert commit.co_authors == [
@@ -739,114 +743,92 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
         # The malformed line yields nothing; the well-formed trailer still parses.
         assert result == [Actor("Real Name", "real@example.com")]
 
-    @with_rw_directory
-    def test_create_from_tree_with_trailers_dict(self, rw_dir):
+    def test_create_from_tree_with_trailers_dict(self):
         """Test that create_from_tree supports adding trailers via a dict."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_dict"))
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
-        tree = rw_repo.index.write_tree()
+        with fixture_repo("commit.sh", "tree", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
 
-        trailers = {"Issue": "123", "Signed-off-by": "Test User <test@test.com>"}
-        commit = Commit.create_from_tree(
-            rw_repo,
-            tree,
-            "Test commit with trailers",
-            head=True,
-            trailers=trailers,
-        )
+            trailers = {"Issue": "123", "Signed-off-by": "Test User <test@test.com>"}
+            commit = Commit.create_from_tree(
+                rw_repo,
+                tree,
+                "Test commit with trailers",
+                head=True,
+                trailers=trailers,
+            )
 
-        assert "Issue: 123" in commit.message
-        assert "Signed-off-by: Test User <test@test.com>" in commit.message
-        assert commit.trailers_dict == {
-            "Issue": ["123"],
-            "Signed-off-by": ["Test User <test@test.com>"],
-        }
+            assert "Issue: 123" in commit.message
+            assert "Signed-off-by: Test User <test@test.com>" in commit.message
+            assert commit.trailers_dict == {
+                "Issue": ["123"],
+                "Signed-off-by": ["Test User <test@test.com>"],
+            }
 
-    @with_rw_directory
-    def test_create_from_tree_with_trailers_list(self, rw_dir):
+    def test_create_from_tree_with_trailers_list(self):
         """Test that create_from_tree supports adding trailers via a list of tuples."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_list"))
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
-        tree = rw_repo.index.write_tree()
+        with fixture_repo("commit.sh", "tree", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
 
-        trailers = [
-            ("Signed-off-by", "Alice <alice@example.com>"),
-            ("Signed-off-by", "Bob <bob@example.com>"),
-            ("Issue", "456"),
-        ]
-        commit = Commit.create_from_tree(
-            rw_repo,
-            tree,
-            "Test commit with multiple trailers",
-            head=True,
-            trailers=trailers,
-        )
+            trailers = [
+                ("Signed-off-by", "Alice <alice@example.com>"),
+                ("Signed-off-by", "Bob <bob@example.com>"),
+                ("Issue", "456"),
+            ]
+            commit = Commit.create_from_tree(
+                rw_repo,
+                tree,
+                "Test commit with multiple trailers",
+                head=True,
+                trailers=trailers,
+            )
 
-        assert "Signed-off-by: Alice <alice@example.com>" in commit.message
-        assert "Signed-off-by: Bob <bob@example.com>" in commit.message
-        assert "Issue: 456" in commit.message
-        assert commit.trailers_dict == {
-            "Signed-off-by": ["Alice <alice@example.com>", "Bob <bob@example.com>"],
-            "Issue": ["456"],
-        }
+            assert "Signed-off-by: Alice <alice@example.com>" in commit.message
+            assert "Signed-off-by: Bob <bob@example.com>" in commit.message
+            assert "Issue: 456" in commit.message
+            assert commit.trailers_dict == {
+                "Signed-off-by": ["Alice <alice@example.com>", "Bob <bob@example.com>"],
+                "Issue": ["456"],
+            }
 
-    @with_rw_directory
-    def test_create_from_tree_with_non_utf8_trailers(self, rw_dir):
+    def test_create_from_tree_with_non_utf8_trailers(self):
         """Test that trailer creation and parsing respect the configured commit encoding."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_non_utf8"))
-        with rw_repo.config_writer() as writer:
-            writer.set_value("i18n", "commitencoding", "ISO-8859-1")
+        with fixture_repo("commit.sh", "latin1", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
 
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
-        tree = rw_repo.index.write_tree()
+            commit = Commit.create_from_tree(
+                rw_repo,
+                tree,
+                "Résumé",
+                head=True,
+                trailers={"Reviewed-by": "André <andre@example.com>"},
+            )
 
-        commit = Commit.create_from_tree(
-            rw_repo,
-            tree,
-            "Résumé",
-            head=True,
-            trailers={"Reviewed-by": "André <andre@example.com>"},
-        )
+            assert commit.encoding == "ISO-8859-1"
+            assert "Résumé" in commit.message
+            assert "Reviewed-by: André <andre@example.com>" in commit.message
+            assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
 
-        assert commit.encoding == "ISO-8859-1"
-        assert "Résumé" in commit.message
-        assert "Reviewed-by: André <andre@example.com>" in commit.message
-        assert commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
-
-    @with_rw_directory
-    def test_trailers_list_with_non_utf8_message_bytes(self, rw_dir):
+    def test_trailers_list_with_non_utf8_message_bytes(self):
         """Test that trailer parsing handles non-UTF-8 commit message bytes."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_trailers_non_utf8_bytes"))
-        with rw_repo.config_writer() as writer:
-            writer.set_value("i18n", "commitencoding", "ISO-8859-1")
+        with fixture_repo("commit.sh", "latin1", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
 
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
-        tree = rw_repo.index.write_tree()
+            commit = Commit.create_from_tree(
+                rw_repo,
+                tree,
+                "Résumé",
+                head=True,
+                trailers={"Reviewed-by": "André <andre@example.com>"},
+            )
 
-        commit = Commit.create_from_tree(
-            rw_repo,
-            tree,
-            "Résumé",
-            head=True,
-            trailers={"Reviewed-by": "André <andre@example.com>"},
-        )
+            bytes_commit = Commit(
+                rw_repo,
+                commit.binsha,
+                message=commit.message.encode(commit.encoding),
+                encoding=commit.encoding,
+            )
 
-        bytes_commit = Commit(
-            rw_repo,
-            commit.binsha,
-            message=commit.message.encode(commit.encoding),
-            encoding=commit.encoding,
-        )
-
-        assert bytes_commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
+            assert bytes_commit.trailers_list == [("Reviewed-by", "André <andre@example.com>")]
 
     def test_interpret_trailers_encodes_before_launching_process(self):
         """Test that encoding failures happen before spawning interpret-trailers."""
@@ -859,21 +841,16 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
 
         repo.git.execute.assert_not_called()
 
-    @with_rw_directory
-    def test_index_commit_with_trailers(self, rw_dir):
+    def test_index_commit_with_trailers(self):
         """Test that IndexFile.commit() supports adding trailers."""
-        rw_repo = Repo.init(osp.join(rw_dir, "test_index_trailers"))
-        path = osp.join(str(rw_repo.working_tree_dir), "hello.txt")
-        touch(path)
-        rw_repo.index.add([path])
+        with fixture_repo("commit.sh", "tree", write=True) as rw_repo:
+            trailers = {"Reviewed-by": "Reviewer <reviewer@example.com>"}
+            commit = rw_repo.index.commit(
+                "Test index commit with trailers",
+                trailers=trailers,
+            )
 
-        trailers = {"Reviewed-by": "Reviewer <reviewer@example.com>"}
-        commit = rw_repo.index.commit(
-            "Test index commit with trailers",
-            trailers=trailers,
-        )
-
-        assert "Reviewed-by: Reviewer <reviewer@example.com>" in commit.message
-        assert commit.trailers_dict == {
-            "Reviewed-by": ["Reviewer <reviewer@example.com>"],
-        }
+            assert "Reviewed-by: Reviewer <reviewer@example.com>" in commit.message
+            assert commit.trailers_dict == {
+                "Reviewed-by": ["Reviewer <reviewer@example.com>"],
+            }

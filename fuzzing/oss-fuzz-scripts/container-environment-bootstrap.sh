@@ -16,6 +16,15 @@ for cmd in python3 git wget zip; do
   }
 done
 
+git_binary="$(command -v git)"
+git_version="$("$git_binary" --version)"
+if [[ ! "$git_version" =~ ^git\ version\ ([0-9]+)\.([0-9]+)(\.|[[:space:]]|$) ]] ||
+  ((10#${BASH_REMATCH[1]} < 2 || (10#${BASH_REMATCH[1]} == 2 && 10#${BASH_REMATCH[2]} < 52))); then
+  printf 'GitPython fuzzing requires Git 2.52 or newer; %s reports %s. Update the container Git installation.\n' \
+    "$git_binary" "$git_version" >&2
+  exit 1
+fi
+
 #############
 # Functions #
 #############
@@ -85,7 +94,7 @@ prepare_dictionaries_for_fuzz_targets() {
 ########################
 # Seed corpora and dictionaries are hosted in a separate repository to avoid additional bloat in this repo.
 # We clone into the $WORK directory because OSS-Fuzz cleans it up after building the image, keeping the image small.
-git clone --depth 1 https://github.com/gitpython-developers/qa-assets.git "$WORK/qa-assets"
+"$git_binary" clone --depth 1 -- https://github.com/gitpython-developers/qa-assets.git "$WORK/qa-assets"
 
 create_seed_corpora_zips "$WORK/qa-assets/gitpython/corpora"
 
@@ -97,7 +106,7 @@ pushd "$SRC/gitpython/"
 # This file can then be used by fuzz harnesses to check exception tracebacks and filter out explicitly raised or otherwise
 # anticipated exceptions to reduce false positive test failures.
 
-git grep -n --recurse-submodules -e '\braise\b' -e '\bassert\b' -- '*.py' -- ':!setup.py' -- ':!test/**' -- ':!fuzzing/**' > "$SRC/explicit-exceptions-list.txt"
+"$git_binary" grep -n --recurse-submodules -e '\braise\b' -e '\bassert\b' -- '*.py' -- ':!setup.py' -- ':!test/**' -- ':!fuzzing/**' > "$SRC/explicit-exceptions-list.txt"
 
 popd
 

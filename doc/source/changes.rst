@@ -2,6 +2,151 @@
 Changelog
 =========
 
+Unreleased: Git CLI migration
+=============================
+
+GitPython now delegates repository discovery, references, configuration, object
+storage, tree construction, index operations, and revision parsing to Git. The
+default backend supports SHA-1 and SHA-256 repositories with either files or
+reftable reference storage. Repository object IDs must no longer be assumed to
+contain 20 binary bytes or 40 hexadecimal characters.
+Legacy class-level ``NULL_BIN_SHA`` and ``NULL_HEX_SHA`` constants retain their
+SHA-1 values; do not use their width to interpret repository object IDs.
+
+Git executable and safety
+-------------------------
+
+* Git **2.52 or newer** is required for library-managed operations. Older versions
+  raise ``UnsupportedOperation`` before repository mutation; there is no Python
+  implementation fallback. ``GIT_PYTHON_GIT_EXECUTABLE`` still selects Git.
+* Every managed command uses argument sequences without a shell. Existing unsafe
+  option/protocol checks remain, and operands and stdin records receive additional
+  validation. NUL-delimited ``cat-file`` requests prevent newline injection.
+  Previously accepted option-like revision/ref arguments can now be rejected.
+* New plumbing calls suppress implicit hooks, filesystem monitors, automatic
+  maintenance, and lazy network fetches. Index staging continues to store raw
+  content rather than introduce clean filters. Diffs disable external diff and
+  text conversion programs; blame disables text conversion unless unsafe options
+  are explicitly enabled. Explicit commit hooks use ``git hook run`` and honor
+  ``skip_hooks``; Git combines their output, so ``HookExecutionError`` may carry
+  former stdout text in stderr. Trailer additions reject executable trailer
+  configuration instead of invoking it.
+* Existing working-tree conversions retain Git's behavior: status and working-tree
+  diffs can run configured clean filters; checkout, clone, and archive can run
+  smudge filters. Archive defaults to Git's built-in formats and internal gzip;
+  custom format commands require ``allow_unsafe_options=True``. Tag creation
+  suppresses configured signing by default; signing, verification, and editor
+  options require the same opt-in.
+* The raw ``repo.git`` interface remains available for direct Git commands.
+  Existing explicit unsafe-option and unsafe-protocol opt-ins remain independent.
+  They do not permit argument or stdin-record injection, or reordering command
+  options past the library's safety flags.
+* Known command outcomes retain established GitPython/configparser exceptions
+  where distinguishable. Other failures raise ``GitCommandError`` with Git's
+  exit status and diagnostic output; exact error text may differ.
+
+API changes
+-----------
+
+* ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
+  writes, existence checks, and enumeration use Git, including packed objects.
+  Precompressed input streams and custom object-output writers are unsupported.
+  ``GitDB`` exports and backend selection are removed. ``odbt`` accepts only
+  ``GitCmdObjectDB`` and its subclasses, rejecting unsupported types before
+  initialization or cloning. Remove ``odbt=GitDB`` or select ``GitCmdObjectDB``.
+  ``gitdb`` remains a dependency for shared types and utilities.
+* ``Repo.object_format`` and ``Repo.ref_format`` report Git's storage formats.
+  ``Repo.alternates`` is read-only and reports effective absolute alternate
+  directories, including environment and transitive alternates. Direct editing
+  of the alternates file through this property is removed.
+* Index entries retain their mode, object ID, path, and stage. Raw stat fields,
+  arbitrary cache flags/extensions/checksums, ``IndexFileSHA1Writer``, and the
+  standalone binary index read/write/merge helpers are removed. Use
+  ``IndexFile.from_tree()``, ``IndexFile.new()``, ``write()`` and ``write_tree()``.
+  Git preserves untouched metadata when an existing index is edited. Temporary
+  indexes isolate tree/merge operations from the real index and working tree.
+  Git's platform-specific index filename restrictions apply. Unsupported entries
+  raise ``ValueError`` before the original index changes, including names with
+  colons or control characters on Windows and backslashes with Cygwin Git.
+  Tree objects can still contain names that the working tree or index cannot
+  represent.
+  ``version`` is read-only. ``from_tree()`` accepts ``trivial``, ``aggressive``,
+  and ``verbose`` options; arbitrary ``read-tree`` keyword forwarding is removed.
+* Standalone binary tree parsers, serializers, and multi-tree traversal helpers
+  are removed. Use ``Tree`` traversal/cache operations and the index interface.
+  Tree/commit serialization adapters that remain write their objects to the
+  repository to obtain Git-produced bytes.
+  Commit creation preserves message bytes through plain stdin. Injecting or
+  reusing arbitrary ``gpgsig`` headers is unsupported; modified signed commits
+  become unsigned.
+* ``RefLog`` is associated with a reference, not a filesystem path. Keep using
+  ``ref.log()``, ``ref.log_entry()`` and ``ref.log_append()``. ``RefLogEntry`` now
+  contains ``newhexsha``, ``actor``, ``time`` and ``message``; ``oldhexsha`` and
+  the old tuple layout are removed. Reads follow Git's commit-reflog view, which
+  omits entries targeting non-commit or unavailable objects. Old IDs are never
+  inferred from adjacent entries. Raw reflog file/stream read, write, and rewrite
+  APIs are removed. Reference updates follow Git's reflog creation/update rules,
+  including updates when ``logmsg`` is omitted.
+* ``GitConfigParser`` uses Git's configuration syntax and canonical key spelling,
+  and no longer subclasses ``configparser.RawConfigParser``.
+  Common getters, typed values, duplicate values, file/stream inputs and mutation
+  methods remain. Invalid Git syntax previously accepted by Python is rejected.
+  Empty-section creation and valueless writes are removed; valueless reads remain.
+  Relative includes from streams are rejected by Git. Locks cover each native
+  mutation rather than the writer object's lifetime.
+* ``Submodule.rename()`` is removed. Moving a submodule preserves its logical name,
+  matching Git. Normal removal retains Git's recoverable submodule metadata.
+  Re-adding with ``no_checkout=True`` can reuse that metadata without changing refs;
+  incompatible URLs, branches, and clone-only options are rejected before mutation.
+  Fetch/pull results are derived from command output rather than ``FETCH_HEAD``
+  file parsing. Revision strings follow Git's native revision grammar.
+
+* ``IndexFile.entries`` is removed. Use ``iter_entries()`` for immutable query
+  records, ``entry(path, stage=0)`` for exact lookup (missing entries raise
+  ``KeyError``), ``add()``, and ``remove()`` for edits. Python retains only opaque
+  index-file bytes for deferred/virtual indexes. Git edits private files and
+  validates readback before atomic publication. ``add(write=False)`` and
+  ``resolve_blobs()`` retain deferred edits; ``remove(..., write=False)`` now does
+  too, unless ``working_tree=True``. ``write(file_path)`` publishes to an alternate
+  path. Checkout and diff use pending bytes. Git owns versions, flags, sparse and
+  split indexes; deferred split snapshots are made standalone through Git.
+  Ordinary failed index edits preserve pending and published state. Worktree,
+  object storage and hook side effects are not rolled back. Commit hooks see the
+  materialized index; their index edits survive failures without advancing HEAD.
+  Binary-parser tests and duplicate filename-rejection matrices are replaced by
+  happy paths, Python glue failures and representative compatibility regressions.
+  Historical timing-only tests are removed; the maintained backend benchmark
+  checks result parity and CLI budgets.
+* Commit/tag metadata uses structured Gix decoders when the Gix backend supports
+  the repository. The CLI backend retains raw decoding because Git has no faithful
+  formatted query for all commit headers or arbitrary tag objects. ``gpgsig``
+  remains readable. The small ``Actor.from_string()`` and
+  ``parse_actor_and_date()`` identity helpers remain supported.
+* ``parse_date()`` delegates text syntax and timezone interpretation to Git;
+  aware datetimes retain direct conversion and invalid inputs raise ``ValueError``.
+  ISO/RFC dates now apply their timezone to the UTC timestamp, correcting the
+  previous behavior. Dates without a zone use Git's local timezone, and accepted
+  date syntax follows the installed Git version. Use an explicit timezone for
+  reproducible results. ``co_authors`` now uses Git's final trailer block rather
+  than scanning arbitrary message lines; use a valid trailer block after a blank
+  line.
+* Removed deprecated APIs: ``Git.USE_SHELL`` (explicit ``Git.execute(shell=...)``
+  remains), ``Diff.renamed`` (use ``renamed_file``), ``Commit.trailers`` (use
+  ``trailers_list`` or ``trailers_dict``), ``Actor.name_email_regex`` (use
+  ``Actor.from_string``), ``git.util.Iterable`` (use ``IterableObj``),
+  ``git.compat.is_win/is_posix/is_darwin`` (use ``os.name``/``sys.platform``), and
+  ``git.types.Lit_commit_ish`` (use ``Literal["commit", "tag"]`` or
+  ``GitObjectTypeString``). Top-level typing exports and private module aliases
+  are removed; import from ``typing`` or the owning module. ``git.util`` now
+  exposes the actual utility module. Abstract ``Traversable.traverse`` and
+  ``list_traverse`` raise ``NotImplementedError``; use concrete implementations.
+* Paths and URLs no longer expand ``$VAR``/``%VAR%`` automatically. Removed
+  ``expand_vars`` switches from ``Repo``, ``Repo.init``, ``expand_path``,
+  ``cygpath`` and ``Git.polish_url``. Expand explicitly with
+  ``os.path.expandvars`` if wanted; initial ``~`` expansion remains.
+  ``HIDE_WINDOWS_KNOWN_ERRORS`` and ``HIDE_WINDOWS_FREEZE_ERRORS`` are removed.
+  ``rmtree`` propagates filesystem errors rather than raising ``SkipTest``.
+
 3.2.1
 =====
 
