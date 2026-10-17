@@ -12,7 +12,6 @@ import re
 import shlex
 import stat
 import sys
-import urllib.parse
 import uuid
 from io import BytesIO
 from pathlib import Path
@@ -57,8 +56,12 @@ from git.util import (
 
 from .util import (
     SubmoduleConfigParser,
+    _is_absolute_path,
+    _url_is_local_not_ssh,
     find_first_remote_branch,
+    is_relative_url,
     mkhead,
+    resolve_relative_url,
     sm_name,
     sm_section,
 )
@@ -68,7 +71,7 @@ from git.types import TBD, Commit_ish, PathLike
 if TYPE_CHECKING:
     from git.index import IndexFile
     from git.objects.commit import Commit
-    from git.refs import Head, RemoteReference
+    from git.refs import Head
     from git.repo import Repo
 
 # -----------------------------------------------------------------------------
@@ -428,13 +431,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
 
-        if url.startswith("../"):
-            remote_name = cast("RemoteReference", repo.active_branch.tracking_branch()).remote_name
-            repo_remote_url = repo.remote(remote_name).url
-            url = os.path.join(repo_remote_url, url)
-
         clone = git.Repo.clone_from(
-            url,
+            cls._resolve_url(repo, url),
             module_checkout_path,
             allow_unsafe_options=allow_unsafe_options,
             allow_unsafe_protocols=allow_unsafe_protocols,
@@ -746,8 +744,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             )
         # END verify url
 
-        ## See #525 for ensuring git URLs in config-files are valid under Windows.
-        url = Git.polish_url(url, expand_vars=False)
+        # Relative submodule URLs must keep their prefix to resolve against the parent remote.
+        if not is_relative_url(url):
+            url = Git.polish_url(url, expand_vars=False)
 
         # It's important to add the URL to the parent config, to let `git submodule` know.
         # Otherwise there is a '-' character in front of the submodule listing:
@@ -982,13 +981,9 @@ class Submodule(IndexObject, TraversableIterableObj):
                     if not dry_run:
                         if no_fetch:
                             raise ValueError("Missing module at %r but fetching is disabled" % self.path) from None
-                        if self.url.startswith("."):
-                            url = urllib.parse.urljoin(self.repo.remotes.origin.url + "/", self.url)
-                        else:
-                            url = self.url
                         mrepo = self._clone_repo(
                             self.repo,
-                            url,
+                            self.url,
                             self.path,
                             self.name,
                             n=True,
@@ -1737,6 +1732,31 @@ class Submodule(IndexObject, TraversableIterableObj):
     def url(self) -> str:
         """:return: The url to the repository our submodule's repository refers to"""
         return self._url
+
+    @staticmethod
+    def _resolve_url(repo: "Repo", url: str) -> str:
+        """Resolve relative URLs against the tracking remote, then ``origin``,
+        falling back to the superproject's directory the way git does."""
+        if not is_relative_url(url):
+            return url
+        remote_name = "origin"
+        if not repo.head.is_detached:
+            with repo.active_branch.config_reader() as reader:
+                remote_name = reader.get("remote", fallback="origin")
+        try:
+            remote_url = repo.remote(remote_name).url
+        except ValueError:
+            remote_url = os.fspath(repo.working_dir)
+        if remote_url == ".":
+            remote_url = os.fspath(repo.working_dir)
+        resolved = resolve_relative_url(remote_url, url)
+        if resolved and _url_is_local_not_ssh(resolved) and not _is_absolute_path(resolved):
+            resolved = os.path.join(repo.working_dir, resolved)
+        return resolved
+
+    def _resolved_url(self) -> str:
+        """:return: :attr:`url` resolved against the superproject's default remote"""
+        return self._resolve_url(self.repo, self.url)
 
     @property
     def parent_commit(self) -> "Commit":
