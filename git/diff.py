@@ -410,7 +410,8 @@ class Diff:
     re_header = re.compile(
         rb"""
                                 ^diff[ ]--git
-                                    [ ](?P<a_path_fallback>"?[ab]/.+?"?)[ ](?P<b_path_fallback>"?[ab]/.+?"?)\n
+                                    [ ](?P<header_names>(?P<a_path_fallback>"?[ab]/.+?"?)
+                                        [ ](?P<b_path_fallback>"?[ab]/.+?"?))\n
                                 (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
                                    ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
@@ -419,7 +420,7 @@ class Diff:
                                 (?:^new[ ]file[ ]mode[ ](?P<new_file_mode>.+)(?:\n|$))?
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
-                                   ^copy[ ]from[ ].*\n
+                                   ^copy[ ]from[ ](?P<copied_from_name>.*)\n
                                    ^copy[ ]to[ ](?P<copied_file_name>.*)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
@@ -626,6 +627,39 @@ class Diff:
 
         return None
 
+    @staticmethod
+    def _same_path_in_header(names: bytes) -> Optional[bytes]:
+        """Return the path that a ``diff --git a/<path> b/<path>`` line names twice.
+
+        git separates the two names with a space but does not quote a path for
+        containing one, so once the path contains ``" a/"`` or ``" b/"`` the line alone
+        does not show where the first name ends. When no ``---``, ``+++``, rename or
+        copy line names the file, both names are the same path, and the split is
+        accepted only where the two halves agree, as ``git_header_name`` in git's
+        ``apply.c`` does. A quoted first name ends at its closing quote.
+
+        :return:
+            The path without its ``a/`` prefix, or ``None`` if no split agrees.
+        """
+        if names.startswith(b'"'):
+            end = 1
+            while end < len(names) and names[end : end + 1] != b'"':
+                end += 2 if names[end : end + 1] == b"\\" else 1
+            splits = [end + 1]
+        else:
+            splits = [index for index in range(len(names)) if names[index : index + 1] == b" "]
+        for split in splits:
+            if names[split : split + 1] != b" ":
+                continue
+            a_name, b_name = names[:split], names[split + 1 :]
+            if a_name.startswith(b'"'):
+                if not (a_name.endswith(b'"') and b_name.startswith(b'"') and b_name.endswith(b'"')):
+                    continue
+                a_name, b_name = _unquote_path(a_name[1:-1]), _unquote_path(b_name[1:-1])
+            if a_name.startswith(b"a/") and b_name.startswith(b"b/") and a_name[2:] == b_name[2:]:
+                return a_name[2:]
+        return None
+
     @classmethod
     def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex["Diff"]:
         """Create a new :class:`DiffIndex` from the given process output which must be
@@ -662,6 +696,7 @@ class Diff:
         a_mode, b_mode = None, None  # For mypy.
         for _header in cls.re_header.finditer(text):
             (
+                header_names,
                 a_path_fallback,
                 b_path_fallback,
                 old_mode,
@@ -670,6 +705,7 @@ class Diff:
                 rename_to,
                 new_file_mode,
                 deleted_file_mode,
+                copied_from_name,
                 copied_file_name,
                 a_blob_id,
                 b_blob_id,
@@ -684,8 +720,15 @@ class Diff:
                 bool(copied_file_name),
             )
 
-            a_path = cls._pick_best_path(a_path, rename_from, a_path_fallback)
-            b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
+            # Mode changes, binary files and empty files have no `---` and `+++` lines,
+            # so only the `diff --git` line names them, and it names the same path twice.
+            named_elsewhere = any((a_path, b_path, rename_from, rename_to, copied_from_name, copied_file_name))
+            same_path = None if named_elsewhere else cls._same_path_in_header(header_names)
+            if same_path is None:
+                a_path = cls._pick_best_path(a_path, rename_from or copied_from_name, a_path_fallback)
+                b_path = cls._pick_best_path(b_path, rename_to or copied_file_name, b_path_fallback)
+            else:
+                a_path = b_path = same_path
 
             # Our only means to find the actual text is to see what has not been matched
             # by our regex, and then retro-actively assign it to our index.

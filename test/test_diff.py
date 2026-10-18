@@ -270,6 +270,42 @@ class TestDiff(TestBase):
         self.assertEqual([d.b_path for d in diffs], sorted(paths))
         self.assertEqual({d.change_type for d in diffs}, {"A"})
 
+    @with_rw_directory
+    def test_diff_patch_paths_named_only_by_the_header_line(self, rw_dir):
+        # Binary files, empty files, mode changes and copies have no `---` and `+++`
+        # lines, so their paths come from the `diff --git a/<path> b/<path>` line, where
+        # git does not quote a space. Each path contains " a/" or " b/" so that the line
+        # alone does not show where the first name ends.
+        repo = Repo.init(rw_dir)
+        binary = repo.odb.store(IStream(Blob.type, 1, BytesIO(b"\0"))).binsha
+        empty = repo.odb.store(IStream(Blob.type, 0, BytesIO(b""))).binsha
+        paths = ["assets b/logo.png", "docs a/empty", "quoted\t a/tab"]
+        repo.index.add(
+            [
+                BaseIndexEntry((0o100644, binary, 0, paths[0])),
+                BaseIndexEntry((0o100644, empty, 0, paths[1])),
+                BaseIndexEntry((0o100644, binary, 0, paths[2])),
+            ]
+        )
+        commit = repo.index.commit("paths")
+
+        diffs = commit.diff(NULL_TREE, create_patch=True)
+        self.assertEqual({(d.a_path, d.b_path) for d in diffs}, {(path, path) for path in paths})
+
+        repo.index.add(
+            [
+                BaseIndexEntry((0o100755, binary, 0, paths[0])),
+                BaseIndexEntry((0o100644, binary, 0, "copy b/logo.png")),
+            ]
+        )
+        changed = repo.index.commit("mode change and copy")
+
+        diffs = commit.diff(changed, create_patch=True, C=True, find_copies_harder=True)
+        self.assertEqual(
+            {(d.a_path, d.b_path, d.copied_file) for d in diffs},
+            {(paths[0], paths[0], False), (paths[0], "copy b/logo.png", True)},
+        )
+
     def test_empty_diff(self):
         res = []
         Diff._handle_diff_line(b"", None, res)
