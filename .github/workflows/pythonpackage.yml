@@ -54,7 +54,7 @@ jobs:
 
     - name: Set up WSL (Windows)
       if: matrix.os-type == 'windows'
-      uses: Vampire/setup-wsl@v7.0.0
+      uses: Vampire/setup-wsl@v7.2.0
       with:
         wsl-version: 1
 
