@@ -733,12 +733,17 @@ class Diff:
         # Discard everything before the first colon, and the colon itself.
         _, _, lines = lines.partition(":")
 
-        for line in lines.split("\x00:"):
-            if not line:
+        # Each record is a metadata field starting with a colon, followed by one path,
+        # or two for copies and renames, each terminated by NUL. A path may itself
+        # start with a colon or contain a line feed, so read the fields in order
+        # instead of splitting at colons.
+        fields = iter(lines.rstrip("\n").split("\x00"))
+        for meta in fields:
+            if not meta:
                 # The line data is empty, skip.
                 continue
-            meta, _, path = line.partition("\x00")
-            path = path.rstrip("\x00")
+            if meta.startswith(":"):
+                meta = meta[1:]
             a_blob_id: Optional[str]
             b_blob_id: Optional[str]
             old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
@@ -748,7 +753,7 @@ class Diff:
             change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = "".join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
-            path = path.strip("\n")
+            path = next(fields, "")
             a_path = path.encode(defenc)
             b_path = path.encode(defenc)
             deleted_file = False
@@ -767,13 +772,9 @@ class Diff:
                 new_file = True
             elif change_type == "C":
                 copied_file = True
-                a_path_str, b_path_str = path.split("\x00", 1)
-                a_path = a_path_str.encode(defenc)
-                b_path = b_path_str.encode(defenc)
+                b_path = next(fields, "").encode(defenc)
             elif change_type == "R":
-                a_path_str, b_path_str = path.split("\x00", 1)
-                a_path = a_path_str.encode(defenc)
-                b_path = b_path_str.encode(defenc)
+                b_path = next(fields, "").encode(defenc)
                 rename_from, rename_to = a_path, b_path
             elif change_type == "T":
                 # Nothing to do.
@@ -817,17 +818,17 @@ class Diff:
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
         index: "DiffIndex" = DiffIndex()
+        text_list: List[bytes] = []
         stderr_list: List[bytes] = []
 
         def finalize_process_with_stderr(proc: Union["Popen", "Git.AutoInterrupt"]) -> None:
             finalize_process(proc, stderr=b"".join(stderr_list))
 
+        # Output is read line by line, but paths may contain line feeds, so parse
+        # the records only once all of it has been read.
         handle_process_output(
-            proc,
-            lambda byt: cls._handle_diff_line(byt, repo, index),
-            stderr_list.append,
-            finalize_process_with_stderr,
-            decode_streams=False,
+            proc, text_list.append, stderr_list.append, finalize_process_with_stderr, decode_streams=False
         )
+        cls._handle_diff_line(b"".join(text_list), repo, index)
 
         return index
