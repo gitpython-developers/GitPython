@@ -365,7 +365,7 @@ class TestBase(TestCase):
             (b"[a]\n\tk = one\\\n two ; ignored\n", "one two"),
             (b'[a]\n\tk = one\\\n "two"\n', "one two"),
             (b"[a]\n\tk = one\\\n two\\tthree\n", "one two\tthree"),
-            (b"[a]\n\tk = val\\\\\n next\n", "val\\\\"),
+            (b"[a]\n\tk = val\\\\\n next\n", "val\\"),
             (b"[a]\n\tk = end\\\n", "end"),
             (b"[alias]\n\tco = checkout \\\n\t\t-v\n", "checkout \t\t-v"),
         ]
@@ -1208,6 +1208,30 @@ class TestBase(TestCase):
 
         # Cases without quotes should still parse correctly even after those, too.
         self.assertEqual(cr.get("custom", "unquoted"), "good evening")
+
+    def test_config_with_unquoted_escapes(self):
+        """Decode git's escape sequences in unquoted values, but only when every
+        backslash in the value is part of a known escape."""
+        cr = GitConfigParser(fixture_path("git_config_unquoted_escapes"), read_only=True)
+
+        self.assertEqual(cr.get("custom", "hasnewline"), "first\nsecond")
+        self.assertEqual(cr.get("custom", "hastab"), "first\tsecond")
+        self.assertEqual(cr.get("custom", "hasbackslash"), R"foo\bar")
+        self.assertEqual(cr.get("custom", "hasquote"), 'ab"cd')
+        self.assertEqual(cr.get("custom", "hastrailingbackslash"), "word\\")
+
+        # Git rejects an unknown escape rather than decoding it. GitPython keeps
+        # such a value literal instead of rejecting it, which is what keeps a
+        # Windows path usable, so no backslash in one may be decoded: doing so
+        # would turn the \t of \Temp\test into a tab while leaving \U alone.
+        self.assertEqual(cr.get("custom", "hasunknownescape"), R"foo\qbar")
+        self.assertEqual(cr.get("custom", "haswindowspath"), R"C:\Users\RUNNER~1\AppData\Local\Temp\test_foo")
+
+        # Values without escapes keep parsing as before.
+        self.assertEqual(cr.get("custom", "ordinary"), "hello world")
+        self.assertEqual(cr.get("custom", "withcolon"), "host:port")
+        self.assertEqual(cr.get("custom", "withequals"), "key=value")
+        self.assertEqual(cr.get("custom", "withhash"), "value")
 
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
