@@ -378,6 +378,33 @@ class TestBase(TestCase):
             key = "co" if section == "alias" else "k"
             self.assertEqual(config.get_value(section, key), expected)
 
+    @with_rw_directory
+    def test_continued_values_preserve_comments_and_eof_whitespace(self, rw_dir):
+        cases = [
+            (b"one\\\n two # C:\\Users\n", "one two"),
+            (b"one\\\n two ; C:\\Users\n", "one two"),
+            (b"one\\\n two\\tthree # C:\\Users\n", "one two\tthree"),
+            (b'one\\\n "two # three" # C:\\Users\n', "one two # three"),
+            (b"value \\", "value "),
+            (b"value \\\n", "value "),
+            (b"value \t\\\n", "value \t"),
+            (b"one\\\n two \\\n", "one two "),
+            (b"C:\\Users \\\n", "C:\\Users "),
+        ]
+        config_path = osp.join(rw_dir, "config")
+        for value, expected in cases:
+            with self.subTest(value=value):
+                with open(config_path, "wb") as config_file:
+                    config_file.write(b"[a]\n\tk = " + value)
+
+                with GitConfigParser(config_path, read_only=False) as config:
+                    self.assertEqual(config.get_value("a", "k"), expected)
+                    config.set_value("other", "value", "updated")
+
+                with GitConfigParser(config_path) as config:
+                    self.assertEqual(config.get_value("a", "k"), expected)
+                    self.assertEqual(config.get_value("other", "value"), "updated")
+
     def test_get_value_reads_git_boolean_spellings(self):
         # git accepts yes/no and on/off as well as true/false, and getboolean on
         # this class already did. get_value returned them as strings, so "no" and

@@ -632,13 +632,15 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # next line is appended before the complete value is
                         # parsed. An even number means the last backslash is
                         # escaped and the value ends there.
+                        eof_continuation = False
                         while True:
                             if not is_line_continuation(optval):
                                 break
                             continuation = fp.readline()
                             if not continuation:
-                                # Backslash at end of file: git drops it.
-                                optval = optval[:-1]
+                                # Keep the backslash until parsing so preceding
+                                # whitespace is significant even though git drops it.
+                                eof_continuation = True
                                 break
                             lineno = lineno + 1
                             joined = continuation.decode(defenc)
@@ -649,8 +651,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # values, but only a value in which every backslash is part
                         # of a known escape is decoded, so that a Windows path keeps
                         # its backslashes instead of losing them one escape at a time.
+                        optval, _ = strip_inline_comment(optval)
                         if escapes_are_known(optval):
                             optval = parse_value(optval)
+                        elif eof_continuation:
+                            optval = optval[:-1]
                     elif quote_open:
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True
