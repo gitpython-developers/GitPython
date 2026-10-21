@@ -1657,6 +1657,17 @@ class TestRepo(TestBase):
                 ["included_file.txt", "ignored_file.txt", "included_dir/file.txt", "ignored_dir/file.txt"]
             ) == ["ignored_file.txt", "ignored_dir/file.txt"]
 
+    def test_ignored_items_reported_verbatim(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            temp_repo = Repo.init(pathlib.Path(tdir) / "repo")
+
+            with open(pathlib.Path(temp_repo.working_tree_dir) / ".gitignore", "w") as file:
+                file.write("*.env\n")
+
+            # Git C-quotes each of these in its default output format.
+            paths = ["donn\u00e9es.env", 'q"uote.env', "tab\t.env", "nl\nx.env"]
+            assert temp_repo.ignored(["keep.txt", *paths]) == paths
+
     @requires_symlinks
     def test_ignored_raises_error_w_symlink(self):
         with tempfile.TemporaryDirectory() as tdir:

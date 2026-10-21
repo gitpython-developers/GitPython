@@ -26,6 +26,7 @@ from git.cmd import Git, handle_process_output
 from git.compat import defenc, safe_decode
 from git.config import GitConfigParser
 from git.db import GitCmdObjectDB
+from git.diff import _unquote_path
 from git.exc import (
     GitCommandError,
     InvalidGitRepositoryError,
@@ -1158,7 +1159,7 @@ class Repo:
             Subset of those paths which are ignored
         """
         try:
-            proc: str = self.git.check_ignore("--", *paths)
+            proc: bytes = self.git.check_ignore("--", *paths, stdout_as_string=False)
         except GitCommandError as err:
             if err.status == 1:
                 # If return code is 1, this means none of the items in *paths are
@@ -1168,7 +1169,12 @@ class Repo:
                 # Raise the exception on all other return codes.
                 raise
 
-        return proc.replace("\\\\", "\\").replace('"', "").split("\n")
+        # Git C-quotes a path containing special characters, including a line feed,
+        # so each path is on its own line.
+        return [
+            safe_decode(_unquote_path(path[1:-1]) if path[:1] == path[-1:] == b'"' else path)
+            for path in proc.split(b"\n")
+        ]
 
     @property
     def active_branch(self) -> Head:
