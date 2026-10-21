@@ -856,6 +856,33 @@ class TestUtils(TestBase):
     def test_remove_password_preserves_url_components(self, url, expected):
         assert remove_password_if_present([url]) == [expected]
 
+    @ddt.data(
+        (
+            ["-c", "http.proxy=http://user:pass@proxy.example.com:3128"],
+            ["-c", "http.proxy=http://*****:*****@proxy.example.com:3128"],
+        ),
+        (
+            ["-c", "remote.origin.url=https://user:pass@example.com/repo"],
+            ["-c", "remote.origin.url=https://*****:*****@example.com/repo"],
+        ),
+        (
+            ["--config=http.proxy=http://user:pass@proxy.example.com:3128"],
+            ["--config=http.proxy=http://*****:*****@proxy.example.com:3128"],
+        ),
+        (
+            ["--config=url.https://user:pass@example.com/.insteadOf=https://example.com/"],
+            ["--config=url.https://*****:*****@example.com/.insteadOf=https://example.com/"],
+        ),
+        (
+            ["--config=http.extraHeader=Authorization: Bearer pass"],
+            ["--config=http.extraHeader=Authorization: *****"],
+        ),
+        (["-c", "user.name=pass"], ["-c", "user.name=pass"]),
+    )
+    @ddt.unpack
+    def test_remove_password_from_config_values(self, cmdline, expected):
+        assert remove_password_if_present(cmdline) == expected
+
 
 def test_mode_str_to_int_accepts_bytes():
     assert mode_str_to_int("100644") == 0o100644

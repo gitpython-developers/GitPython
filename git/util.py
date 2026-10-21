@@ -652,8 +652,29 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
         return None
 
 
+def _redact_url_credentials(text: str) -> Optional[str]:
+    """Return `text` with the userinfo of a URL redacted, or ``None`` if it has none."""
+    try:
+        url = urlsplit(text)
+    except ValueError:
+        # This is not a valid URL.
+        return None
+    if url.password is None and url.username is None:
+        return None
+
+    # Match urllib.parse's userinfo boundary. Keeping the raw hostinfo
+    # preserves hostname case, IPv6 brackets, and port formatting.
+    _, _, hostinfo = url.netloc.rpartition("@")
+    redacted = "*****:*****" if url.password is not None else "*****"
+    return urlunsplit(url._replace(netloc=f"{redacted}@{hostinfo}"))
+
+
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     """Redact credentials in URLs and HTTP Authorization extra headers in a command line.
+
+    URLs are also redacted when they are the value of a configuration assignment, such
+    as ``http.proxy=<url>``, and assignments are recognized in both the ``-c <key>=<value>``
+    and the ``--config=<key>=<value>`` form.
 
     If nothing is found, this just returns the command line as-is.
 
@@ -661,33 +682,30 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     exception messages.
     """
     new_cmdline = []
-    for index, to_parse in enumerate(cmdline):
-        new_cmdline.append(to_parse)
-        config_key, separator, header = to_parse.partition("=")
-        header_name, colon, _ = header.partition(":")
+    for to_parse in cmdline:
+        option = "--config=" if to_parse.startswith("--config=") else ""
+        assignment = to_parse[len(option) :]
+        config_key, separator, value = assignment.partition("=")
+        header_name, colon, _ = value.partition(":")
         if (
             separator
             and colon
             and config_key.lower().endswith(".extraheader")
             and header_name.strip().lower() == "authorization"
         ):
-            new_cmdline[index] = "%s%s%s%s *****" % (config_key, separator, header_name, colon)
+            new_cmdline.append("%s%s%s%s%s *****" % (option, config_key, separator, header_name, colon))
             continue
-        try:
-            url = urlsplit(to_parse)
-            # Remove password from the URL if present.
-            if url.password is None and url.username is None:
-                continue
 
-            # Match urllib.parse's userinfo boundary. Keeping the raw hostinfo
-            # preserves hostname case, IPv6 brackets, and port formatting.
-            _, _, hostinfo = url.netloc.rpartition("@")
-            redacted = "*****:*****" if url.password is not None else "*****"
-            url = url._replace(netloc=f"{redacted}@{hostinfo}")
-            new_cmdline[index] = urlunsplit(url)
-        except ValueError:
-            # This is not a valid URL.
-            continue
+        redacted = _redact_url_credentials(to_parse)
+        if redacted is None and option:
+            redacted = _redact_url_credentials(assignment)
+            if redacted is not None:
+                redacted = option + redacted
+        if redacted is None and separator:
+            redacted = _redact_url_credentials(value)
+            if redacted is not None:
+                redacted = option + config_key + separator + redacted
+        new_cmdline.append(to_parse if redacted is None else redacted)
     return new_cmdline
 
 
