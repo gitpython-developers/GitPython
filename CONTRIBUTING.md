@@ -9,6 +9,16 @@ The following is a short step-by-step rundown of what one typically would do to 
 - Feel free to add yourself to AUTHORS file.
 - Create a pull request.
 
+## Prefer pull requests
+
+Pull requests are preferred when you have a fix or improvement to contribute: a PR
+can be treated as an issue with a fix attached. Describe the problem and proposed
+solution in the PR itself; a separate issue is not required.
+
+Please avoid opening an issue solely to follow it immediately with a PR that fixes
+it. Open the PR directly instead. Issues are still welcome for problems without a
+fix or for changes that need discussion before implementation.
+
 ## Quality expectations
 
 Contributions must be made with care and meet the quality bar of the surrounding code.
