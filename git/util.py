@@ -672,9 +672,9 @@ def _redact_url_credentials(text: str) -> Optional[str]:
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     """Redact credentials in URLs and HTTP Authorization extra headers in a command line.
 
-    URLs are also redacted when they are the value of a configuration assignment, such
-    as ``http.proxy=<url>``, and assignments are recognized in both the ``-c <key>=<value>``
-    and the ``--config=<key>=<value>`` form.
+    URLs are also redacted in the key and value of a configuration assignment, such
+    as ``http.proxy=<url>``. Assignments are recognized in the ``-c <key>=<value>``,
+    ``-c<key>=<value>``, and ``--config=<key>=<value>`` forms.
 
     If nothing is found, this just returns the command line as-is.
 
@@ -683,8 +683,15 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     """
     new_cmdline = []
     for to_parse in cmdline:
-        option = "--config=" if to_parse.startswith("--config=") else ""
+        if to_parse.startswith("--config="):
+            option = "--config="
+        elif to_parse.startswith("-c"):
+            option = "-c"
+        else:
+            option = ""
         assignment = to_parse[len(option) :]
+        # Redact the whole URL first, before splitting on a possible '=' in userinfo.
+        assignment = _redact_url_credentials(assignment) or assignment
         config_key, separator, value = assignment.partition("=")
         header_name, colon, _ = value.partition(":")
         if (
@@ -696,16 +703,9 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
             new_cmdline.append("%s%s%s%s%s *****" % (option, config_key, separator, header_name, colon))
             continue
 
-        redacted = _redact_url_credentials(to_parse)
-        if redacted is None and option:
-            redacted = _redact_url_credentials(assignment)
-            if redacted is not None:
-                redacted = option + redacted
-        if redacted is None and separator:
-            redacted = _redact_url_credentials(value)
-            if redacted is not None:
-                redacted = option + config_key + separator + redacted
-        new_cmdline.append(to_parse if redacted is None else redacted)
+        if separator:
+            value = _redact_url_credentials(value) or value
+        new_cmdline.append(option + config_key + separator + value)
     return new_cmdline
 
 

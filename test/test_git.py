@@ -10,7 +10,6 @@ import io
 import logging
 import os
 import os.path as osp
-from pathlib import Path
 import pickle
 import re
 import shutil
@@ -20,6 +19,7 @@ import sys
 import tempfile
 import threading
 import time
+from pathlib import Path
 from unittest import mock, skipUnless
 
 import ddt
@@ -27,7 +27,6 @@ import ddt
 from git import Git, GitCommandError, GitCommandNotFound, Repo, cmd, refresh
 from git.exc import UnsafeOptionError
 from git.util import cwd, finalize_process
-
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
@@ -546,6 +545,38 @@ class TestGit(TestBase):
         message = str(context.exception)
         self.assertNotIn(token, message)
         self.assertIn("http.extraHeader=Authorization: *****", message)
+
+    @ddt.data(
+        (
+            "--config=http.https://alice@host.proxy=http://bob:token@proxy",
+            "--config=http.https://*****@host.proxy=http://*****:*****@proxy",
+        ),
+        (
+            "-curl.https://user:token@host/.insteadOf=https://old/",
+            "-curl.https://*****:*****@host/.insteadOf=https://old/",
+        ),
+    )
+    @ddt.unpack
+    def test_clone_redacts_config_urls_from_trace_and_error(self, option, expected):
+        for trace in (True, "full"):
+            with self.subTest(trace=trace), tempfile.TemporaryDirectory() as directory:
+                with mock.patch.object(Git, "GIT_PYTHON_TRACE", trace):
+                    with self.assertLogs("git.cmd", level="INFO") as logs:
+                        with self.assertRaises(GitCommandError) as context:
+                            Repo.clone_from(
+                                osp.join(directory, "missing-source"),
+                                osp.join(directory, "destination"),
+                                multi_options=[option],
+                                allow_unsafe_options=True,
+                            )
+                self.assertIn(expected, context.exception.command)
+                message = str(context.exception)
+                assert logs is not None
+                log_output = " ".join(logs.output)
+                self.assertIn(expected, log_output)
+                for credential in ("alice", "bob", "user", "token"):
+                    self.assertNotIn(credential, message)
+                    self.assertNotIn(credential, log_output)
 
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
