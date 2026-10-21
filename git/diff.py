@@ -9,16 +9,9 @@ import enum
 import re
 import warnings
 
-from git.cmd import Git, handle_process_output
-from git.compat import defenc
-from git.objects.base import IndexObject
-from git.objects.blob import Blob
-from git.objects.util import mode_str_to_int
-from git.util import finalize_process, hex_to_bin
-
 # typing ------------------------------------------------------------------
-
 from typing import (
+    TYPE_CHECKING,
     Any,
     Iterator,
     List,
@@ -26,12 +19,18 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    TYPE_CHECKING,
     TypeVar,
     Union,
     cast,
 )
-from git.types import PathLike, Literal
+
+from git.cmd import Git, handle_process_output
+from git.compat import defenc
+from git.objects.base import IndexObject
+from git.objects.blob import Blob
+from git.objects.util import mode_str_to_int
+from git.types import Literal, PathLike
+from git.util import finalize_process, hex_to_bin
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -645,19 +644,22 @@ class Diff:
             end = 1
             while end < len(names) and names[end : end + 1] != b'"':
                 end += 2 if names[end : end + 1] == b"\\" else 1
-            splits = [end + 1]
+            split = end + 1
         else:
-            splits = [index for index in range(len(names)) if names[index : index + 1] == b" "]
-        for split in splits:
-            if names[split : split + 1] != b" ":
-                continue
-            a_name, b_name = names[:split], names[split + 1 :]
-            if a_name.startswith(b'"'):
-                if not (a_name.endswith(b'"') and b_name.startswith(b'"') and b_name.endswith(b'"')):
-                    continue
-                a_name, b_name = _unquote_path(a_name[1:-1]), _unquote_path(b_name[1:-1])
-            if a_name.startswith(b"a/") and b_name.startswith(b"b/") and a_name[2:] == b_name[2:]:
-                return a_name[2:]
+            # Equal unquoted paths have equal-length names, so only the midpoint
+            # can separate them. Trying every space would copy the header quadratically.
+            if len(names) % 2 == 0:
+                return None
+            split = len(names) // 2
+        if names[split : split + 1] != b" ":
+            return None
+        a_name, b_name = names[:split], names[split + 1 :]
+        if a_name.startswith(b'"'):
+            if not (a_name.endswith(b'"') and b_name.startswith(b'"') and b_name.endswith(b'"')):
+                return None
+            a_name, b_name = _unquote_path(a_name[1:-1]), _unquote_path(b_name[1:-1])
+        if a_name.startswith(b"a/") and b_name.startswith(b"b/") and a_name[2:] == b_name[2:]:
+            return a_name[2:]
         return None
 
     @classmethod
