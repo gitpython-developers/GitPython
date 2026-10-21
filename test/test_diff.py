@@ -4,23 +4,21 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-from io import BytesIO
 import os.path as osp
 import shutil
 import sys
 import tempfile
+from io import BytesIO
 
 import ddt
 import pytest
-
 from gitdb.base import IStream
 
-from git import NULL_TREE, Blob, Diff, DiffIndex, Diffable, GitCommandError, Repo, Submodule
+from git import NULL_TREE, Blob, Diff, Diffable, DiffIndex, GitCommandError, Repo, Submodule
 from git.cmd import Git
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
 from git.index.typ import BaseIndexEntry
-
 from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
 
@@ -269,6 +267,92 @@ class TestDiff(TestBase):
         diffs = commit.diff(NULL_TREE)
         self.assertEqual([d.b_path for d in diffs], sorted(paths))
         self.assertEqual({d.change_type for d in diffs}, {"A"})
+
+    @with_rw_directory
+    def test_diff_patch_paths_named_only_by_the_header_line(self, rw_dir):
+        # Binary files, empty files, mode changes and copies have no `---` and `+++`
+        # lines, so their paths come from the `diff --git a/<path> b/<path>` line, where
+        # git does not quote a space. Each path contains " a/" or " b/" so that the line
+        # alone does not show where the first name ends.
+        repo = Repo.init(rw_dir)
+        binary = repo.odb.store(IStream(Blob.type, 1, BytesIO(b"\0"))).binsha
+        empty = repo.odb.store(IStream(Blob.type, 0, BytesIO(b""))).binsha
+        paths = ["assets b/logo.png", "docs a/empty", "quoted\t a/tab"]
+        repo.index.add(
+            [
+                BaseIndexEntry((0o100644, binary, 0, paths[0])),
+                BaseIndexEntry((0o100644, empty, 0, paths[1])),
+                BaseIndexEntry((0o100644, binary, 0, paths[2])),
+            ]
+        )
+        commit = repo.index.commit("paths")
+
+        diffs = commit.diff(NULL_TREE, create_patch=True)
+        self.assertEqual({(d.a_path, d.b_path) for d in diffs}, {(path, path) for path in paths})
+
+        repo.index.add(
+            [
+                BaseIndexEntry((0o100755, binary, 0, paths[0])),
+                BaseIndexEntry((0o100644, binary, 0, "copy b/logo.png")),
+            ]
+        )
+        changed = repo.index.commit("mode change and copy")
+
+        diffs = commit.diff(changed, create_patch=True, C=True, find_copies_harder=True)
+        self.assertEqual(
+            {(d.a_path, d.b_path, d.copied_file) for d in diffs},
+            {(paths[0], paths[0], False), (paths[0], "copy b/logo.png", True)},
+        )
+
+    @ddt.data(
+        (b"a/x b/x", b"x"),
+        (b"a/x  b/x ", b"x "),
+        (b"a/x b/y", None),
+        (b"a/x b/xx", None),
+        (b"a/x-b/x", None),
+        (b"", None),
+        (b'"a/x\\t" "b/x\\t"', b"x\t"),
+        (b'"a/x\\t" "b/x\\011"', b"x\t"),
+        (b'"a/x\\t" "b/y\\t"', None),
+        (b'"a/x\\t" "b/x\\t', None),
+    )
+    def test_same_path_in_header(self, case):
+        names, expected = case
+        self.assertEqual(Diff._same_path_in_header(names), expected)
+
+    def test_same_path_in_header_copies_linear_bytes(self):
+        class SliceCountingBytes(bytes):
+            sliced_bytes = 0
+
+            def __getitem__(self, key):
+                result = super().__getitem__(key)
+                if isinstance(key, slice):
+                    self.sliced_bytes += len(result)
+                return result
+
+        path = b"x " * 1000
+        names = SliceCountingBytes(b"a/" + path + b" b/" + path)
+        self.assertEqual(Diff._same_path_in_header(names), path)
+        # Count copied bytes rather than asserting a machine-dependent time limit.
+        self.assertLessEqual(names.sliced_bytes, 2 * len(names))
+
+    @with_rw_directory
+    def test_diff_patch_mode_only_with_long_space_heavy_path(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        path = b"x " * 250000
+        blob = repo.odb.store(IStream(Blob.type, 0, BytesIO(b""))).binsha
+        trees = []
+        # Store trees directly: Git accepts paths longer than filesystem or index limits.
+        for mode in (b"100644", b"100755"):
+            data = mode + b" " + path + b"\0" + blob
+            tree = repo.odb.store(IStream(b"tree", len(data), BytesIO(data)))
+            trees.append(repo.tree(tree.binsha.hex()))
+
+        diffs = trees[0].diff(trees[1], create_patch=True)
+        self.assertEqual(len(diffs), 1)
+        self.assertEqual((diffs[0].a_rawpath, diffs[0].b_rawpath), (path, path))
+        self.assertEqual((diffs[0].a_mode, diffs[0].b_mode), (0o100644, 0o100755))
+        self.assertEqual(diffs[0].diff, b"")
 
     def test_empty_diff(self):
         res = []
