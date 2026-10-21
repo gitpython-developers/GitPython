@@ -201,8 +201,12 @@ Please have a look at the [contributions file][contributing].
 - [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
 - Please post on Stack Overflow and use the `gitpython` tag
 - [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
-  - Post reproducible bugs and feature requests as a new issue.
-    Please be sure to provide the following information if posting bugs:
+  - Post reproducible bugs and feature requests as a new issue when you do not have
+    a fix or need discussion before implementation. If you have a fix or improvement,
+    [open a pull request directly](CONTRIBUTING.md#prefer-pull-requests) and describe
+    the problem there; you do not need to create an issue first.
+    Please be sure to provide the following information when reporting bugs in an
+    issue or PR:
     - GitPython version (e.g. `import git; git.__version__`)
     - Python version (e.g. `python --version`)
     - The encountered stack-trace, if applicable

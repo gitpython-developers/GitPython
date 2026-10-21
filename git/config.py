@@ -69,6 +69,13 @@ UNSAFE_CONFIG_CHARS_RE = re.compile(r"[\r\n\x00]")
 VALID_CONFIG_OPTION_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 """Pattern for option names that can be written without changing config syntax."""
 
+UNQUOTED_ESCAPES = {"b": "\b", "n": "\n", "t": "\t", '"': '"', "\\": "\\"}
+"""Escape sequences git recognizes in an unquoted value.
+
+Any other backslash escape is an error for git, which is why a value holding one is
+left undecoded rather than rejected.
+"""
+
 
 class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
     """Utility class wrapping base-class methods into decorators that assure read-only
@@ -530,10 +537,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             parsed: List[str] = []
             whitespace: List[str] = []
             quoted = escaped = False
-            escapes = {"b": "\b", "n": "\n", "t": "\t", '"': '"', "\\": "\\"}
             for char in value:
                 if escaped:
-                    parsed.append(escapes.get(char, "\\" + char))
+                    parsed.append(UNQUOTED_ESCAPES.get(char, "\\" + char))
                     escaped = False
                     continue
                 if char.isspace() and not quoted:
@@ -551,6 +557,26 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 else:
                     parsed.append(char)
             return "".join(parsed)
+
+        def escapes_are_known(value: str) -> bool:
+            """Whether every backslash in `value` introduces an escape git recognises.
+
+            Git rejects an unquoted value carrying an unknown escape outright. GitPython
+            tolerates such values, because that is what lets a Windows path such as
+            ``C:\\Users\\me`` stay literal, so a value is decoded only when every one
+            of its backslashes is part of a known escape. Decoding part of a value would
+            otherwise turn the ``\\t`` of ``\\Temp\\test`` into a tab while leaving the
+            ``\\U`` of ``\\Users`` alone.
+            """
+            index = value.find("\\")
+            while index >= 0:
+                # A trailing backslash has nothing to escape and git drops it, so
+                # only a backslash followed by an unknown escape disqualifies the
+                # value from being decoded.
+                if index + 1 < len(value) and value[index + 1] not in UNQUOTED_ESCAPES:
+                    return False
+                index = value.find("\\", index + 2)
+            return True
 
         while True:
             # We assume to read binary!
@@ -606,23 +632,30 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                         # next line is appended before the complete value is
                         # parsed. An even number means the last backslash is
                         # escaped and the value ends there.
-                        continued = False
+                        eof_continuation = False
                         while True:
                             if not is_line_continuation(optval):
                                 break
                             continuation = fp.readline()
                             if not continuation:
-                                # Backslash at end of file: git drops it.
-                                optval = optval[:-1]
+                                # Keep the backslash until parsing so preceding
+                                # whitespace is significant even though git drops it.
+                                eof_continuation = True
                                 break
                             lineno = lineno + 1
                             joined = continuation.decode(defenc)
                             while joined.endswith("\n") or joined.endswith("\r"):
                                 joined = joined[:-1]
                             optval = optval[:-1] + joined
-                            continued = True
-                        if continued:
+                        # Git decodes the standard escape sequences in unquoted
+                        # values, but only a value in which every backslash is part
+                        # of a known escape is decoded, so that a Windows path keeps
+                        # its backslashes instead of losing them one escape at a time.
+                        optval, _ = strip_inline_comment(optval)
+                        if escapes_are_known(optval):
                             optval = parse_value(optval)
+                        elif eof_continuation:
+                            optval = optval[:-1]
                     elif quote_open:
                         # Opens quoting and does not close: appears to start multi-line quoting.
                         is_multi_line = True

@@ -365,7 +365,7 @@ class TestBase(TestCase):
             (b"[a]\n\tk = one\\\n two ; ignored\n", "one two"),
             (b'[a]\n\tk = one\\\n "two"\n', "one two"),
             (b"[a]\n\tk = one\\\n two\\tthree\n", "one two\tthree"),
-            (b"[a]\n\tk = val\\\\\n next\n", "val\\\\"),
+            (b"[a]\n\tk = val\\\\\n next\n", "val\\"),
             (b"[a]\n\tk = end\\\n", "end"),
             (b"[alias]\n\tco = checkout \\\n\t\t-v\n", "checkout \t\t-v"),
         ]
@@ -377,6 +377,33 @@ class TestBase(TestCase):
             section = "alias" if b"[alias]" in content else "a"
             key = "co" if section == "alias" else "k"
             self.assertEqual(config.get_value(section, key), expected)
+
+    @with_rw_directory
+    def test_continued_values_preserve_comments_and_eof_whitespace(self, rw_dir):
+        cases = [
+            (b"one\\\n two # C:\\Users\n", "one two"),
+            (b"one\\\n two ; C:\\Users\n", "one two"),
+            (b"one\\\n two\\tthree # C:\\Users\n", "one two\tthree"),
+            (b'one\\\n "two # three" # C:\\Users\n', "one two # three"),
+            (b"value \\", "value "),
+            (b"value \\\n", "value "),
+            (b"value \t\\\n", "value \t"),
+            (b"one\\\n two \\\n", "one two "),
+            (b"C:\\Users \\\n", "C:\\Users "),
+        ]
+        config_path = osp.join(rw_dir, "config")
+        for value, expected in cases:
+            with self.subTest(value=value):
+                with open(config_path, "wb") as config_file:
+                    config_file.write(b"[a]\n\tk = " + value)
+
+                with GitConfigParser(config_path, read_only=False) as config:
+                    self.assertEqual(config.get_value("a", "k"), expected)
+                    config.set_value("other", "value", "updated")
+
+                with GitConfigParser(config_path) as config:
+                    self.assertEqual(config.get_value("a", "k"), expected)
+                    self.assertEqual(config.get_value("other", "value"), "updated")
 
     def test_get_value_reads_git_boolean_spellings(self):
         # git accepts yes/no and on/off as well as true/false, and getboolean on
@@ -1208,6 +1235,30 @@ class TestBase(TestCase):
 
         # Cases without quotes should still parse correctly even after those, too.
         self.assertEqual(cr.get("custom", "unquoted"), "good evening")
+
+    def test_config_with_unquoted_escapes(self):
+        """Decode git's escape sequences in unquoted values, but only when every
+        backslash in the value is part of a known escape."""
+        cr = GitConfigParser(fixture_path("git_config_unquoted_escapes"), read_only=True)
+
+        self.assertEqual(cr.get("custom", "hasnewline"), "first\nsecond")
+        self.assertEqual(cr.get("custom", "hastab"), "first\tsecond")
+        self.assertEqual(cr.get("custom", "hasbackslash"), R"foo\bar")
+        self.assertEqual(cr.get("custom", "hasquote"), 'ab"cd')
+        self.assertEqual(cr.get("custom", "hastrailingbackslash"), "word\\")
+
+        # Git rejects an unknown escape rather than decoding it. GitPython keeps
+        # such a value literal instead of rejecting it, which is what keeps a
+        # Windows path usable, so no backslash in one may be decoded: doing so
+        # would turn the \t of \Temp\test into a tab while leaving \U alone.
+        self.assertEqual(cr.get("custom", "hasunknownescape"), R"foo\qbar")
+        self.assertEqual(cr.get("custom", "haswindowspath"), R"C:\Users\RUNNER~1\AppData\Local\Temp\test_foo")
+
+        # Values without escapes keep parsing as before.
+        self.assertEqual(cr.get("custom", "ordinary"), "hello world")
+        self.assertEqual(cr.get("custom", "withcolon"), "host:port")
+        self.assertEqual(cr.get("custom", "withequals"), "key=value")
+        self.assertEqual(cr.get("custom", "withhash"), "value")
 
     def test_get_values_works_without_requiring_any_other_calls_first(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))

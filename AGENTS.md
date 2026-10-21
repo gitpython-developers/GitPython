@@ -5,6 +5,10 @@ including the [Prevent agent impersonation](CONTRIBUTING.md#prevent-agent-impers
 section governing agent identification and separation of unaltered user statements
 when communicating through a person's account.
 
+[Prefer pull requests](CONTRIBUTING.md#prefer-pull-requests): a PR can serve as an
+issue with a fix attached. Do not create an issue solely to follow it immediately
+with a PR that fixes it; describe the problem in the PR instead.
+
 # Commit messages
 
 Follow Conventional Commits for every commit. Every commit must have a
