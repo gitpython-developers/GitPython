@@ -63,6 +63,14 @@ Object queries continue through `object_data()` and the supported
 `Repository.try_find_header()`/`find_object()` APIs, with the existing large-object
 and diagnostic CLI fallbacks. Storage uses the existing `hash_object` dispatch.
 
+`Head.tracking_branch()` asks Git's `rev-parse --symbolic-full-name` to resolve
+local upstreams configured with `branch.<name>.remote=.`. GixPython does not
+expose the corresponding Git-compatible upstream configuration resolver; this
+path retains CLI. Without it, both released GitPython 3.2.1 and the initial
+adapter return an invalid remote reference, preventing angr 10.0.4.post1 from
+reporting a valid local tracking branch. A native replacement must expose Git's
+local-upstream resolution, including its validation and diagnostics.
+
 `IndexFile` queries immutable entry records; it does not retain a parsed index.
 The compatibility `entries` property projects those queries into a read-only
 snapshot keyed by path and stage, preserving readers in dlt and Renku. It uses

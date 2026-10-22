@@ -12,6 +12,18 @@ from test.lib.fixtures import fixture_repo
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_local_tracking_branch_uses_gits_upstream_location(object_format, ref_format):
+    with fixture_repo("downstream-local-upstream.sh", object_format, ref_format) as repo:
+        upstream = repo.head.reference.tracking_branch()
+        assert isinstance(upstream, git.Head)
+        assert upstream.path == repo.git.rev_parse("--symbolic-full-name", "@{upstream}")
+        assert upstream.name == "upstream"
+        assert not upstream.is_remote()
+        assert upstream.commit == repo.head.commit
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
 def test_legacy_gitdb_selector_uses_the_managed_object_backend(object_format, ref_format):
     assert git.GitDB is git.db.GitDB is git.GitCmdObjectDB
     with fixture_repo("downstream-index.sh", object_format, ref_format) as fixture:

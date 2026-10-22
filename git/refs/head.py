@@ -202,16 +202,23 @@ class Head(Reference):
 
         return self
 
-    def tracking_branch(self) -> Union["RemoteReference", None]:
+    def tracking_branch(self) -> Union["RemoteReference", "Head", None]:
         """
         :return:
-            The remote reference we are tracking, or ``None`` if we are not a tracking
-            branch.
+            The remote reference or local head we are tracking, or ``None`` if we
+            are not a tracking branch.
         """
         from .remote import RemoteReference
 
         reader = self.config_reader()
         if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
+            if reader.get_value(self.k_config_remote) == ".":
+                # Git resolves local-upstream configuration; do not construct a
+                # remote reference for the special local-repository selector.
+                path = self.repo.git._call_process_safe(
+                    "rev_parse", "--symbolic-full-name", f"{self.name}@{{upstream}}"
+                )
+                return Head(self.repo, path)
             ref = Head(
                 self.repo,
                 Head.to_full_path(strip_quotes(reader.get_value(self.k_config_remote_ref))),

@@ -51,6 +51,10 @@ Git executable and safety
 API changes
 -----------
 
+* ``Head.tracking_branch()`` returns a local ``Head`` when Git configures the
+  current repository (``branch.<name>.remote=.``) as the upstream, instead of
+  constructing an invalid ``refs/remotes/./...`` reference. Git resolves the
+  upstream location; remote tracking branches retain their existing behavior.
 * ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
   writes, existence checks, and enumeration use Git, including packed objects.
   Precompressed input streams and custom object-output writers are unsupported.
