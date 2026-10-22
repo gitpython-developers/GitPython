@@ -616,6 +616,7 @@ class Git:
         "_git_options",
         "_persistent_git_options",
         "_environment",
+        "_repository_environment",
         "_repo",
     )
 
@@ -1164,6 +1165,7 @@ class Git:
 
         # Extra environment variables to pass to git commands
         self._environment: Dict[str, Optional[str]] = {}
+        self._repository_environment: Dict[str, Optional[str]] = {}
         self._repo: Any = None  # Weak reference; the Repo owns native resources.
 
         # Cached version slots
@@ -1535,7 +1537,11 @@ class Git:
         # just to be sure.
         environment["LANGUAGE"] = "C"
         environment["LC_ALL"] = "C"
-        environment.update(self._environment)
+        redirected = subprocess_kwargs.pop("_repository_redirected", False)
+        automatic = self._repository_environment if redirected else {}
+        environment.update(
+            {key: value for key, value in self._environment.items() if key not in automatic or value != automatic[key]}
+        )
         if inline_env is not None:
             environment.update(inline_env)
         # Internal or per-call None overrides remove inherited variables.
@@ -1725,6 +1731,7 @@ class Git:
         """
         old_env = {}
         for key, value in kwargs.items():
+            self._repository_environment.pop(key, None)
             # Set value if it is None.
             if value is not None:
                 old_env[key] = self._environment.get(key)
@@ -1748,11 +1755,13 @@ class Git:
         :param kwargs:
             See :meth:`update_environment`.
         """
+        automatic = {key: self._repository_environment[key] for key in kwargs if key in self._repository_environment}
         old_env = self.update_environment(**kwargs)
         try:
             yield
         finally:
             self.update_environment(**old_env)
+            self._repository_environment.update(automatic)
 
     def transform_kwarg(self, name: str, value: Any, split_single_char_options: bool) -> List[str]:
         if len(name) == 1:
@@ -1906,6 +1915,11 @@ class Git:
         # Add the git options, then reset to empty to avoid side effects.
         call.extend(self._git_options)
         self._git_options = ()
+
+        # Only global options redirect discovery. A subcommand operand named
+        # -C must not drop the repository locations supplied by Repo.
+        if any(option == "-C" for option in call[1:]):
+            exec_kwargs["_repository_redirected"] = True
 
         call.extend(safe_git_options)
 

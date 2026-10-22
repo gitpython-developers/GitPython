@@ -38,6 +38,9 @@ Git executable and safety
   suppresses configured signing by default; signing, verification, and editor
   options require the same opt-in.
 * The raw ``repo.git`` interface remains available for direct Git commands.
+  Global ``-C`` options select the requested checkout without the repository
+  locations automatically supplied by ``Repo`` overriding it. Explicit
+  environment overrides retain Git's precedence over ``-C``.
   Existing explicit unsafe-option and unsafe-protocol opt-ins remain independent.
   They do not permit argument or stdin-record injection, or reordering command
   options past the library's safety flags.

@@ -447,8 +447,12 @@ class Repo:
         self.git = self.GitCommandWrapperType(self.working_dir)
         self.git._repo = weakref.ref(self)
         self.git._environment.update(GIT_DIR=git_dir, **environment)
+        if git_dir_env is None:
+            self.git._repository_environment["GIT_DIR"] = git_dir
         if self._working_tree_dir is not None:
             self.git.update_environment(GIT_WORK_TREE=os.fspath(self._working_tree_dir))
+            if "GIT_WORK_TREE" not in environment:
+                self.git._repository_environment["GIT_WORK_TREE"] = os.fspath(self._working_tree_dir)
         if native is not NotImplemented:
             self._gix_repository = native
             self._empty_tree_hexsha = str(native.empty_tree().id)
