@@ -905,6 +905,18 @@ class TestRepo(TestBase):
             self.assertEqual(len(rwrepo.untracked_files), (num_recently_untracked - len(files)))
         # END for each run
 
+    @with_rw_directory
+    def test_untracked_files_with_unquoted_unicode_and_escapes(self, rw_dir):
+        with Repo.init(rw_dir) as repo:
+            paths = {"plain.txt", "caf\u00e9.txt", "caf\u00e9\x7f.txt", " leading.txt"}
+            for path in paths:
+                Path(rw_dir, path).touch()
+            for quote_path in ("true", "false"):
+                with self.subTest(quote_path=quote_path):
+                    repo.git.config("core.quotePath", quote_path)
+                    assert set(repo.untracked_files) == paths
+                    assert repo.is_dirty(untracked_files=True)
+
     def test_config_reader(self):
         reader = self.rorepo.config_reader()  # All config files.
         assert reader.read_only

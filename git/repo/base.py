@@ -1141,9 +1141,7 @@ class Repo:
             filename = line[len(prefix) :].rstrip("\n")
             # Special characters are escaped
             if filename[0] == filename[-1] == '"':
-                filename = filename[1:-1]
-                # WHATEVER ... it's a mess, but works for me
-                filename = filename.encode("ascii").decode("unicode_escape").encode("latin1").decode(defenc)
+                filename = _unquote_path(filename[1:-1].encode(defenc)).decode(defenc)
             untracked_files.append(filename)
         finalize_process(proc)
         return untracked_files
