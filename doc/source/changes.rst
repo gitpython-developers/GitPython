@@ -51,6 +51,10 @@ Git executable and safety
 API changes
 -----------
 
+* ``GitConfigParser[section] = values`` again replaces a nonempty section,
+  restoring Kas's Git identity cleanup. Git performs each mutation and locks
+  it independently; replacement is not one atomic transaction. Empty sections
+  and ``add_section()`` remain unsupported, including Kas's SSH key setup.
 * Explicit ``from git import Union`` imports remain available for Demisto SDK's
   validator registration, retaining the historical ``typing.Union`` alias.
 * Editable/source imports expose the release version in ``git.__version__``,

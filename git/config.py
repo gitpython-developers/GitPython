@@ -15,6 +15,7 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from typing import Any, Dict, Generic, Iterator, List, OrderedDict, Sequence, Tuple, TypeVar, Union, TYPE_CHECKING
+from typing import Mapping
 
 from git.compat import defenc, force_text
 from git.exc import GitCommandError
@@ -490,6 +491,22 @@ class GitConfigParser:
         key = self._key(section, option)
         self._mutate("set", "--all", "--", key, self._value(value))
         return self
+
+    def __setitem__(self, section: str, values: Mapping[str, Any]) -> None:
+        """Replace a nonempty section through Git's existing config mutations.
+
+        Each value is validated before modifying the file. Git locks individual
+        mutations; section replacement does not reserve a transaction-wide lock.
+        """
+        self._assure_writable("section assignment")
+        if not isinstance(values, Mapping):
+            raise TypeError("Git configuration section values must be a mapping")
+        if not values:
+            raise ValueError("Empty Git configuration sections are unsupported")
+        validated = [(self._key(section, option), self._value(value)) for option, value in values.items()]
+        self.remove_section(section)
+        for key, value in validated:
+            self._mutate("set", "--all", "--", key, value)
 
     def add_value(self, section: str, option: str, value: Any) -> "GitConfigParser":
         key = self._key(section, option)

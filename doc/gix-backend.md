@@ -1094,6 +1094,46 @@ do not demonstrate a native Gix mismatch or eliminate any CLI calls.
 | Config-backed remote/submodule maintenance | Missing config enumeration/multivar/removal operations (GIX-12), plus filesystem and worktree lifecycle requirements. |
 | Hook execution | Every explicit hook request, including an absent hook, retains Git-managed lookup, execution and diagnostics until GIX-23 is addressed. Native operations retain GitPython's default hook/fsmonitor/maintenance restrictions. |
 
+### Downstream mirror-fetch result gap
+
+Airflow Git provider 1.0.1's bare-cache refspecs
+`+refs/heads/*:refs/heads/*` and `+refs/tags/*:refs/tags/*` expose an existing
+GitPython result-decoding problem when a branch and tag share a name. With Git
+2.53.0, both refs update successfully, but verbose output abbreviates their
+names. The local CLI and Gix selections omit the ambiguous branch result;
+released GitPython 3.2.1 instead returns a nonexistent `refs/remotes/main`
+reference whose commit cannot be read. The same problem occurs with
+`+refs/*:refs/*`. Two preserved real-repository supplemental tests fail with
+all three selections; Airflow's 175 unchanged upstream tests pass.
+
+This is a demonstrated GitPython adapter gap, not a demonstrated Gitoxide
+mismatch. Git's `fetch --porcelain` reports full destination refnames and old/new
+IDs, providing native evidence for a future adapter correction. Fetch remains
+a CLI fallback: GixPython 0.2.0 must expose per-ref identities, status and notes
+before its fetch outcome can satisfy `FetchInfo`. Do not infer namespaces or
+reimplement fetch semantics in Python. Reproduction and baseline evidence are
+retained in the [third downstream audit](../test/downstream/audit-2026-10-22-batch-3.md).
+
+### Downstream empty configuration sections
+
+Kas 5.5's three unchanged SSH key validation tests call
+`GitConfigParser.add_section('gpg "ssh"')` before assigning
+`allowedSignersFile` through a section proxy. They pass with released GitPython
+3.2.1 and fail with both local backends because empty sections and the inherited
+ConfigParser section API were removed. Git 2.53.0's config mutation interface
+and GixPython 0.2.0 do not expose creating an empty section. This is a missing
+capability and an intentional, demonstrated GitPython API break; it is not a
+demonstrated Gitoxide mismatch. No successful empty-section result is invented
+or serialized in Python. GixPython needs a supported native configuration edit
+that creates sections before this contract can be restored.
+
+Kas's separate identity cleanup uses nonempty section assignment, which is
+restored through existing Git config remove/set operations under GIX-12. Values
+are validated before mutation; individual Git operations lock independently,
+so replacement does not claim transaction-wide atomicity. Downstream can avoid
+the empty-section API by calling `set_value('gpg "ssh"', 'allowedSignersFile',
+path)` directly. The three upstream failures remain in the audit.
+
 ## Maintaining the adapters
 
 `git/_backend.py` contains the capability checks. Managed command adapters return

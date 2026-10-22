@@ -24,6 +24,30 @@ def test_legacy_typing_union_import_supports_downstream_registration():
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_config_section_assignment_restores_downstream_git_identity(object_format, ref_format):
+    with fixture_repo("downstream-index.sh", object_format, ref_format, write=True) as repo:
+        with repo.config_writer() as config:
+            config.set_value("user", "name", "Temporary identity")
+            config.set_value("user", "email", "temporary@example.invalid")
+            config.add_value("user", "email", "duplicate@example.invalid")
+            config.set_value("user", "signingkey", "temporary-key")
+            config.set_value("core", "editor", "retained")
+            config["user"] = {"name": "Original Person", "email": "original@example.invalid"}
+            assert config.get("user", "name") == "Original Person"
+            assert config.get_values("user", "email") == ["original@example.invalid"]
+            assert not config.has_option("user", "signingkey")
+            assert config.get("core", "editor") == "retained"
+            with pytest.raises(ValueError, match="valueless"):
+                config["user"] = {"name": "Discarded", "email": None}
+            assert config.get("user", "name") == "Original Person"
+            with pytest.raises(ValueError, match="Empty"):
+                config["user"] = {}
+        assert repo.git.config("get", "user.name") == "Original Person"
+        assert repo.git.config("get", "user.email") == "original@example.invalid"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
 def test_repo_accepts_explicit_literal_path_selection(object_format, ref_format, monkeypatch):
     root = read_only_fixture("downstream-literal-repo.sh", object_format, ref_format)
     monkeypatch.setenv("DOWNSTREAM_REPOSITORY", str(root / "expanded"))
