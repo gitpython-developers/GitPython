@@ -81,6 +81,11 @@ __all__ = [
 ]
 
 __version__ = "git"
+if __version__ == "git":
+    # Wheels and source distributions stamp this value; editable imports do not.
+    from pathlib import Path as _Path
+
+    __version__ = (_Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
 from typing import Optional as _Optional
 

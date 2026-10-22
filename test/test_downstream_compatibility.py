@@ -1,6 +1,7 @@
 """Public GitPython queries used by released downstream projects."""
 
 from pathlib import Path
+from importlib.metadata import version
 
 import pytest
 
@@ -8,6 +9,10 @@ import git
 import git.db
 
 from test.lib.fixtures import fixture_repo, read_only_fixture
+
+
+def test_public_version_supports_downstream_provider_checks():
+    assert git.__version__ == version("GitPython")
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

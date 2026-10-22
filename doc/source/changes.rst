@@ -51,6 +51,9 @@ Git executable and safety
 API changes
 -----------
 
+* Editable/source imports expose the release version in ``git.__version__``,
+  matching built distributions. Salt's GitPython provider checks can parse the
+  version instead of rejecting the unstamped ``"git"`` build placeholder.
 * Revision root trees such as ``Repo.rev_parse("HEAD:")`` retain their empty
   path and can be iterated. Missing paths within a valid tree revision retain
   ``Tree.join()``'s ``KeyError`` and missing-component message, restoring MCP
