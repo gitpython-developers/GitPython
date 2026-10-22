@@ -36,7 +36,8 @@ def test_index_entries_readers_retain_pending_and_published_snapshots(object_for
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
 def test_git_directory_option_selects_the_requested_worktree(object_format, ref_format):
-    with fixture_repo("downstream-worktree.sh", object_format, ref_format, write=True) as repo:
+    # Linked-worktree registration contains absolute paths that cannot be copied.
+    with fixture_repo("downstream-worktree.sh", object_format, ref_format, write=True, execute=True) as repo:
         root = Path(repo.working_tree_dir).parent
         linked = root / "linked"
         original_index = Path(repo.index.path).read_bytes()
@@ -55,10 +56,24 @@ def test_git_directory_option_selects_the_requested_worktree(object_format, ref_
 
 
 def test_git_directory_option_retains_explicit_environment():
-    with fixture_repo("downstream-worktree.sh", "sha1", "files", write=True) as repo:
+    # Linked-worktree registration contains absolute paths that cannot be copied.
+    with fixture_repo("downstream-worktree.sh", "sha1", "files", write=True, execute=True) as repo:
         root = Path(repo.working_tree_dir).parent
         other = root / "other"
         with repo.git.custom_environment(GIT_DIR=repo.git_dir, GIT_WORK_TREE=repo.working_tree_dir):
             assert repo.git(C=str(other)).show("HEAD:tracked") == "original"
         assert repo.git(C=str(other)).show("HEAD:tracked") == "other"
         assert repo.git(C=str(other)).show("HEAD:tracked", env={"GIT_DIR": repo.git_dir}) == "original"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_separate_git_directory_retains_the_supplied_checkout(object_format, ref_format):
+    with fixture_repo("downstream-separate-git-dir.sh", object_format, ref_format, write=True) as repo:
+        assert Path(repo.working_tree_dir).name == "repo"
+        assert Path(repo.git_dir).name == "metadata"
+        assert Path(repo.git.rev_parse("--show-toplevel")).samefile(repo.working_tree_dir)
+        assert repo.index.entry("tracked").to_blob(repo).data_stream.read() == b"tracked"
+        Path(repo.working_tree_dir, "tracked").write_text("updated")
+        repo.index.add(["tracked"])
+        assert repo.index.commit("updated").tree["tracked"].data_stream.read() == b"updated"

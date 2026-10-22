@@ -321,13 +321,13 @@ class Repo:
         curpath = osp.abspath(os.fspath(epath))
         git_dir = None
         native = NotImplemented
-        while curpath:
+        while True:
             dotgit = osp.join(curpath, ".git")
             candidate = curpath if explicit_git_dir or not osp.lexists(dotgit) else dotgit
             try:
                 # Git resolves relative gitfile targets using the last forward
                 # slash in this operand, including on Windows.
-                native = _backend.discover_repository(candidate, environment)
+                native = _backend.discover_repository(candidate, environment, from_worktree=candidate == dotgit)
                 git_dir = (
                     probe._call_process_safe("rev_parse", "--resolve-git-dir", to_native_path_linux(candidate))
                     if native is NotImplemented
@@ -357,6 +357,14 @@ class Repo:
             curpath = parent
         if git_dir is None:
             raise InvalidGitRepositoryError(epath)
+
+        checkout = None
+        if native is NotImplemented and candidate == dotgit and osp.isfile(candidate):
+            # Let Git select the checkout through the supplied .git file. Its
+            # administrative directory alone need not identify the worktree.
+            checkout_probe = self.GitCommandWrapperType(curpath)
+            checkout_probe._environment.update(GIT_DIR=None, **environment)
+            checkout = checkout_probe._call_process_safe("rev_parse", "--show-toplevel")
 
         self.git_dir = git_dir
         probe.update_environment(GIT_DIR=git_dir)
@@ -388,7 +396,7 @@ class Repo:
             # Gix's configured bare flag also applies to linked worktrees.
             self._bare = native.is_bare() and self._working_tree_dir is None
         else:
-            self._working_tree_dir = environment.get("GIT_WORK_TREE")
+            self._working_tree_dir = environment.get("GIT_WORK_TREE") or checkout
             if self._working_tree_dir is None and not self._bare and environment.get("GIT_COMMON_DIR") is None:
                 try:
                     probe._call_process_safe("config", "--get", "core.worktree")

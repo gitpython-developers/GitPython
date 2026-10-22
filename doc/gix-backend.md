@@ -60,6 +60,16 @@ The compatibility `entries` property projects those queries into a read-only
 snapshot keyed by path and stage, preserving readers in dlt and Renku. It uses
 the same Gix-backed default-index query or documented Git fallback as
 `iter_entries()`; snapshots do not become editable index state.
+
+Discovery distinguishes a checkout's `.git` file from an arbitrary gitfile
+operand. Gix reopens the canonical checkout gitfile through `gix.open_opts()`
+and returns `Repository.workdir()` for separate Git directories. Reopening only
+the administrative directory loses that checkout context. Standalone gitfile
+helpers still reopen the canonical native Git directory to avoid the known
+arbitrary-gitfile mismatch (GIX-14). The CLI path uses `rev-parse --show-toplevel`
+from the supplied checkout. Mistral Vibe 3.0.1 and scripted SHA-1/SHA-256,
+files/reftable regressions verify this adapter correction with Git 2.53.0 and
+GixPython 0.2.0; it does not close GIX-14's upstream compatibility bugs.
 Deferred/virtual state consists of opaque file bytes, materialized before Git
 operates and read back only after success. Private edits use Git because native
 bindings cannot load an arbitrary existing index (GIX-3) or validate a checked

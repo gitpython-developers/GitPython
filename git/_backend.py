@@ -57,7 +57,7 @@ def _fallback(method: str, reason: str) -> Any:
     return NotImplemented
 
 
-def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
+def discover_repository(path: str, environment: Dict[str, Any], *, from_worktree: bool = False) -> Any:
     """Open one discovery candidate; the caller controls parent traversal."""
     if gix is None:
         return NotImplemented
@@ -73,7 +73,11 @@ def discover_repository(path: str, environment: Dict[str, Any]) -> Any:
     )
     try:
         repo = gix.open_opts(path, options)
-        if os.path.isfile(path):
+        if os.path.isfile(path) and from_worktree:
+            # Canonicalize the supplied checkout path and let Gix resolve both
+            # its Git directory and worktree from that .git file.
+            repo = gix.open_opts(os.path.realpath(path), options)
+        elif os.path.isfile(path):
             # Reopening also makes Gix derive the worktree from its Git directory,
             # rather than retaining an arbitrary gitfile's location as a worktree.
             repo = gix.open_opts(os.path.realpath(repo.git_dir()), options)
