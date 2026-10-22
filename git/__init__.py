@@ -81,7 +81,7 @@ __all__ = [
 ]
 
 __version__ = "git"
-if __version__ == "git":
+if "git" == __version__:
     # Wheels and source distributions stamp this value; editable imports do not.
     from pathlib import Path as _Path
 

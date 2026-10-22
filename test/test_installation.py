@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 
-from git import _backend
+from git import __version__, _backend
 from test.lib import TestCase, requires_symlinks
 from test.lib.fixtures import ROOT, writable_fixture
 
@@ -43,6 +43,10 @@ class TestInstallation(TestCase):
         result = run([python, "-c", "from git import _backend; print(_backend.name)"])
         self._check_result(result, "Backend selection failed")
         self.assertEqual(result.stdout.strip(), _backend.name)
+
+        result = run([python, "-c", "import git; print(git.__version__)"])
+        self._check_result(result, "Installed version import failed")
+        self.assertEqual(result.stdout.strip(), __version__)
 
         result = run([python, "-c", "import gitdb; import smmap"])
         self._check_result(result, "Dependencies not installed")
