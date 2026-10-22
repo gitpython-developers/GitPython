@@ -88,6 +88,7 @@ if __version__ == "git":
     __version__ = (_Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
 from typing import Optional as _Optional
+from typing import Union as Union  # Compatibility for downstream explicit imports.
 
 from git.util import to_hex_sha
 

@@ -1,6 +1,7 @@
 """Public GitPython queries used by released downstream projects."""
 
 from pathlib import Path
+from typing import Union
 from importlib.metadata import version
 
 import pytest
@@ -13,6 +14,12 @@ from test.lib.fixtures import fixture_repo, read_only_fixture
 
 def test_public_version_supports_downstream_provider_checks():
     assert git.__version__ == version("GitPython")
+
+
+def test_legacy_typing_union_import_supports_downstream_registration():
+    from git import Union as GitUnion
+
+    assert GitUnion is Union
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

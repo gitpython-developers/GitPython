@@ -51,6 +51,8 @@ Git executable and safety
 API changes
 -----------
 
+* Explicit ``from git import Union`` imports remain available for Demisto SDK's
+  validator registration, retaining the historical ``typing.Union`` alias.
 * Editable/source imports expose the release version in ``git.__version__``,
   matching built distributions. Salt's GitPython provider checks can parse the
   version instead of rejecting the unstamped ``"git"`` build placeholder.
