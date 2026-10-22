@@ -51,6 +51,10 @@ Git executable and safety
 API changes
 -----------
 
+* Revision root trees such as ``Repo.rev_parse("HEAD:")`` retain their empty
+  path and can be iterated. Missing paths within a valid tree revision retain
+  ``Tree.join()``'s ``KeyError`` and missing-component message, restoring MCP
+  Server Git's directory display and path-error reporting.
 * ``Head.tracking_branch()`` returns a local ``Head`` when Git configures the
   current repository (``branch.<name>.remote=.``) as the upstream, instead of
   constructing an invalid ``refs/remotes/./...`` reference. Git resolves the

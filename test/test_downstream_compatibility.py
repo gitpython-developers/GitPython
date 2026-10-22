@@ -12,6 +12,35 @@ from test.lib.fixtures import fixture_repo
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_revision_root_tree_retains_iterable_path_context(object_format, ref_format):
+    with fixture_repo("downstream-revision-path.sh", object_format, ref_format) as repo:
+        for revision in ("HEAD:", "HEAD^{}:", "HEAD^{/initial: with colon}:"):
+            tree = repo.rev_parse(revision)
+            assert tree.path == ""
+            assert tree.mode == 0o40000
+            assert [entry.path for entry in tree] == ["dir", "tracked"]
+            assert tree["dir/file"].data_stream.read() == b"nested"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_missing_revision_paths_retain_tree_lookup_errors(object_format, ref_format):
+    with fixture_repo("downstream-revision-path.sh", object_format, ref_format) as repo:
+        for revision, missing in (
+            ("HEAD:nope", "nope"),
+            ("HEAD:dir/nope", "nope"),
+            ("HEAD:nope/child", "nope"),
+            ("HEAD:tracked/child", "tracked/child"),
+            ("HEAD^{}:nope", "nope"),
+            ("HEAD^{/initial: with colon}:nope", "nope"),
+        ):
+            with pytest.raises(KeyError) as error:
+                repo.rev_parse(revision)
+            assert error.value.args == ("Blob or Tree named %r not found" % missing,)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
 def test_local_tracking_branch_uses_gits_upstream_location(object_format, ref_format):
     with fixture_repo("downstream-local-upstream.sh", object_format, ref_format) as repo:
         upstream = repo.head.reference.tracking_branch()

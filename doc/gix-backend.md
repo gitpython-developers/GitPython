@@ -71,6 +71,16 @@ adapter return an invalid remote reference, preventing angr 10.0.4.post1 from
 reporting a valid local tracking branch. A native replacement must expose Git's
 local-upstream resolution, including its validation and diagnostics.
 
+Revision path results retain the root tree's empty path so `Repo.rev_parse("HEAD:")`
+can be iterated, as required by MCP Server Git 2026.10.19. Git's `objectmode`
+atom and Gix's `RevisionSpec.path_and_mode()` omit metadata for that root;
+the adapter supplies its fixed empty path after successful tree resolution.
+Missing tree paths retain GitPython's `Tree.join()` `KeyError` diagnostics.
+Git validates the tree-ish prefix, including colons inside commit-message
+searches, and existing backend-managed tree queries identify the missing
+component. This error path uses a CLI prefix resolver; GixPython would need to
+expose compatible failed-path context and component diagnostics to replace it.
+
 `IndexFile` queries immutable entry records; it does not retain a parsed index.
 The compatibility `entries` property projects those queries into a read-only
 snapshot keyed by path and stage, preserving readers in dlt and Renku. It uses

@@ -122,11 +122,31 @@ def to_commit(obj: AnyGitObject) -> "Commit":
     return obj
 
 
+def _tree_path(repo: "Repo", rev: str) -> Optional[tuple[str, str]]:
+    """Ask Git which colon follows a tree-ish, including message-search revisions."""
+    if rev.startswith(":"):
+        return None
+    for index, char in enumerate(rev):
+        if char != ":":
+            continue
+        try:
+            tree = repo.git._call_process_safe(
+                "rev_parse", "--verify", "--quiet", "--end-of-options", rev[:index] + "^{tree}"
+            )
+        except GitCommandError as exc:
+            if exc.status != 1:
+                raise
+            continue
+        return tree, rev[index + 1 :]
+    return None
+
+
 def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
     """Resolve a Git revision to an object using Git's native revision grammar.
 
-    Invalid or missing revisions raise :class:`gitdb.exc.BadName`. Option-like
-    revisions and embedded command delimiters are rejected before invoking Git.
+    Invalid or missing revisions raise :class:`gitdb.exc.BadName`. Missing tree
+    paths retain the tree lookup's :class:`KeyError`. Option-like revisions and
+    embedded command delimiters are rejected before invoking Git.
     """
     rev = Git._check_operand(rev, "revision")
     native = _backend.revision_info(repo.git, rev) if ":" in rev else NotImplemented
@@ -139,6 +159,12 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
     except GitCommandError as exc:
         if exc.status != 1 and "Invalid regular expression" not in exc.stderr:
             raise
+        if exc.status == 1 and ":" in rev:
+            context = _tree_path(repo, rev)
+            if context is not None and context[1]:
+                # Reuse the public, backend-managed tree query for its legacy
+                # missing-component diagnostics; do not parse Git storage here.
+                repo.tree(context[0]).join(context[1])
         raise BadName(rev) from exc
     if not repo.re_hexsha_only.fullmatch(oid):
         raise BadName(rev)
@@ -149,6 +175,9 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
                 path_bytes, obj.mode = native[1]
                 path = path_bytes.decode(defenc, "surrogateescape")
                 obj.path = posixpath.normpath(path) if path else ""
+            elif obj.type == "tree":
+                # Gix omits path metadata for a successfully resolved root tree.
+                obj.path = ""
             return obj
         # Git resolves the mode, including index stages and executable/symlink
         # entries. No object storage or revision grammar is decoded in Python.
@@ -165,20 +194,13 @@ def rev_parse(repo: "Repo", rev: str) -> AnyGitObject:
                 path = rev[3:] if len(rev) > 2 and rev[1] in "0123" and rev[2] == ":" else rev[1:]
                 obj.path = posixpath.normpath(path) if path else ""
             else:
-                # Git has no path format atom. Ask it which colon follows a
-                # tree-ish; earlier colons can belong to commit-message regexes.
-                for index, char in enumerate(rev):
-                    if char != ":":
-                        continue
-                    try:
-                        repo.git._call_process_safe(
-                            "rev_parse", "--verify", "--quiet", "--end-of-options", rev[:index] + "^{tree}"
-                        )
-                    except GitCommandError as exc:
-                        if exc.status != 1:
-                            raise
-                        continue
-                    path = rev[index + 1 :]
+                context = _tree_path(repo, rev)
+                if context is not None:
+                    path = context[1]
                     obj.path = posixpath.normpath(path) if path else ""
-                    break
+        elif obj.type == "tree":
+            # Git's objectmode atom is empty for the root tree, too.
+            context = _tree_path(repo, rev)
+            if context is not None and not context[1]:
+                obj.path = ""
     return obj
