@@ -56,6 +56,10 @@ fallbacks.
 ## Index and object metadata lifecycle
 
 `IndexFile` queries immutable entry records; it does not retain a parsed index.
+The compatibility `entries` property projects those queries into a read-only
+snapshot keyed by path and stage, preserving readers in dlt and Renku. It uses
+the same Gix-backed default-index query or documented Git fallback as
+`iter_entries()`; snapshots do not become editable index state.
 Deferred/virtual state consists of opaque file bytes, materialized before Git
 operates and read back only after success. Private edits use Git because native
 bindings cannot load an arbitrary existing index (GIX-3) or validate a checked

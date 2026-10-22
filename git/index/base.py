@@ -18,6 +18,7 @@ from stat import S_ISLNK, S_ISREG
 import subprocess
 import shutil
 import tempfile
+from types import MappingProxyType
 
 from gitdb.base import IStream
 
@@ -60,6 +61,7 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Mapping,
     NoReturn,
     Sequence,
     TYPE_CHECKING,
@@ -147,6 +149,15 @@ class IndexFile(LazyMixin, git_diff.Diffable):
         else:
             with self._materialized_index() as path:
                 yield from self._read_entries(path)
+
+    @property
+    def entries(self) -> Mapping[Tuple[PathLike, StageType], IndexEntry]:
+        """Return an immutable snapshot keyed by path and merge stage.
+
+        Each access queries the current on-disk or pending index. Use :meth:`add`
+        and :meth:`remove` to edit the index; the snapshot is never written back.
+        """
+        return MappingProxyType({entry_key(entry): entry for entry in self.iter_entries()})
 
     def entry(self, path: PathLike, stage: StageType = 0) -> IndexEntry:
         """Return the exact path/stage entry; raise ``KeyError`` if absent."""

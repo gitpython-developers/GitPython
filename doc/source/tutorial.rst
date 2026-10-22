@@ -341,7 +341,7 @@ As trees allow direct access to their intermediate child entries only, use the t
 
 The Index Object
 ****************
-The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. Use :meth:`IndexFile.iter_entries <git.index.base.IndexFile.iter_entries>` and :meth:`IndexFile.entry <git.index.base.IndexFile.entry>` to query immutable entry records (mode, object ID, path, and stage); use ``add`` and ``remove`` to edit them. Deferred edits retain opaque index-file bytes. Git reads and writes the underlying index; raw stat fields and binary index extensions are not exposed.
+The git index is the stage containing changes to be written with the next commit or where merges finally have to take place. Use :meth:`IndexFile.iter_entries <git.index.base.IndexFile.iter_entries>` and :meth:`IndexFile.entry <git.index.base.IndexFile.entry>` to query immutable entry records (mode, object ID, path, and stage). The ``entries`` property provides a read-only snapshot keyed by ``(path, stage)`` for existing readers; use ``add`` and ``remove`` to edit the index. Deferred edits retain opaque index-file bytes. Git reads and writes the underlying index; raw stat fields and binary index extensions are not exposed.
 Modify the index with ease
 
 .. literalinclude:: ../../test/test_docs.py

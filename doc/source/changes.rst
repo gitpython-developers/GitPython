@@ -101,8 +101,11 @@ API changes
   Fetch/pull results are derived from command output rather than ``FETCH_HEAD``
   file parsing. Revision strings follow Git's native revision grammar.
 
-* ``IndexFile.entries`` is removed. Use ``iter_entries()`` for immutable query
-  records, ``entry(path, stage=0)`` for exact lookup (missing entries raise
+* ``IndexFile.entries`` returns an immutable snapshot keyed by ``(path, stage)``
+  for compatibility with existing readers. Each access queries the current
+  on-disk or pending index; previously returned snapshots retain their values.
+  Direct mutation of the mapping is removed. Use ``iter_entries()`` for immutable
+  query records, ``entry(path, stage=0)`` for exact lookup (missing entries raise
   ``KeyError``), ``add()``, and ``remove()`` for edits. Python retains only opaque
   index-file bytes for deferred/virtual indexes. Git edits private files and
   validates readback before atomic publication. ``add(write=False)`` and

@@ -180,7 +180,7 @@ def test_pending_index_queries_removal_and_failed_update(repo):
     index.add(["file"], write=False)
     pending = index.entry("file")
     assert pending.binsha != original.binsha
-    assert not hasattr(index, "entries")
+    assert index.entries[("file", 0)] == pending
     with pytest.raises(ValueError, match="Git did not retain"):
         index.add([BaseIndexEntry((0o120000, pending.binsha, 0, ".gitmodules"))], write=False)
     with pytest.raises(ValueError, match="Invalid index path"):
