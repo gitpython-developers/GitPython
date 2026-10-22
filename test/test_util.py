@@ -849,12 +849,69 @@ class TestUtils(TestBase):
         ("//user:pass@[2001:db8::1]:0080/repo", "//*****:*****@[2001:db8::1]:0080/repo"),
         ("https://user:p@ss@example.com/repo", "https://*****:*****@example.com/repo"),
         ("https://user:@example.com/repo", "https://*****:*****@example.com/repo"),
+        ("https://user:p=ass@example.com/repo", "https://*****:*****@example.com/repo"),
         ("https://@example.com/repo", "https://*****@example.com/repo"),
         ("https://example.com/repo@name?q=a@b#c@d", "https://example.com/repo@name?q=a@b#c@d"),
     )
     @ddt.unpack
     def test_remove_password_preserves_url_components(self, url, expected):
         assert remove_password_if_present([url]) == [expected]
+
+    @ddt.data(
+        (
+            ["-c", "http.proxy=http://user:pass@proxy.example.com:3128"],
+            ["-c", "http.proxy=http://*****:*****@proxy.example.com:3128"],
+        ),
+        (
+            ["-c", "remote.origin.url=https://user:pass@example.com/repo"],
+            ["-c", "remote.origin.url=https://*****:*****@example.com/repo"],
+        ),
+        (
+            ["--config=http.proxy=http://user:pass@proxy.example.com:3128"],
+            ["--config=http.proxy=http://*****:*****@proxy.example.com:3128"],
+        ),
+        (
+            ["--config=url.https://user:pass@example.com/.insteadOf=https://example.com/"],
+            ["--config=url.https://*****:*****@example.com/.insteadOf=https://example.com/"],
+        ),
+        (
+            ["--config=http.extraHeader=Authorization: Bearer pass"],
+            ["--config=http.extraHeader=Authorization: *****"],
+        ),
+        (
+            ["--config=http.https://alice@host.proxy=http://bob:token@proxy"],
+            ["--config=http.https://*****@host.proxy=http://*****:*****@proxy"],
+        ),
+        (
+            ["-c", "http.https://alice@host.proxy=http://bob:token@proxy"],
+            ["-c", "http.https://*****@host.proxy=http://*****:*****@proxy"],
+        ),
+        (
+            ["-chttp.https://alice@host.proxy=http://bob:token@proxy"],
+            ["-chttp.https://*****@host.proxy=http://*****:*****@proxy"],
+        ),
+        (
+            ["-curl.https://user:token@host/.insteadOf=https://old/"],
+            ["-curl.https://*****:*****@host/.insteadOf=https://old/"],
+        ),
+        (
+            ["-chttp.proxy=http://bob:token@proxy"],
+            ["-chttp.proxy=http://*****:*****@proxy"],
+        ),
+        (
+            ["--config=http.https://alice:token@host/.extraHeader=Authorization: Bearer pass"],
+            ["--config=http.https://*****:*****@host/.extraHeader=Authorization: *****"],
+        ),
+        (
+            ["-chttp.extraHeader=Authorization: Bearer pass"],
+            ["-chttp.extraHeader=Authorization: *****"],
+        ),
+        (["-c", "user.name=pass"], ["-c", "user.name=pass"]),
+        (["-cuser.name=pass"], ["-cuser.name=pass"]),
+    )
+    @ddt.unpack
+    def test_remove_password_from_config_values(self, cmdline, expected):
+        assert remove_password_if_present(cmdline) == expected
 
 
 def test_mode_str_to_int_accepts_bytes():
