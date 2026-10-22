@@ -8,6 +8,7 @@ from __future__ import annotations
 __all__ = ["Repo"]
 
 import gc
+from io import BytesIO
 import logging
 import os
 import os.path as osp
@@ -1358,8 +1359,10 @@ class Repo:
 
         info: InfoTD = {}
 
-        keepends = True
-        for line_bytes in data.splitlines(keepends):
+        # Git ends each porcelain line with a line feed only. bytes.splitlines() also
+        # splits at a lone carriage return, which a line of file content can contain,
+        # and would then parse the rest of that content line as blame headers.
+        for line_bytes in BytesIO(data):
             line_str = ""
             try:
                 line_str = line_bytes.rstrip().decode(defenc)

@@ -839,8 +839,43 @@ class TestRepo(TestBase):
     def test_blame_accepts_rev_opts(self, git):
         expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--", "README.md"]
         boilerplate_kwargs = {"p": True, "stdout_as_string": False}
+        git.return_value = b""
         self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
+
+    @with_rw_directory
+    def test_blame_content_with_carriage_returns(self, rw_dir):
+        repo = Repo.init(rw_dir)
+        with repo.config_writer() as writer:
+            writer.set_value("user", "name", "GitPython Tests")
+            writer.set_value("user", "email", "gitpython@example.com")
+
+        # A lone CR inside a line of content, followed by text shaped like blame
+        # porcelain headers for a forged commit and author.
+        forged = "\r".join(
+            [
+                "ok",
+                "0" * 40 + " 2 2 1",
+                "author Forged Author",
+                "author-mail <forged@example.com>",
+                "author-time 1000000000",
+                "committer Forged Author",
+                "committer-mail <forged@example.com>",
+                "committer-time 1000000000",
+                "\tforged()",
+            ]
+        )
+        tracked_file = Path(rw_dir) / "file.txt"
+        tracked_file.write_bytes(b"first\n" + forged.encode("ascii") + b"\n")
+        repo.index.add([str(tracked_file)])
+        commit = repo.index.commit("init")
+
+        blames = repo.blame("HEAD", "file.txt")
+
+        self.assertEqual(len(blames), 1)
+        self.assertEqual(blames[0][0], commit)
+        self.assertEqual(blames[0][0].author.name, "GitPython Tests")
+        self.assertEqual(blames[0][1], ["first", forged])
 
     @with_rw_repo("HEAD", bare=False)
     def test_untracked_files(self, rwrepo):
