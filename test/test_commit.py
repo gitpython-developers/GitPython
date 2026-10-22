@@ -513,6 +513,28 @@ class TestCommit(TestCommitSerialization):
                 self.assertEqual(cmt.committer.name, "André")
                 self.assertEqual(cmt.message, "Résumé\n")
 
+    def test_deserialization_headers_end_at_empty_line(self):
+        # Git ends the headers only at an empty line. A line holding only whitespace
+        # belongs to the headers, so what follows it is not the message.
+        for blank in (b"\r\n", b" \n", b"\t\n"):
+            with self.subTest(blank=blank):
+                data = (
+                    b"tree 3385f7b1e5f91930a3bd3e07105e113fca29981d\n"
+                    b"author Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+                    b"committer Andr\xe9 <andre@example.com> 1112591163 +0200\n"
+                    b"x-note a\n" + blank + b"Co-authored-by: Mallory <mallory@example.com>\n"
+                    b"encoding ISO-8859-1\n"
+                    b"\n"
+                    b"R\xe9sum\xe9\n"
+                )
+                cmt = self.rorepo.commit()
+                cmt._deserialize(BytesIO(data))
+
+                self.assertEqual(cmt.encoding, "ISO-8859-1")
+                self.assertEqual(cmt.author.name, "André")
+                self.assertEqual(cmt.message, "Résumé\n")
+                self.assertEqual(cmt.co_authors, [])
+
     @with_rw_directory
     def test_identity_cannot_alter_headers(self, rw_dir):
         """A name or email must not add header lines or present another identity."""

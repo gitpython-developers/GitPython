@@ -892,10 +892,13 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         self.encoding = self.default_encoding
         self.gpgsig = ""
 
-        # Read headers.
-        enc = next_line
-        buf = enc.strip()
-        while buf:
+        # Read headers. Like git, end them only at an empty line. A line holding only
+        # whitespace (such as "\r" or a bare continuation space) is still a header
+        # line, and only trailing whitespace is stripped, so a continuation line is
+        # never read as a header of its own.
+        line = next_line
+        while line not in (b"", b"\n"):
+            buf = line.rstrip()
             if buf[0:9] == b"encoding ":
                 raw_encoding = buf[9:]
                 try:
@@ -917,7 +920,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                     if not sigbuf:
                         break
                     if sigbuf[0:1] != b" ":
-                        buf = sigbuf.strip()
+                        line = sigbuf
                         is_next_header = True
                         break
                     sig_lines.append(sigbuf[1:])
@@ -925,7 +928,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 self.gpgsig = b"".join(sig_lines).rstrip(b"\n").decode(self.encoding, "ignore")
                 if is_next_header:
                     continue
-            buf = readline().strip()
+            line = readline()
 
         # Decode the author's name.
         try:
