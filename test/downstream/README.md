@@ -1,5 +1,12 @@
 # Downstream compatibility
 
+The [October 22–23, 2026 audit](audit.md) summarizes **115 projects**, beginning
+with known incompatibilities and retaining each project's release, results and
+coverage limits. It covers every identified current declared consumer in the
+September snapshot's top 15,000 distributions, plus known Git-focused users.
+This is not a strict popularity ranking or proof of complete application coverage.
+The runner below automates five CI profiles; it is not the complete audit inventory.
+
 Run released projects' GitPython-related tests against this checkout with
 [uv](https://docs.astral.sh/uv/) and Git 2.52 or newer:
 
@@ -35,19 +42,22 @@ settings, pytest options/plugins, and Python import paths are cleared before
 setup and testing. Select a different Git executable by putting its directory
 first on `PATH`.
 
-## Selection and coverage
+## Automated CI profiles
 
-The selection uses current runtime users, including optional end-user features,
+These five profiles use current runtime users, including optional end-user features,
 ranked by September 2026 PyPI distribution downloads. Development, documentation,
 and test-only dependencies are excluded. Downloads are not unique installations.
 
 | Project | Distribution downloads | Last tested release | Selected coverage |
 | --- | ---: | --- | --- |
 | LangChain Community | 27,882,881 | 0.4.2 | 2 upstream GitLoader tests: real clones, commits, checkout, tree traversal, ignored paths, and remote validation |
-| MLflow (`mlflow-skinny`) | 25,850,354 | 3.17.0 | 47 upstream tests: 31 repository/project/model-versioning cases plus 16 Git context and credential-redaction contract cases |
+| MLflow (`mlflow-skinny`) | 25,850,354 | 3.17.2 | 53 unique upstream repository/project/model-versioning, Git context and credential-redaction cases in the expanded audit |
 | Bandit | 24,935,372 | 1.9.4 | 12 upstream baseline CLI tests: real repository creation, commits, branches, resets, discovery, and dirty state |
 | SWE-bench | 22,942,741 | 5.0.2 | 4 supplemental integration cases for `AutoContextManager`; no upstream tests cover its GitPython callers |
-| DataHub (`acryl-datahub`) | 5,019,402 | 1.7.0.14 | 7 upstream tests passed, 1 credential-dependent skip: public clone/checkout, SSH timeout, exception/redaction contracts, and configuration |
+| DataHub (`acryl-datahub`) | 5,019,402 | 1.7.0.16 | 8 upstream tests passed, 1 credential-dependent skip: clone/checkout, SSH timeout, exception/redaction contracts, configuration and ODCS sourcing |
+
+The runner automates the original selections. The linked audit broadens MLflow
+with `tests/projects/test_utils.py` and DataHub with its ODCS Git sourcing test.
 
 Source: [top-pypi-packages](https://hugovk.github.io/top-pypi-packages/top-pypi-packages.min.json),
 snapshot updated **2026-10-01 12:40:51 UTC**. Its

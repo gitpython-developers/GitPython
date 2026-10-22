@@ -61,6 +61,24 @@ variables literal; `expand_vars=True` is unsupported. Callers wanting expansion
 must perform it before passing the path. Discovery still uses Gix/Git after
 ordinary input-path canonicalization.
 
+Repository construction validates storage and configuration through Gix/Git;
+overriding `Repo.config_reader()` does not replace that native discovery parser.
+sbxloop 2.1.36's `_MetadataRepo` subclass relied on the released constructor's
+permissive Python discovery and overridden no-includes reader. Five upstream
+tests still differ: malformed includes prevent opening, malformed local config
+is rejected before its custom `ProvisionError`, and version-0 repositories
+with version-1 storage extensions are rejected before its format check. Released
+GitPython 3.2.1 passes those five tests. This is a breaking subclass contract,
+not a demonstrated Gix-versus-Git mismatch: both backends reject the metadata.
+GixPython `OpenOptions` has strict/lossy configuration controls and overrides,
+but no supported option to open a repository while omitting its local include
+graph. A replacement must expose separately controlled metadata discovery and
+literal local configuration access with Git-compatible format validation.
+Do not bypass validation or reconstruct discovery/storage in Python to restore
+the old constructor. Downstream must construct its trusted metadata view before
+opening it with `Repo`, and handle native discovery errors explicitly; its
+original tests remain failed in the audit.
+
 `git.GitDB` and `git.db.GitDB` remain compatibility aliases for
 `GitCmdObjectDB`, so legacy `Repo(..., odbt=GitDB)` selectors use the same
 managed backend. Aider 0.86.2 uses that selector for every repository open.
@@ -1151,7 +1169,7 @@ IDs, providing native evidence for a future adapter correction. Fetch remains
 a CLI fallback: GixPython 0.2.0 must expose per-ref identities, status and notes
 before its fetch outcome can satisfy `FetchInfo`. Do not infer namespaces or
 reimplement fetch semantics in Python. Reproduction and baseline evidence are
-retained in the [third downstream audit](../test/downstream/audit-2026-10-22-batch-3.md).
+retained in the [downstream audit](../test/downstream/audit.md#airflow-ambiguous-mirror-fetch-results).
 
 ### Downstream empty configuration sections
 

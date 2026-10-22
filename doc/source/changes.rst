@@ -65,6 +65,12 @@ API changes
 * Editable/source imports expose the release version in ``git.__version__``,
   matching built distributions. Salt's GitPython provider checks can parse the
   version instead of rejecting the unstamped ``"git"`` build placeholder.
+* ``Repo`` construction validates repository configuration through Git/Gix.
+  A subclass override of ``config_reader()`` no longer controls discovery or
+  suppresses its include graph. Malformed configuration and invalid repository
+  extensions can fail before downstream custom validation runs. sbxloop's
+  metadata-reader subclass exposes this remaining compatibility break; callers
+  must prepare their trusted metadata view before opening it with ``Repo``.
 * Revision root trees such as ``Repo.rev_parse("HEAD:")`` retain their empty
   path and can be iterated. Missing paths within a valid tree revision retain
   ``Tree.join()``'s ``KeyError`` and missing-component message, restoring MCP
