@@ -238,6 +238,7 @@ class Repo:
         path: Optional[PathLike] = None,
         odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
         search_parent_directories: bool = False,
+        expand_vars: bool = False,
         *,
         _env: Optional[Mapping[str, Optional[str]]] = None,
     ) -> None:
@@ -274,6 +275,11 @@ class Repo:
             Please note that this was the default behaviour in older versions of
             GitPython, which is considered a bug though.
 
+        :param expand_vars:
+            The legacy ``False`` option remains accepted to select literal paths.
+            ``True`` is unsupported; expand environment variables explicitly
+            before opening a repository. Initial ``~`` expansion remains enabled.
+
         :raise git.exc.InvalidGitRepositoryError:
 
         :raise git.exc.NoSuchPathError:
@@ -286,6 +292,8 @@ class Repo:
         # process environment. Apply these overrides to discovery and later calls.
         if not isinstance(odbt, type) or not issubclass(odbt, GitCmdObjectDB):
             raise ValueError("odbt must be GitCmdObjectDB or a subclass")
+        if expand_vars:
+            raise ValueError("Environment variable expansion is unsupported; expand the path explicitly")
         environment = dict(_env or {})
         git_dir_env = environment.pop("GIT_DIR", os.getenv("GIT_DIR"))
         object_dir_env = environment.get("GIT_OBJECT_DIRECTORY", os.getenv("GIT_OBJECT_DIRECTORY"))

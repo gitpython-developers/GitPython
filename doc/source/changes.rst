@@ -156,8 +156,10 @@ API changes
   are removed; import from ``typing`` or the owning module. ``git.util`` now
   exposes the actual utility module. Abstract ``Traversable.traverse`` and
   ``list_traverse`` raise ``NotImplementedError``; use concrete implementations.
-* Paths and URLs no longer expand ``$VAR``/``%VAR%`` automatically. Removed
-  ``expand_vars`` switches from ``Repo``, ``Repo.init``, ``expand_path``,
+* Paths and URLs no longer expand ``$VAR``/``%VAR%`` automatically. ``Repo``
+  still accepts ``expand_vars=False`` for callers that explicitly select literal
+  paths; ``True`` raises ``ValueError``. Removed ``expand_vars`` switches from
+  ``Repo.init``, ``expand_path``,
   ``cygpath`` and ``Git.polish_url``. Expand explicitly with
   ``os.path.expandvars`` if wanted; initial ``~`` expansion remains.
   ``HIDE_WINDOWS_KNOWN_ERRORS`` and ``HIDE_WINDOWS_FREEZE_ERRORS`` are removed.

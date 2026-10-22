@@ -7,7 +7,22 @@ import pytest
 import git
 import git.db
 
-from test.lib.fixtures import fixture_repo
+from test.lib.fixtures import fixture_repo, read_only_fixture
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_repo_accepts_explicit_literal_path_selection(object_format, ref_format, monkeypatch):
+    root = read_only_fixture("downstream-literal-repo.sh", object_format, ref_format)
+    monkeypatch.setenv("DOWNSTREAM_REPOSITORY", str(root / "expanded"))
+    literal = root / "$DOWNSTREAM_REPOSITORY"
+    for kwargs in ({}, {"expand_vars": False}):
+        with git.Repo(literal, **kwargs) as repo:
+            assert repo.head.commit.tree["tracked"].data_stream.read() == b"$DOWNSTREAM_REPOSITORY"
+    with git.Repo(literal, git.GitCmdObjectDB, False, False) as repo:
+        assert Path(repo.working_tree_dir) == literal
+    with pytest.raises(ValueError, match="Environment variable expansion is unsupported"):
+        git.Repo(literal, expand_vars=True)
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

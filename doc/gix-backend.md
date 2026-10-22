@@ -55,6 +55,12 @@ fallbacks.
 
 ## Index and object metadata lifecycle
 
+`Repo(..., expand_vars=False)` remains accepted for callers such as sbxloop
+2.1.36 that explicitly require literal paths. The default also keeps environment
+variables literal; `expand_vars=True` is unsupported. Callers wanting expansion
+must perform it before passing the path. Discovery still uses Gix/Git after
+ordinary input-path canonicalization.
+
 `git.GitDB` and `git.db.GitDB` remain compatibility aliases for
 `GitCmdObjectDB`, so legacy `Repo(..., odbt=GitDB)` selectors use the same
 managed backend. Aider 0.86.2 uses that selector for every repository open.
