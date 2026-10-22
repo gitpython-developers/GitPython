@@ -4,7 +4,25 @@ from pathlib import Path
 
 import pytest
 
+import git
+import git.db
+
 from test.lib.fixtures import fixture_repo
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_legacy_gitdb_selector_uses_the_managed_object_backend(object_format, ref_format):
+    assert git.GitDB is git.db.GitDB is git.GitCmdObjectDB
+    with fixture_repo("downstream-index.sh", object_format, ref_format) as fixture:
+        with git.Repo(fixture.working_tree_dir, odbt=git.GitDB) as repo:
+            assert isinstance(repo.odb, git.GitCmdObjectDB)
+            blob = repo.head.commit.tree["tracked"]
+            assert repo.odb.has_object(blob.binsha)
+            info = repo.odb.info(blob.binsha)
+            assert info.binsha == blob.binsha
+            assert info.type == b"blob"
+            assert repo.odb.stream(blob.binsha).read() == blob.data_stream.read()
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

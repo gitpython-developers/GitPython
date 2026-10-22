@@ -3,7 +3,7 @@
 
 """Git's object database, accessed exclusively through the Git command."""
 
-__all__ = ["GitCmdObjectDB"]
+__all__ = ["GitCmdObjectDB", "GitDB"]
 
 import tempfile
 from typing import Iterator, TYPE_CHECKING
@@ -107,3 +107,8 @@ class GitCmdObjectDB:
             return hex_to_bin(hexsha)
         except (GitCommandError, ValueError) as exc:
             raise BadObject(partial_hexsha) from exc
+
+
+# Preserve the public object-backend selector used by downstream applications.
+# Storage remains owned by Git/Gix; this does not restore gitdb's Python backend.
+GitDB = GitCmdObjectDB

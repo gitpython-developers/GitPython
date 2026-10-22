@@ -54,9 +54,11 @@ API changes
 * ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
   writes, existence checks, and enumeration use Git, including packed objects.
   Precompressed input streams and custom object-output writers are unsupported.
-  ``GitDB`` exports and backend selection are removed. ``odbt`` accepts only
-  ``GitCmdObjectDB`` and its subclasses, rejecting unsupported types before
-  initialization or cloning. Remove ``odbt=GitDB`` or select ``GitCmdObjectDB``.
+  ``GitDB`` remains exported as a compatibility alias for ``GitCmdObjectDB``;
+  ``odbt=GitDB`` selects the same managed Git/Gix backend. It no longer selects
+  gitdb's Python storage implementation or supports that implementation's
+  specialized interfaces. ``odbt`` accepts ``GitCmdObjectDB`` and its subclasses,
+  rejecting unsupported types before initialization or cloning.
   ``gitdb`` remains a dependency for shared types and utilities.
 * ``Repo.object_format`` and ``Repo.ref_format`` report Git's storage formats.
   ``Repo.alternates`` is read-only and reports effective absolute alternate

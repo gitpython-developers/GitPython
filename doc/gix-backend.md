@@ -55,6 +55,14 @@ fallbacks.
 
 ## Index and object metadata lifecycle
 
+`git.GitDB` and `git.db.GitDB` remain compatibility aliases for
+`GitCmdObjectDB`, so legacy `Repo(..., odbt=GitDB)` selectors use the same
+managed backend. Aider 0.86.2 uses that selector for every repository open.
+This does not restore gitdb's Python object database or its specialized APIs.
+Object queries continue through `object_data()` and the supported
+`Repository.try_find_header()`/`find_object()` APIs, with the existing large-object
+and diagnostic CLI fallbacks. Storage uses the existing `hash_object` dispatch.
+
 `IndexFile` queries immutable entry records; it does not retain a parsed index.
 The compatibility `entries` property projects those queries into a read-only
 snapshot keyed by path and stage, preserving readers in dlt and Renku. It uses

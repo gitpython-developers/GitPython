@@ -29,6 +29,7 @@ __all__ = [
     "GitCommandError",
     "GitCommandNotFound",
     "GitConfigParser",
+    "GitDB",
     "GitError",
     "HEAD",
     "Head",
@@ -146,7 +147,7 @@ try:
         DiffIndex,
         Diffable,
     )
-    from git.db import GitCmdObjectDB  # @NoMove
+    from git.db import GitCmdObjectDB, GitDB  # @NoMove
     from git.cmd import Git  # @NoMove
     from git.repo import Repo  # @NoMove
     from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress  # @NoMove
