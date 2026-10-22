@@ -55,8 +55,9 @@ API changes
   restoring Kas's Git identity cleanup. Git performs each mutation and locks
   it independently; replacement is not one atomic transaction. Empty sections
   and ``add_section()`` remain unsupported, including Kas's SSH key setup.
-* Explicit ``from git import Union`` imports remain available for Demisto SDK's
-  validator registration, retaining the historical ``typing.Union`` alias.
+* Explicit ``from git import Union`` and ``Optional`` imports remain available
+  for Demisto SDK's validator registration and MkDocs RSS Plugin imports,
+  retaining the historical ``typing`` aliases.
 * Editable/source imports expose the release version in ``git.__version__``,
   matching built distributions. Salt's GitPython provider checks can parse the
   version instead of rejecting the unstamped ``"git"`` build placeholder.

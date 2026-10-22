@@ -1,7 +1,7 @@
 """Public GitPython queries used by released downstream projects."""
 
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 from importlib.metadata import version
 
 import pytest
@@ -20,6 +20,12 @@ def test_legacy_typing_union_import_supports_downstream_registration():
     from git import Union as GitUnion
 
     assert GitUnion is Union
+
+
+def test_legacy_typing_optional_import_supports_downstream_plugin_import():
+    from git import Optional as GitOptional
+
+    assert GitOptional is Optional
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

@@ -87,7 +87,7 @@ if "git" == __version__:
 
     __version__ = (_Path(__file__).resolve().parents[1] / "VERSION").read_text(encoding="utf-8").strip()
 
-from typing import Optional as _Optional
+from typing import Optional as Optional  # Compatibility for downstream explicit imports.
 from typing import Union as Union  # Compatibility for downstream explicit imports.
 
 from git.util import to_hex_sha
@@ -182,7 +182,7 @@ except GitError as _exc:
 GIT_OK = None
 
 
-def refresh(path: _Optional[PathLike] = None) -> None:
+def refresh(path: Optional[PathLike] = None) -> None:
     """Convenience method for setting the git executable path.
 
     :param path:
