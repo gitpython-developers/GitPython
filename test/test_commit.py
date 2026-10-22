@@ -200,6 +200,24 @@ class TestCommit(TestCommitSerialization):
         }
         assert removed_stats.total == {"insertions": 0, "deletions": 30, "lines": 30, "files": 5}
 
+    @with_rw_directory
+    def test_stats_preserve_unicode_line_separators(self, rw_dir):
+        with Repo.init(rw_dir) as repo:
+            repo.git.config("core.quotePath", "false")
+            actor = Actor("Test", "test@example.com")
+            paths = [f"before{separator}after.txt" for separator in ("\x85", "\u2028", "\u2029")]
+            for multiplier, change_type in ((1, "A"), (2, "M")):
+                for path in paths:
+                    data = b"line\n" * multiplier
+                    blob = repo.odb.store(IStream("blob", len(data), BytesIO(data)))
+                    repo.index.add([BaseIndexEntry((0o100644, blob.binsha, 0, path))])
+                commit = repo.index.commit("Update files", author=actor, committer=actor)
+                assert commit.stats.total == {"insertions": 3, "deletions": 0, "lines": 3, "files": 3}
+                assert commit.stats.files == {
+                    path: {"insertions": 1, "deletions": 0, "lines": 1, "change_type": change_type} for path in paths
+                }
+            assert repo.index.commit("No changes", author=actor, committer=actor).stats.files == {}
+
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
         files = commit.stats.files
