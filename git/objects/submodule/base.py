@@ -362,6 +362,21 @@ class Submodule(IndexObject, TraversableIterableObj):
         raise NotADirectoryError()
 
     @classmethod
+    def _transport_env(cls, allow_unsafe_protocols: bool = False) -> Dict[str, str]:
+        """
+        :return:
+            Environment for clones and fetches whose URL comes from ``.gitmodules``.
+
+            :manpage:`git-submodule(1)` runs those with ``GIT_PROTOCOL_FROM_USER=0``, so
+            that git refuses every transport whose ``protocol.<name>.allow`` policy is
+            ``user``, which it is for ``file`` since git 2.38.1, unless the user
+            configured ``protocol.<name>.allow=always``.
+        """
+        if allow_unsafe_protocols:
+            return {}
+        return {"GIT_PROTOCOL_FROM_USER": "0"}
+
+    @classmethod
     def _clone_repo(
         cls,
         repo: "Repo",
@@ -849,7 +864,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             They only take effect with the `init` option.
 
         :param allow_unsafe_protocols:
-            Allow unsafe protocols to be used, like ``ext``.
+            Allow unsafe protocols to be used, like ``ext``. This also runs the clone
+            and the fetches as if their URL came from the user, so that git accepts a
+            transport whose ``protocol.<name>.allow`` policy is ``user``, such as
+            ``file``, without ``protocol.<name>.allow=always`` being configured.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
@@ -900,7 +918,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
                 # ===============================
                 if not dry_run:
-                    remote.fetch(progress=progress)
+                    with module_repo.git.custom_environment(**self._transport_env(allow_unsafe_protocols)):
+                        remote.fetch(progress=progress)
                 # END handle dry-run
                 # ===============================
                 if i == len_rmts - 1:
@@ -987,7 +1006,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                             self.path,
                             self.name,
                             n=True,
-                            env=env,
+                            env={**self._transport_env(allow_unsafe_protocols), **(env or {})},
                             multi_options=clone_multi_options,
                             allow_unsafe_options=allow_unsafe_options,
                             allow_unsafe_protocols=allow_unsafe_protocols,

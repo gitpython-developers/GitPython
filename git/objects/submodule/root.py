@@ -305,7 +305,8 @@ class RootModule(Submodule):
                                 else:
                                     assert nn not in [r.name for r in rmts]
                                     smr = smm.create_remote(nn, sm_url)
-                                    smr.fetch(progress=progress)
+                                    with smm.git.custom_environment(**sm._transport_env()):
+                                        smr.fetch(progress=progress)
 
                                     # If we have a tracking branch, it should be available
                                     # in the new remote as well.

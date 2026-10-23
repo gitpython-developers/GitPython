@@ -1,7 +1,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import contextlib
 import gc
 import os
 import os.path as osp
@@ -30,31 +29,12 @@ from git.objects.submodule.util import resolve_relative_url
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cwd, join_path_native, to_native_path_linux
 
-from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
-
-
-@contextlib.contextmanager
-def _patch_git_config(name, value):
-    """Temporarily add a git config name-value pair, using environment variables."""
-    pair_index = int(os.getenv("GIT_CONFIG_COUNT", "0"))
-
-    # This is recomputed each time the context is entered, for compatibility with
-    # existing GIT_CONFIG_* environment variables, even if changed in this process.
-    patcher = mock.patch.dict(
-        os.environ,
-        {
-            "GIT_CONFIG_COUNT": str(pair_index + 1),
-            f"GIT_CONFIG_KEY_{pair_index}": name,
-            f"GIT_CONFIG_VALUE_{pair_index}": value,
-        },
-    )
-
-    with patcher:
-        yield
+from test.lib import TestBase, patch_git_config, with_rw_directory, with_rw_repo, PathLikeMock
 
 
 @pytest.mark.parametrize("state", ["unborn", "untracked", "detached"])
 @pytest.mark.parametrize("remote", [None, ".", "origin"], ids=["working-tree", "local-origin", "origin"])
+@patch_git_config("protocol.file.allow", "always")
 def test_add_relative_submodule_without_tracking_remote(tmp_path, state, remote):
     with git.Repo.init(tmp_path / "parent") as parent:
         if state != "unborn":
@@ -94,6 +74,7 @@ def test_add_preserves_relative_url_on_cygwin(tmp_path, url):
             assert reader.get_value('submodule "module"', "url") == url
 
 
+@patch_git_config("protocol.file.allow", "always")
 def test_update_resolves_local_relative_remote_once(tmp_path):
     with git.Repo.init(tmp_path / "parent") as parent, git.Repo.init(tmp_path / "repos" / "child.git") as source:
         source.git.symbolic_ref("HEAD", "refs/heads/master")
@@ -116,6 +97,7 @@ def test_update_resolves_local_relative_remote_once(tmp_path):
 
 
 @pytest.mark.parametrize("no_fetch", [False, True])
+@patch_git_config("protocol.file.allow", "always")
 def test_root_update_anchors_relative_remote_url(tmp_path, no_fetch):
     with git.Repo.init(tmp_path / "repos" / "source.git") as source, git.Repo.init(tmp_path / "parent") as parent:
         source.git.symbolic_ref("HEAD", "refs/heads/master")
@@ -139,6 +121,7 @@ def test_root_update_anchors_relative_remote_url(tmp_path, no_fetch):
 
 
 @pytest.mark.parametrize("no_fetch", [False, True])
+@patch_git_config("protocol.file.allow", "always")
 def test_root_update_uses_single_remote_without_resolving_old_url(tmp_path, no_fetch):
     with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
         source.git.symbolic_ref("HEAD", "refs/heads/master")
@@ -185,16 +168,67 @@ def test_root_update_skips_old_url_resolution_when_remote_matches(tmp_path, dry_
             assert module.head.commit == source.head.commit
 
 
+def test_update_applies_git_transport_policy_to_gitmodules_url(tmp_path):
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        with patch_git_config("protocol.file.allow", "always"):
+            parent.git.submodule("add", source.working_tree_dir, "module")
+        parent.index.commit("Add submodule")
+
+        with git.Repo.clone_from(parent.working_tree_dir, tmp_path / "clone") as clone:
+            submodule = clone.submodules[0]
+            # git submodule update refuses the file transport for a URL taken from
+            # .gitmodules unless protocol.file.allow is set to always.
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                submodule.update(init=True)
+            assert not submodule.module_exists()
+
+            with patch_git_config("protocol.file.allow", "always"):
+                submodule.update(init=True)
+            with submodule.module() as module:
+                assert module.head.commit == source.head.commit
+
+                # The same policy applies when an initialized submodule fetches.
+                source.index.commit("Second commit")
+                with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                    submodule.update(to_latest_revision=True)
+                assert module.head.commit != source.head.commit
+
+                submodule.update(to_latest_revision=True, allow_unsafe_protocols=True)
+                assert module.head.commit == source.head.commit
+
+
+def test_root_update_applies_git_transport_policy_to_changed_url(tmp_path):
+    with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
+        source.git.symbolic_ref("HEAD", "refs/heads/master")
+        source.index.commit("Initial commit")
+        with git.Repo.clone_from(source.working_tree_dir, tmp_path / "replacement") as replacement:
+            with patch_git_config("protocol.file.allow", "always"):
+                submodule = parent.create_submodule("module", "module", source.working_tree_dir)
+            previous = parent.index.commit("Add submodule")
+            with submodule.config_writer() as writer:
+                writer.set_value("url", replacement.working_tree_dir)
+            parent.index.commit("Replace submodule URL")
+
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                RootModule(parent).update(previous_commit=previous)
+            with submodule.module() as module:
+                assert Path(module.remotes.origin.url).samefile(source.working_tree_dir)
+                assert module.head.commit == source.head.commit
+
+
 @pytest.mark.parametrize(
     "name", ["module", "$GITPYTHON_TEST_SECRET", "prefix-${GITPYTHON_TEST_SECRET}-suffix", "%GITPYTHON_TEST_SECRET%"]
 )
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_update_preserves_literal_name(tmp_path, monkeypatch, caplog, name):
     monkeypatch.setenv("GITPYTHON_TEST_SECRET", "sensitive-value")
     caplog.set_level("DEBUG", logger="git.cmd")
     with git.Repo.init(tmp_path / "source") as source, git.Repo.init(tmp_path / "parent") as parent:
         source.git.symbolic_ref("HEAD", "refs/heads/master")
         source.index.commit("Initial commit")
-        with _patch_git_config("protocol.file.allow", "always"):
+        with patch_git_config("protocol.file.allow", "always"):
             parent.git.submodule("add", "--name", name, source.working_tree_dir, "module")
         parent.index.commit("Add submodule")
 
@@ -223,7 +257,7 @@ def movable_submodule(tmp_path):
         (tmp_path / "source" / "file").write_text("content", encoding="utf-8")
         source.index.add(["file"])
         source.index.commit("Create source")
-        with _patch_git_config("protocol.file.allow", "always"):
+        with patch_git_config("protocol.file.allow", "always"):
             submodule = parent.create_submodule("logical-name", "module", source.working_tree_dir)
         parent.index.commit("Create submodule")
         # Release clone handles before Windows moves the checkout.
@@ -274,7 +308,7 @@ def test_submodule_rejects_unsafe_checkout_before_mutation(movable_submodule, tm
     # Check the portable metadata aliases against Git's index validation as well.
     if operation == "clone" and path not in ("C:relative", "nul\0name"):
         with sm.repo.git.custom_environment(GIT_INDEX_FILE=str(tmp_path / "validation-index")):
-            with _patch_git_config("core.protectHFS", "true"), _patch_git_config("core.protectNTFS", "true"):
+            with patch_git_config("core.protectHFS", "true"), patch_git_config("core.protectNTFS", "true"):
                 with pytest.raises(GitCommandError):
                     sm.repo.git.update_index("--add", "--cacheinfo", f"160000,{sm.hexsha},{path}")
     with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("clone attempted")):
@@ -503,6 +537,7 @@ def test_move_normal_destination(movable_submodule, absolute_path):
 
 
 @pytest.mark.parametrize("metadata_dir", ["git_dir", "common_dir"])
+@patch_git_config("protocol.file.allow", "always")
 def test_move_rejects_leaf_symlink_to_metadata(movable_submodule, tmp_path, metadata_dir):
     root = tmp_path / "worktree"
     movable_submodule.repo.git.worktree("add", "--detach", str(root))
@@ -713,6 +748,7 @@ def metadata_realpath(request):
 
 
 @pytest.mark.parametrize("operation", ["add", "reconnect", "rename"])
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_path, operation, metadata_realpath):
     """Allow linked metadata destinations while keeping the checkout correctly connected.
 
@@ -743,6 +779,7 @@ def test_submodule_allows_metadata_destination_symlinks(movable_submodule, tmp_p
 
 @pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf", "gitfile", "config", "alias"])
 @pytest.mark.parametrize("operation", ["update", "move", "rename", "remove"])
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_allows_existing_metadata_symlinks(
     movable_submodule, tmp_path, kind, operation, windows_directory_symlink_removal, metadata_realpath
 ):
@@ -809,6 +846,7 @@ def test_submodule_allows_existing_metadata_symlinks(
 
 
 @pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf"])
+@patch_git_config("protocol.file.allow", "always")
 def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(
     movable_submodule, tmp_path, kind, metadata_realpath
 ):
@@ -1279,6 +1317,7 @@ class TestSubmodule(TestBase):
     #         "it is being used by another process: "
     #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa: E501
     @with_rw_repo(k_subm_current)
+    @patch_git_config("protocol.file.allow", "always")
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
 
@@ -1295,6 +1334,7 @@ class TestSubmodule(TestBase):
         raises=PermissionError,
     )
     @with_rw_repo(k_subm_current, bare=False)
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_module(self, rwrepo):
         # Can query everything without problems.
         rm = RootModule(rwrepo)
@@ -1534,6 +1574,7 @@ class TestSubmodule(TestBase):
             git_submodule.assert_called_once_with("deinit", "--force", "--", submodule.path)
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit(self, rwdir):
         source_path = osp.join(rwdir, "source")
         source_repo = git.Repo.init(source_path)
@@ -1557,6 +1598,7 @@ class TestSubmodule(TestBase):
         assert osp.isfile(osp.join(submodule.abspath, "file"))
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_to_latest_revision_after_deinit_fetches_remote(self, rwdir):
         source_path = osp.join(rwdir, "source")
         source_repo = git.Repo.init(source_path)
@@ -1577,6 +1619,7 @@ class TestSubmodule(TestBase):
         assert osp.isfile(osp.join(submodule.abspath, "new-file"))
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_fetches_new_gitlink_commit(self, rwdir):
         source_path = osp.join(rwdir, "source")
         source_repo = git.Repo.init(source_path)
@@ -1659,6 +1702,7 @@ class TestSubmodule(TestBase):
         assert not osp.exists(osp.join(submodule.abspath, ".git"))
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_restores_nested_checkout(self, rwdir):
         source_path = osp.join(rwdir, "source")
         source_repo = git.Repo.init(source_path)
@@ -1719,7 +1763,7 @@ class TestSubmodule(TestBase):
         # END for each checkout mode
 
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_submodule_with_relative_path(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
@@ -1735,7 +1779,7 @@ class TestSubmodule(TestBase):
         cloned_repo.submodule_update(init=True, recursive=True)
 
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_rejects_parent_component_in_name(self, rwdir):
         source = git.Repo.init(osp.join(rwdir, "source"))
         source.git.commit(m="initial commit", allow_empty=True)
@@ -1787,7 +1831,7 @@ class TestSubmodule(TestBase):
                 Submodule._module_abspath(clone, "module", "../module")
 
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_update_keeps_going_after_invalid_submodule_name(self, rwdir):
         source = git.Repo.init(osp.join(rwdir, "source"))
         source.git.commit(m="initial commit", allow_empty=True)
@@ -1812,7 +1856,7 @@ class TestSubmodule(TestBase):
         clone.submodule("../invalid").update(recursive=True, keep_going=True)
 
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
@@ -1839,7 +1883,7 @@ class TestSubmodule(TestBase):
         raises=PermissionError,
     )
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         parent.git.submodule("add", self._small_repo_url(), "module")
@@ -1907,6 +1951,7 @@ class TestSubmodule(TestBase):
         raises=PermissionError,
     )
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         sm_path = join_path_native("submodules", "intermediate", "one")
@@ -2079,6 +2124,7 @@ class TestSubmodule(TestBase):
             assert sm_mod.git_dir.endswith(join_path_native(".git", "modules", new_sm_name))
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_branch_renames(self, rw_dir):
         # Set up initial sandbox:
         # The parent repo has one submodule, which has all the latest changes.
@@ -2266,6 +2312,7 @@ class TestSubmodule(TestBase):
         self.assertEqual(len(list(sm.module().iter_commits())), sm_depth)
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_clone_multi_options_argument(self, rwdir):
         # Arrange
         parent = git.Repo.init(osp.join(rwdir, "parent"))
@@ -2290,6 +2337,7 @@ class TestSubmodule(TestBase):
         self.assertTrue(sm_config.get_value("core", "eol"))
 
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_no_clone_multi_options_argument(self, rwdir):
         # Arrange
         parent = git.Repo.init(osp.join(rwdir, "parent"))
@@ -2531,7 +2579,7 @@ class TestSubmodule(TestBase):
                     submodule.update(clone_multi_options=[unsafe_option], allow_unsafe_options=True)
 
     @with_rw_directory
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_submodule_update_relative_url(self, rwdir):
         parent_path = osp.join(rwdir, "parent")
         parent_repo = git.Repo.init(parent_path)

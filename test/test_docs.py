@@ -8,7 +8,7 @@ import os
 import os.path
 
 from test.lib import TestBase
-from test.lib.helper import with_rw_directory, with_rw_repo
+from test.lib.helper import patch_git_config, with_rw_directory, with_rw_repo
 
 
 class Tutorials(TestBase):
@@ -479,6 +479,7 @@ class Tutorials(TestBase):
         repo.git.clear_cache()
 
     @with_rw_repo("c15a6e1923a14bc760851913858a3942a4193cdb")
+    @patch_git_config("protocol.file.allow", "always")
     def test_submodules(self, repo):
         # [1-test_submodules]
         sms = repo.submodules

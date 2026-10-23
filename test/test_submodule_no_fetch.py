@@ -9,6 +9,7 @@ import pytest
 
 from git import Git, Remote, Repo, RootModule, Submodule
 from git.exc import GitCommandError
+from test.lib import patch_git_config
 
 
 def _commit_file(repo, content):
@@ -24,7 +25,9 @@ def _cached_remote_refs(repo):
 @pytest.fixture
 def local_submodule(tmp_path):
     """Use only local repositories, with two commits already available in the clone."""
-    with Repo.init(tmp_path / "source") as source, Repo.init(tmp_path / "parent") as parent:
+    with Repo.init(tmp_path / "source") as source, Repo.init(tmp_path / "parent") as parent, patch_git_config(
+        "protocol.file.allow", "always"
+    ):
         # RootModule's URL-change handling currently assumes a master branch.
         source.git.symbolic_ref("HEAD", "refs/heads/master")
         _commit_file(source, "initial")
