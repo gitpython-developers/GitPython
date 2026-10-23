@@ -990,6 +990,22 @@ class TestBase(TestCase):
             assert config._included_paths() == []
 
     @with_rw_directory
+    def test_conditional_includes_expand_home_in_git_dir_pattern(self, rw_dir):
+        git_dir = osp.join(rw_dir, "target", "repo", ".git")
+        repo = mock.Mock(git_dir=git_dir)
+        config_path = osp.join(rw_dir, "config")
+        included_path = osp.join(rw_dir, "included")
+
+        with open(config_path, "w") as stream:
+            stream.write(f'[includeIf "gitdir:~/target/"]\n    path={included_path}\n')
+
+        # On Windows, the home directory has backslashes, but Git matches it as if it
+        # were written with forward slashes.
+        with mock.patch.dict(os.environ, {"HOME": rw_dir, "USERPROFILE": rw_dir}):
+            with GitConfigParser(config_path, repo=repo, merge_includes=False) as config:
+                assert config._included_paths() == [("path", included_path)]
+
+    @with_rw_directory
     def test_conditional_includes_from_branch_name(self, rw_dir):
         # Initiate mocked branch.
         branch = mock.Mock()

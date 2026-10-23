@@ -730,7 +730,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             value = match.group(2).strip()
 
             if keyword in ["gitdir", "gitdir/i"]:
-                value = osp.expanduser(value)
+                if sys.platform == "win32" and (value == "~" or value.startswith("~/")):
+                    # Like Git, substitute the home directory with forward slashes, as a
+                    # backslash in the pattern would escape the next character.
+                    value = osp.expanduser("~").replace("\\", "/") + value[1:]
+                else:
+                    value = osp.expanduser(value)
                 git_dir = os.fspath(self._repo.git_dir) if self._repo.git_dir else None
                 if sys.platform == "win32":
                     git_dir = git_dir.replace("\\", "/") if git_dir else None
