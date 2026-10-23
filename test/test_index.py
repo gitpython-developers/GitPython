@@ -189,6 +189,12 @@ def _make_hook(git_dir, name, content, make_exec=True):
     return hp
 
 
+def _only_ownership_check(command, *args, **kwargs):
+    """Stand in for :meth:`Git.execute`, allowing only the check before running a hook."""
+    if command[1:] != ["rev-parse", "--git-dir"]:
+        raise AssertionError("hook lookup must not run git: %r" % (command,))
+
+
 def _raw_index(path, mode=0o100644):
     """Build an index without using the writer under test."""
     name = path.encode("utf-8")
@@ -1496,7 +1502,7 @@ class TestIndex(TestBase):
         _make_hook(index.repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
         output = Path(rw_repo.git_dir, "output.txt")
         with mock.patch.object(Repo, "config_level", ("repository",)):
-            with mock.patch.object(Git, "execute", side_effect=AssertionError("hook lookup must not run git")):
+            with mock.patch.object(Git, "execute", side_effect=_only_ownership_check):
                 run_commit_hook("fake-hook", index)
                 self.assertEqual(output.read_text(encoding="utf-8"), "ran fake hook\n")
 
@@ -1533,7 +1539,7 @@ class TestIndex(TestBase):
             ):
                 with mock.patch("git.index.fun.safer_popen") as popen, mock.patch(
                     "git.index.fun.handle_process_output"
-                ):
+                ), mock.patch.object(Git, "execute", side_effect=_only_ownership_check):
                     popen.return_value.returncode = 0
                     run_commit_hook("fake-hook", repo.index)
             return popen.call_args[0][0]
@@ -1706,6 +1712,20 @@ class TestIndex(TestBase):
         repo.index.commit("This should run the hook outside the working tree")
         output = Path(repo.working_dir, "outside-hook-output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran outside hook\n")
+
+    @with_rw_directory
+    def test_pre_commit_hook_not_run_in_repository_git_refuses(self, rw_dir):
+        repo = Repo.init(osp.join(rw_dir, "repo"))
+        if repo.git.version_info < (2, 35, 2):
+            self.skipTest("Git checks repository ownership since 2.35.2")
+        _make_hook(repo.git_dir, "pre-commit", "echo 'ran hook' >hook-output.txt")
+
+        # Git's test hook makes it treat the repository as owned by another user.
+        with mock.patch.dict(os.environ, {"GIT_TEST_ASSUME_DIFFERENT_OWNER": "1"}):
+            with self.assertRaisesRegex(GitCommandError, "dubious ownership"):
+                repo.index.commit("Git refuses this repository")
+
+        self.assertFalse(osp.exists(osp.join(repo.working_dir, "hook-output.txt")))
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,

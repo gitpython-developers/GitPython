@@ -185,10 +185,19 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         Arguments passed to hook file.
 
     :raise git.exc.HookExecutionError:
+
+    :raise git.exc.GitCommandError:
+        If Git refuses to work in the repository, for instance because it is owned by
+        another user and not listed in ``safe.directory``. The hook is not run then.
     """
     hp = _commit_hook_path(name, index)
     if not os.access(hp, os.X_OK):
         return
+
+    # Hooks are found and run without invoking Git, so Git's check of whether the
+    # repository is safe to use has not happened yet. Let Git apply it before
+    # executing code taken from the repository.
+    index.repo.git.rev_parse("--git-dir")
 
     env = os.environ.copy()
     env["GIT_INDEX_FILE"] = safe_decode(os.fspath(index.path))
