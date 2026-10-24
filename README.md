@@ -2,26 +2,64 @@
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 [![Packaging status](https://repology.org/badge/tiny-repos/python:gitpython.svg)](https://repology.org/metapackage/python:gitpython/versions)
 
-## [Gitoxide](https://github.com/Byron/gitoxide): A peek into the future…
+## GixPython: Gitoxide for GitPython
 
-I started working on GitPython in 2009, back in the days when Python was 'my thing' and I had great plans with it.
-Of course, back in the days, I didn't really know what I was doing and this shows in many places. Somewhat similar to
-Python this happens to be 'good enough', but at the same time is deeply flawed and broken beyond repair.
+[GixPython](https://github.com/GitoxideLabs/GixPython) provides the **Python bindings
+for [Gitoxide](https://github.com/GitoxideLabs/gitoxide)**, an implementation of Git
+in [Rust](https://www.rust-lang.org). GitPython's experimental Gix backend uses these
+bindings to execute supported operations through Gitoxide while exposing GitPython's
+high-level repository, commit, tree and index interfaces.
 
-By now, GitPython is widely used and I am sure there is a good reason for that, it's something to be proud of and happy about.
-The community is maintaining the software and is keeping it relevant for which I am absolutely grateful. For the time to come I am happy to continue maintaining GitPython, remaining hopeful that one day it won't be needed anymore.
+Supported object reads, tree traversal, reference/index queries and commit history
+can run without launching Git subprocesses. GitPython also retains and reuses a Gix
+repository handle across operations, reducing repeated initialization work. These
+changes reduce subprocess overhead, particularly for repeated repository queries;
+the [backend benchmarks](test/performance/README.md) measure results and CLI launch
+counts for both backends.
 
-More than 15 years after my first meeting with 'git' I am still in excited about it, and am happy to finally have the tools and
-probably the skills to scratch that itch of mine: implement `git` in a way that makes tool creation a piece of cake for most.
+### Activate the Gix backend
 
-If you like the idea and want to learn more, please head over to [gitoxide](https://github.com/Byron/gitoxide), an
-implementation of 'git' in [Rust](https://www.rust-lang.org).
+This backend is currently unreleased. From this source checkout, install the
+optional `gix` extra in a virtual environment:
 
-The experimental `GitPython[gix]` extra uses GixPython 0.3.0 from PyPI for
-supported operations, with Git CLI fallback. Set `GIT_PYTHON_BACKEND=cli` or
-`gix` to select the backend explicitly. Tests use `gix.testtools` for scripted
-fixtures with either backend and require Python 3.11+. See the
-[installation, test commands, and conversion ledger](doc/gix-backend.md).
+```sh
+python -m pip install ".[gix]"
+```
+
+The extra installs **GixPython 0.3.0** from PyPI; its Python import name is `gix`.
+Set `GIT_PYTHON_BACKEND=gix` **before importing GitPython**, either in your
+environment or in Python:
+
+```python
+import os
+
+os.environ["GIT_PYTHON_BACKEND"] = "gix"
+from git import Repo
+
+with Repo(".") as repo:
+    print(repo.head.commit.hexsha)
+```
+
+With `GIT_PYTHON_BACKEND` unset, GitPython automatically selects Gix when `gix`
+can be imported, otherwise CLI. Set it to `cli` to force Git subprocesses instead.
+Explicit `gix` selection fails if GixPython cannot be imported.
+
+### Prerequisites and coverage
+
+- **CPython 3.11 or newer** for GixPython. GitPython itself still supports Python
+  3.8 or newer; on Python 3.8–3.10 the extra omits GixPython and uses CLI.
+- **Git 2.52 or newer**, available in `PATH` or selected with
+  `GIT_PYTHON_GIT_EXECUTABLE`, remains required for CLI fallbacks.
+- GixPython 0.3.0 publishes **macOS wheels**. On **Linux and Windows**, installation
+  builds its released source distribution and requires **Rust 1.89 or newer** and
+  a **system linker**. Default hashing, compression and HTTPS dependencies use
+  pure Rust and do not require a C/C++ compiler.
+
+Unsupported operations and options retain the Git CLI path, including clone,
+fetch and push. Direct `repo.git.<command>()` calls also retain command-line
+behavior. Coverage and compatibility gaps are documented in the
+[backend ledger and installation guide](doc/gix-backend.md); the
+[downstream audit](test/downstream/audit.md) starts with known API incompatibilities.
 
 ## GitPython
 
