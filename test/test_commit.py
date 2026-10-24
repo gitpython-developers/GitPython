@@ -566,6 +566,39 @@ class TestCommit(TestCommitSerialization):
                     key = ("commit.decode", outcome)
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
+    def test_deserialization_headers_end_at_empty_line(self):
+        for blank in ("cr", "space", "tab"):
+            with self.subTest(blank=blank), fixture_repo("commit.sh", "whitespace-headers", blank) as repo:
+                oid = (Path(repo.working_dir).parent / "object-id").read_text().strip()
+                repo.git.fsck("--strict", oid)
+                expected = repo.git.show(
+                    "--no-patch",
+                    "--no-notes",
+                    "--no-show-signature",
+                    "--no-use-mailmap",
+                    "--encoding=UTF-8",
+                    "--format=format:%an%x00%cn%x00%B",
+                    oid,
+                    "--",
+                    strip_newline_in_stdout=False,
+                ).split("\0", 2)
+                self.assertEqual(expected, ["André", "André", "Résumé\n"])
+                raw = repo.git.cat_file("commit", oid, stdout_as_string=False, strip_newline_in_stdout=False)
+                before = _backend.statistics()
+                for cmt in (
+                    Commit(repo, bytes.fromhex(oid))._deserialize(BytesIO(raw)),
+                    Commit(repo, bytes.fromhex(oid)),
+                ):
+                    self.assertEqual(cmt.encoding, "ISO-8859-1")
+                    self.assertEqual([cmt.author.name, cmt.committer.name, cmt.message], expected)
+                    self.assertEqual(cmt.co_authors, [])
+                if _backend.name == "gix":
+                    reason = (
+                        "commit encoding header order (GIX-30)" if blank == "space" else "native decoder diagnostics"
+                    )
+                    key = ("commit.decode", "CLI: " + reason)
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
     def test_identity_cannot_alter_headers(self):
         """A name or email must not add header lines or present another identity."""
         with fixture_repo("commit.sh", "tree", write=True) as rw_repo:

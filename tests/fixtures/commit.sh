@@ -47,6 +47,23 @@ case "$1" in
     raw)
         git hash-object --literally -w -t commit "$2" > ../object-id
         ;;
+    whitespace-headers)
+        tree=$(git mktree </dev/null)
+        {
+            printf 'tree %s\n' "$tree"
+            printf 'author Andr\351 <andre@example.com> 1112591163 +0200\n'
+            printf 'committer Andr\351 <andre@example.com> 1112591163 +0200\n'
+            printf 'x-note a\n'
+            case "$2" in
+                cr) printf '\r\n' ;;
+                space) printf ' \n' ;;
+                tab) printf '\t\n' ;;
+                *) exit 1 ;;
+            esac
+            printf 'Co-authored-by: Mallory <mallory@example.com>\n'
+            printf 'encoding ISO-8859-1\n\nR\351sum\351\n'
+        } | git hash-object --literally -w -t commit --stdin > ../object-id
+        ;;
     encoding)
         tree=$(git mktree </dev/null)
         {
