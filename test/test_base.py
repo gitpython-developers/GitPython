@@ -5,10 +5,8 @@
 
 import gc
 from io import BytesIO
-import os
 import os.path as osp
 import sys
-import tempfile
 from unittest import skipIf
 from unittest.mock import patch
 
@@ -18,9 +16,10 @@ from git import Repo
 from git.objects import Blob, Commit, TagObject, Tree
 import git.objects.base as base
 from git.objects.util import get_object_type_by_name
-from git.util import HIDE_WINDOWS_FREEZE_ERRORS, hex_to_bin
+from git.util import hex_to_bin
 
 from test.lib import TestBase as _TestBase, with_rw_and_rw_remote_repo, with_rw_repo
+from test.lib.fixtures import fixture_repo, writable_fixture
 
 
 class TestBase(_TestBase):
@@ -72,14 +71,11 @@ class TestBase(_TestBase):
             data = data_stream.read()
             assert data
 
-            with tempfile.NamedTemporaryFile(suffix="test-stream", delete=False) as tmpfile:
-                self.assertEqual(item, item.stream_data(tmpfile))
-                tmpfile.seek(0)
-                self.assertEqual(tmpfile.read(), data)
-
-            # Remove the file this way, instead of with a context manager or "finally",
-            # so it is only removed on success, and we can inspect the file on failure.
-            os.remove(tmpfile.name)
+            with writable_fixture("empty.sh") as temporary:
+                with (temporary.path() / "stream").open("w+b") as tmpfile:
+                    self.assertEqual(item, item.stream_data(tmpfile))
+                    tmpfile.seek(0)
+                    self.assertEqual(tmpfile.read(), data)
 
             for stored_type in (typename, typename.encode("ascii")):
                 with patch.object(self.rorepo.odb, "info", return_value=OInfo(binsha, stored_type, item.size)):
@@ -126,37 +122,19 @@ class TestBase(_TestBase):
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
         assert osp.isdir(rw_repo.working_dir)
 
-    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
+    @skipIf(sys.platform == "win32", "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
 
-    @with_rw_repo("0.1.6")
-    def test_add_unicode(self, rw_repo):
+    def test_add_unicode(self):
         filename = "שלום.txt"
-
-        file_path = osp.join(rw_repo.working_dir, filename)
-
-        # Verify first that we could encode file name in this environment.
-        try:
-            file_path.encode(sys.getfilesystemencoding())
-        except UnicodeEncodeError as e:
-            raise RuntimeError("Environment doesn't support unicode filenames") from e
-
-        with open(file_path, "wb") as fp:
-            fp.write(b"something")
-
-        if sys.platform == "win32":
-            # On Windows, there is no way this works, see images on:
-            # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
-            # Therefore, it must be added using the Python implementation.
-            rw_repo.index.add([file_path])
-            # However, when the test winds down, rmtree fails to delete this file, which
-            # is recognized as ??? only.
-        else:
-            # On POSIX, we can just add Unicode files without problems.
-            rw_repo.git.add(rw_repo.working_dir)
-
-        rw_repo.index.commit("message")
+        with fixture_repo("index.sh", "file", filename, "something", write=True) as repo:
+            file_path = osp.join(repo.working_dir, filename)
+            if sys.platform == "win32":
+                repo.index.add([file_path])
+            else:
+                repo.git.add(repo.working_dir)
+            repo.index.commit("message")

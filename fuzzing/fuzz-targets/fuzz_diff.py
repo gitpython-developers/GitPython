@@ -40,8 +40,8 @@ def TestOneInput(data):
                 repo,
                 a_rawpath=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
                 b_rawpath=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
-                a_blob_id=fdp.ConsumeBytes(20),
-                b_blob_id=fdp.ConsumeBytes(20),
+                a_blob_id=fdp.ConsumeBytes(repo._oid_size * 2),
+                b_blob_id=fdp.ConsumeBytes(repo._oid_size * 2),
                 a_mode=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
                 b_mode=fdp.ConsumeBytes(fdp.ConsumeIntInRange(0, fdp.remaining_bytes())),
                 new_file=fdp.ConsumeBool(),
@@ -55,11 +55,10 @@ def TestOneInput(data):
             )
         except BinasciiError:
             return -1
-        except AssertionError as e:
-            if "Require 20 byte binary sha, got" in str(e):
+        except ValueError as e:
+            if "Object ID does not match the repository object format" in str(e):
                 return -1
-            else:
-                raise e
+            raise
 
         _ = diff.__str__()
         _ = diff.a_path

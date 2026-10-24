@@ -10,9 +10,9 @@ __all__ = [
     "with_rw_directory",
     "with_rw_repo",
     "with_rw_and_rw_remote_repo",
+    "patch_git_config",
     "PathLikeMock",
     "TestBase",
-    "VirtualEnvironment",
     "TestCase",
     "SkipTest",
     "skipIf",
@@ -31,21 +31,21 @@ import io
 import logging
 import os
 import os.path as osp
+from pathlib import Path
 from stat import S_ISLNK, ST_MODE
 import socket
-import subprocess
-import sys
-import tempfile
 import textwrap
 import time
 import unittest
-import venv
+from unittest import mock
 from typing import Union, Type, Tuple
 
-import gitdb
 import pytest
+from gix import testtools
 
-from git.util import rmtree, cwd
+from git.util import cwd
+from test.cleanup import TemporaryDirectory
+from test.lib.fixtures import read_only_fixture, writable_fixture
 
 TestCase = unittest.TestCase
 SkipTest = unittest.SkipTest
@@ -84,6 +84,26 @@ def fixture(name):
 # { Adapters
 
 
+@contextlib.contextmanager
+def patch_git_config(name, value):
+    """Temporarily add a git config name-value pair, using environment variables."""
+    pair_index = int(os.getenv("GIT_CONFIG_COUNT", "0"))
+
+    # This is recomputed each time the context is entered, for compatibility with
+    # existing GIT_CONFIG_* environment variables, even if changed in this process.
+    patcher = mock.patch.dict(
+        os.environ,
+        {
+            "GIT_CONFIG_COUNT": str(pair_index + 1),
+            f"GIT_CONFIG_KEY_{pair_index}": name,
+            f"GIT_CONFIG_VALUE_{pair_index}": value,
+        },
+    )
+
+    with patcher:
+        yield
+
+
 class StringProcessAdapter:
     """Allows strings to be used as process objects returned by subprocess.Popen.
 
@@ -105,13 +125,20 @@ class StringProcessAdapter:
 # { Decorators
 
 
-def with_rw_directory(func):
+def with_rw_directory(func=None, *, script="empty.sh", args=(), execute=False):
     """Create a temporary directory which can be written to, remove it if the
-    test succeeds, but leave it otherwise to aid additional debugging."""
+    test succeeds, but leave it otherwise to aid additional debugging.
+
+    Cleanup is best-effort: a locked file must not change the test result.
+    """
+
+    if func is None:
+        return lambda wrapped: with_rw_directory(wrapped, script=script, args=args, execute=execute)
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        path = tempfile.mkdtemp(prefix=func.__name__)
+        temporary = writable_fixture(script, *fixture_args, execute=execute)
+        path = str(temporary.path())
         keep = False
         try:
             return func(self, path, *args, **kwargs)
@@ -131,9 +158,9 @@ def with_rw_directory(func):
             # memory maps closed, once objects go out of scope. For some reason
             # though this is not the case here unless we collect explicitly.
             gc.collect()
-            if not keep:
-                rmtree(path)
+            temporary.close(keep=keep)
 
+    fixture_args = args
     return wrapper
 
 
@@ -151,41 +178,33 @@ def with_rw_repo(working_tree_ref, bare=False):
 
     def argument_passer(func):
         @wraps(func)
-        def repo_creator(self):
-            prefix = "non_"
-            if bare:
-                prefix = ""
-            # END handle prefix
-            repo_dir = tempfile.mktemp(prefix="%sbare_%s" % (prefix, func.__name__))
-            rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
+        def repo_creator(self, *args, **kwargs):
+            from git import Repo
 
-            if rw_repo.head.is_detached:
-                rw_repo.head.reference = rw_repo.create_head(
-                    "master", working_tree_ref, force=True, logmsg="Create test branch"
-                )
-            else:
-                rw_repo.head.commit = rw_repo.commit(working_tree_ref)
-            if not bare:
-                rw_repo.head.reference.checkout()
-            # END handle checkout
+            temporary = writable_fixture(
+                "history.sh",
+                self.rorepo.working_dir,
+                self.rorepo.head.commit.hexsha,
+                working_tree_ref,
+                "bare" if bare else "worktree",
+            )
+            repo_dir = temporary.path() / "repo"
+            rw_repo = Repo(repo_dir)
+            keep = False
 
             prev_cwd = os.getcwd()
             os.chdir(rw_repo.working_dir)
             try:
-                return func(self, rw_repo)
+                return func(self, rw_repo, *args, **kwargs)
             except:  # noqa: E722
                 _logger.info("Keeping repo after failure: %s", repo_dir)
-                repo_dir = None
+                keep = True
                 raise
             finally:
                 os.chdir(prev_cwd)
-                rw_repo.git.clear_cache()
+                rw_repo.close()
                 rw_repo = None
-                if repo_dir is not None:
-                    gc.collect()
-                    gitdb.util.mman.collect()
-                    gc.collect()
-                    rmtree(repo_dir)
+                temporary.close(keep=keep)
                 # END rm test repo if possible
             # END cleanup
 
@@ -202,29 +221,17 @@ def git_daemon_launched(base_path, ip, port):
 
     gd = None
     try:
-        if sys.platform == "win32":
-            # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
-            # but if invoked as 'git daemon', it detaches from parent `git` cmd,
-            # and then CANNOT DIE!
-            # So, invoke it as a single command.
-            daemon_cmd = [
-                osp.join(Git()._call_process("--exec-path"), "git-daemon"),
-                "--enable=receive-pack",
-                "--listen=%s" % ip,
-                "--port=%s" % port,
-                "--base-path=%s" % base_path,
-                base_path,
-            ]
-            gd = Git().execute(daemon_cmd, as_process=True)
-        else:
-            gd = Git().daemon(
-                base_path,
-                enable="receive-pack",
-                listen=ip,
-                port=port,
-                base_path=base_path,
-                as_process=True,
-            )
+        # Killing a `git daemon` wrapper can leave its child listening on any OS.
+        daemon_cmd = [
+            osp.join(Git()._call_process("--exec-path"), "git-daemon"),
+            "--enable=receive-pack",
+            "--reuseaddr",
+            "--listen=%s" % ip,
+            "--port=%s" % port,
+            "--base-path=%s" % base_path,
+            base_path,
+        ]
+        gd = Git().execute(daemon_cmd, as_process=True)
 
         # Wait until git daemon listens for connections.
         for _attempt in range(1, 30):
@@ -241,7 +248,7 @@ def git_daemon_launched(base_path, ip, port):
           Probably test will fail subsequently.
 
           BUT you may start *git-daemon* manually with this command:"
-                git daemon --enable=receive-pack  --listen=%s --port=%s --base-path=%s  %s
+                git daemon --enable=receive-pack --reuseaddr --listen=%s --port=%s --base-path=%s %s
           You may also run the daemon on a different port by passing --port=<port>"
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """
@@ -257,6 +264,7 @@ def git_daemon_launched(base_path, ip, port):
             try:
                 _logger.debug("Killing git-daemon...")
                 gd.proc.kill()
+                gd.proc.wait(timeout=5)
             except Exception as ex:
                 # Either it has died (and we're here), or it won't die, again here...
                 _logger.debug("Hidden error while Killing git-daemon: %s", ex, exc_info=1)
@@ -289,79 +297,53 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     :note: We attempt to launch our own invocation of git-daemon, which will be shut
         down at the end of the test.
     """
-    from git import Git, Remote  # To avoid circular deps.
+    from git import Git, Repo  # To avoid circular deps.
 
     assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         @wraps(func)
-        def remote_repo_creator(self):
-            rw_daemon_repo_dir = tempfile.mktemp(prefix="daemon_repo-%s-" % func.__name__)
-            rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
-
-            rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
-            rw_daemon_repo.head.reference = rw_daemon_repo.create_head("master", force=True)
-            # Recursive alternates info?
-            rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
+        def remote_repo_creator(self, *args, **kwargs):
+            temporary = writable_fixture(
+                "history.sh",
+                self.rorepo.working_dir,
+                self.rorepo.head.commit.hexsha,
+                working_tree_ref,
+                "remote",
+                GIT_DAEMON_PORT,
+            )
+            rw_daemon_repo_dir = temporary.path() / "remote"
+            rw_repo_dir = temporary.path() / "repo"
+            rw_daemon_repo = Repo(rw_daemon_repo_dir)
+            rw_repo = Repo(rw_repo_dir)
+            keep = False
             try:
-                rw_repo.head.commit = working_tree_ref
-                rw_repo.head.reference.checkout()
-
-                # Prepare for git-daemon.
-                rw_daemon_repo.daemon_export = True
-
-                # This thing is just annoying!
-                with rw_daemon_repo.config_writer() as crw:
-                    section = "daemon"
-                    try:
-                        crw.add_section(section)
-                    except Exception:
-                        pass
-                    crw.set(section, "receivepack", True)
-
-                # Initialize the remote - first do it as local remote and pull, then
-                # we change the url to point to the daemon.
-                d_remote = Remote.create(rw_repo, "daemon_origin", rw_daemon_repo_dir)
-                d_remote.fetch()
-
-                base_daemon_path, rel_repo_dir = osp.split(rw_daemon_repo_dir)
-
-                remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir))
-                with d_remote.config_writer as cw:
-                    cw.set("url", remote_repo_url)
-
                 with git_daemon_launched(
-                    Git.polish_url(base_daemon_path),
+                    Git.polish_url(str(temporary.path())),
                     "127.0.0.1",
                     GIT_DAEMON_PORT,
                 ):
                     # Try listing remotes, to diagnose whether the daemon is up.
-                    rw_repo.git.ls_remote(d_remote)
+                    rw_repo.git.ls_remote(rw_repo.remotes.daemon_origin)
 
                     with cwd(rw_repo.working_dir):
                         try:
-                            return func(self, rw_repo, rw_daemon_repo)
+                            return func(self, rw_repo, rw_daemon_repo, *args, **kwargs)
                         except:  # noqa: E722
                             _logger.info(
                                 "Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
                                 rw_repo_dir,
                                 rw_daemon_repo_dir,
                             )
-                            rw_repo_dir = rw_daemon_repo_dir = None
+                            keep = True
                             raise
 
             finally:
-                rw_repo.git.clear_cache()
-                rw_daemon_repo.git.clear_cache()
+                rw_repo.close()
+                rw_daemon_repo.close()
                 del rw_repo
                 del rw_daemon_repo
-                gc.collect()
-                gitdb.util.mman.collect()
-                gc.collect()
-                if rw_repo_dir:
-                    rmtree(rw_repo_dir)
-                if rw_daemon_repo_dir:
-                    rmtree(rw_daemon_repo_dir)
+                temporary.close(keep=keep)
             # END cleanup
 
         # END bare repo creator
@@ -391,7 +373,7 @@ class TestBase(TestCase):
 
         self.rorepo  # 'ro' stands for read-only
 
-      The rorepo is in fact your current project's git repo. If you refer to specific
+      The rorepo is a scripted clone of your project's git repo. If you refer to specific
       shas for your objects, be sure you choose some that are part of the immutable
       portion of the project history (so that tests don't fail for others).
     """
@@ -400,13 +382,13 @@ class TestBase(TestCase):
         """:return: A path to a small, clonable repository"""
         from git.cmd import Git
 
-        return Git.polish_url(self._dependency_repo_dirs["smmap"])
+        return Git.polish_url(self._dependency_repo_factory("smmap"))
 
     def _gitdb_repo_url(self):
         """:return: A local gitdb repository reconstructed from merged history"""
         from git.cmd import Git
 
-        return Git.polish_url(self._dependency_repo_dirs["gitdb"])
+        return Git.polish_url(self._dependency_repo_factory("gitdb"))
 
     @classmethod
     def setUpClass(cls):
@@ -417,27 +399,14 @@ class TestBase(TestCase):
         from git import Repo
 
         gc.collect()
-        cls.rorepo = Repo(GIT_REPO)
-        cls._dependency_repo_root = tempfile.mkdtemp(prefix="gitpython-dependency-repos-")
-        cls._dependency_repo_dirs = {}
-        for name, rev in {
-            "gitdb": "2da3232f9d58e7761e384ac6d32f7b1ed77a74a2",
-            "smmap": "8ce61ad5cc4016bffaf25080bc0d69b3acbe8555",
-        }.items():
-            path = osp.join(cls._dependency_repo_root, name)
-            repo = cls.rorepo.clone(path, shared=True, no_checkout=True)
-            repo.create_head("master", repo.commit(rev), force=True).checkout()
-            if name == "smmap":
-                repo.create_tag("v0.8.1", ref="master~10", message="Test fixture tag", force=True)
-            repo.git.gc()
-            repo.close()
-            cls._dependency_repo_dirs[name] = path
+        source = Path(GIT_REPO).resolve()
+        revision = testtools.git(source, "rev-parse HEAD").strip()
+        cls.rorepo = Repo(read_only_fixture("history.sh", source, revision, revision, "baseline") / "repo")
 
     @classmethod
     def tearDownClass(cls):
-        cls.rorepo.git.clear_cache()
+        cls.rorepo.close()
         cls.rorepo.git = None
-        rmtree(cls._dependency_repo_root)
 
     def _make_file(self, rela_path, data, repo=None):
         """
@@ -453,62 +422,6 @@ class TestBase(TestCase):
         return abs_path
 
 
-class VirtualEnvironment:
-    """A newly created Python virtual environment for use in a test."""
-
-    __slots__ = ("_env_dir",)
-
-    def __init__(self, env_dir, *, with_pip):
-        if sys.platform == "win32":
-            self._env_dir = osp.realpath(env_dir)
-            venv.create(self.env_dir, symlinks=False, with_pip=with_pip)
-        else:
-            self._env_dir = env_dir
-            venv.create(self.env_dir, symlinks=True, with_pip=with_pip)
-
-        if with_pip:
-            # The upgrade_deps parameter to venv.create is 3.9+ only, so do it this way.
-            command = [
-                self.python,
-                "-m",
-                "pip",
-                "install",
-                "--upgrade",
-                "pip",
-                'setuptools; python_version<"3.12"',
-            ]
-            subprocess.check_output(command)
-
-    @property
-    def env_dir(self):
-        """The top-level directory of the environment."""
-        return self._env_dir
-
-    @property
-    def python(self):
-        """Path to the Python executable in the environment."""
-        return self._executable("python")
-
-    @property
-    def pip(self):
-        """Path to the pip executable in the environment, or RuntimeError if absent."""
-        return self._executable("pip")
-
-    @property
-    def sources(self):
-        """Path to a src directory in the environment, which may not exist yet."""
-        return os.path.join(self.env_dir, "src")
-
-    def _executable(self, basename):
-        if sys.platform == "win32":
-            path = osp.join(self.env_dir, "Scripts", basename + ".exe")
-        else:
-            path = osp.join(self.env_dir, "bin", basename)
-        if osp.isfile(path) or osp.islink(path):
-            return path
-        raise RuntimeError(f"no regular file or symlink {path!r}")
-
-
 def symlinks_supported() -> bool:
     """Check whether this process can actually create a symlink.
 
@@ -516,7 +429,7 @@ def symlinks_supported() -> bool:
     Developer Mode or SeCreateSymbolicLinkPrivilege, and an unprivileged process gets
     OSError (WinError 1314) instead.
     """
-    with tempfile.TemporaryDirectory(prefix="gitpython-symlink-check-") as temp_dir:
+    with TemporaryDirectory(prefix="gitpython-symlink-check-") as temp_dir:
         link_path = osp.join(temp_dir, "link")
         try:
             os.symlink("missing-target", link_path)

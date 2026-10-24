@@ -21,13 +21,14 @@ def test_index_entry_constructor_shapes() -> None:
         pass
 
     short = (0o100644, b"\0" * 20, 0, "file")
-    full = short + (b"\0" * 8, b"\0" * 8, 1, 2, 3, 4, 5)
-    entries: List[IndexEntry] = [IndexEntry(short), IndexEntry(full), IndexEntry(full + (0x4000,))]
+    entries: List[IndexEntry] = [IndexEntry(short), IndexEntry((0o100644, b"a" * 32, 3 << 12, "other"))]
     derived: DerivedEntry = DerivedEntry(short)
 
     assert all(type(entry) is IndexEntry for entry in entries)
-    assert [entry.size for entry in entries] == [0, 5, 5]
-    assert [entry.skip_worktree for entry in entries] == [False, False, True]
+    assert [entry.stage for entry in entries] == [0, 3]
+    assert [entry.path for entry in entries] == ["file", "other"]
+    with pytest.raises(TypeError, match="raw stat metadata"):
+        IndexEntry(short + (b"\0" * 8, b"\0" * 8, 1, 2, 3, 4, 5))
     assert type(derived) is DerivedEntry
     assert IndexEntry.from_base(BaseIndexEntry(short)) == entries[0]
 

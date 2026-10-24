@@ -7,10 +7,61 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from gix import Error, testtools
+
+from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 FIXTURE_DIRS = [pytest.param(REPO_ROOT, id="repo_root")]
+
+
+def test_scripted_readonly_fixture_reuses_initial_state():
+    path = read_only_fixture("fixture-lifecycle.sh")
+    assert read_only_fixture("fixture-lifecycle.sh") == path
+    with fixture_repo("fixture-lifecycle.sh") as repo:
+        assert repo.head.commit.tree["file"].data_stream.read() == b"initial"
+        assert Path(repo.working_tree_dir, "file").read_text() == "initial"
+
+
+def test_scripted_writable_fixture_copies_and_closes_repository():
+    baseline = read_only_fixture("fixture-lifecycle.sh")
+    with fixture_repo("fixture-lifecycle.sh", write=True) as repo:
+        root = Path(repo.working_tree_dir)
+        assert not (root / "file").samefile(baseline / "repo/file")
+        (root / "file").write_text("private")
+        repo.index.add(["file"])
+        repo.index.commit("Private change", skip_hooks=True)
+    assert repo._gix_repository is None
+    assert not root.exists()
+    assert (baseline / "repo/file").read_text() == "initial"
+
+
+def test_scripted_execute_fixture_uses_its_final_location():
+    # The recorded absolute path cannot be relocated by copying the cached fixture.
+    with writable_fixture("fixture-lifecycle.sh", execute=True) as temporary:
+        root = temporary.path().resolve()
+        assert Path((root / "location").read_text().strip()).samefile(root / "repo")
+
+
+def test_fixture_cache_keeps_arguments_before_absolute_paths_distinct():
+    first = read_only_fixture("fixture-lifecycle.sh", "first", REPO_ROOT)
+    second = read_only_fixture("fixture-lifecycle.sh", "second", REPO_ROOT)
+    assert first != second
+    assert (first / "scenario").read_text().strip() == "first"
+    assert (second / "scenario").read_text().strip() == "second"
+
+
+def test_script_failure_does_not_report_inherited_environment(monkeypatch):
+    def fail(*args):
+        raise Error("fixture command failed: PRIVATE_TOKEN=do-not-report")
+
+    monkeypatch.setattr(testtools, "scripted_fixture_read_only_with_args_with_post", fail)
+    with pytest.raises(RuntimeError) as caught:
+        read_only_fixture("fixture-lifecycle.sh")
+    assert "fixture-lifecycle.sh" in str(caught.value)
+    assert "PRIVATE_TOKEN" not in str(caught.value)
+    assert caught.value.__suppress_context__
 
 
 def test_source_tree_has_no_gitlinks() -> None:

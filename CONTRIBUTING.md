@@ -48,6 +48,29 @@ Attributing AI assistance in commit metadata, for example with a `Co-authored-by
 trailer, is welcome but not required. Code is reviewed the same way regardless of its
 origin.
 
+## Temporary test directories
+
+Tests require Python 3.11+, Git 2.52+, Bash, and the `test` extra, which installs
+GixPython even when testing the CLI backend. Select `GIT_PYTHON_BACKEND=cli` or
+`GIT_PYTHON_BACKEND=gix` before running pytest.
+
+Put initial repository and filesystem states in `tests/fixtures/*.sh` and use
+`test.lib.fixtures` to run them through `gix.testtools`. Read-only tests share
+cached output; mutating tests use writable copies. Use `execute=True` only when
+the fixture cannot be copied, and explain the reason at its call site. Keep
+operations under test in Python. Immutable parser byte samples remain in
+`test/fixtures`; generated caches and archives are ignored.
+
+Use `test.cleanup.cleanup_directory` for cleanup outside the shared fixture
+owners. Close repository handles before removing their files. Cleanup is
+best-effort: it logs filesystem errors, removes whatever it can, and leaves
+locked files behind without failing or skipping a test. The shared writable
+repository decorators still keep failed tests' directories for debugging.
+
+Deletions and renames that exercise library behavior or prepare a fixture for
+reuse must remain strict. If a cached fixture cannot be cleaned up, rebuild it
+at a fresh location before handing it to another test.
+
 ## Fuzzing Test Specific Documentation
 
 For details related to contributing to the fuzzing test suite and OSS-Fuzz integration, please 

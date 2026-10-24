@@ -1,0 +1,19 @@
+{
+  "fixture_revision": "6ba2c0a2f9ee7feffd7e079621c4845820180c9a",
+  "max_gix_cli_processes": {
+    "journey": 1,
+    "inventory": 0,
+    "history_25": 0,
+    "browse_tree_and_blob": 0,
+    "read_index": 0,
+    "submodule_inventory": 0,
+    "revision_paths": 0,
+    "object_readback": 0,
+    "revision_graph": 0,
+    "diff_and_stats": 0,
+    "patch_diff": 1,
+    "worktree_status": 0,
+    "open_repository": 1,
+    "discover_repository": 3
+  }
+}
