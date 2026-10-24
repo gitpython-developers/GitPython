@@ -1,5 +1,4 @@
 import atheris
-import io
 import sys
 import os
 import tempfile
@@ -15,9 +14,7 @@ with atheris.instrument_imports():
 def TestOneInput(data):
     fdp = atheris.FuzzedDataProvider(data)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        repo = git.Repo.init(path=temp_dir)
-
+    with tempfile.TemporaryDirectory() as temp_dir, git.Repo.init(path=temp_dir) as repo:
         # Generate a minimal set of files based on fuzz data to minimize I/O operations.
         file_paths = [os.path.join(temp_dir, f"File{i}") for i in range(min(3, fdp.ConsumeIntInRange(1, 3)))]
         for file_path in file_paths:
@@ -27,15 +24,14 @@ def TestOneInput(data):
                 # fuzzer coverage plateaus.
                 f.write(fdp.ConsumeBytes(fdp.ConsumeIntInRange(1, 512)))
 
-        repo.index.add(file_paths)
-        repo.index.commit(fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 80)))
-
-        fuzz_tree = git.Tree(repo, git.Tree.NULL_BIN_SHA, 0, "")
-
-        try:
-            fuzz_tree._deserialize(io.BytesIO(data))
-        except IndexError:
+        message = fdp.ConsumeUnicodeNoSurrogates(fdp.ConsumeIntInRange(1, 80))
+        if "\0" in message:
             return -1
+        repo.index.add(file_paths)
+        actor = git.Actor("Fuzzing", "fuzzing@example.invalid")
+        commit = repo.index.commit(message, author=actor, committer=actor, skip_hooks=True)
+        for blob in commit.tree.blobs:
+            blob.data_stream.read()
 
 
 def main():

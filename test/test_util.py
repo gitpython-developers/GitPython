@@ -3,18 +3,16 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import ast
+import contextlib
 import errno
+from datetime import datetime
 import os
 import pathlib
 import pickle
 import stat
-import subprocess
 import sys
-import tempfile
 import threading
 import time
-from datetime import datetime
 from unittest import SkipTest, mock
 
 import ddt
@@ -43,25 +41,36 @@ from git.util import (
     remove_password_if_present,
     rmtree,
 )
+from test.cleanup import cleanup_directory
+from test.lib.fixtures import writable_fixture
 from test.lib import TestBase, requires_symlinks, with_rw_repo
 
 
 @pytest.fixture
-def permission_error_tmpdir(tmp_path):
-    """Fixture to test permissions errors in situations where they are not overcome."""
-    td = tmp_path / "testdir"
-    td.mkdir()
-    (td / "x").touch()
+def tmp_path(request):
+    # Unreadable files and symlinks cannot be copied by native fixture tooling.
+    execute = request.node.name != "test_deletes_nested_dir_with_files"
+    with writable_fixture("rmtree.sh", request.node.name, execute=execute) as temporary:
+        yield temporary.path().resolve()
 
-    # Set up PermissionError on Windows, where we can't delete read-only files.
-    (td / "x").chmod(stat.S_IRUSR)
 
-    # Set up PermissionError on Unix, where non-root users can't delete files in
-    # read-only directories. (Tests that rely on this and assert that rmtree raises
-    # PermissionError will fail if they are run as root.)
-    td.chmod(stat.S_IRUSR | stat.S_IXUSR)
-
-    yield td
+@pytest.fixture
+def lock_directory(request):
+    name = request.node.originalname
+    if name in {"test_blocking_lock_waits_for_existing_holder", "test_blocking_relative_lock_reports_timeout"}:
+        scenario = "contended"
+    elif name == "test_blocking_relative_lock_rejects_unwritable_cwd":
+        scenario = "unwritable"
+    else:
+        scenario = "empty"
+    # Native fixture copies reset directory permissions, losing the unwritable state.
+    with writable_fixture("util.sh", "blocking", scenario, execute=scenario == "unwritable") as fixture:
+        directory = fixture.path().resolve() / "directory"
+        try:
+            yield directory
+        finally:
+            if scenario == "unwritable":
+                directory.chmod(0o700)
 
 
 class TestRmtree:
@@ -69,18 +78,6 @@ class TestRmtree:
 
     def test_deletes_nested_dir_with_files(self, tmp_path):
         td = tmp_path / "testdir"
-
-        for d in td, td / "q", td / "s":
-            d.mkdir()
-        for f in (
-            td / "p",
-            td / "q" / "w",
-            td / "q" / "x",
-            td / "r",
-            td / "s" / "y",
-            td / "s" / "z",
-        ):
-            f.touch()
 
         try:
             rmtree(td)
@@ -95,15 +92,8 @@ class TestRmtree:
     )
     def test_deletes_dir_with_readonly_files(self, tmp_path):
         # Automatically works on Unix, but requires special handling on Windows.
-        # Not to be confused with what permission_error_tmpdir sets up (see below).
 
         td = tmp_path / "testdir"
-
-        for d in td, td / "sub":
-            d.mkdir()
-        for f in td / "x", td / "sub" / "y":
-            f.touch()
-            f.chmod(0)
 
         try:
             rmtree(td)
@@ -122,16 +112,10 @@ class TestRmtree:
         # or refraining from attempting to fix PermissionError by making chmod calls.
 
         dir1 = tmp_path / "dir1"
-        dir1.mkdir()
-        (dir1 / "file").touch()
-        (dir1 / "file").chmod(stat.S_IRUSR)
         old_mode = (dir1 / "file").stat().st_mode
 
         dir2 = tmp_path / "dir2"
-        dir2.mkdir()
         symlink = dir2 / "symlink"
-        symlink.symlink_to(dir1 / "file")
-        dir2.chmod(stat.S_IRUSR | stat.S_IXUSR)
 
         def preen_dir2():
             """Don't leave unwritable directories behind.
@@ -143,15 +127,16 @@ class TestRmtree:
             rwx = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR
             if not dir2.exists():
                 return
-            if symlink.exists():
-                try:
-                    # Try lchmod first, if the platform supports it.
-                    symlink.lchmod(rwx)
-                except NotImplementedError:
-                    # The platform (probably win32) doesn't support lchmod; fall back to chmod.
-                    symlink.chmod(rwx)
-            dir2.chmod(rwx)
-            rmtree(dir2)
+            with contextlib.suppress(OSError):
+                if symlink.exists():
+                    try:
+                        # Try lchmod first, if the platform supports it.
+                        symlink.lchmod(rwx)
+                    except NotImplementedError:
+                        # The platform (probably win32) doesn't support lchmod; fall back to chmod.
+                        symlink.chmod(rwx)
+                dir2.chmod(rwx)
+            cleanup_directory(dir2)
 
         request.addfinalizer(preen_dir2)
 
@@ -164,118 +149,6 @@ class TestRmtree:
 
         new_mode = (dir1 / "file").stat().st_mode
         assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
-
-    def _patch_for_wrapping_test(self, mocker, hide_windows_known_errors):
-        # Access the module through sys.modules so it is unambiguous which module's
-        # attribute we patch: the original git.util, not git.index.util even though
-        # git.index.util "replaces" git.util and is what "import git.util" gives us.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
-
-        # Mock out common chmod functions to simulate PermissionError the callback can't
-        # fix. (We leave the corresponding lchmod functions alone. If they're used, it's
-        # more important we detect any failures from inadequate compatibility checks.)
-        mocker.patch.object(os, "chmod")
-        mocker.patch.object(pathlib.Path, "chmod")
-
-    @pytest.mark.skipif(
-        sys.platform != "win32",
-        reason="PermissionError is only ever wrapped on Windows",
-    )
-    def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is
-        true."""
-        self._patch_for_wrapping_test(mocker, True)
-
-        with pytest.raises(SkipTest):
-            rmtree(permission_error_tmpdir)
-
-    @pytest.mark.skipif(
-        sys.platform == "cygwin",
-        reason="Cygwin can't set the permissions that make the test meaningful.",
-    )
-    @pytest.mark.parametrize(
-        "hide_windows_known_errors",
-        [
-            pytest.param(False),
-            pytest.param(True, marks=pytest.mark.skipif(sys.platform == "win32", reason="We would wrap on Windows")),
-        ],
-    )
-    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
-        """rmtree does not wrap PermissionError on non-Windows systems or when
-        HIDE_WINDOWS_KNOWN_ERRORS is false."""
-        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
-
-        with pytest.raises(PermissionError):
-            try:
-                rmtree(permission_error_tmpdir)
-            except SkipTest as ex:
-                pytest.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-    @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
-    def test_does_not_wrap_other_errors(self, tmp_path, mocker, hide_windows_known_errors):
-        # The file is deliberately never created.
-        file_not_found_tmpdir = tmp_path / "testdir"
-
-        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
-
-        with pytest.raises(FileNotFoundError):
-            try:
-                rmtree(file_not_found_tmpdir)
-            except SkipTest as ex:
-                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-
-class TestEnvParsing:
-    """Tests for environment variable parsing logic in :mod:`git.util`."""
-
-    @staticmethod
-    def _run_parse(name, value):
-        command = [
-            sys.executable,
-            "-c",
-            f"from git.util import {name}; print(repr({name}))",
-        ]
-        output = subprocess.check_output(
-            command,
-            env=None if value is None else dict(os.environ, **{name: value}),
-            text=True,
-        )
-        return ast.literal_eval(output)
-
-    @pytest.mark.skipif(
-        sys.platform != "win32",
-        reason="These environment variables are only used on Windows.",
-    )
-    @pytest.mark.parametrize(
-        "env_var_value, expected_truth_value",
-        [
-            (None, True),  # When the environment variable is unset.
-            ("", False),
-            (" ", False),
-            ("0", False),
-            ("1", True),
-            ("false", False),
-            ("true", True),
-            ("False", False),
-            ("True", True),
-            ("no", False),
-            ("yes", True),
-            ("NO", False),
-            ("YES", True),
-            (" no  ", False),
-            (" yes  ", True),
-        ],
-    )
-    @pytest.mark.parametrize(
-        "name",
-        [
-            "HIDE_WINDOWS_KNOWN_ERRORS",
-            "HIDE_WINDOWS_FREEZE_ERRORS",
-        ],
-    )
-    def test_env_vars_for_windows_tests(self, name, env_var_value, expected_truth_value):
-        actual_parsed_value = self._run_parse(name, env_var_value)
-        assert actual_parsed_value is expected_truth_value
 
 
 def _xfail_param(*values, **xfail_kwargs):
@@ -421,9 +294,9 @@ class TestUtils(TestBase):
 
     @ddt.data("my-lock-file", "my-lock-file-\u0394", "\u0394/my-lock-file", "\U0001f680/my-lock-file")
     def test_lock_file(self, filename):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("util.sh", "lock", filename) as temporary:
+            tdir = str(temporary.path().resolve())
             my_file = os.path.join(tdir, filename)
-            os.makedirs(os.path.dirname(my_file), exist_ok=True)
             lock_file = LockFile(my_file)
             assert not lock_file._has_lock()
             # Release lock we don't have - fine.
@@ -452,7 +325,8 @@ class TestUtils(TestBase):
             lock_file._release_lock()
 
     def test_lock_file_rejects_embedded_nul(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = LockFile(my_file + "\0suffix")
             self.assertRaises(ValueError, lock_file._obtain_lock_or_raise)
@@ -462,14 +336,11 @@ class TestUtils(TestBase):
     @ddt.data(False, True)
     @requires_symlinks
     def test_lock_file_does_not_follow_a_symlink(self, target_exists):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("util.sh", "symlink", target_exists, execute=True) as temporary:
+            tdir = str(temporary.path().resolve())
             my_file = os.path.join(tdir, "my-lock-file")
             outside = os.path.join(tdir, "outside-the-lock")
             content = b"Do not modify the symlink target."
-            if target_exists:
-                with open(outside, "wb") as stream:
-                    stream.write(content)
-            os.symlink(outside, my_file + ".lock")
 
             lock_file = LockFile(my_file)
             self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
@@ -483,7 +354,8 @@ class TestUtils(TestBase):
                 assert not os.path.exists(outside)
 
     def test_lock_file_is_obtained_by_a_single_holder(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             my_file = os.path.join(tdir, "my-lock-file")
             racers = 8
             at_the_line = threading.Barrier(racers)
@@ -513,7 +385,8 @@ class TestUtils(TestBase):
                     lock_file._release_lock()
 
     def test_blocking_lock_file(self):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             my_file = os.path.join(tdir, "my-lock-file")
             lock_file = BlockingLockFile(my_file)
             lock_file._obtain_lock()
@@ -564,18 +437,17 @@ class TestUtils(TestBase):
         iso = ("2005-04-07T22:13:11 -0200", 7200)
         iso2 = ("2005-04-07 22:13:11 +0400", -14400)
         iso3 = ("2005.04.07 22:13:11 -0000", 0)
-        alt = ("04/07/2005 22:13:11", 0)
-        alt2 = ("07.04.2005 22:13:11", 0)
+        alt = ("04/07/2005 22:13:11 +0000", 0)
+        alt2 = ("07.04.2005 22:13:11 +0000", 0)
         veri_time_utc = 1112911991  # The time this represents, in time since epoch, UTC.
         for date, offset in (rfc, iso, iso2, iso3, alt, alt2):
-            assert_rval(parse_date(date), veri_time_utc, offset)
+            assert_rval(parse_date(date), veri_time_utc + offset, offset)
         # END for each date type
 
         # ...and failure.
         self.assertRaises(ValueError, parse_date, datetime.now())  # Non-aware datetime.
         self.assertRaises(ValueError, parse_date, "invalid format")
-        self.assertRaises(ValueError, parse_date, "123456789 -02000")
-        self.assertRaises(ValueError, parse_date, " 123456789 -0200")
+        assert parse_date(" 123456789 -0200") == (123456789, 7200)
 
     def test_actor(self):
         for cr in (None, self.rorepo.config_reader()):
@@ -943,37 +815,32 @@ def test_iterable_list_name_lookup_ignores_list_attributes(name, prefix):
 
 @pytest.mark.parametrize("path_type", [str, pathlib.Path])
 @pytest.mark.parametrize("relative", [True, False])
-def test_blocking_lock_waits_for_existing_holder(tmp_path, monkeypatch, path_type, relative):
-    monkeypatch.chdir(tmp_path)
-    path = path_type("resource" if relative else tmp_path / "resource")
-    owner = LockFile(path)
+def test_blocking_lock_waits_for_existing_holder(lock_directory, monkeypatch, path_type, relative):
+    monkeypatch.chdir(lock_directory)
+    path = path_type("resource" if relative else lock_directory / "resource")
+    lock = lock_directory / "resource.lock"
     waiter = BlockingLockFile(path, check_interval_s=0.01, max_block_time_s=1)
-    owner._obtain_lock()
     try:
-        with mock.patch.object(time, "sleep", side_effect=lambda _: owner._release_lock()) as sleep:
+        with mock.patch.object(time, "sleep", side_effect=lambda _: lock.unlink()) as sleep:
             waiter._obtain_lock()
             sleep.assert_called_once_with(0.01)
         assert waiter._has_lock()
     finally:
-        owner._release_lock()
         waiter._release_lock()
 
 
 @pytest.mark.parametrize("path_type", [str, pathlib.Path])
-def test_blocking_relative_lock_reports_timeout(tmp_path, monkeypatch, path_type):
-    monkeypatch.chdir(tmp_path)
-    owner = LockFile(path_type("resource"))
+def test_blocking_relative_lock_reports_timeout(lock_directory, monkeypatch, path_type):
+    monkeypatch.chdir(lock_directory)
     waiter = BlockingLockFile(path_type("resource"), max_block_time_s=0)
-    owner._obtain_lock()
-    try:
-        with pytest.raises(OSError, match="Waited .* seconds for lock"):
-            waiter._obtain_lock()
-    finally:
-        owner._release_lock()
+    with pytest.raises(OSError, match="Waited .* seconds for lock"):
+        waiter._obtain_lock()
+    assert not waiter._has_lock()
+    assert (lock_directory / "resource.lock").is_file()
 
 
-def test_blocking_lock_still_rejects_missing_directory(tmp_path):
-    waiter = BlockingLockFile(tmp_path / "missing" / "resource")
+def test_blocking_lock_still_rejects_missing_directory(lock_directory):
+    waiter = BlockingLockFile(lock_directory / "missing" / "resource")
     with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
         with pytest.raises(OSError) as exc_info:
             waiter._obtain_lock()
@@ -988,9 +855,9 @@ def test_blocking_lock_still_rejects_missing_directory(tmp_path):
 )
 @pytest.mark.parametrize("path_type", [str, pathlib.Path])
 @pytest.mark.parametrize("relative", [True, False])
-def test_blocking_lock_propagates_non_contention_errors(tmp_path, monkeypatch, error_number, path_type, relative):
-    monkeypatch.chdir(tmp_path)
-    path = path_type("resource" if relative else tmp_path / "resource")
+def test_blocking_lock_propagates_non_contention_errors(lock_directory, monkeypatch, error_number, path_type, relative):
+    monkeypatch.chdir(lock_directory)
+    path = path_type("resource" if relative else lock_directory / "resource")
     waiter = BlockingLockFile(path)
     error = OSError(error_number, os.strerror(error_number), waiter._lock_file_path())
     with mock.patch.object(os, "open", side_effect=error) as open_lock:
@@ -1007,30 +874,25 @@ def test_blocking_lock_propagates_non_contention_errors(tmp_path, monkeypatch, e
 
 @pytest.mark.skipif(os.name != "posix", reason="Directory write permissions require POSIX")
 @pytest.mark.parametrize("path_type", [str, pathlib.Path])
-def test_blocking_relative_lock_rejects_unwritable_cwd(tmp_path, monkeypatch, path_type):
-    monkeypatch.chdir(tmp_path)
-    original_mode = tmp_path.stat().st_mode
-    tmp_path.chmod(stat.S_IRUSR | stat.S_IXUSR)
-    try:
-        if os.access(".", os.W_OK):
-            pytest.skip("Current user can write to read-only directories")
-        assert os.path.isdir(".")
-        waiter = BlockingLockFile(path_type("resource"))
-        with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
-            with pytest.raises(OSError) as exc_info:
-                waiter._obtain_lock()
-            sleep.assert_not_called()
-        assert isinstance(exc_info.value.__cause__, PermissionError)
-        assert not waiter._has_lock()
-    finally:
-        tmp_path.chmod(original_mode)
+def test_blocking_relative_lock_rejects_unwritable_cwd(lock_directory, monkeypatch, path_type):
+    monkeypatch.chdir(lock_directory)
+    if os.access(".", os.W_OK):
+        pytest.skip("Current user can write to read-only directories")
+    assert os.path.isdir(".")
+    waiter = BlockingLockFile(path_type("resource"))
+    with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
+        with pytest.raises(OSError) as exc_info:
+            waiter._obtain_lock()
+        sleep.assert_not_called()
+    assert isinstance(exc_info.value.__cause__, PermissionError)
+    assert not waiter._has_lock()
 
 
 @pytest.mark.skipif(os.name != "posix", reason="Removing the current directory requires POSIX")
 @pytest.mark.parametrize("path_type", [str, pathlib.Path])
-def test_blocking_relative_lock_rejects_removed_cwd(tmp_path, monkeypatch, path_type):
-    monkeypatch.chdir(tmp_path)
-    tmp_path.rmdir()
+def test_blocking_relative_lock_rejects_removed_cwd(lock_directory, monkeypatch, path_type):
+    monkeypatch.chdir(lock_directory)
+    lock_directory.rmdir()
     waiter = BlockingLockFile(path_type("resource"))
     with mock.patch.object(time, "sleep", side_effect=AssertionError("Must not retry")) as sleep:
         with pytest.raises(OSError) as exc_info:

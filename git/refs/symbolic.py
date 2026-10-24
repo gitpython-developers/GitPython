@@ -4,29 +4,28 @@
 __all__ = ["SymbolicReference"]
 
 import os
-from pathlib import Path
+from functools import lru_cache
+import tempfile
 
 from gitdb.exc import BadName, BadObject
 
-from git.compat import defenc
+from git import _backend
+from git.cmd import Git
+from git.exc import GitCommandError, UnsafeOptionError
 from git.objects.base import Object
 from git.objects.commit import Commit
 from git.refs.log import RefLog
 from git.util import (
-    LockedFD,
-    assure_directory_exists,
     hex_to_bin,
-    join_path,
     join_path_native,
-    to_native_path_linux,
 )
 
 # typing ------------------------------------------------------------------
 
 from typing import (
     Any,
+    Dict,
     Iterator,
-    List,
     TYPE_CHECKING,
     Tuple,
     Type,
@@ -38,8 +37,6 @@ from typing import (
 from git.types import AnyGitObject, PathLike
 
 if TYPE_CHECKING:
-    from git.config import GitConfigParser
-    from git.objects.commit import Actor
     from git.refs.log import RefLogEntry
     from git.refs.reference import Reference
     from git.repo import Repo
@@ -53,7 +50,7 @@ T_References = TypeVar("T_References", bound="SymbolicReference")
 def _git_dir(repo: "Repo", path: Union[PathLike, None]) -> PathLike:
     """Find the git dir that is appropriate for the path."""
     name = f"{path}"
-    if name in ["HEAD", "ORIG_HEAD", "FETCH_HEAD", "index", "logs"]:
+    if not name.startswith("refs/") or name.startswith(("refs/bisect/", "refs/worktree/", "refs/rewritten/")):
         return repo.git_dir
     return repo.common_dir
 
@@ -135,56 +132,6 @@ class SymbolicReference:
         return cls._get_validated_path(_git_dir(repo, ref_path), ref_path)
 
     @classmethod
-    def _get_validated_reflog_path(cls, repo: "Repo", path: PathLike) -> str:
-        """Return the absolute filesystem path for a reflog after validating it."""
-        cls._check_ref_name_valid(path)
-        return cls._get_validated_path(os.path.join(repo.git_dir, "logs"), path)
-
-    @classmethod
-    def _get_packed_refs_path(cls, repo: "Repo") -> str:
-        return os.path.join(repo.common_dir, "packed-refs")
-
-    @classmethod
-    def _iter_packed_refs(cls, repo: "Repo") -> Iterator[Tuple[str, str]]:
-        """Return an iterator yielding pairs of sha1/path pairs (as strings) for the
-        corresponding refs.
-
-        :note:
-            The packed refs file will be kept open as long as we iterate.
-        """
-        try:
-            with open(cls._get_packed_refs_path(repo), "rt", encoding="UTF-8") as fp:
-                for line in fp:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    if line.startswith("#"):
-                        # "# pack-refs with: peeled fully-peeled sorted"
-                        # the git source code shows "peeled",
-                        # "fully-peeled" and "sorted" as the keywords
-                        # that can go on this line, as per comments in git file
-                        # refs/packed-backend.c
-                        # I looked at master on 2017-10-11,
-                        # commit 111ef79afe, after tag v2.15.0-rc1
-                        # from repo https://github.com/git/git.git
-                        if line.startswith("# pack-refs with:") and "peeled" not in line:
-                            raise TypeError("PackingType of packed-Refs not understood: %r" % line)
-                        # END abort if we do not understand the packing scheme
-                        continue
-                    # END parse comment
-
-                    # Skip dereferenced tag object entries - previous line was actual
-                    # tag reference for it.
-                    if line[0] == "^":
-                        continue
-
-                    yield cast(Tuple[str, str], tuple(line.split(" ", 1)))
-                # END for each line
-        except OSError:
-            return None
-        # END no packed-refs file handling
-
-    @classmethod
     def dereference_recursive(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> str:
         """
         :return:
@@ -208,99 +155,54 @@ class SymbolicReference:
 
     @staticmethod
     def _check_ref_name_valid(ref_path: PathLike) -> None:
-        """Check a ref name for validity.
+        """Validate reference names, rejecting CLI control input first."""
+        try:
+            name = Git._check_operand(os.fspath(ref_path), "reference")
+        except UnsafeOptionError as exc:
+            raise ValueError("Invalid reference %r" % os.fspath(ref_path)) from exc
+        SymbolicReference._check_ref_name_native(name, Git._refresh_token)
 
-        This is based on the rules described in :manpage:`git-check-ref-format(1)`.
-        """
-        previous: Union[str, None] = None
-        one_before_previous: Union[str, None] = None
-        for c in os.fspath(ref_path):
-            if c in " ~^:?*[\\":
-                raise ValueError(
-                    f"Invalid reference '{ref_path}': references cannot contain spaces, tildes (~), carets (^),"
-                    f" colons (:), question marks (?), asterisks (*), open brackets ([) or backslashes (\\)"
-                )
-            elif c == ".":
-                if previous is None or previous == "/":
-                    raise ValueError(
-                        f"Invalid reference '{ref_path}': references cannot start with a period (.) or contain '/.'"
-                    )
-                elif previous == ".":
-                    raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '..'")
-            elif c == "/":
-                if previous == "/":
-                    raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '//'")
-                elif previous is None:
-                    raise ValueError(
-                        f"Invalid reference '{ref_path}': references cannot start with forward slashes '/'"
-                    )
-            elif c == "{" and previous == "@":
-                raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '@{{'")
-            elif ord(c) < 32 or ord(c) == 127:
-                raise ValueError(f"Invalid reference '{ref_path}': references cannot contain ASCII control characters")
-
-            one_before_previous = previous
-            previous = c
-
-        if previous == ".":
-            raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a period (.)")
-        elif previous == "/":
-            raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a forward slash (/)")
-        elif previous == "@" and one_before_previous is None:
-            raise ValueError(f"Invalid reference '{ref_path}': references cannot be '@'")
-        elif any(component.endswith(".lock") for component in Path(ref_path).parts):
-            raise ValueError(
-                f"Invalid reference '{ref_path}': references cannot have slash-separated components that end with"
-                " '.lock'"
-            )
+    @staticmethod
+    @lru_cache(maxsize=512)
+    def _check_ref_name_native(name: str, _refresh_token: object) -> None:
+        # The grammar depends on Git's executable, not repository contents.
+        # Filesystem containment remains checked separately on every operation.
+        if _backend.check_ref_name(name) is not NotImplemented:
+            return
+        try:
+            Git()._call_process_safe("check_ref_format", "--allow-onelevel", name)
+        except GitCommandError as exc:
+            raise ValueError("Invalid reference %r" % name) from exc
 
     @classmethod
     def _get_ref_info_helper(
         cls, repo: "Repo", ref_path: Union[PathLike, None]
     ) -> Union[Tuple[str, None], Tuple[None, str]]:
-        """
-        :return:
-            *(str(sha), str(target_ref_path))*, where:
-
-            * *sha* is of the file at rela_path points to if available, or ``None``.
-            * *target_ref_path* is the reference we point to, or ``None``.
-        """
         if ref_path is None:
-            raise ValueError("Reference at %r does not exist" % ref_path)
-        ref_file = cls._get_validated_ref_path(repo, ref_path)
-
-        tokens: Union[None, List[str], Tuple[str, str]] = None
+            raise ValueError("Reference does not exist")
+        cls._get_validated_ref_path(repo, ref_path)
+        path = os.fspath(ref_path)
+        info = _backend.reference_info(repo.git, path)
+        if info is None:
+            raise ValueError("Reference at %r does not exist or is invalid" % path)
+        if info is not NotImplemented:
+            if info[1] is not None:
+                cls._get_validated_ref_path(repo, info[1])
+            return info
         try:
-            with open(ref_file, "rt", encoding="UTF-8") as fp:
-                value = fp.read().rstrip()
-            # Don't only split on spaces, but on whitespace, which allows to parse lines like:
-            # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
-            tokens = value.split()
-            assert len(tokens) != 0
-        except OSError:
-            # Probably we are just packed. Find our entry in the packed refs file.
-            # NOTE: We are not a symbolic ref if we are in a packed file, as these
-            # are excluded explicitly.
-            for sha, path in cls._iter_packed_refs(repo):
-                if path != ref_path:
-                    continue
-                # sha will be used.
-                tokens = sha, path
-                break
-            # END for each packed ref
-        # END handle packed refs
-        if tokens is None:
-            raise ValueError("Reference at %r does not exist" % ref_path)
-
-        # Is it a reference?
-        if tokens[0] == "ref:":
-            return (None, tokens[1])
-
-        # It's a commit.
-        if repo.re_hexsha_only.match(tokens[0]):
-            return (tokens[0], None)
-
-        raise ValueError("Failed to parse reference information from %r" % ref_path)
+            target = repo.git._call_process_safe("symbolic_ref", "--quiet", "--no-recurse", "--", path)
+            cls._get_validated_ref_path(repo, target)
+            return None, target
+        except GitCommandError as exc:
+            if exc.status != 1:
+                raise ValueError("Invalid symbolic reference %r" % path) from exc
+        try:
+            oid = repo.git._call_process_safe("rev_parse", "--verify", "--end-of-options", path)
+        except GitCommandError as exc:
+            raise ValueError("Reference at %r does not exist or is invalid" % path) from exc
+        if not repo.re_hexsha_only.fullmatch(oid):
+            raise ValueError("Invalid object ID for reference %r" % path)
+        return oid, None
 
     @classmethod
     def _get_ref_info(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> Union[Tuple[str, None], Tuple[None, str]]:
@@ -397,7 +299,7 @@ class SymbolicReference:
 
         :param logmsg:
             If not ``None``, the message will be used in the reflog entry to be written.
-            Otherwise the reflog is not altered.
+            Otherwise Git applies its normal reflog policy.
 
         :note:
             Plain :class:`SymbolicReference` instances may not actually point to objects
@@ -409,8 +311,8 @@ class SymbolicReference:
         :raise ValueError:
             If the symbolic reference chain exceeds Git's limit of five references.
         """
-        # Validate before recursing through the public method, preserving subclass
-        # dispatch and Reference's HEAD reflog updates.
+        # Validate each link for repository path containment before Git updates
+        # the chain. Git handles the actual dereferencing and transaction.
         ref_path: Union[PathLike, None] = self.path
         for _ in range(self._max_symref_depth):
             try:
@@ -422,22 +324,27 @@ class SymbolicReference:
         else:
             raise ValueError("Too many levels of symbolic references at %r" % ref_path)
 
-        if isinstance(object, SymbolicReference):
-            object = object.object  # @ReservedAssignment
-        # END resolve references
-
-        is_detached = True
-        try:
-            is_detached = self.is_detached
-        except ValueError:
-            pass
-        # END handle non-existing ones
-
-        if is_detached:
-            return self.set_reference(object, logmsg)
-
-        # set the commit on our reference
-        return self._get_reference().set_object(object, logmsg)
+        self._get_validated_ref_path(self.repo, self.path)
+        obj = self._resolve_object(object)
+        options = []
+        if logmsg is not None:
+            if "\0" in logmsg:
+                raise ValueError("Reflog messages must not contain NUL")
+            options.append("--create-reflog")
+            first_line = logmsg.split("\n", 1)[0]
+            if first_line:
+                options.extend(("-m", first_line))
+        # Updating the original symbolic ref lets Git maintain the entire chain's
+        # reflogs, including HEAD, in the same reference transaction.
+        self.repo.git._call_process_safe(
+            "update_ref",
+            *options,
+            "--",
+            self.path,
+            obj.hexsha,
+            env=self._reflog_environment(obj) if logmsg is not None else {},
+        )
+        return self
 
     @property
     def commit(self) -> "Commit":
@@ -487,82 +394,77 @@ class SymbolicReference:
         ref: Union[AnyGitObject, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "SymbolicReference":
-        """Set ourselves to the given `ref`.
+        """Set this reference without dereferencing it.
 
-        It will stay a symbol if the `ref` is a :class:`~git.refs.reference.Reference`.
-
-        Otherwise a git object, specified as a :class:`~git.objects.base.Object`
-        instance or refspec, is assumed. If it is valid, this reference will be set to
-        it, which effectively detaches the reference if it was a purely symbolic one.
-
-        :param ref:
-            A :class:`SymbolicReference` instance, an :class:`~git.objects.base.Object`
-            instance (specifically an :class:`~git.types.AnyGitObject`), or a refspec
-            string. Only if the ref is a :class:`SymbolicReference` instance, we will
-            point to it. Everything else is dereferenced to obtain the actual object.
-
-        :param logmsg:
-            If set to a string, the message will be used in the reflog.
-            Otherwise, a reflog entry is not written for the changed reference.
-            The previous commit of the entry will be the commit we point to now.
-
-            See also: :meth:`log_append`
-
-        :return:
-            self
-
-        :note:
-            This symbolic reference will not be dereferenced. For that, see
-            :meth:`set_object`.
+        Reference objects create symbolic references; objects and revision strings
+        detach it. Git applies its normal reflog policy, even without ``logmsg``.
         """
-        write_value = None
-        obj = None
+        self._get_validated_ref_path(self.repo, self.path)
+        options = []
+        if logmsg is not None:
+            if "\0" in logmsg:
+                raise ValueError("Reflog messages must not contain NUL")
+            first_line = logmsg.split("\n", 1)[0]
+            if first_line:
+                options = ["-m", first_line]
         if isinstance(ref, SymbolicReference):
-            write_value = "ref: %s" % ref.path
+            self._get_validated_ref_path(self.repo, ref.path)
+            self.repo.git._call_process_safe("symbolic_ref", *options, "--", self.path, ref.path)
+        else:
+            obj = self._resolve_object(ref)
+            if logmsg is not None:
+                options.append("--create-reflog")
+            self.repo.git._call_process_safe(
+                "update_ref",
+                "--no-deref",
+                *options,
+                "--",
+                self.path,
+                obj.hexsha,
+                env=self._reflog_environment(obj) if logmsg is not None else {},
+            )
+        return self
+
+    @staticmethod
+    def _reflog_environment(obj: AnyGitObject) -> Dict[str, Union[str, None]]:
+        if obj.type != "commit":
+            return {}
+        actor = obj.committer
+        return {"GIT_COMMITTER_NAME": actor.name, "GIT_COMMITTER_EMAIL": actor.email}
+
+    def _resolve_object(self, ref: Union[AnyGitObject, "SymbolicReference", str]) -> AnyGitObject:
+        if isinstance(ref, SymbolicReference):
+            obj = ref.object
         elif isinstance(ref, Object):
             obj = ref
-            write_value = ref.hexsha
         elif isinstance(ref, str):
+            Git._check_operand(ref, "revision")
             try:
-                obj = self.repo.rev_parse(ref + "^{}")  # Optionally dereference tags.
-                write_value = obj.hexsha
-            except (BadObject, BadName) as e:
-                raise ValueError("Could not extract object from %s" % ref) from e
-            # END end try string
+                obj = self.repo.rev_parse(ref + "^{}")
+            except (BadObject, BadName) as exc:
+                raise ValueError("Could not extract object from %s" % ref) from exc
         else:
-            raise ValueError("Unrecognized Value: %r" % ref)
-        # END try commit attribute
-
-        # typecheck
-        if obj is not None and self._points_to_commits_only and obj.type != Commit.type:
+            raise ValueError("Unrecognized value: %r" % ref)
+        if self._points_to_commits_only and obj.type != Commit.type:
             raise TypeError("Require commit, got %r" % obj)
-        # END verify type
+        return obj
 
-        oldbinsha: bytes = b""
+    @staticmethod
+    def _transaction(repo: "Repo", commands: str, logmsg: Union[str, None] = None) -> None:
+        # Operands have already passed reference/OID validation. NUL framing keeps
+        # reference names separate from the fixed update-ref protocol commands.
+        options = []
         if logmsg is not None:
-            try:
-                oldbinsha = self.commit.binsha
-            except ValueError:
-                oldbinsha = Commit.NULL_BIN_SHA
-            # END handle non-existing
-        # END retrieve old hexsha
-
-        fpath = self._get_validated_ref_path(self.repo, self.path)
-        assure_directory_exists(fpath, is_file=True)
-
-        lfd = LockedFD(fpath)
-        fd = lfd.open(write=True, stream=True)
-        try:
-            fd.write(write_value.encode("utf-8") + b"\n")
-            lfd.commit()
-        except BaseException:
-            lfd.rollback()
-            raise
-        # Adjust the reflog
-        if logmsg is not None:
-            self.log_append(oldbinsha, logmsg)
-
-        return self
+            if "\0" in logmsg:
+                raise ValueError("Reflog messages must not contain NUL")
+            options.append("--create-reflog")
+            first_line = logmsg.split("\n", 1)[0]
+            if first_line:
+                options.extend(("-m", first_line))
+        with tempfile.TemporaryFile() as stream:
+            stream.write(commands.encode("utf-8"))
+            stream.seek(0)
+            repo.git._call_process_safe("update_ref", "--no-deref", "--stdin", "-z", *options, istream=stream)
 
     # Aliased reference
     @property
@@ -595,7 +497,7 @@ class SymbolicReference:
         """
         try:
             self.object  # noqa: B018
-        except (OSError, ValueError):
+        except (OSError, ValueError, BadObject, BadName, GitCommandError):
             return False
         else:
             return True
@@ -612,16 +514,12 @@ class SymbolicReference:
         return self._get_ref_info(self.repo, self.path)[1] is None
 
     def log(self) -> "RefLog":
-        """
-        :return:
-            :class:`~git.refs.log.RefLog` for this reference.
-            Its last entry reflects the latest change applied to this reference.
+        """Return Git's commit reflog view, ordered from oldest to newest.
 
-        :note:
-            As the log is parsed every time, its recommended to cache it for use instead
-            of calling this method repeatedly. It should be considered read-only.
+        Non-commit and unavailable objects are omitted by Git. Entries expose the
+        new object ID, actor, time and message; raw old object IDs are unavailable.
         """
-        return RefLog.from_file(RefLog.path(self))
+        return RefLog(self)
 
     def log_append(
         self,
@@ -629,50 +527,14 @@ class SymbolicReference:
         message: Union[str, None],
         newbinsha: Union[bytes, None] = None,
     ) -> "RefLogEntry":
-        """Append a logentry to the logfile of this ref.
-
-        :param oldbinsha:
-            Binary sha this ref used to point to.
-
-        :param message:
-            A message describing the change.
-
-        :param newbinsha:
-            The sha the ref points to now. If None, our current commit sha will be used.
-
-        :return:
-            The added :class:`~git.refs.log.RefLogEntry` instance.
-        """
-        # NOTE: We use the committer of the currently active commit - this should be
-        # correct to allow overriding the committer on a per-commit level.
-        # See https://github.com/gitpython-developers/GitPython/pull/146.
-        try:
-            committer_or_reader: Union["Actor", "GitConfigParser"] = self.commit.committer
-        except ValueError:
-            committer_or_reader = self.repo.config_reader()
-        # END handle newly cloned repositories
-        if newbinsha is None:
-            newbinsha = self.commit.binsha
-
-        if message is None:
-            message = ""
-
-        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha, newbinsha, message)
+        """Append a reflog entry through Git without changing the reference."""
+        return RefLog.append_entry(
+            self, oldbinsha, newbinsha if newbinsha is not None else self.commit.binsha, message or ""
+        )
 
     def log_entry(self, index: int) -> "RefLogEntry":
-        """
-        :return:
-            :class:`~git.refs.log.RefLogEntry` at the given index
-
-        :param index:
-            Python list compatible positive or negative index.
-
-        :note:
-            This method must read part of the reflog during execution, hence it should
-            be used sparingly, or only if you need just one index. In that case, it will
-            be faster than the :meth:`log` method.
-        """
-        return RefLog.entry_at(RefLog.path(self), index)
+        """Return a Python-indexed entry from Git's commit reflog view."""
+        return self.log()[index]
 
     @classmethod
     def to_full_path(cls, path: Union[PathLike, "SymbolicReference"]) -> PathLike:
@@ -693,62 +555,10 @@ class SymbolicReference:
 
     @classmethod
     def delete(cls, repo: "Repo", path: PathLike) -> None:
-        """Delete the reference at the given path.
-
-        :param repo:
-            Repository to delete the reference from.
-
-        :param path:
-            Short or full path pointing to the reference, e.g. ``refs/myreference`` or
-            just ``myreference``, hence ``refs/`` is implied.
-            Alternatively the symbolic reference to be deleted.
-        """
-        full_ref_path = cls.to_full_path(path)
-        abs_path = cls._get_validated_ref_path(repo, full_ref_path)
-        if os.path.exists(abs_path):
-            os.remove(abs_path)
-        else:
-            # Check packed refs.
-            pack_file_path = cls._get_packed_refs_path(repo)
-            try:
-                with open(pack_file_path, "rb") as reader:
-                    new_lines = []
-                    made_change = False
-                    dropped_last_line = False
-                    for line_bytes in reader:
-                        line = line_bytes.decode(defenc)
-                        _, _, line_ref = line.partition(" ")
-                        line_ref = line_ref.strip()
-                        # Keep line if it is a comment or if the ref to delete is not in
-                        # the line.
-                        # If we deleted the last line and this one is a tag-reference
-                        # object, we drop it as well.
-                        if (line.startswith("#") or full_ref_path != line_ref) and (
-                            not dropped_last_line or dropped_last_line and not line.startswith("^")
-                        ):
-                            new_lines.append(line)
-                            dropped_last_line = False
-                            continue
-                        # END skip comments and lines without our path
-
-                        # Drop this line.
-                        made_change = True
-                        dropped_last_line = True
-
-                # Write the new lines.
-                if made_change:
-                    # Binary writing is required, otherwise Windows will open the file
-                    # in text mode and change LF to CRLF!
-                    with open(pack_file_path, "wb") as fd:
-                        fd.writelines(line.encode(defenc) for line in new_lines)
-
-            except OSError:
-                pass  # It didn't exist at all.
-
-        # Delete the reflog.
-        reflog_path = RefLog.path(cls(repo, full_ref_path))
-        if os.path.isfile(reflog_path):
-            os.remove(reflog_path)
+        """Delete a reference and its reflog without dereferencing symbolic refs."""
+        path = cls.to_full_path(path)
+        cls._get_validated_ref_path(repo, path)
+        repo.git._call_process_safe("update_ref", "--no-deref", "-d", "--", path)
         # END remove reflog
 
     @classmethod
@@ -761,37 +571,44 @@ class SymbolicReference:
         force: bool,
         logmsg: Union[str, None] = None,
     ) -> T_References:
-        """Internal method used to create a new symbolic reference.
-
-        If `resolve` is ``False``, the reference will be taken as is, creating a proper
-        symbolic reference. Otherwise it will be resolved to the corresponding object
-        and a detached symbolic reference will be created instead.
-        """
-        full_ref_path = cls.to_full_path(path)
-        abs_ref_path = cls._get_validated_ref_path(repo, full_ref_path)
-
-        # Figure out target data.
-        target = reference
-        if resolve:
-            target = repo.rev_parse(str(reference))
-
-        if not force and os.path.isfile(abs_ref_path):
-            target_data = str(target)
-            if isinstance(target, SymbolicReference):
-                target_data = os.fspath(target.path)
-            if not resolve:
-                target_data = "ref: " + target_data
-            with open(abs_ref_path, "rb") as fd:
-                existing_data = fd.read().decode(defenc).strip()
-            if existing_data != target_data:
-                raise OSError(
-                    "Reference at %r does already exist, pointing to %r, requested was %r"
-                    % (full_ref_path, existing_data, target_data)
+        full_path = cls.to_full_path(path)
+        cls._get_validated_ref_path(repo, full_path)
+        target = repo.rev_parse(str(reference)) if resolve else reference
+        ref = cls(repo, full_path)
+        if force:
+            ref.set_reference(target, logmsg)
+            return ref
+        desired: Tuple[Union[str, None], Union[str, None]]
+        if isinstance(target, SymbolicReference):
+            cls._get_validated_ref_path(repo, target.path)
+            desired = (None, os.fspath(target.path))
+        else:
+            obj = ref._resolve_object(target)
+            desired = (obj.hexsha, None)
+        try:
+            existing = cls._get_ref_info(repo, full_path)
+        except ValueError:
+            existing = None
+        if existing is not None:
+            if existing != desired:
+                raise OSError("Reference %r already exists with different contents" % full_path)
+            return ref
+        try:
+            if desired[1] is not None:
+                cls._transaction(repo, "symref-create %s\0%s\0" % (full_path, desired[1]), logmsg)
+            else:
+                if logmsg is not None and "\0" in logmsg:
+                    raise ValueError("Reflog messages must not contain NUL")
+                options = [] if logmsg is None else ["--create-reflog"]
+                if logmsg:
+                    first_line = logmsg.split("\n", 1)[0]
+                    if first_line:
+                        options.extend(("-m", first_line))
+                repo.git._call_process_safe(
+                    "update_ref", "--no-deref", *options, "--", full_path, desired[0], repo._null_hexsha
                 )
-        # END no force handling
-
-        ref = cls(repo, full_ref_path)
-        ref.set_reference(target, logmsg)
+        except GitCommandError as exc:
+            raise OSError("Could not create reference %r" % full_path) from exc
         return ref
 
     @classmethod
@@ -811,7 +628,7 @@ class SymbolicReference:
 
         :param path:
             Full path at which the new symbolic reference is supposed to be created at,
-            e.g. ``NEW_HEAD`` or ``symrefs/my_new_symref``.
+            e.g. ``NEW_HEAD`` or ``refs/symrefs/my_new_symref``.
 
         :param reference:
             The reference which the new symbolic reference should point to.
@@ -838,89 +655,49 @@ class SymbolicReference:
         return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, logmsg)
 
     def rename(self, new_path: PathLike, force: bool = False) -> "SymbolicReference":
-        """Rename self to a new path.
+        """Move a reference through an atomic Git reference transaction.
 
-        :param new_path:
-            Either a simple name or a full path, e.g. ``new_name`` or
-            ``features/new_name``.
-            The prefix ``refs/`` is implied for references and will be set as needed.
-            In case this is a symbolic ref, there is no implied prefix.
-
-        :param force:
-            If ``True``, the rename will succeed even if a head with the target name
-            already exists. It will be overwritten in that case.
-
-        :return:
-            self
-
-        :raise OSError:
-            If a file at path but with different contents already exists.
+        Branches override this with ``git branch --move``, which also moves reflogs
+        and branch configuration. Generic references retain their value only.
         """
         new_path = self.to_full_path(new_path)
+        self._get_validated_ref_path(self.repo, self.path)
+        self._get_validated_ref_path(self.repo, new_path)
         if self.path == new_path:
             return self
-
-        new_abs_path = self._get_validated_ref_path(self.repo, new_path)
-        cur_abs_path = self._get_validated_ref_path(self.repo, self.path)
-        if os.path.isfile(new_abs_path):
-            if not force:
-                # If they point to the same file, it's not an error.
-                with open(new_abs_path, "rb") as fd1:
-                    f1 = fd1.read().strip()
-                with open(cur_abs_path, "rb") as fd2:
-                    f2 = fd2.read().strip()
-                if f1 != f2:
-                    raise OSError("File at path %r already exists" % new_abs_path)
-                # else: We could remove ourselves and use the other one, but...
-                # ...for clarity, we just continue as usual.
-            # END not force handling
-            os.remove(new_abs_path)
-        # END handle existing target file
-
-        dname = os.path.dirname(new_abs_path)
-        if not os.path.isdir(dname):
-            os.makedirs(dname)
-        # END create directory
-
-        os.rename(cur_abs_path, new_abs_path)
+        value = self._get_ref_info(self.repo, self.path)
+        try:
+            destination = self._get_ref_info(self.repo, new_path)
+        except ValueError:
+            destination = None
+        if destination is not None and not force and value != destination:
+            raise OSError("Reference %r already exists" % new_path)
+        oid, target = value
+        if target is not None:
+            command = "symref-create" if destination is None else "symref-update"
+            updates = "%s %s\0%s\0symref-delete %s\0%s\0" % (command, new_path, target, self.path, target)
+        else:
+            command = "create" if destination is None else "update"
+            updates = "%s %s\0%s\0" % (command, new_path, oid)
+            if command == "update":
+                updates += "\0"
+            updates += "delete %s\0%s\0" % (self.path, oid)
+        self._transaction(self.repo, updates)
         self.path = new_path
-
         return self
 
     @classmethod
     def _iter_items(
         cls: Type[T_References], repo: "Repo", common_path: Union[PathLike, None] = None
     ) -> Iterator[T_References]:
-        if common_path is None:
-            common_path = cls._common_path_default
-        rela_paths = set()
-
-        # Walk loose refs.
-        # Currently we do not follow links.
-        for root, dirs, files in os.walk(join_path_native(repo.common_dir, common_path)):
-            if "refs" not in root.split(os.sep):  # Skip non-refs subfolders.
-                refs_id = [d for d in dirs if d == "refs"]
-                if refs_id:
-                    dirs[0:] = ["refs"]
-            # END prune non-refs folders
-
-            for f in files:
-                if f == "packed-refs":
-                    continue
-                abs_path = to_native_path_linux(join_path(root, f))
-                rela_paths.add(abs_path.replace(to_native_path_linux(repo.common_dir) + "/", ""))
-            # END for each file in root directory
-        # END for each directory to walk
-
-        # Read packed refs.
-        for _sha, rela_path in cls._iter_packed_refs(repo):
-            if rela_path.startswith(os.fspath(common_path)):
-                rela_paths.add(rela_path)
-            # END relative path matches common path
-        # END packed refs reading
-
-        # Yield paths in sorted order.
-        for path in sorted(rela_paths):
+        prefix = os.fspath(cls._common_path_default if common_path is None else common_path)
+        if prefix:
+            cls._check_ref_name_valid(prefix.rstrip("/"))
+        options = [] if prefix.startswith("refs/") or prefix == "refs" else ["--include-root-refs"]
+        output = repo.git._call_process_safe(
+            "for_each_ref", "--format=%(refname)", *options, "--", *([prefix] if prefix else [])
+        )
+        for path in sorted(output.splitlines()):
             try:
                 yield cls.from_path(repo, path)
             except ValueError:

@@ -5,8 +5,9 @@ from unittest import mock
 
 import pytest
 
-from git import Actor, Git, GitCommandError, Remote, Repo
+from git import Git, GitCommandError, Remote
 from git.exc import UnsafeOptionError, UnsafeProtocolError
+from test.lib.fixtures import fixture_repo
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])
@@ -39,7 +40,7 @@ def test_ls_remote_rejects_unsafe_protocols(args, kwargs, allow_unsafe_options):
 @pytest.mark.parametrize("through_repo", (False, True))
 @pytest.mark.parametrize("remote", ("ext::helper", "ext://helper"))
 def test_ls_remote_protocol_guard_at_both_entry_points(tmp_path, through_repo, remote):
-    with Repo.init(tmp_path) as repo:
+    with fixture_repo("command-guards.sh", "empty", write=False) as repo:
         command = repo.git if through_repo else Git()
         with mock.patch.object(Git, "execute", return_value="refs") as execute:
             for allow_unsafe_options in (False, True):
@@ -118,7 +119,7 @@ def test_ls_remote_unsafe_opt_ins_are_independent():
     ],
 )
 def test_remote_protocol_guards_check_rendered_operands(tmp_path, method, allow_unsafe_options, name, kwargs):
-    with Repo.init(tmp_path) as repo:
+    with fixture_repo("command-guards.sh", "empty", write=True) as repo:
         remote = Remote(repo, name)
         with mock.patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as run:
             with pytest.raises(UnsafeProtocolError):
@@ -138,7 +139,8 @@ def test_remote_protocol_guards_check_rendered_operands(tmp_path, method, allow_
     ],
 )
 def test_remote_protocol_guards_preserve_safe_rendered_arguments(tmp_path, method, kwargs, token):
-    with Repo.init(tmp_path) as repo:
+    with fixture_repo("command-guards.sh", "empty", write=True) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         error = GitCommandError("captured command", 128)
         with mock.patch.object(Git, "execute", side_effect=error) as run:
@@ -153,7 +155,8 @@ def test_remote_protocol_guards_preserve_safe_rendered_arguments(tmp_path, metho
 
 @pytest.mark.parametrize("method", ["fetch", "pull", "push"])
 def test_remote_protocol_and_option_opt_ins_are_independent(tmp_path, method):
-    with Repo.init(tmp_path) as repo:
+    with fixture_repo("command-guards.sh", "empty", write=True) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         kwargs = {"q": "ext::helper"}
         option = "receive_pack" if method == "push" else "upload_pack"
@@ -175,7 +178,8 @@ def test_remote_protocol_and_option_opt_ins_are_independent(tmp_path, method):
 
 @pytest.mark.parametrize("verbose", ["ext::helper", "--upload-pack=helper"])
 def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
-    with Repo.init(tmp_path) as repo:
+    with fixture_repo("command-guards.sh", "empty", write=True) as repo:
+        repo.git.version_info
         remote = Remote(repo, "origin")
         error = GitCommandError("captured command", 128)
         with mock.patch.object(Git, "execute", side_effect=error) as run:
@@ -183,7 +187,10 @@ def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
                 remote.fetch("HEAD", verbose=verbose)
             assert raised.value is error
             run.assert_called_once()
-            assert run.call_args[0][0] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "fetch", "-v", "--", "origin", "HEAD"]
+            argv = run.call_args[0][0]
+            assert argv[argv.index("fetch") :] == ["fetch", "-v", "--", "origin", "HEAD"]
+            assert argv[:3] == [Git.GIT_PYTHON_GIT_EXECUTABLE, "--no-pager", "--no-optional-locks"]
+            assert run.call_args.kwargs["shell"] is False
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])
@@ -199,59 +206,64 @@ def test_fetch_verbose_cannot_introduce_operands_or_options(tmp_path, verbose):
     ],
 )
 def test_merge_base_checks_unsafe_options(tmp_path, revs, kwargs, allow_unsafe_options):
-    repo = Repo.init(tmp_path)
-    with mock.patch.object(Git, "execute", return_value="") as run:
-        if allow_unsafe_options:
-            assert repo.merge_base(*revs, allow_unsafe_options=True, **kwargs) == []
-            run.assert_called_once()
-            assert "--allow-unsafe-options" not in run.call_args[0][0]
-        else:
-            with pytest.raises(UnsafeOptionError):
-                repo.merge_base(*revs, **kwargs)
-            run.assert_not_called()
+    with fixture_repo("command-guards.sh", "test_merge_base_checks_unsafe_options", write=False) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute", return_value="") as run:
+            if allow_unsafe_options and kwargs:
+                assert repo.merge_base(*revs, allow_unsafe_options=True, **kwargs) == []
+                run.assert_called_once()
+                assert "--allow-unsafe-options" not in run.call_args[0][0]
+            else:
+                with pytest.raises(UnsafeOptionError):
+                    repo.merge_base(*revs, **kwargs)
+                run.assert_not_called()
 
 
 @pytest.mark.parametrize("status", [-9, 2, 128, 129])
 def test_merge_base_propagates_errors(tmp_path, status):
-    repo = Repo.init(tmp_path)
-    error = GitCommandError("git merge-base", status)
-    with mock.patch.object(Git, "execute", side_effect=error):
-        with pytest.raises(GitCommandError) as raised:
-            repo.merge_base("HEAD", "HEAD")
-        assert raised.value is error
+    with fixture_repo("command-guards.sh", "test_merge_base_propagates_errors", write=False) as repo:
+        repo.git.version_info
+        error = GitCommandError("git merge-base", status)
+        with mock.patch.object(Git, "execute", side_effect=error):
+            with pytest.raises(GitCommandError) as raised:
+                repo.merge_base("HEAD", "HEAD")
+            assert raised.value is error
 
 
 def test_merge_base_distinguishes_unrelated_history_from_invalid_options(tmp_path):
-    repo = Repo.init(tmp_path)
-    actor = Actor("Test", "test@example.com")
-    first = repo.index.commit("first", author=actor, committer=actor)
-    second = repo.index.commit("second", parent_commits=[], head=False, author=actor, committer=actor)
-    assert repo.merge_base(first, first) == [first]
-    assert repo.merge_base(first, second) == []
-    with pytest.raises(GitCommandError) as raised:
-        repo.merge_base(first, second, invalid_option=True)
-    assert raised.value.status == 129
+    with fixture_repo(
+        "command-guards.sh", "test_merge_base_distinguishes_unrelated_history_from_invalid_options", write=False
+    ) as repo:
+        first = repo.head.commit
+        second = repo.heads.second.commit
+        assert repo.merge_base(first, first) == [first]
+        assert repo.merge_base(first, second) == []
+        with pytest.raises(GitCommandError) as raised:
+            repo.merge_base(first, second, invalid_option=True)
+        assert raised.value.status == 129
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])
 @pytest.mark.parametrize("option", ["pathspec_from_file", "pathspec-from-file", "pathspec_from"])
 @pytest.mark.parametrize("dry_run", [False, True])
 def test_move_checks_unsafe_options(tmp_path, option, dry_run, allow_unsafe_options):
-    repo = Repo.init(tmp_path)
-    with mock.patch.object(Git, "execute", return_value="Renaming source to destination\n") as run:
-        kwargs = {option: "unused", "dry_run": dry_run}
-        if allow_unsafe_options:
-            assert repo.index.move(["source", "destination"], True, allow_unsafe_options=True, **kwargs) == [
-                ("source", "destination")
-            ]
-            assert run.call_count == (1 if dry_run else 2)
-            for call in run.call_args_list:
-                argv = call[0][0]
-                assert "-k" in argv
-                assert f"--{option.replace('_', '-')}=unused" in argv
-                assert "--allow-unsafe-options" not in argv
-                assert argv[-3:] == ["--", "source", "destination"]
-        else:
-            with pytest.raises(UnsafeOptionError):
-                repo.index.move(["source", "destination"], **kwargs)
-            run.assert_not_called()
+    with fixture_repo("command-guards.sh", "test_move_checks_unsafe_options", write=True) as repo:
+        repo.git.version_info
+        with mock.patch.object(Git, "execute", return_value="Renaming source to destination\n") as run:
+            kwargs = {option: "unused", "dry_run": dry_run}
+            if allow_unsafe_options:
+                assert repo.index.move(["source", "destination"], True, allow_unsafe_options=True, **kwargs) == [
+                    ("source", "destination")
+                ]
+                moves = [call for call in run.call_args_list if "mv" in call.args[0]]
+                assert len(moves) == (1 if dry_run else 2)
+                for call in moves:
+                    argv = call[0][0]
+                    assert "-k" in argv
+                    assert f"--{option.replace('_', '-')}=unused" in argv
+                    assert "--allow-unsafe-options" not in argv
+                    assert argv[-3:] == ["--", "source", "destination"]
+            else:
+                with pytest.raises(UnsafeOptionError):
+                    repo.index.move(["source", "destination"], **kwargs)
+                run.assert_not_called()

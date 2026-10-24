@@ -12,7 +12,7 @@ import re
 import shlex
 import stat
 import sys
-import uuid
+import urllib.parse
 from io import BytesIO
 from pathlib import Path
 
@@ -32,16 +32,18 @@ from typing import (
 )
 
 import git
+from git import _backend
 from git.cmd import Git
-from git.compat import defenc
 from git.config import GitConfigParser, SectionConstraint, cp
 from git.exc import (
     BadName,
+    BadObject,
+    GitCommandError,
     InvalidGitRepositoryError,
     NoSuchPathError,
     RepositoryDirtyError,
 )
-from git.objects.base import IndexObject, Object
+from git.objects.base import IndexObject
 from git.objects.util import TraversableIterableObj
 from git.util import (
     IterableList,
@@ -173,6 +175,16 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _set_cache_(self, attr: str) -> None:
         if attr in ("path", "_url", "_branch_path"):
             reader: SectionConstraint = self.config_reader()
+            native = _backend.submodule_config(reader.config._file_or_files)
+            if native is not NotImplemented and self.name in native:
+                values = native[self.name]
+                self.path, self._url = values["path"], values["url"]
+                self._branch_path = (
+                    GitConfigParser._string_to_value(values[self.k_head_option])
+                    if self.k_head_option in values
+                    else git.Head.to_full_path(self.k_head_default)
+                )
+                return
             # Default submodule values.
             try:
                 self.path = reader.get("path")
@@ -203,7 +215,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def _need_gitfile_submodules(cls, git: Git) -> bool:
-        return git.version_info[:3] >= (1, 7, 5)
+        return True
 
     def __eq__(self, other: Any) -> bool:
         """Compare with another submodule."""
@@ -317,6 +329,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         ):
             raise ValueError("Invalid submodule name %r" % name)
         cls._validate_windows_path(name)
+        Git._check_operand(name, "submodule name")
         return name
 
     @staticmethod
@@ -335,24 +348,21 @@ class Submodule(IndexObject, TraversableIterableObj):
                     raise ValueError("Invalid submodule path on Windows: %r" % path)
 
     @classmethod
-    def _module_abspath(
-        cls, parent_repo: "Repo", path: PathLike, name: str, *, moving_from: Union[PathLike, None] = None
-    ) -> PathLike:
-        """Reject nested Git directories, allowing the source of a pending rename."""
+    def _module_abspath(cls, parent_repo: "Repo", path: PathLike, name: str) -> PathLike:
+        """Reject submodule metadata nested inside another Git directory."""
         from git.repo.fun import is_git_dir
 
         name = cls._validated_name(name)
         if cls._need_gitfile_submodules(parent_repo.git):
-            directory = osp.join(parent_repo.git_dir, "modules")
+            modules = parent_repo.git._call_process_safe("rev_parse", "--path-format=absolute", "--git-path", "modules")
+            directory = modules
             for component in to_native_path_linux(name).split("/")[:-1]:
                 directory = osp.join(directory, component)
-                if is_git_dir(directory) and (
-                    moving_from is None or Path(directory).resolve() != Path(moving_from).resolve()
-                ):
+                if is_git_dir(directory):
                     raise ValueError(
                         "Submodule metadata for %r is inside another Git directory: %r" % (name, directory)
                     )
-            return osp.join(parent_repo.git_dir, "modules", name)
+            return osp.join(modules, name)
         if parent_repo.working_tree_dir:
             return cls._checked_abspath(
                 parent_repo.working_tree_dir,
@@ -360,6 +370,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                 git_dirs=(parent_repo.git_dir, parent_repo.common_dir),
             )
         raise NotADirectoryError()
+
+    @classmethod
+    def _transport_env(cls, allow_unsafe_protocols: bool = False) -> Dict[str, str]:
+        """Apply Git's non-user transport policy to URLs read from ``.gitmodules``."""
+        return {} if allow_unsafe_protocols else {"GIT_PROTOCOL_FROM_USER": "0"}
 
     @classmethod
     def _clone_repo(
@@ -449,7 +464,9 @@ class Submodule(IndexObject, TraversableIterableObj):
                 except FileNotFoundError:
                     pass
                 raise
-            cls._write_git_file_and_module_config(module_checkout_path, module_abspath)
+            clone.close()
+            cls._connect_module(module_checkout_path, module_abspath)
+            clone = git.Repo(module_checkout_path)
 
         return clone
 
@@ -529,48 +546,40 @@ class Submodule(IndexObject, TraversableIterableObj):
             parent = osp.dirname(parent)
 
     @classmethod
-    def _write_git_file_and_module_config(cls, working_tree_dir: PathLike, module_abspath: PathLike) -> None:
-        """Write a ``.git`` file containing a (preferably) relative path to the actual
-        git module repository.
+    def _connect_module(cls, working_tree_dir: PathLike, module_abspath: PathLike) -> None:
+        """Let Git create or repair the gitfile connection to retained module data."""
+        from git.repo.fun import find_submodule_git_dir
 
-        It is an error if the `module_abspath` cannot be made into a relative path,
-        relative to the `working_tree_dir`.
-
-        :note:
-            This will overwrite existing files!
-
-        :note:
-            As we rewrite both the git file as well as the module configuration, we
-            might fail on the configuration and will not roll back changes done to the
-            git file. This should be a non-issue, but may easily be fixed if it becomes
-            one.
-
-        :param working_tree_dir:
-            Directory to write the ``.git`` file into.
-
-        :param module_abspath:
-            Absolute path to the bare repository.
-        """
-        # Git resolves metadata symlinks before interpreting core.worktree.
-        # Path.resolve() also handles Windows symlinks on Python 3.7.
+        working_tree_dir = osp.abspath(working_tree_dir)
         module_abspath = str(Path(module_abspath).resolve())
-        working_tree_dir = str(Path(working_tree_dir).resolve())
-        git_file = osp.join(working_tree_dir, ".git")
-        module_config = osp.join(module_abspath, "config")
-        rela_path = osp.relpath(module_abspath, start=working_tree_dir)
-        if sys.platform == "win32" and osp.isfile(git_file):
-            os.remove(git_file)
-        with open(git_file, "wb") as fp:
-            fp.write(("gitdir: %s" % rela_path).encode(defenc))
-
-        with GitConfigParser(module_config, read_only=False, merge_includes=False) as writer:
-            writer.set_value(
-                "core",
-                "worktree",
-                to_native_path_linux(osp.relpath(working_tree_dir, start=module_abspath)),
+        object_format, ref_format = (
+            Git(module_abspath)
+            ._call_process_safe(
+                "rev_parse",
+                "--show-object-format",
+                "--show-ref-format",
+                env={"GIT_DIR": module_abspath, "GIT_WORK_TREE": working_tree_dir},
             )
-
-    # { Edit Interface
+            .splitlines()
+        )
+        gitfile = osp.join(working_tree_dir, ".git")
+        connected = find_submodule_git_dir(gitfile) if osp.isfile(gitfile) else None
+        # Reinitializing an existing connection makes Git rename the metadata
+        # onto itself, which can fail on Windows with "Directory not empty".
+        if connected is None or not osp.samefile(connected, module_abspath):
+            Git(working_tree_dir)._call_process_safe(
+                "init",
+                "--quiet",
+                "--template=",
+                "--object-format=" + Git._check_operand(object_format, "object format"),
+                "--ref-format=" + Git._check_operand(ref_format, "reference format"),
+                "--separate-git-dir",
+                module_abspath,
+                "--",
+                working_tree_dir,
+            )
+        with GitConfigParser(osp.join(module_abspath, "config"), read_only=False) as writer:
+            writer.set_value("core", "worktree", working_tree_dir)
 
     @classmethod
     def add(
@@ -623,6 +632,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             If ``True``, and if the repository has to be cloned manually, no checkout
             will be performed.
 
+            Retained metadata can instead be reconnected without checking out files
+            or changing refs. Its URL and any explicit branch must match; ``depth``
+            and ``clone_multi_options`` require a new clone and are rejected here.
+
         :param depth:
             Create a shallow clone with a history truncated to the specified number of
             commits.
@@ -668,7 +681,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # INSTANTIATE INTERMEDIATE SM
         sm = cls(
             repo,
-            cls.NULL_BIN_SHA,
+            repo._null_binsha,
             cls.k_default_mode,
             path,
             name,
@@ -685,11 +698,52 @@ class Submodule(IndexObject, TraversableIterableObj):
             except KeyError:
                 # Could only be in index.
                 index = repo.index
-                entry = index.entries[index.entry_key(path, 0)]
+                entry = index.entry(path)
                 sm.binsha = entry.binsha
                 return sm
             # END handle exceptions
         # END handle existing
+
+        if sm.module_exists() and url is not None:
+            with sm.module() as existing:
+                if url not in [remote.url for remote in existing.remotes]:
+                    raise ValueError("Specified URL does not match the existing submodule repository")
+
+        metadata_path = cls._module_abspath(repo, path, name)
+        if (
+            url is not None
+            and not no_checkout
+            and not clone_multi_options
+            and (not osp.islink(metadata_path) or osp.isdir(metadata_path))
+        ):
+            Git._check_operand(url, "submodule URL")
+            if not allow_unsafe_protocols:
+                Git.check_unsafe_protocols(url)
+            args = ["add", "--name", name]
+            if osp.isdir(metadata_path):
+                args.append("--force")
+            if branch is not None:
+                args.extend(("--branch", Git._check_operand(branch, "branch")))
+            if depth is not None:
+                if not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0:
+                    raise ValueError("depth must be a positive integer")
+                args.extend(("--depth", str(depth)))
+            args.extend(("--", url, str(path)))
+            # An explicitly requested local submodule is also supported by clone().
+            local_url = urllib.parse.urlsplit(url).scheme == "file" or osp.isabs(url) or ":" not in url
+            config = ("protocol.file.allow=always",) if local_url else ()
+            try:
+                repo.git._call_process_safe("submodule", *args, env=env, _allow_network=True, _config=config)
+            except GitCommandError as error:
+                if error.status == 128 and "fatal: You are on a branch yet to be born" in error.stderr:
+                    raise ValueError("Cannot add a submodule from a repository without commits") from error
+                raise
+            sm._url = url
+            if branch is not None:
+                sm._branch_path = git.Head.to_full_path(branch)
+            with sm.module() as module:
+                sm.binsha = module.head.commit.binsha
+            return sm
 
         # fake-repo - we only need the functionality on the branch instance.
         br = git.Head(repo, git.Head.to_full_path(str(branch) or cls.k_head_default))
@@ -716,6 +770,48 @@ class Submodule(IndexObject, TraversableIterableObj):
                 raise ValueError("Didn't find any remote url in repository at %s" % sm.abspath)
             # END verify we have url
             url = urls[0]
+        elif osp.isdir(metadata_path):
+            # Reuse recoverable metadata without altering its refs or checking out
+            # files. Clone-specific options cannot be applied to an existing repo.
+            Git._check_operand(url, "submodule URL")
+            if not allow_unsafe_protocols:
+                Git.check_unsafe_protocols(url)
+            if clone_multi_options or depth is not None:
+                raise ValueError("Clone options cannot be applied to retained submodule metadata")
+            retained_git = Git(metadata_path)
+            retained_env = {"GIT_DIR": str(metadata_path), "GIT_WORK_TREE": str(metadata_path)}
+            try:
+                stored_urls = retained_git._call_process_safe(
+                    "config",
+                    "get",
+                    "--local",
+                    "--all",
+                    "--null",
+                    "--no-show-names",
+                    "--regexp",
+                    "--",
+                    r"^remote\..*\.url$",
+                    env=retained_env,
+                ).split("\0")
+            except GitCommandError as error:
+                if error.status != 1:
+                    raise
+                stored_urls = []
+            if not url or url not in stored_urls:
+                raise ValueError("Specified URL does not match retained submodule metadata")
+            if branch is not None:
+                Git._check_operand(branch, "branch")
+                current_branch = retained_git._call_process_safe(
+                    "symbolic_ref", "--quiet", "--", "HEAD", env=retained_env
+                )
+                if current_branch != br.path:
+                    raise ValueError("Cannot change branches while reusing retained submodule metadata")
+            checkout_path = sm.abspath
+            if osp.lexists(checkout_path) and (not osp.isdir(checkout_path) or os.listdir(checkout_path)):
+                raise OSError("Retained submodule checkout must be empty before reconnection")
+            os.makedirs(checkout_path, exist_ok=True)
+            cls._connect_module(checkout_path, metadata_path)
+            mrepo = git.Repo(checkout_path)
         else:
             # Clone new repo.
             kwargs: Dict[str, Union[bool, int, str, Sequence[TBD]]] = {"n": no_checkout}
@@ -746,7 +842,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # Relative submodule URLs must keep their prefix to resolve against the parent remote.
         if not is_relative_url(url):
-            url = Git.polish_url(url, expand_vars=False)
+            url = Git.polish_url(url)
 
         # It's important to add the URL to the parent config, to let `git submodule` know.
         # Otherwise there is a '-' character in front of the submodule listing:
@@ -759,14 +855,14 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # Update configuration and index.
         index = sm.repo.index
-        with sm.config_writer(index=index, write=False) as writer:
-            writer.set_value("url", url)
-            writer.set_value("path", path)
+        with sm.config_writer(index=index, write=False) as sm_writer:
+            sm_writer.set_value("url", url)
+            sm_writer.set_value("path", path)
 
             sm._url = url
             if not branch_is_default:
                 # Store full path.
-                writer.set_value(cls.k_head_option, br.path)
+                sm_writer.set_value(cls.k_head_option, br.path)
                 sm._branch_path = br.path
 
         # We deliberately assume that our head matches our index!
@@ -849,7 +945,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             They only take effect with the `init` option.
 
         :param allow_unsafe_protocols:
-            Allow unsafe protocols to be used, like ``ext``.
+            Allow unsafe protocols to be used, like ``ext``. Clone and fetch also
+            preserve the caller's ``GIT_PROTOCOL_FROM_USER`` policy instead of
+            forcing it to ``0``. A ``user`` transport such as ``file`` is then
+            accepted only when that environment policy permits it.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
@@ -881,6 +980,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END handle prefix
 
         mrepo = None
+        freshly_cloned = False
         # END init mrepo
 
         def fetch_remotes(module_repo: "Repo") -> None:
@@ -900,7 +1000,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
                 # ===============================
                 if not dry_run:
-                    remote.fetch(progress=progress)
+                    with module_repo.git.custom_environment(**self._transport_env(allow_unsafe_protocols)):
+                        remote.fetch(progress=progress)
                 # END handle dry-run
                 # ===============================
                 if i == len_rmts - 1:
@@ -916,6 +1017,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         try:
             self._validated_name(self.name)
+            self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
 
             # ENSURE REPO IS PRESENT AND UP-TO-DATE
             #######################################
@@ -937,8 +1039,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # repository instead of trying to clone over it.
                 if not dry_run and osp.isdir(module_abspath):
                     try:
-                        git.Repo(module_abspath)
-                    except InvalidGitRepositoryError:
+                        Git()._call_process_safe("rev_parse", "--resolve-git-dir", module_abspath)
+                    except GitCommandError:
                         pass
                     else:
                         if osp.lexists(checkout_module_abspath) and (
@@ -950,7 +1052,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                                 "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
                             )
                         os.makedirs(checkout_module_abspath, exist_ok=True)
-                        self._write_git_file_and_module_config(checkout_module_abspath, module_abspath)
+                        self._connect_module(checkout_module_abspath, module_abspath)
                         mrepo = git.Repo(checkout_module_abspath)
                         mrepo.head.reset(mrepo.head.commit, index=True, working_tree=True)
                         if not no_fetch:
@@ -987,11 +1089,12 @@ class Submodule(IndexObject, TraversableIterableObj):
                             self.path,
                             self.name,
                             n=True,
-                            env=env,
+                            env={**self._transport_env(allow_unsafe_protocols), **(env or {})},
                             multi_options=clone_multi_options,
                             allow_unsafe_options=allow_unsafe_options,
                             allow_unsafe_protocols=allow_unsafe_protocols,
                         )
+                        freshly_cloned = True
                     progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
                     if not dry_run:
@@ -1000,7 +1103,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                             mrepo = cast("Repo", mrepo)
                             remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
                             local_branch = mkhead(mrepo, self.branch_path)
-                            local_branch.set_object(Object(mrepo, self.NULL_BIN_SHA))
+                            local_branch.set_object(remote_branch.commit)
                             mrepo.head.set_reference(
                                 local_branch,
                                 logmsg="submodule: attaching head to %s" % local_branch,
@@ -1046,7 +1149,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
             # Update the working tree.
             # Handles dry_run.
-            if mrepo is not None and mrepo.head.commit.binsha != binsha:
+            if mrepo is not None and (freshly_cloned or mrepo.head.commit.binsha != binsha):
                 # We must ensure that our destination sha (the one to point to) is in
                 # the future of our current head. Otherwise, we will reset changes that
                 # might have been done on the submodule, but were not yet pushed. We
@@ -1054,7 +1157,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # merge-base. In that case we behave conservatively, protecting possible
                 # changes the user had done.
                 may_reset = True
-                if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
+                if not freshly_cloned:
                     base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
                     if len(base_commit) == 0 or (base_commit[0] is not None and base_commit[0].hexsha == hexsha):
                         if force:
@@ -1093,7 +1196,9 @@ class Submodule(IndexObject, TraversableIterableObj):
                         # detached submodules anyway. Maybe at some point this becomes
                         # an option, to properly handle user modifications - see below
                         # for future options regarding rebase and merge.
-                        mrepo.git.checkout(hexsha, force=force)
+                        mrepo.git._call_process_safe(
+                            "checkout", Git._check_operand(hexsha, "commit"), "--", force=force
+                        )
                     else:
                         mrepo.head.reset(hexsha, index=True, working_tree=True)
                     # END handle checkout
@@ -1106,6 +1211,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
             # END update to new commit only if needed
         except Exception as err:
+            if mrepo is not None:
+                mrepo.close()
             if not keep_going:
                 raise
             _logger.error(str(err))
@@ -1113,10 +1220,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # HANDLE RECURSION
         ##################
-        if recursive:
+        try:
             # In dry_run mode, the module might not exist.
-            if mrepo is not None:
-                for submodule in self.iter_items(self.module()):
+            if recursive and mrepo is not None:
+                for submodule in self.iter_items(mrepo):
                     submodule.update(
                         recursive,
                         init,
@@ -1129,7 +1236,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                     )
                 # END handle recursive update
             # END handle dry run
-        # END for each submodule
+        finally:
+            # Log records and progress callbacks can retain refs to this repository.
+            # Its cat-file processes must not keep the checkout open on Windows.
+            if mrepo is not None:
+                mrepo.close()
 
         return self
 
@@ -1179,24 +1290,40 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         if configuration:
             self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
+            self._config_parser_constrained(read_only=False)
         # Validate the source before removing the destination.
         cur_path = self.abspath
         module_abspath = self._module_abspath(self.repo, self.path, self.name)
-        if self.path == self.name:
-            self._module_abspath(
-                self.repo, module_checkout_path, os.fspath(module_checkout_path), moving_from=module_abspath
-            )
+        if module and not osp.isdir(cur_path):
+            raise InvalidGitRepositoryError("No submodule repository at %s" % cur_path)
         module_checkout_abspath = self._checkout_abspath(module_checkout_path, allow_final_symlink=True)
         if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files
 
         index = self.repo.index
-        tekey = index.entry_key(module_checkout_path, 0)
-        # if the target item already exists, fail
-        if configuration and tekey in index.entries:
+        # Fail if the target already has an entry.
+        if configuration and any(e.path == module_checkout_path and e.stage == 0 for e in index.iter_entries()):
             raise ValueError("Index entry for target path did already exist")
         # END handle index key already there
+
+        if module and configuration:
+            if osp.lexists(module_checkout_abspath):
+                if not osp.exists(module_checkout_abspath):
+                    raise OSError("Destination module path is a dangling symbolic link")
+                if not osp.isdir(module_checkout_abspath) or os.listdir(module_checkout_abspath):
+                    raise ValueError("Destination module directory was not empty")
+                if osp.islink(module_checkout_abspath):
+                    os.unlink(module_checkout_abspath)
+                else:
+                    os.rmdir(module_checkout_abspath)
+            os.makedirs(osp.dirname(module_checkout_abspath), exist_ok=True)
+            self.repo.git._call_process_safe(
+                "mv", "--", self.path, module_checkout_path, env={"GIT_LITERAL_PATHSPECS": "1"}
+            )
+            self.path = module_checkout_path
+            self._clear_cache()
+            return self
 
         # Remove existing destination.
         if module:
@@ -1224,21 +1351,19 @@ class Submodule(IndexObject, TraversableIterableObj):
             renamed_module = True
 
             if osp.isfile(osp.join(module_checkout_abspath, ".git")):
-                self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
+                self._connect_module(module_checkout_abspath, module_abspath)
             # END handle git file rewrite
         # END move physical module
 
         # Rename the index entry - we have to manipulate the index directly as git-mv
         # cannot be used on submodules... yeah.
-        previous_sm_path = self.path
         try:
             if configuration:
                 try:
-                    ekey = index.entry_key(self.path, 0)
-                    entry = index.entries[ekey]
-                    del index.entries[ekey]
+                    entry = index.entry(self.path)
+                    index.remove(self.path, write=False, force=True)
                     nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
-                    index.entries[tekey] = nentry
+                    index.add([nentry], write=False)
                 except KeyError as e:
                     raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path)) from e
                 # END handle submodule doesn't exist
@@ -1254,11 +1379,6 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END undo module renaming
             raise
         # END handle undo rename
-
-        # Auto-rename submodule if its name was 'default', that is, the checkout
-        # directory.
-        if previous_sm_path == self.name:
-            self.rename(module_checkout_path)
 
         return self
 
@@ -1308,10 +1428,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             leave an inconsistent state.
 
         :note:
-            Metadata-directory aliases under ``.git/modules`` are retained. A link
-            directly to the deleted repository becomes dangling; adding or initializing
-            the submodule again recreates its target. Linked parent directories remain
-            available to sibling submodules.
+            Git metadata and its directory aliases are retained for recovery or a
+            later initialization. Linked parent directories remain available to sibling
+            submodules.
 
         :raise git.exc.InvalidGitRepositoryError:
             Thrown if the repository cannot be deleted.
@@ -1326,6 +1445,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         self._validated_name(self.name)
         if configuration:
             self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
+            self._config_parser_constrained(read_only=False)
         # Recursively remove children of this submodule.
         nc = 0
         for csm in self.children():
@@ -1344,7 +1464,16 @@ class Submodule(IndexObject, TraversableIterableObj):
         ################################
         if module and self.module_exists():
             mod = self.module()
-            git_dir = str(Path(mod.git_dir).resolve())
+            if force and configuration:
+                if not dry_run:
+                    mod.close()
+                    self.repo.git._call_process_safe(
+                        "rm", "--force", "--", self.path, env={"GIT_LITERAL_PATHSPECS": "1"}
+                    )
+                    with self.repo.config_writer() as writer:
+                        writer.remove_section(sm_section(self.name))
+                    self._clear_cache()
+                return self
             if force:
                 # Take the fast lane and just delete everything in our module path.
                 # TODO: If we run into permission problems, we have a highly
@@ -1361,6 +1490,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # END handle brutal deletion
                 if not dry_run:
                     assert method
+                    mod.close()
                     method(mp)
                 # END apply deletion method
             else:
@@ -1381,7 +1511,9 @@ class Submodule(IndexObject, TraversableIterableObj):
                     rrefs = remote.refs
                     rref = None
                     for rref in rrefs:
-                        num_branches_with_new_commits += len(mod.git.cherry(rref)) != 0
+                        num_branches_with_new_commits += (
+                            len(mod.git._call_process_safe("cherry", Git._check_operand(rref, "reference"))) != 0
+                        )
                     # END for each remote ref
                     # Not a single remote branch contained all our commits.
                     if len(rrefs) and num_branches_with_new_commits == len(rrefs):
@@ -1401,6 +1533,23 @@ class Submodule(IndexObject, TraversableIterableObj):
                     del remote
                 # END for each remote
 
+                # Git removes the checkout while keeping its object database recoverable.
+                if configuration:
+                    if not dry_run:
+                        mod.close()
+                        try:
+                            self.repo.git._call_process_safe("rm", "--", self.path, env={"GIT_LITERAL_PATHSPECS": "1"})
+                        except GitCommandError as error:
+                            if error.status == 1:
+                                raise InvalidGitRepositoryError(
+                                    "Cannot delete modified submodule %r" % self.path
+                                ) from error
+                            raise
+                        with self.repo.config_writer() as writer:
+                            writer.remove_section(sm_section(self.name))
+                        self._clear_cache()
+                    return self
+
                 # Finally delete our own submodule.
                 if not dry_run:
                     self._clear_cache()
@@ -1411,10 +1560,6 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # END delete tree if possible
             # END handle force
 
-            if not dry_run and osp.isdir(git_dir):
-                self._clear_cache()
-                rmtree(git_dir)
-            # END handle separate bare repository
         # END handle module deletion
 
         # Void our data so as not to delay invalid access.
@@ -1427,7 +1572,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             # First the index-entry.
             parent_index = self.repo.index
             try:
-                del parent_index.entries[parent_index.entry_key(self.path, 0)]
+                parent_index.entry(self.path)
+                parent_index.remove(self.path, write=False, force=True)
             except KeyError:
                 pass
             # END delete entry
@@ -1472,7 +1618,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         if force:
             args.append("--force")
         args.extend(["--", str(self.path)])
-        self.repo.git.submodule("deinit", *args)
+        self.repo.git._call_process_safe("submodule", "deinit", *args, env={"GIT_LITERAL_PATHSPECS": "1"})
         return self
 
     def set_parent_commit(self, commit: Union[Commit_ish, str, None], check: bool = True) -> "Submodule":
@@ -1523,7 +1669,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         try:
             self.binsha = pctree[str(self.path)].binsha
         except KeyError:
-            self.binsha = self.NULL_BIN_SHA
+            self.binsha = self.repo._null_binsha
 
         self._clear_cache()
         return self
@@ -1562,62 +1708,6 @@ class Submodule(IndexObject, TraversableIterableObj):
             writer.config._index = index
         writer.config._auto_write = write
         return writer
-
-    @unbare_repo
-    def rename(self, new_name: str) -> "Submodule":
-        """Rename this submodule.
-
-        :note:
-            This method takes care of renaming the submodule in various places, such as:
-
-            * ``$parent_git_dir / config``
-            * ``$working_tree_dir / .gitmodules``
-            * (git >= v1.8.0: move submodule repository to new name)
-
-        As ``.gitmodules`` will be changed, you would need to make a commit afterwards.
-        The changed ``.gitmodules`` file will already be added to the index.
-
-        :return:
-            This :class:`Submodule` instance
-        """
-        if self.name == new_name:
-            return self
-
-        self._validated_name(self.name)
-        self._validated_name(new_name)
-        mod = self.module()
-        destination_module_abspath = self._module_abspath(self.repo, self.path, new_name, moving_from=mod.git_dir)
-        self._checked_abspath(self.repo.working_tree_dir, self.k_modules_file)
-
-        # .git/config
-        with self.repo.config_writer() as pw:
-            # As we ourselves didn't write anything about submodules into the parent
-            # .git/config, we will not require it to exist, and just ignore missing
-            # entries.
-            if pw.has_section(sm_section(self.name)):
-                pw.rename_section(sm_section(self.name), sm_section(new_name))
-
-        # .gitmodules
-        with self.config_writer(write=True).config as cw:
-            cw.rename_section(sm_section(self.name), sm_section(new_name))
-
-        self._name = new_name
-
-        # .git/modules
-        if mod.has_separate_working_tree():
-            source_dir = mod.git_dir
-            # Let's be sure the submodule name is not so obviously tied to a directory.
-            if str(destination_module_abspath).startswith(str(mod.git_dir)):
-                tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
-                self._renames(source_dir, tmp_dir)
-                source_dir = tmp_dir
-            # END handle self-containment
-            self._renames(source_dir, destination_module_abspath)
-            if mod.working_tree_dir:
-                self._write_git_file_and_module_config(mod.working_tree_dir, destination_module_abspath)
-        # END move separate git repository
-
-        return self
 
     # } END edit interface
 
@@ -1835,16 +1925,23 @@ class Submodule(IndexObject, TraversableIterableObj):
             parser = cls._config_parser(repo, pc, read_only=True)
         except (OSError, BadName):
             return
+        except BadObject as error:
+            raise ValueError("Commit %r could not be resolved" % parent_commit) from error
         # END handle empty iterator
 
-        for sms in parser.sections():
+        native = _backend.submodule_config(parser._file_or_files)
+        sections = parser.sections() if native is NotImplemented else [sm_section(name) for name in native]
+        for sms in sections:
             n = sm_name(sms)
-            p = parser.get(sms, "path")
-            u = parser.get(sms, "url")
-            b = cls.k_head_default
-            if parser.has_option(sms, cls.k_head_option):
-                b = str(parser.get(sms, cls.k_head_option))
-            # END handle optional information
+            if native is NotImplemented:
+                p = parser.get(sms, "path")
+                u = parser.get(sms, "url")
+                b = cls.k_head_default
+                if parser.has_option(sms, cls.k_head_option):
+                    b = str(parser.get(sms, cls.k_head_option))
+            else:
+                p, u = native[n]["path"], native[n]["url"]
+                b = native[n].get(cls.k_head_option, cls.k_head_default)
 
             # Get the binsha.
             index = repo.index
@@ -1854,7 +1951,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             except KeyError:
                 # Try the index, maybe it was just added.
                 try:
-                    entry = index.entries[index.entry_key(p, 0)]
+                    entry = index.entry(p)
                     sm = Submodule(repo, entry.binsha, entry.mode, entry.path)
                 except KeyError:
                     # The submodule doesn't exist, probably it wasn't removed from the

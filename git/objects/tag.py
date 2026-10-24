@@ -11,6 +11,8 @@ For lightweight tags, see the :mod:`git.refs.tag` module.
 
 __all__ = ["TagObject"]
 
+from git import _backend
+from git.exc import BadObject, GitCommandError
 from git.compat import defenc
 from git.util import Actor, hex_to_bin
 
@@ -69,7 +71,7 @@ class TagObject(base.Object):
             Repository this object is located in.
 
         :param binsha:
-            20 byte SHA1.
+            Binary object ID in the repository's object format.
 
         :param object:
             :class:`~git.objects.base.Object` instance of object we are pointing to.
@@ -105,15 +107,33 @@ class TagObject(base.Object):
     def _set_cache_(self, attr: str) -> None:
         """Cache all our attributes at once."""
         if attr in TagObject.__slots__:
-            ostream = self.repo.odb.stream(self.binsha)
-            # Git ends a header only at a line feed, but str.splitlines() also
-            # breaks at "\r", "\v", "\f", U+2028 and similar. Splitting a tag
-            # object that way lets an untrusted "tag" header containing such a
-            # character shift every later header by a line. Split at "\n" only,
-            # and drop the trailing empty element so tags that use line feeds
-            # parse exactly as before.
-            data = ostream.read().decode(defenc, "replace")
-            lines: List[str] = data.split("\n")
+            data = _backend.object_metadata(self.repo.git, self.hexsha, "tag")
+            if data is not NotImplemented:
+                object_type = get_object_type_by_name(data["target_kind"].encode("ascii"))
+                self.object = object_type(self.repo, bytes.fromhex(data["target"]))
+                self.tag = data["name"].decode(defenc, "replace")
+                signature = data["tagger"]
+                if signature is not None:
+                    self.tagger = Actor(
+                        signature.name.decode(defenc, "replace"), signature.email.decode(defenc, "replace")
+                    )
+                    self.tagged_date = signature.time.seconds
+                    self.tagger_tz_offset = -signature.time.offset
+                message = data["message"]
+                if data["signature"]:
+                    message += data["signature"]
+                self.message = message.decode(defenc, "replace")
+                if self.message.endswith("\n"):
+                    self.message = self.message[:-1]
+                return
+            try:
+                raw = self.repo.git._call_process_safe(
+                    "cat_file", "tag", self.hexsha, stdout_as_string=False, strip_newline_in_stdout=False
+                )
+            except GitCommandError as exc:
+                raise BadObject(self.binsha) from exc
+            # Git terminates tag headers only at line feeds.
+            lines: List[str] = raw.decode(defenc, "replace").split("\n")
             if lines and lines[-1] == "":
                 lines.pop()
 

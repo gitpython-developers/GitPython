@@ -27,13 +27,14 @@ from git import (
     Remote,
     RemoteProgress,
     RemoteReference,
-    Repo,
     SymbolicReference,
     TagReference,
 )
 from git.cmd import Git
 from git.exc import UnsafeOptionError, UnsafeProtocolError
-from git.util import HIDE_WINDOWS_FREEZE_ERRORS, IterableList, rmtree
+from git.util import IterableList
+from test.cleanup import cleanup_directory
+from test.lib.fixtures import fixture_repo, writable_fixture
 from test.lib import (
     GIT_DAEMON_PORT,
     TestBase,
@@ -330,7 +331,8 @@ class TestRemote(TestBase):
             # ttys.
             res = fetch_and_test(other_origin)
         finally:
-            rmtree(other_repo_dir)
+            other_repo.close()
+            cleanup_directory(other_repo_dir)
         # END test and cleanup
 
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
@@ -439,7 +441,7 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path, kill_after_timeout=10.0)
 
-    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
+    @skipIf(sys.platform == "win32", "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
@@ -561,90 +563,24 @@ class TestRemote(TestBase):
         bare_rw_repo.create_remote("bogus", "/bogus/path", mirror="push")
 
     def test_fetch_info(self):
-        # Ensure we can handle remote-tracking branches.
-        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
-        fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
-        remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
-
-        self.assertRaises(
-            ValueError,
-            FetchInfo._from_line,
-            self.rorepo,
-            remote_info_line_fmt % "refs/something/branch",
-            "269c498e56feb93e408ed4558c8138d750de8893\t\t/Users/ben/test/foo\n",
-        )
-
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "local/master",
-            fetch_info_line_fmt % "remote-tracking branch",
-        )
-        assert not fi.ref.is_valid()
-        self.assertEqual(fi.ref.name, "local/master")
-
-        # Handles non-default refspecs: One can specify a different path in refs/remotes
-        # or a special path just in refs/something for instance.
-
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "subdir/tagname",
-            fetch_info_line_fmt % "tag",
-        )
-
-        self.assertIsInstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith("refs/tags"), fi.ref.path
-
-        # It could be in a remote directory though.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "remotename/tags/tagname",
-            fetch_info_line_fmt % "tag",
-        )
-
-        self.assertIsInstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith("refs/remotes/"), fi.ref.path
-
-        # It can also be anywhere!
-        tag_path = "refs/something/remotename/tags/tagname"
-        fi = FetchInfo._from_line(self.rorepo, remote_info_line_fmt % tag_path, fetch_info_line_fmt % "tag")
-
-        self.assertIsInstance(fi.ref, TagReference)
-        self.assertEqual(fi.ref.path, tag_path)
-
-        # Branches default to refs/remotes.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "remotename/branch",
-            fetch_info_line_fmt % "branch",
-        )
-
-        self.assertIsInstance(fi.ref, RemoteReference)
-        self.assertEqual(fi.ref.remote_name, "remotename")
-
-        # But you can force it anywhere, in which case we only have a references.
-        fi = FetchInfo._from_line(
-            self.rorepo,
-            remote_info_line_fmt % "refs/something/branch",
-            fetch_info_line_fmt % "branch",
-        )
-
-        assert type(fi.ref) is Reference, type(fi.ref)
-        self.assertEqual(fi.ref.path, "refs/something/branch")
+        for source, destination, refspec, ref_type in (
+            ("master", "origin/master", "+refs/heads/*:refs/remotes/origin/*", RemoteReference),
+            ("tag", "subdir/tag", "refs/tags/tag:refs/tags/subdir/tag", TagReference),
+            ("branch", "refs/something/branch", "refs/heads/branch:refs/something/branch", Reference),
+        ):
+            info = FetchInfo._from_line(self.rorepo, "* [new branch]      %s -> %s" % (source, destination), [refspec])
+            self.assertIsInstance(info.ref, ref_type)
+            self.assertEqual(info.remote_ref_path, source)
+            self.assertTrue(info.flags & FetchInfo.NEW_HEAD)
+        with self.assertRaises(ValueError):
+            FetchInfo._from_line(self.rorepo, "= [up to date] master -> ambiguous")
 
     def test_uncommon_branch_names(self):
-        stderr_lines = fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
-        fetch_lines = fixture("uncommon_branch_prefix_FETCH_HEAD").decode("ascii").splitlines()
-
-        # The contents of the files above must be fetched with a custom refspec:
-        # +refs/pull/*:refs/heads/pull/*
-        res = [
-            FetchInfo._from_line("ShouldntMatterRepo", stderr, fetch_line)
-            for stderr, fetch_line in zip(stderr_lines, fetch_lines)
-        ]
-        self.assertGreater(len(res), 0)
-        self.assertEqual(res[0].remote_ref_path, "refs/pull/1/head")
-        self.assertEqual(res[0].ref.path, "refs/heads/pull/1/head")
-        self.assertIsInstance(res[0].ref, Head)
+        lines = fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
+        results = [FetchInfo._from_line(self.rorepo, line, ["+refs/pull/*:refs/heads/pull/*"]) for line in lines]
+        self.assertEqual(results[0].remote_ref_path, "refs/pull/1/head")
+        self.assertEqual(results[0].ref.path, "refs/heads/pull/1/head")
+        self.assertIsInstance(results[0].ref, Head)
 
     @with_rw_repo("HEAD", bare=False)
     def test_multiple_urls(self, rw_repo):
@@ -698,8 +634,9 @@ class TestRemote(TestBase):
 
         assert remote.url == url
 
-    def test_fetch_error(self):
-        rem = self.rorepo.remote("origin")
+    @with_rw_repo("HEAD")
+    def test_fetch_error(self, rw_repo):
+        rem = rw_repo.remote("origin")
         msg = (
             r"[Cc]ouldn't find remote ref __BAD_REF__|"
             r"could not read Username|"
@@ -716,7 +653,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -731,7 +669,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -746,7 +685,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -761,7 +701,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -776,7 +717,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -795,7 +737,8 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
@@ -809,7 +752,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -824,7 +768,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -841,7 +786,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -866,7 +812,8 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -881,7 +828,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -896,7 +844,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -913,7 +862,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -938,7 +888,8 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -953,7 +904,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -968,7 +920,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             remote = rw_repo.remote("origin")
@@ -985,7 +938,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -1013,7 +967,8 @@ class TestRemote(TestBase):
     )
     @with_rw_repo("HEAD")
     def test_push_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             remote = rw_repo.remote("origin")
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -1032,7 +987,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_ls_remote_unsafe_options(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [
@@ -1066,7 +1022,8 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_ls_remote_unsafe_options_allowed(self, rw_repo):
-        with tempfile.TemporaryDirectory() as tdir:
+        with writable_fixture("empty.sh") as temporary:
+            tdir = str(temporary.path().resolve())
             tmp_dir = Path(tdir)
             tmp_file = tmp_dir / "pwn"
             unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
@@ -1094,42 +1051,35 @@ class TestRemote(TestBase):
 @pytest.mark.skipif(sys.platform == "win32", reason="kill_after_timeout is not supported on Windows")
 @pytest.mark.parametrize("protocol", ["git", "http", "https"])
 @pytest.mark.parametrize("operation", ["fetch", "pull", "push"])
-def test_timeout_stalled_remote(tmp_path, protocol, operation):
-    repo = Repo.init(tmp_path)
-    repo.git.symbolic_ref("HEAD", "refs/heads/main")
-    with repo.config_writer() as config:
-        config.set_value("user", "name", "Timeout Test")
-        config.set_value("user", "email", "timeout@example.com")
-        config.set_value("commit", "gpgSign", False)
-    repo.git.commit(allow_empty=True, message="initial commit")
+def test_timeout_stalled_remote(protocol, operation):
+    with fixture_repo("remote-timeout.sh", write=True) as repo:
+        with socket.socket() as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen()
+            server.settimeout(10)
+            finished = threading.Event()
+            connected = threading.Event()
 
-    with socket.socket() as server:
-        server.bind(("127.0.0.1", 0))
-        server.listen()
-        server.settimeout(10)
-        finished = threading.Event()
-        connected = threading.Event()
+            def stall():
+                with server.accept()[0]:
+                    connected.set()
+                    # Release the connection even if the timeout cleanup deadlocks.
+                    finished.wait(5)
 
-        def stall():
-            with server.accept()[0]:
-                connected.set()
-                # Release the connection even if the timeout cleanup deadlocks.
-                finished.wait(5)
-
-        thread = threading.Thread(target=stall)
-        thread.start()
-        remote = repo.create_remote("origin", f"{protocol}://127.0.0.1:{server.getsockname()[1]}/stalled.git")
-        started = time.monotonic()
-        try:
-            with pytest.raises(GitCommandError, match="process killed because it timed out"):
-                getattr(remote, operation)("main", kill_after_timeout=0.5)
-            assert connected.is_set(), "the command did not reach the stalled remote"
-            assert time.monotonic() - started < 3, "timeout cleanup blocked on a pipe reader"
-        finally:
-            finished.set()
-            thread.join(10)
-            repo.close()
-        assert not thread.is_alive()
+            thread = threading.Thread(target=stall)
+            thread.start()
+            remote = repo.create_remote("origin", f"{protocol}://127.0.0.1:{server.getsockname()[1]}/stalled.git")
+            started = time.monotonic()
+            try:
+                with pytest.raises(GitCommandError, match="process killed because it timed out"):
+                    getattr(remote, operation)("main", kill_after_timeout=0.5)
+                assert connected.is_set(), "the command did not reach the stalled remote"
+                assert time.monotonic() - started < 3, "timeout cleanup blocked on a pipe reader"
+            finally:
+                finished.set()
+                thread.join(10)
+                repo.close()
+            assert not thread.is_alive()
 
 
 class TestTimeouts(TestBase):
