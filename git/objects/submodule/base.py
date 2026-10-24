@@ -372,6 +372,11 @@ class Submodule(IndexObject, TraversableIterableObj):
         raise NotADirectoryError()
 
     @classmethod
+    def _transport_env(cls, allow_unsafe_protocols: bool = False) -> Dict[str, str]:
+        """Apply Git's non-user transport policy to URLs read from ``.gitmodules``."""
+        return {} if allow_unsafe_protocols else {"GIT_PROTOCOL_FROM_USER": "0"}
+
+    @classmethod
     def _clone_repo(
         cls,
         repo: "Repo",
@@ -940,7 +945,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             They only take effect with the `init` option.
 
         :param allow_unsafe_protocols:
-            Allow unsafe protocols to be used, like ``ext``.
+            Allow unsafe protocols to be used, like ``ext``. Clone and fetch also
+            preserve the caller's ``GIT_PROTOCOL_FROM_USER`` policy instead of
+            forcing it to ``0``. A ``user`` transport such as ``file`` is then
+            accepted only when that environment policy permits it.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, like ``--upload-pack``.
@@ -992,7 +1000,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
                 # ===============================
                 if not dry_run:
-                    remote.fetch(progress=progress)
+                    with module_repo.git.custom_environment(**self._transport_env(allow_unsafe_protocols)):
+                        remote.fetch(progress=progress)
                 # END handle dry-run
                 # ===============================
                 if i == len_rmts - 1:
@@ -1080,7 +1089,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                             self.path,
                             self.name,
                             n=True,
-                            env=env,
+                            env={**self._transport_env(allow_unsafe_protocols), **(env or {})},
                             multi_options=clone_multi_options,
                             allow_unsafe_options=allow_unsafe_options,
                             allow_unsafe_protocols=allow_unsafe_protocols,

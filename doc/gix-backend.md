@@ -1108,6 +1108,20 @@ compatibility bug or reduction in CLI calls.
 | Config-backed remote/submodule maintenance | Missing config enumeration/multivar/removal operations (GIX-12), plus filesystem and worktree lifecycle requirements. |
 | Hook execution | Every explicit hook request, including an absent hook, retains Git-managed lookup, execution and diagnostics until GIX-23 is addressed. Native operations retain GitPython's default hook/fsmonitor/maintenance restrictions. |
 
+### Submodule transport policy
+
+Submodule clone and fetch stay on the CLI and pass `GIT_PROTOCOL_FROM_USER=0`
+for URLs from `.gitmodules`, matching `git submodule update --init` and
+`git submodule update --remote`. A `protocol.file.allow=user` policy therefore
+rejects the file transport, while `always` permits it. The existing explicit
+`allow_unsafe_protocols=True` opt-in preserves the caller's environment policy;
+`user` is accepted only when `GIT_PROTOCOL_FROM_USER` is unset or permits it.
+The regression compares both backends with Git 2.54.0, including unchanged
+checkouts after denied transfers.
+GixPython 0.2.0 still needs the clone/environment and fetch-result contracts
+listed above before these calls can move to Gix. This is a shared GitPython
+policy bug, not a demonstrated Gix compatibility mismatch.
+
 ### Downstream mirror-fetch result gap
 
 Airflow Git provider 1.0.1's bare-cache refspecs

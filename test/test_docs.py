@@ -7,7 +7,7 @@ import gc
 import os
 import os.path
 
-from test.lib import TestBase
+from test.lib import TestBase, patch_git_config
 from test.lib.helper import with_rw_directory, with_rw_repo
 from test.lib.fixtures import writable_fixture
 
@@ -25,6 +25,7 @@ class Tutorials(TestBase):
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa: E501
     @with_rw_repo("HEAD")
     @with_rw_directory
+    @patch_git_config("protocol.file.allow", "always")
     def test_init_repo_object(self, rw_dir, rw_repo):
         # [1-test_init_repo_object]
         from git import Repo
@@ -484,6 +485,7 @@ class Tutorials(TestBase):
         repo.git.clear_cache()
 
     @with_rw_repo("c15a6e1923a14bc760851913858a3942a4193cdb")
+    @patch_git_config("protocol.file.allow", "always")
     def test_submodules(self, repo):
         # [1-test_submodules]
         sms = repo.submodules

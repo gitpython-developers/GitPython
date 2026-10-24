@@ -10,6 +10,7 @@ __all__ = [
     "with_rw_directory",
     "with_rw_repo",
     "with_rw_and_rw_remote_repo",
+    "patch_git_config",
     "PathLikeMock",
     "TestBase",
     "TestCase",
@@ -36,6 +37,7 @@ import socket
 import textwrap
 import time
 import unittest
+from unittest import mock
 from typing import Union, Type, Tuple
 
 import pytest
@@ -80,6 +82,26 @@ def fixture(name):
 # } END routines
 
 # { Adapters
+
+
+@contextlib.contextmanager
+def patch_git_config(name, value):
+    """Temporarily add a git config name-value pair, using environment variables."""
+    pair_index = int(os.getenv("GIT_CONFIG_COUNT", "0"))
+
+    # This is recomputed each time the context is entered, for compatibility with
+    # existing GIT_CONFIG_* environment variables, even if changed in this process.
+    patcher = mock.patch.dict(
+        os.environ,
+        {
+            "GIT_CONFIG_COUNT": str(pair_index + 1),
+            f"GIT_CONFIG_KEY_{pair_index}": name,
+            f"GIT_CONFIG_VALUE_{pair_index}": value,
+        },
+    )
+
+    with patcher:
+        yield
 
 
 class StringProcessAdapter:

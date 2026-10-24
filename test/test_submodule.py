@@ -1,7 +1,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import contextlib
 import gc
 import os
 import os.path as osp
@@ -29,32 +28,13 @@ from git.objects.submodule.util import resolve_relative_url
 from git.repo.fun import find_submodule_git_dir, touch
 from git.util import cwd, join_path_native, to_native_path_linux
 
-from test.lib import TestBase, with_rw_repo, PathLikeMock
+from test.lib import TestBase, patch_git_config, with_rw_repo, PathLikeMock
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
-
-
-@contextlib.contextmanager
-def _patch_git_config(name, value):
-    """Temporarily add a git config name-value pair, using environment variables."""
-    pair_index = int(os.getenv("GIT_CONFIG_COUNT", "0"))
-
-    # This is recomputed each time the context is entered, for compatibility with
-    # existing GIT_CONFIG_* environment variables, even if changed in this process.
-    patcher = mock.patch.dict(
-        os.environ,
-        {
-            "GIT_CONFIG_COUNT": str(pair_index + 1),
-            f"GIT_CONFIG_KEY_{pair_index}": name,
-            f"GIT_CONFIG_VALUE_{pair_index}": value,
-        },
-    )
-
-    with patcher:
-        yield
 
 
 @pytest.mark.parametrize("state", ["unborn", "untracked", "detached"])
 @pytest.mark.parametrize("remote", [None, ".", "origin"], ids=["working-tree", "local-origin", "origin"])
+@patch_git_config("protocol.file.allow", "always")
 def test_add_relative_submodule_without_tracking_remote(state, remote):
     # Origins and submodule URLs refer to this private fixture's absolute paths.
     with writable_fixture("submodule-relative.sh", "add", state, remote, execute=True) as fixture:
@@ -88,6 +68,7 @@ def test_add_preserves_relative_url_on_cygwin(url):
                 assert reader.get_value('submodule "module"', "url") == url
 
 
+@patch_git_config("protocol.file.allow", "always")
 def test_update_resolves_local_relative_remote_once():
     with writable_fixture("submodule-relative.sh", "local-remote") as fixture:
         root = fixture.path().resolve()
@@ -109,6 +90,7 @@ def test_update_resolves_local_relative_remote_once():
 
 @pytest.mark.parametrize("no_fetch", [False, True])
 @pytest.mark.parametrize("scenario", ["root-anchor", "root-single"])
+@patch_git_config("protocol.file.allow", "always")
 def test_root_update_resolves_relative_remote_url(scenario, no_fetch):
     # Module origins and .gitmodules URLs contain this private fixture's absolute paths.
     with writable_fixture("submodule-relative.sh", scenario, execute=True) as fixture:
@@ -148,6 +130,41 @@ def test_root_update_skips_old_url_resolution_when_remote_matches(dry_run):
                 assert module.head.commit == source.head.commit
 
 
+@patch_git_config("protocol.file.allow", "user")
+def test_update_applies_git_transport_policy_to_gitmodules_url(monkeypatch):
+    monkeypatch.setenv("GIT_PROTOCOL_FROM_USER", "1")
+    # The cloned origins and .gitmodules URLs point to this private source.
+    with writable_fixture("submodule-transport.sh", "update", execute=True) as fixture:
+        root = fixture.path().resolve()
+        with git.Repo(root / "source") as source, git.Repo(root / "clone") as clone, git.Repo(
+            root / "baseline"
+        ) as baseline:
+            submodule = clone.submodules[0]
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                baseline.git.submodule("update", "--init")
+            assert not Path(baseline.working_tree_dir, "module", ".git").exists()
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                submodule.update(init=True)
+            assert not submodule.module_exists()
+
+            with patch_git_config("protocol.file.allow", "always"):
+                baseline.git.submodule("update", "--init")
+                submodule.update(init=True)
+            with submodule.module() as module, git.Repo(root / "baseline" / "module") as baseline_module:
+                assert module.head.commit.hexsha == baseline_module.git.rev_parse("HEAD") == source.head.commit.hexsha
+                source.index.commit("Second commit", skip_hooks=True)
+                with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                    baseline.git.submodule("update", "--remote")
+                with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                    submodule.update(to_latest_revision=True)
+                assert module.head.commit.hexsha == baseline_module.git.rev_parse("HEAD") != source.head.commit.hexsha
+
+                with patch_git_config("protocol.file.allow", "always"):
+                    baseline.git.submodule("update", "--remote")
+                submodule.update(to_latest_revision=True, allow_unsafe_protocols=True)
+                assert module.head.commit.hexsha == baseline_module.git.rev_parse("HEAD") == source.head.commit.hexsha
+
+
 @pytest.mark.parametrize(
     "scenario,name",
     [
@@ -157,6 +174,7 @@ def test_root_update_skips_old_url_resolution_when_remote_matches(dry_run):
         ("percent", "%GITPYTHON_TEST_SECRET%"),
     ],
 )
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_update_preserves_literal_name(monkeypatch, caplog, scenario, name):
     monkeypatch.setenv("GITPYTHON_TEST_SECRET", "sensitive-value")
     caplog.set_level("DEBUG", logger="git.cmd")
@@ -479,7 +497,7 @@ def test_submodule_rejects_unsafe_checkout_before_mutation(movable_submodule, pa
     # Check the portable metadata aliases against Git's index validation as well.
     if operation == "clone" and path not in ("C:relative", "nul\0name"):
         with sm.repo.git.custom_environment(GIT_INDEX_FILE=str(root.parent / "validation-index")):
-            with _patch_git_config("core.protectHFS", "true"), _patch_git_config("core.protectNTFS", "true"):
+            with patch_git_config("core.protectHFS", "true"), patch_git_config("core.protectNTFS", "true"):
                 with pytest.raises(GitCommandError):
                     sm.repo.git.update_index("--add", "--cacheinfo", f"160000,{sm.hexsha},{path}")
     with mock.patch.object(git.Repo, "clone_from", side_effect=AssertionError("clone attempted")):
@@ -738,6 +756,7 @@ def test_move_normal_destination(movable_submodule, absolute_path):
 
 
 @pytest.mark.parametrize("metadata_dir", ["git_dir", "common_dir"])
+@patch_git_config("protocol.file.allow", "always")
 def test_move_rejects_leaf_symlink_to_metadata(leaf_metadata_submodule, metadata_dir):
     submodule = leaf_metadata_submodule
     parent = submodule.repo
@@ -973,6 +992,7 @@ def metadata_realpath(request):
 
 
 @pytest.mark.parametrize("operation", ["add", "reconnect"])
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_allows_metadata_destination_symlinks(configured_submodule, operation, metadata_realpath):
     """Allow linked metadata destinations while keeping the checkout correctly connected.
 
@@ -1000,6 +1020,7 @@ def test_submodule_allows_metadata_destination_symlinks(configured_submodule, op
 @pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf", "gitfile", "config", "alias"])
 @pytest.mark.parametrize("operation", ["update", "move", "remove"])
 @pytest.mark.parametrize("configured_submodule", ["nested/module"], indirect=True)
+@patch_git_config("protocol.file.allow", "always")
 def test_submodule_allows_existing_metadata_symlinks(
     configured_submodule, kind, operation, windows_directory_symlink_removal, metadata_realpath
 ):
@@ -1056,6 +1077,7 @@ def test_submodule_allows_existing_metadata_symlinks(
 
 @pytest.mark.parametrize("kind", ["modules", "intermediate", "leaf"])
 @pytest.mark.parametrize("configured_submodule", ["nested/module"], indirect=True)
+@patch_git_config("protocol.file.allow", "always")
 def test_remove_linked_metadata_keeps_siblings_and_can_reinitialize(configured_submodule, kind, metadata_realpath):
     sm = configured_submodule
     sibling = sm.repo.submodules["nested/sibling"]
@@ -1518,6 +1540,7 @@ class TestSubmodule(TestBase):
         )
 
     @with_rw_repo(k_subm_current)
+    @patch_git_config("protocol.file.allow", "always")
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
 
@@ -1534,6 +1557,7 @@ class TestSubmodule(TestBase):
         raises=PermissionError,
     )
     @with_rw_repo(k_subm_current, bare=False)
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_module(self, rwrepo):
         # Can query everything without problems.
         rm = RootModule(rwrepo)
@@ -1778,6 +1802,7 @@ class TestSubmodule(TestBase):
                 "submodule", "deinit", "--force", "--", submodule.path, env={"GIT_LITERAL_PATHSPECS": "1"}
             )
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit(self):
         rwdir = self._fixture("deinit", execute=True)
         source_repo = git.Repo(rwdir / "source")
@@ -1792,6 +1817,7 @@ class TestSubmodule(TestBase):
         assert submodule.module().head.commit == source_repo.head.commit
         assert osp.isfile(osp.join(submodule.abspath, "file"))
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_to_latest_revision_after_deinit_fetches_remote(self):
         rwdir = self._fixture("deinit-latest", execute=True)
         source_repo = git.Repo(rwdir / "source")
@@ -1803,6 +1829,7 @@ class TestSubmodule(TestBase):
         assert submodule.module().head.commit == source_repo.head.commit
         assert osp.isfile(osp.join(submodule.abspath, "new-file"))
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_fetches_new_gitlink_commit(self):
         rwdir = self._fixture("deinit-gitlink", execute=True)
         source_repo = git.Repo(rwdir / "source")
@@ -1844,6 +1871,7 @@ class TestSubmodule(TestBase):
         assert not submodule.module_exists()
         assert not osp.exists(osp.join(submodule.abspath, ".git"))
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_restores_nested_checkout(self):
         rwdir = self._fixture("deinit-nested", execute=True)
         source_repo = git.Repo(rwdir / "source")
@@ -1895,14 +1923,14 @@ class TestSubmodule(TestBase):
             )
         # END for each checkout mode
 
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_submodule_with_relative_path(self):
         rwdir = self._fixture("relative")
         cloned_repo = git.Repo(rwdir / "cloned_repo")
 
         cloned_repo.submodule_update(init=True, recursive=True)
 
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_rejects_parent_component_in_name(self):
         for existing_metadata in (False, True):
             scenario = "invalid-name-existing" if existing_metadata else "invalid-name"
@@ -1933,7 +1961,7 @@ class TestSubmodule(TestBase):
             with pytest.raises(ValueError, match="submodule name"):
                 Submodule._module_abspath(clone, "module", "../module")
 
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_update_keeps_going_after_invalid_submodule_name(self):
         rwdir = self._fixture("invalid-and-valid", execute=True)
         clone = git.Repo(rwdir / "clone")
@@ -1947,7 +1975,7 @@ class TestSubmodule(TestBase):
 
         clone.submodule("../invalid").update(recursive=True, keep_going=True)
 
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self):
         with git.Repo(self._fixture("module", write=False) / "parent") as repo:
             assert len(repo.submodules) == 1
@@ -1962,7 +1990,7 @@ class TestSubmodule(TestBase):
         ),
         raises=PermissionError,
     )
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_git_submodules_and_add_sm_with_new_commit(self):
         rwdir = self._fixture("existing-repository")
         parent = git.Repo(rwdir / "parent")
@@ -2024,6 +2052,7 @@ class TestSubmodule(TestBase):
         reason='"The process cannot access the file because it is being used by another process" on call to sm.move',
         raises=PermissionError,
     )
+    @patch_git_config("protocol.file.allow", "always")
     def test_git_submodule_compatibility(self):
         rwdir = self._fixture("compatibility")
         parent = git.Repo(rwdir / "parent")
@@ -2134,6 +2163,7 @@ class TestSubmodule(TestBase):
         assert sm.exists() and sm.module_exists()
         assert not hasattr(sm, "rename")
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_branch_renames(self):
         rwdir = self._fixture("branch-renames", execute=True)
         sm_source_repo = git.Repo(rwdir / "sm-source")
@@ -2303,6 +2333,7 @@ class TestSubmodule(TestBase):
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url(), depth=sm_depth)
         self.assertEqual(len(list(sm.module().iter_commits())), sm_depth)
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_clone_multi_options_argument(self):
         rwdir = self._fixture("empty")
         parent = git.Repo(rwdir / "parent")
@@ -2326,6 +2357,7 @@ class TestSubmodule(TestBase):
         sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config"))
         self.assertTrue(sm_config.get_value("core", "eol"))
 
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_no_clone_multi_options_argument(self):
         rwdir = self._fixture("empty")
         parent = git.Repo(rwdir / "parent")
@@ -2558,7 +2590,7 @@ class TestSubmodule(TestBase):
                 with self.assertRaises(GitCommandError):
                     submodule.update(clone_multi_options=[unsafe_option], allow_unsafe_options=True)
 
-    @_patch_git_config("protocol.file.allow", "always")
+    @patch_git_config("protocol.file.allow", "always")
     def test_submodule_update_relative_url(self):
         rwdir = self._fixture("relative")
         cloned_repo = git.Repo(rwdir / "cloned_repo")

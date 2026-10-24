@@ -10,6 +10,7 @@ import pytest
 
 from git import Remote, Repo, RootModule, Submodule
 from git.exc import GitCommandError
+from test.lib import patch_git_config
 from test.lib.fixtures import read_only_fixture, writable_fixture
 
 
@@ -45,7 +46,7 @@ def local_submodule(request):
         str(params.get("change_branch", False)),
         str(params.get("multiple_remotes", False)),
         execute=True,
-    ) as fixture, ExitStack() as handles:
+    ) as fixture, ExitStack() as handles, patch_git_config("protocol.file.allow", "always"):
         root = fixture.path().resolve()
         source = handles.enter_context(Repo(root / "source"))
         parent = handles.enter_context(Repo(root / "parent"))
