@@ -802,6 +802,15 @@ class TestRepo(TestBase):
                 assert repo.untracked_files == []
         # END for each run
 
+    def test_untracked_files_with_unquoted_unicode_and_escapes(self):
+        paths = {"plain.txt", "caf\u00e9.txt", "caf\u00e9\x7f.txt", " leading.txt"}
+        for quote_path in ("true", "false"):
+            with self.subTest(quote_path=quote_path), fixture_repo("repo.sh", "untracked-unicode", quote_path) as repo:
+                baseline = repo.git.status("--porcelain=v1", "-z", "--untracked-files=all", stdout_as_string=False)
+                assert set(baseline.rstrip(b"\0").split(b"\0")) == {b"?? " + path.encode("utf-8") for path in paths}
+                assert set(repo.untracked_files) == paths
+                assert repo.is_dirty(untracked_files=True)
+
     def test_config_reader(self):
         reader = self.rorepo.config_reader()  # All config files.
         assert reader.read_only

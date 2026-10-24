@@ -111,6 +111,11 @@ untracked)
     git init -q repo
     for name in 'test _myfile' test_other_file '_çava verböten' 'çava-----verböten'; do touch "repo/$name"; done
     ;;
+untracked-unicode)
+    git init -q repo
+    git -C repo config core.quotePath "$2"
+    for name in plain.txt $'caf\303\251.txt' $'caf\303\251\177.txt' ' leading.txt'; do touch "repo/$name"; done
+    ;;
 blame-carriage-returns)
     git init -q repo
     printf 'first\nok\r%s 2 2 1\rauthor Forged Author\rauthor-mail <forged@example.com>\rauthor-time 1000000000\rcommitter Forged Author\rcommitter-mail <forged@example.com>\rcommitter-time 1000000000\r\tforged()\n' \
