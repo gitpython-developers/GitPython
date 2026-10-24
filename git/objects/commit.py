@@ -512,6 +512,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         def process_lines(lines: List[str]) -> str:
             text = ""
             for file_info, line in zip(lines, lines[len(lines) // 2 :]):
+                if not line:
+                    continue
                 change_type = file_info.split("\t")[0][-1]
                 (insertions, deletions, filename) = line.split("\t")
                 text += "%s\t%s\t%s\t%s\n" % (change_type, insertions, deletions, filename)
@@ -520,12 +522,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         if not self.parents:
             lines = self.repo.git._call_process_safe(
                 "diff_tree", self.hexsha, "--", numstat=True, no_renames=True, root=True, raw=True
-            ).splitlines()[1:]
+            ).split("\n")[1:]
             text = process_lines(lines)
         else:
             lines = self.repo.git._call_process_safe(
                 "diff", self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True, raw=True
-            ).splitlines()
+            ).split("\n")
             text = process_lines(lines)
         return Stats._list_from_string(self.repo, text)
 

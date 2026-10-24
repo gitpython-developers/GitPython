@@ -3,13 +3,18 @@ set -eu
 git init --initial-branch=master repo
 cd repo
 case "$1" in
-    spaces)
+    spaces|unicode-separators)
         # Construct trees directly: Windows rejects trailing spaces in index paths.
+        paths=(name ' name' 'name ' ' name ' ' ')
+        if [ "$1" = unicode-separators ]; then
+            git config core.quotePath false
+            paths=($'before\302\205after.txt' $'before\342\200\250after.txt' $'before\342\200\251after.txt')
+        fi
         for multiplier in 1 2; do
             tree=$(
                 count=0
-                for path in name ' name' 'name ' ' name ' ' '; do
-                    count=$((count + 1))
+                for path in "${paths[@]}"; do
+                    if [ "$1" = spaces ]; then count=$((count + 1)); else count=1; fi
                     oid=$(for ((line=0; line<count*multiplier; line++)); do printf 'line\n'; done | git hash-object -w --stdin)
                     printf '100644 blob %s\t%s\0' "$oid" "$path"
                 done | git mktree -z

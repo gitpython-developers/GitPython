@@ -1051,7 +1051,9 @@ class Stats:
             "total": {"insertions": 0, "deletions": 0, "lines": 0, "files": 0},
             "files": {},
         }
-        for line in text.splitlines():
+        for line in text.split("\n"):
+            if not line:
+                continue
             (change_type, raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != "-" and int(raw_insertions) or 0
             deletions = raw_deletions != "-" and int(raw_deletions) or 0

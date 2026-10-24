@@ -366,7 +366,7 @@ repository-format validation gap.
 | Committer identity, `var` | Native process/config identity from `Repository.committer()` | Per-command identity overrides, other variables and normalization/identity errors; GIX-21 |
 | Selected `set_object` / reference deletion, `update_ref` | Native ref edits with GitPython's existing validation | Strict create/CAS, branch-target validation, symbolic aliases other than HEAD, symbolic detachment, active-branch HEAD log, unchanged targets and log-message cleanup; GIX-9/10/21/24 |
 | Tree/commit `Diffable.diff` | Raw change records and unambiguous exact renames | Patches, paths, index/worktree/root diff, inexact/ambiguous renames; GIX-11 |
-| `Commit.stats` | Native Myers line counts, binary counts, first-parent tree comparison | Diff attributes, other algorithms, gitlinks, quoted filenames, large blobs; GIX-2/18 |
+| `Commit.stats` | Native Myers line counts, binary counts, first-parent tree comparison | Diff attributes, other algorithms, gitlinks, non-ASCII or quoted filenames, large blobs; GIX-2/18 |
 | `Repo.is_dirty` | Index/tree/worktree status, configured submodule checks and pathspecs | Custom/sparse indexes and non-root command directories |
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal, unsupported path normalization, and unavailable path metadata |

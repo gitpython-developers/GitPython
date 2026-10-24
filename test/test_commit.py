@@ -191,6 +191,40 @@ class TestCommit(TestCommitSerialization):
             }
             assert removed_stats.total == {"insertions": 0, "deletions": 30, "lines": 30, "files": 5}
 
+    def test_stats_preserve_unicode_line_separators(self):
+        paths = [f"before{separator}after.txt" for separator in ("\x85", "\u2028", "\u2029")]
+        with fixture_repo("commit.sh", "unicode-separators") as repo:
+            for revision, change_type in (("update-1", "A"), ("update-2", "M")):
+                assert repo.git.diff_tree(
+                    "--root",
+                    "--no-commit-id",
+                    "--no-renames",
+                    "--numstat",
+                    "-z",
+                    revision,
+                    "--",
+                    stdout_as_string=False,
+                ) == b"".join(f"1\t0\t{path}\0".encode("utf-8") for path in paths)
+                assert repo.git.diff_tree(
+                    "--root",
+                    "--no-commit-id",
+                    "--no-renames",
+                    "--name-status",
+                    "-z",
+                    revision,
+                    "--",
+                    stdout_as_string=False,
+                ) == b"".join(f"{change_type}\0{path}\0".encode("utf-8") for path in paths)
+                stats = repo.commit(revision).stats
+                assert stats.total == {"insertions": 3, "deletions": 0, "lines": 3, "files": 3}
+                assert stats.files == {
+                    path: {"insertions": 1, "deletions": 0, "lines": 1, "change_type": change_type} for path in paths
+                }
+            assert repo.git.diff_tree("--no-commit-id", "--numstat", "-z", "empty", "--") == ""
+            empty_stats = repo.commit("empty").stats
+            assert empty_stats.files == {}
+            assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
+
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
         files = commit.stats.files

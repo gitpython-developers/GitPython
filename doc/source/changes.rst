@@ -51,6 +51,10 @@ Git executable and safety
 API changes
 -----------
 
+* ``Commit.stats`` preserves Unicode line separators in filenames when
+  ``core.quotePath=false``. Git's LF-delimited output remains intact for root,
+  subsequent and empty commits, including the Gix backend's existing filename
+  quoting fallback.
 * ``GitConfigParser[section] = values`` again replaces a nonempty section,
   restoring Kas's Git identity cleanup. Git performs each mutation and locks
   it independently; replacement is not one atomic transaction. Empty sections
