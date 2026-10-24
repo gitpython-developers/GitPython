@@ -578,17 +578,42 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 index = value.find("\\", index + 2)
             return True
 
+        def split_section_header(line: str) -> Tuple[str, str]:
+            """Split a section header line into the header and the text after it.
+
+            Like git, the header ends at the first ``]`` outside a quoted subsection
+            name. A header whose quotes are unbalanced keeps the previous reading up
+            to the last ``]``.
+            """
+            quoted = escaped = False
+            for index, char in enumerate(line):
+                if escaped:
+                    escaped = False
+                elif char == "\\" and quoted:
+                    escaped = True
+                elif char == '"':
+                    quoted = not quoted
+                elif char == "]" and not quoted and index > 1:
+                    return line[1:index], line[index + 1 :]
+            return line[1 : line.rindex("]")], ""
+
+        # Text after a section header on the same line, as in `[core] bare = true`.
+        # Git reads it as if it started a line of its own.
+        rest_of_line = ""
         while True:
-            # We assume to read binary!
-            raw_line = fp.readline()
-            if not raw_line:
-                break
-            if lineno == 0 and raw_line.startswith(b"\xef\xbb\xbf"):
-                # A UTF-8 BOM is not part of the content. git skips it, so a
-                # config file written by a Windows editor still parses.
-                raw_line = raw_line[3:]
-            line = raw_line.decode(defenc)
-            lineno = lineno + 1
+            if rest_of_line:
+                line, rest_of_line = rest_of_line, ""
+            else:
+                # We assume to read binary!
+                raw_line = fp.readline()
+                if not raw_line:
+                    break
+                if lineno == 0 and raw_line.startswith(b"\xef\xbb\xbf"):
+                    # A UTF-8 BOM is not part of the content. git skips it, so a
+                    # config file written by a Windows editor still parses.
+                    raw_line = raw_line[3:]
+                line = raw_line.decode(defenc)
+                lineno = lineno + 1
             # Comment or blank line?
             if line.strip() == "" or self.re_comment.match(line):
                 continue
@@ -599,7 +624,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             # Is it a section header?
             mo = self.SECTCRE.match(line.strip())
             if not is_multi_line and mo:
-                sectname: str = mo.group("header").strip()
+                header, rest_of_line = split_section_header(line.strip())
+                sectname: str = header.strip()
                 if sectname in self._sections:
                     cursect = self._sections[sectname]
                 elif sectname == cp.DEFAULTSECT:

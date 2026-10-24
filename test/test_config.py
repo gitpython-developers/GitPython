@@ -462,6 +462,38 @@ class TestBase(TestCase):
         config.read()
         self.assertIs(config.get_value("core", "bare"), True)
 
+    def test_option_after_section_header_is_read_like_git(self):
+        """git ends a section header at its first unquoted ``]`` and reads the rest
+        of the line as an option. Expectations are what
+        `git config -f <file> --list` prints on git 2.54.0."""
+        content = (
+            b'[submodule "lib"]\n'
+            b"\tpath = lib\n"
+            b"\turl = https://good.example/lib\n"
+            b'[submodule "lib"] url = https://evil.example/lib\n'
+            b'[a "x]y"] k = v # comment\n'
+            b"[b]flag\n"
+            b"[c] k = v ]\n"
+            b'[d] k = "multi\\\n'
+            b'  line"\n'
+            b"[e] ; comment\n"
+            b"[f] [g] k = v\n"
+        )
+        config_file = io.BytesIO(content)
+        config_file.name = "header.config"
+        config = GitConfigParser(config_file)
+        config.read()
+
+        self.assertEqual(config.get_value('submodule "lib"', "url"), "https://evil.example/lib")
+        self.assertEqual(config.get_value('a "x]y"', "k"), "v")
+        self.assertIs(config.getboolean("b", "flag"), True)
+        self.assertEqual(config.get_value("c", "k"), "v ]")
+        self.assertEqual(config.get_value("d", "k"), "multi  line")
+        self.assertEqual(config.items("e"), [])
+        self.assertEqual(config.items("f"), [])
+        self.assertEqual(config.get_value("g", "k"), "v")
+        self.assertEqual(config.sections(), ['submodule "lib"', 'a "x]y"', "b", "c", "d", "e", "f", "g"])
+
     def test_config_value_with_trailing_new_line(self):
         config_content = b'[section-header]\nkey:"value\n"'
         config_file = io.BytesIO(config_content)
