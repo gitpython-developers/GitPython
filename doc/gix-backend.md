@@ -1081,6 +1081,19 @@ former Python parser's repair of that input. General config files and
 mutations still use the CLI on both backends under GIX-12; these observations
 do not demonstrate a native Gix mismatch or eliminate any CLI calls.
 
+The October 24 ports of PRs #2305 and #2307 also compare home-relative
+`includeIf` conditions and inline section headers with Git 2.54.0. The
+conditional-include fixture uses a real repository and platform-native
+`HOME`/`USERPROFILE` paths, retaining the Windows regression case; the local
+run covered macOS only. Git accepts options after headers, quoted `]` in
+subsections, and multiple headers on one line. It rejects unbalanced quoted
+headers, missing closing brackets, stray brackets, and malformed options or
+sections. `git config list` omits empty sections, so the facade's enumeration
+also omits the original PR's empty `e` and `f` sections; their inspection is
+still unsupported. These regressions pass through the existing GIX-12 CLI
+fallback on both backends with GixPython 0.2.0. They establish no native
+compatibility bug or reduction in CLI calls.
+
 ## Other remaining operations
 
 | Operation family | Why it still uses Git |

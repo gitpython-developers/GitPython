@@ -84,6 +84,83 @@ def test_config_includes_and_repository_conditions():
         ]
 
 
+@pytest.mark.parametrize("directory, matches", [("target", True), ("other", False)])
+def test_conditional_includes_expand_home_in_git_dir_pattern(monkeypatch, directory, matches):
+    path = read_only_fixture("config.sh", "home-includes")
+    home = path / "home"
+    # Native Windows separators must reach Git's home expansion unchanged.
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    with Repo(home / directory / "repo") as repo:
+        expected = b"includeif.gitdir:~/target/.path\n./included\0"
+        if matches:
+            expected += b"values.source\nincluded\0"
+        assert (
+            repo.git.config("list", "--null", "--includes", "--file", str(path / "config"), stdout_as_string=False)
+            == expected
+        )
+        with GitConfigParser(path / "config", repo=repo) as config:
+            assert config.get('includeIf "gitdir:~/target/"', "path") == "./included"
+            assert config.has_section("values") is matches
+            if matches:
+                assert config.get_value("values", "source") == "included"
+        with GitConfigParser(path / "config", repo=repo, merge_includes=False) as config:
+            assert config.sections() == ['includeif "gitdir:~/target/"']
+
+
+@pytest.mark.parametrize("stream", [False, True])
+def test_option_after_section_header_is_read_like_git(stream):
+    path = read_only_fixture("config.sh", "inline-headers") / "config"
+    assert Git().config("list", "--null", "--file", str(path), stdout_as_string=False) == (
+        b"submodule.lib.path\nlib\0"
+        b"submodule.lib.url\nhttps://good.example/lib\0"
+        b"submodule.lib.url\nhttps://evil.example/lib\0"
+        b"a.x]y.k\nv\0b.flag\0c.k\nv ]\0d.k\nmulti  line\0g.k\nv\0"
+    )
+    source = BytesIO(path.read_bytes()) if stream else path
+    with GitConfigParser(source) as config:
+        assert config.get_value('submodule "lib"', "url") == "https://evil.example/lib"
+        assert config.get_values('submodule "lib"', "url") == ["https://good.example/lib", "https://evil.example/lib"]
+        assert config.get_value('a "x]y"', "k") == "v"
+        assert config.getboolean("b", "flag") is True
+        assert config.get_value("c", "k") == "v ]"
+        assert config.get_value("d", "k") == "multi  line"
+        assert config.get_value("g", "k") == "v"
+        # Git's enumeration omits empty sections; the facade cannot expose them.
+        for section in ("e", "f"):
+            with pytest.raises(configparser.NoSectionError):
+                config.items(section)
+        assert config.sections() == ['submodule "lib"', 'a "x]y"', "b", "c", "d", "g"]
+
+
+@pytest.mark.parametrize(
+    "case, section, key",
+    [
+        ("multiple", "third", "third.k"),
+        ("escaped-quote", 'a "x\\"]y"', 'a.x"]y.k'),
+        ("unbalanced-quote", None, None),
+        ("missing-bracket", None, None),
+        ("trailing-bracket", None, None),
+        ("invalid-option", None, None),
+        ("invalid-section", None, None),
+    ],
+)
+def test_inline_section_headers_match_git_validation(case, section, key):
+    path = read_only_fixture("config.sh", "inline-header-cases", case) / "config"
+    if section is None:
+        with pytest.raises(GitCommandError, match="bad config line") as baseline:
+            Git().config("list", "--file", str(path))
+        with GitConfigParser(path) as config, pytest.raises(configparser.ParsingError) as error:
+            config.read()
+        assert isinstance(error.value.__cause__, GitCommandError)
+        assert error.value.__cause__.status == baseline.value.status
+        return
+    assert Git().config("list", "--null", "--file", str(path)) == key + "\nv\0"
+    with GitConfigParser(path) as config:
+        assert config.sections() == [section]
+        assert config.get_value(section, "k") == "v"
+
+
 def test_config_multiple_files_and_missing_values():
     tmp_path = read_only_fixture("config.sh", "multiple")
     one, two = tmp_path / "one", tmp_path / "two"
