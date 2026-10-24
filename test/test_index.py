@@ -16,7 +16,7 @@ from unittest import mock
 import ddt
 import pytest
 
-from git import NULL_TREE, BlobFilter, Diff, Git, IndexFile, Object, Tree
+from git import NULL_TREE, BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
 from git.diff import NULL_TREE_SHA
 from git.exc import (
     CheckoutError,
@@ -1188,6 +1188,86 @@ class TestIndex(TestBase):
             repo.index.commit("This should run the hook outside the working tree")
             output = Path(repo.working_dir, "outside-hook-output.txt").read_text(encoding="utf-8")
             self.assertEqual(output, "ran outside hook\n")
+
+    def test_pre_commit_hook_not_run_in_repository_git_refuses(self):
+        for layout in ("regular", "bare", "linked", "separate", "configured"):
+            # Linked worktree registrations contain absolute paths.
+            with self.subTest(layout=layout), fixture_repo(
+                "hook-ownership.sh",
+                layout,
+                write=True,
+                execute=layout == "linked",
+                subdir="metadata" if layout == "configured" else "repo",
+            ) as repo:
+                output = Path(repo.working_dir, "output.txt")
+                discovery = repo.git_dir if layout == "configured" else repo.working_dir
+                baseline_output = Path(discovery, "output.txt")
+                baseline = Git(discovery)
+                # Reset any configured exemptions, as in Git's t0033-safe-directory.sh.
+                with mock.patch.dict(
+                    os.environ,
+                    {
+                        "GIT_TEST_ASSUME_DIFFERENT_OWNER": "1",
+                        "GIT_CONFIG_COUNT": "1",
+                        "GIT_CONFIG_KEY_0": "safe.directory",
+                        "GIT_CONFIG_VALUE_0": "",
+                    },
+                ):
+                    if layout == "regular":
+                        with self.assertRaisesRegex(GitCommandError, "dubious ownership"):
+                            baseline.commit("--allow-empty", "--no-gpg-sign", "-m", "Git refuses this repository")
+                        self.assertFalse(output.exists())
+                        with self.assertRaisesRegex(GitCommandError, "dubious ownership"):
+                            repo.index.commit("Git refuses this repository")
+                        self.assertFalse(output.exists())
+                    with self.assertRaises(GitCommandError):
+                        baseline.hook("run", "pre-commit")
+                    self.assertFalse(baseline_output.exists())
+                    with self.assertRaisesRegex(GitCommandError, "dubious ownership"):
+                        run_commit_hook("pre-commit", repo.index)
+                    self.assertFalse(output.exists())
+
+                    for environment in (
+                        {"GIT_CONFIG_VALUE_0": str(discovery)},
+                        {"GIT_DIR": str(repo.git_dir), "GIT_WORK_TREE": str(repo.working_dir)},
+                    ):
+                        with baseline.custom_environment(**environment), repo.git.custom_environment(**environment):
+                            baseline.hook("run", "pre-commit")
+                            expected = baseline_output.read_text(encoding="utf-8")
+                            baseline_output.unlink()
+                            run_commit_hook("pre-commit", repo.index)
+                            self.assertEqual(output.read_text(encoding="utf-8"), expected)
+                            output.unlink()
+
+    def test_commit_hook_preserves_explicit_repository_selection(self):
+        for selection in ("one-shot", "persistent", "environment", "git-dir-option"):
+            with self.subTest(selection=selection), fixture_repo("hook-ownership.sh", "regular", write=True) as repo:
+                with Repo(repo.git_dir) as metadata:
+                    index = metadata.index
+                    baseline = Git(metadata.working_dir)
+                    metadata.git.version_info
+                    environment = {"GIT_DIR": ".git"} if selection == "environment" else {}
+                    with baseline.custom_environment(**environment), metadata.git.custom_environment(**environment):
+                        for command in (baseline, metadata.git):
+                            if selection == "one-shot":
+                                command(C=".git")
+                            elif selection == "persistent":
+                                command.set_persistent_git_options(C=".git")
+                            elif selection == "git-dir-option":
+                                command(git_dir=".git")
+                        output = Path(repo.git_dir if selection in ("one-shot", "persistent") else repo.working_dir)
+                        output /= "output.txt"
+                        baseline.hook("run", "pre-commit")
+                        expected = output.read_text(encoding="utf-8")
+                        output.unlink()
+                        run_commit_hook("pre-commit", index)
+                        self.assertEqual(output.read_text(encoding="utf-8"), expected)
+
+                    metadata.git.set_persistent_git_options()
+                    metadata.git(C="missing")
+                    with self.assertRaises(GitCommandError):
+                        run_commit_hook("pre-commit", index)
+                    self.assertEqual(metadata.git.rev_parse("--git-dir"), str(metadata.git_dir))
 
     def test_pre_commit_hook_fail(self):
         with fixture_repo("index.sh", "hook-fail", write=True) as repo:

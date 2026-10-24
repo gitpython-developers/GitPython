@@ -375,6 +375,7 @@ class Repo:
             checkout = checkout_probe._call_process_safe("rev_parse", "--show-toplevel")
 
         self.git_dir = git_dir
+        self._discovery_path = git_dir if candidate == curpath else curpath
         probe.update_environment(GIT_DIR=git_dir)
         try:
             if native is not NotImplemented:

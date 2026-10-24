@@ -342,18 +342,18 @@ def test_hooks_retain_cli_even_when_missing(repo):
                     run_commit_hook(name, current.index)
             with pytest.raises(UnsafeOptionError, match="NUL"):
                 run_commit_hook("commit-msg", repo.index, "message\0path")
-            assert cli.call_count == 6
-        assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count + 6
+            assert cli.call_count == 12
+        assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count + 12
         hook = Path(repo.common_dir, "hooks", "pre-commit")
         hook.parent.mkdir(exist_ok=True)
         hook.write_text("present, even without executable permission")
         with patch.object(Git, "execute", return_value="") as cli:
             run_commit_hook("pre-commit", linked.index)
-            cli.assert_called_once()
+            assert cli.call_count == 2
         repo.git.config("core.hooksPath", "custom-hooks")
         with patch.object(Git, "execute", return_value="") as cli:
             run_commit_hook("post-commit", repo.index)
-            cli.assert_called_once()
+            assert cli.call_count == 2
 
 
 @pytest.mark.parametrize("config_variant", ["normal", "duplicate", "include"])
