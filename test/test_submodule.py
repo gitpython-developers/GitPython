@@ -165,6 +165,34 @@ def test_update_applies_git_transport_policy_to_gitmodules_url(monkeypatch):
                 assert module.head.commit.hexsha == baseline_module.git.rev_parse("HEAD") == source.head.commit.hexsha
 
 
+@patch_git_config("protocol.file.allow", "user")
+def test_root_update_applies_git_transport_policy_to_changed_url(monkeypatch):
+    monkeypatch.setenv("GIT_PROTOCOL_FROM_USER", "1")
+    # The submodule URLs point to this private source and replacement.
+    with writable_fixture("submodule-transport.sh", "changed-url", execute=True) as fixture:
+        root = fixture.path().resolve()
+        with git.Repo(root / "source") as source, git.Repo(root / "parent") as parent, git.Repo(
+            root / "baseline"
+        ) as baseline, git.Repo(root / "baseline" / "module") as baseline_module:
+            submodule = parent.submodules[0]
+            previous = (root / "previous").read_text().strip()
+            # A rejected fetch preserves the original remote and checked-out commit.
+            with baseline_module.git.custom_environment(GIT_PROTOCOL_FROM_USER="0"):
+                with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                    baseline_module.git.fetch(str(root / "replacement"))
+            assert Path(baseline_module.remotes.origin.url).samefile(source.working_tree_dir)
+            assert baseline_module.git.rev_parse("HEAD") == source.head.commit.hexsha
+            baseline.git.submodule("sync")
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                baseline.git.submodule("update", "--remote")
+
+            with pytest.raises(GitCommandError, match="transport 'file' not allowed"):
+                RootModule(parent).update(previous_commit=previous)
+            with submodule.module() as module:
+                assert Path(module.remotes.origin.url).samefile(source.working_tree_dir)
+                assert module.head.commit.hexsha == baseline_module.git.rev_parse("HEAD") == source.head.commit.hexsha
+
+
 @pytest.mark.parametrize(
     "scenario,name",
     [
