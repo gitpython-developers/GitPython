@@ -69,7 +69,8 @@ API changes
 * ``Commit.stats`` preserves Unicode line separators in filenames when
   ``core.quotePath=false``. Git's LF-delimited output remains intact for root,
   subsequent and empty commits, including the Gix backend's filename
-  quoting fallback.
+  quoting fallback. File keys contain the actual names, unquoting Git's C-style
+  escapes and preserving undecodable bytes with ``surrogateescape``.
 * Imports from a source checkout now read ``git.__version__`` from ``VERSION``.
   Built wheels and source distributions continue to carry their stamped release
   version.
