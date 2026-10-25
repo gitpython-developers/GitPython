@@ -85,6 +85,7 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
 
+from git.compat import safe_decode
 from git.types import (
     HSH_TD,
     Files_TD,
@@ -728,7 +729,7 @@ class RemoteProgress:
         # Compressing objects: 100% (2/2)
         # Compressing objects: 100% (2/2), done.
         if isinstance(line, bytes):  # mypy argues about ternary assignment.
-            line_str = line.decode("utf-8")
+            line_str = safe_decode(line)
         else:
             line_str = line
         self._cur_line = line_str

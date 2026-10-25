@@ -43,7 +43,7 @@ from typing import (
     overload,
 )
 
-from git.compat import defenc, force_bytes, safe_decode
+from git.compat import defenc, safe_decode, safe_encode
 from git import _backend
 from git.exc import (
     CommandError,
@@ -199,7 +199,7 @@ def handle_process_output(
                 if handler:
                     if is_decode:
                         assert isinstance(line, bytes)
-                        line_str = line.decode(defenc)
+                        line_str = safe_decode(line)
                         handler(line_str)
                     else:
                         handler(line)
@@ -451,7 +451,7 @@ class _AutoInterrupt:
             status = self.status
             p_stderr = None
 
-        stderr_b = force_bytes(data=stderr, encoding="utf-8") or b""
+        stderr_b = safe_encode(stderr) or b""
         if self._timeout_error is not None:
             stderr_b += (b"\n" if stderr_b else b"") + self._timeout_error.encode("utf-8")
             status = status or 1
@@ -459,7 +459,7 @@ class _AutoInterrupt:
         def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
             if stream:
                 try:
-                    return stderr_b + force_bytes(stream.read())
+                    return stderr_b + safe_encode(stream.read())
                 except (OSError, ValueError):
                     return stderr_b or b""
             else:
@@ -1457,8 +1457,9 @@ class Git:
             If ``True``, default ``True``, we open stdout on the created process.
 
         :param universal_newlines:
-            If ``True``, pipes will be opened as text, and lines are split at all known
-            line endings.
+            If ``True``, pipes are opened as text with CR, LF and CRLF newline
+            handling. Undecodable bytes are preserved with ``surrogateescape``
+            unless an explicit ``errors`` subprocess argument selects another policy.
 
         :param shell:
             Whether to invoke commands through a shell
@@ -1569,6 +1570,8 @@ class Git:
             shell,
             universal_newlines,
         )
+        if universal_newlines:
+            subprocess_kwargs.setdefault("errors", "surrogateescape")
         try:
             proc = safer_popen(
                 command,
@@ -1609,7 +1612,7 @@ class Git:
 
             def make_timeout_error() -> Union[str, bytes]:
                 err = f'Timeout: the command "{" ".join(redacted_command)}" did not complete in {timeout:g} secs.'
-                return err if universal_newlines else err.encode(defenc)
+                return err if universal_newlines else safe_encode(err)
 
             def communicate() -> Tuple[Union[str, bytes, None], Union[str, bytes, None]]:
                 assert watchdog is not None

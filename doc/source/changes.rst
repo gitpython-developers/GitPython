@@ -47,6 +47,9 @@ Git executable and safety
 * Known command outcomes retain established GitPython/configparser exceptions
   where distinguishable. Other failures raise ``GitCommandError`` with Git's
   exit status and diagnostic output; exact error text may differ.
+  Text and streamed command output preserve undecodable bytes with
+  ``surrogateescape``, including fetch/push results, clone errors and timeout
+  diagnostics containing byte names.
 
 API changes
 -----------
