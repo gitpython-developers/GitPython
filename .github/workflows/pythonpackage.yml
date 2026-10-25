@@ -251,6 +251,17 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.8", "3.9", "3.10"]
+        exclude:
+        # setup-python has no builds of these versions for Ubuntu 26.04.
+        - os: ubuntu-latest
+          python: "3.8"
+        - os: ubuntu-latest
+          python: "3.9"
+        include:
+        - os: ubuntu-24.04
+          python: "3.8"
+        - os: ubuntu-24.04
+          python: "3.9"
     env:
       GIT_PYTHON_BACKEND: cli
     steps:
