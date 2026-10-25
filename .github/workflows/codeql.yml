@@ -18,6 +18,8 @@ on:
   schedule:
     - cron: '27 10 * * 3'
 
+permissions: {}  # Expanded in the `analyze` job.
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -28,7 +30,7 @@ jobs:
     # Consider using larger runners or machines with greater resources for possible analysis time improvements.
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     permissions:
-      security-events: write
+      security-events: write  # Required for uploading SARIF to view in the Security tab.
 
     strategy:
       fail-fast: false
