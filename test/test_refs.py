@@ -10,6 +10,8 @@ from itertools import chain
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from gitdb.exc import BadName
 
 import git.refs as refs
@@ -17,18 +19,42 @@ from git import (
     Commit,
     GitCommandError,
     GitConfigParser,
+    Git,
     Head,
     Reference,
     RefLog,
     RemoteReference,
     SymbolicReference,
     TagReference,
+    _backend,
 )
+from git.compat import safe_encode
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
 from git.util import Actor
 from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_non_utf8_tag_names_preserve_bytes_and_resolve(object_format):
+    with fixture_repo("legacy-refs.sh", object_format) as repo:
+        tags = repo.tags
+        assert len(tags) == 2
+        assert {safe_encode(tag.path) for tag in tags} == {b"refs/tags/release-\xf5", b"refs/tags/annotated-\xe3"}
+        native_guard = (
+            patch.object(Git, "execute", side_effect=AssertionError("unexpected reference CLI call"))
+            if _backend.name == "gix"
+            else contextlib.nullcontext()
+        )
+        with native_guard:
+            for tag in tags:
+                assert tag.commit == repo.head.commit
+                assert repo.rev_parse(tag.path).hexsha == tag.object.hexsha
+                assert repo.commit(tag.path) == repo.head.commit
+        if _backend.name == "gix":
+            with patch.object(_backend, "gix", None):
+                assert {tag.path for tag in repo.tags} == {tag.path for tag in tags}
 
 
 class TestRefs(TestBase):

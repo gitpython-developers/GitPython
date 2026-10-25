@@ -51,6 +51,9 @@ Git executable and safety
 API changes
 -----------
 
+* Packed tag names containing non-UTF-8 bytes remain losslessly represented as
+  surrogate-escaped strings. ``safe_encode()`` recovers their original bytes,
+  and Gix reference validation and resolution receive those bytes directly.
 * Raw diffs preserve non-UTF-8 filename bytes in ``a_rawpath``, ``b_rawpath``,
   and raw rename fields. Staged-file diffs no longer fail while decoding legacy
   filenames; blob contents remain byte streams regardless of their encoding.

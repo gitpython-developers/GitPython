@@ -389,6 +389,15 @@ repository-format validation gap.
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal, unsupported path normalization, and unavailable path metadata |
 
+Reference names and revisions are encoded with `surrogateescape` before calling
+GixPython's byte-capable `Target.Symbolic`, `Repository.try_find_reference`,
+`Repository.rev_parse_single`, `Repository.rev_parse` and `RefEdit` APIs.
+This preserves non-UTF-8 packed tag names without interpreting reference storage
+in Python. `test_non_utf8_tag_names_preserve_bytes_and_resolve` covers lightweight
+and annotated tags in SHA-1 and SHA-256 repositories and forbids CLI fallback
+during native resolution. This corrects adapter input conversion; GixPython 0.3.0
+already accepts the original bytes through those APIs.
+
 Repository-backed native operations fall back for reftable (GIX-1) and repositories
 with `extensions.compatObjectFormat` (GIX-19). Process-returning calls, timeouts,
 custom storage/environment, global Git options, and unhandled command options
