@@ -515,7 +515,7 @@ def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, sub
             .index_worktree_submodules("configured" if submodules else "all", check_dirty=submodules)
         )
         dirty = False
-        with status.into_iter(patterns) as entries:
+        with status.into_iter([safe_encode(pattern) for pattern in patterns]) as entries:
             for item in entries:
                 if item.summary() is None:
                     continue
@@ -556,7 +556,7 @@ def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]
             raise _Unsupported("invalid pathspec")
         walk_options = repo.dirwalk_options().emit_untracked("matching").emit_tracked(False)
         result = []
-        with repo.dirwalk_iter(index, patterns, walk_options) as entries:
+        with repo.dirwalk_iter(index, [safe_encode(pattern) for pattern in patterns], walk_options) as entries:
             for item in entries:
                 entry = item.entry
                 if entry.status == "Untracked":

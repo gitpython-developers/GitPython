@@ -395,6 +395,10 @@ and predate the current fallback; they do not establish native coverage.
 Reference names and revisions are encoded with `surrogateescape` before calling
 GixPython's byte-capable `Target.Symbolic`, `Repository.try_find_reference`,
 `Repository.rev_parse_single`, `Repository.rev_parse` and `RefEdit` APIs.
+Status and untracked-file filters likewise pass byte patterns to
+`StatusPlatform.into_iter()` and `Repository.dirwalk_iter()`. Their regression
+checks matching and nonmatching patterns containing undecodable bytes, and
+prohibits CLI fallback in Gix mode.
 This preserves non-UTF-8 packed tag names without interpreting reference storage
 in Python. `test_non_utf8_tag_names_preserve_bytes` covers lightweight and annotated
 tag enumeration in SHA-1 and SHA-256 repositories on both backends and all platforms.
