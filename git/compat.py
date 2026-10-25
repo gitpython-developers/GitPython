@@ -65,9 +65,9 @@ def safe_encode(s: AnyStr) -> bytes: ...
 
 
 def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
-    """Safely encode a binary string to Unicode."""
+    """Encode text to bytes, preserving bytes recovered by :func:`safe_decode`."""
     if isinstance(s, str):
-        return s.encode(defenc)
+        return s.encode(defenc, "surrogateescape")
     elif isinstance(s, bytes):
         return s
     elif s is None:

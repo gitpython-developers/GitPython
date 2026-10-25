@@ -16,7 +16,7 @@ import stat
 from threading import Lock
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, cast
 
-from git.compat import defenc, safe_decode
+from git.compat import defenc, safe_decode, safe_encode
 from git.exc import GitCommandError
 
 _selection = os.environ.get("GIT_PYTHON_BACKEND")
@@ -144,56 +144,17 @@ def _open_repository(command: Any, env: Dict[str, Any], *, query_config: bool = 
         options = options.config_overrides(
             ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false", "core.hooksPath=" + os.devnull]
         )
-    owner = command._repo() if command._repo is not None else None
-    state = None
-    repo = None
-    if owner is not None and not query_config:
-        # Gix refreshes index/ODB snapshots itself; configuration is loaded at open.
-        paths = [
-            path,
-            os.fspath(owner.common_dir),
-            os.path.join(owner.common_dir, "config"),
-            os.path.join(path, "config.worktree"),
-        ]
-        paths += [
-            effective.get("GIT_CONFIG_SYSTEM", "/etc/gitconfig"),
-            effective.get("GIT_CONFIG_GLOBAL", os.path.expanduser("~/.gitconfig")),
-            os.path.join(effective.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "git", "config"),
-            os.path.join(owner.common_dir, "objects", "info", "alternates"),
-            os.path.join(path, "commondir"),
-            os.path.join(path, "gitdir"),
-        ]
-        stamps: List[Any] = []
-        for filename in paths:
-            try:
-                info = os.stat(filename)
-                stamps.append((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns))
-            except FileNotFoundError:
-                stamps.append(None)
-        state = (path, tuple(sorted(effective.items())), tuple(stamps))
-        repo = owner._gix_repository
-        if repo is not None and os.path.realpath(repo.git_dir()) != os.path.realpath(path):
-            repo = None
-        if repo is not None and state != owner._gix_state:
-            repo.reload()
-    if repo is None:
-        repo = gix.open_opts(path, options)
+    repo = gix.open_opts(path, options)
     snapshot = repo.config_snapshot()
     if snapshot.string("extensions.refStorage") == b"reftable":
         raise _Unsupported("reftable (GIX-1)")
     if snapshot.string("extensions.compatObjectFormat") is not None:
         raise _Unsupported("compatibility object format (GIX-19)")
-    if effective.get("GIT_WORK_TREE") and (owner is None or query_config or state != owner._gix_state):
+    if effective.get("GIT_WORK_TREE"):
         workdir = effective["GIT_WORK_TREE"]
         if not os.path.isabs(workdir):
             workdir = os.path.join(command.working_dir or os.getcwd(), workdir)
         repo.set_workdir(workdir)
-    if owner is not None and not query_config:
-        owner._gix_repository = repo
-        # ponytail: includes can load arbitrary files; reopen until Gix exposes their source paths.
-        if state != owner._gix_state:
-            included = re.search(rb"\[include(?:if)?[\s\]]", repo.config_snapshot().plumbing().to_bstring(), re.I)
-            owner._gix_state = None if included else state
     return repo
 
 
@@ -218,7 +179,7 @@ def _oid(repo: Any, ref: Any, env: Optional[Dict[str, Any]] = None) -> Any:
         _index(repo, {"env": env or {}})
     if not hasattr(repo, "rev_parse_single"):
         raise _Unsupported("revision feature disabled")
-    return repo.rev_parse_single(ref)
+    return repo.rev_parse_single(safe_encode(ref))
 
 
 def object_data(command: Any, ref: bytes, *, stream: bool = False) -> Any:
@@ -296,7 +257,7 @@ def revision_info(command: Any, ref: str) -> Any:
         repo = _repository(command, {})
         if ref.startswith(":"):
             _index(repo, {"env": command.environment()})
-        spec = repo.rev_parse(ref)
+        spec = repo.rev_parse(safe_encode(ref))
         oid = spec.single()
         if oid is None:
             raise _Unsupported("multiple revisions")
@@ -362,7 +323,7 @@ def check_ref_name(name: str) -> Any:
     if gix is None:
         return NotImplemented
     try:
-        gix.Target.Symbolic(name)
+        gix.Target.Symbolic(safe_encode(name))
     except gix.Error as exc:
         if "/" not in name:
             return _fallback("Reference.validate", "standalone reference names (GIX-20)")
@@ -380,10 +341,11 @@ def reference_info(command: Any, path: str) -> Any:
         if path != "HEAD" and not path.startswith("refs/"):
             raise _Unsupported("partial reference names")
         repo = _repository(command, {})
-        reference = repo.try_find_reference(path)
+        encoded_path = safe_encode(path)
+        reference = repo.try_find_reference(encoded_path)
         result = None
         if reference is not None:
-            if reference.name() != os.fsencode(path):
+            if reference.name() != encoded_path:
                 raise _Unsupported("partial reference lookup")
             target = reference.target()
             name = target.try_name()
@@ -400,7 +362,7 @@ def reference_info(command: Any, path: str) -> Any:
 def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 4 or args[:3] != ["--quiet", "--no-recurse", "--"]:
         raise _Unsupported("reference mutation or options")
-    reference = repo.try_find_reference(args[-1])
+    reference = repo.try_find_reference(safe_encode(args[-1]))
     if reference is None:
         raise _Unsupported("missing reference diagnostics")
     target = reference.target().try_name()
@@ -415,7 +377,7 @@ def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     split = args.index("--") if "--" in args else len(args)
     if args[1:split] or len(args[split + 1 :]) > 1:
         raise _Unsupported("root refs or reference options")
-    prefix = os.fsencode(args[-1]) if len(args) > split + 1 else b""
+    prefix = safe_encode(args[-1]) if len(args) > split + 1 else b""
     if any(char in prefix for char in b"*?["):
         raise _Unsupported("reference glob patterns")
     with repo.references().all() as refs:
@@ -463,7 +425,7 @@ def submodule_config(source: Any) -> Any:
                     if option != "branch" or config.boolean(key) is not None:
                         raise _Unsupported("missing or implicit submodule fields")
                 else:
-                    values[option] = value.decode(defenc)
+                    values[option] = safe_decode(value)
             result[name] = values
     except _Unsupported as exc:
         return _fallback("Submodule.config", str(exc))
@@ -553,7 +515,7 @@ def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, sub
             .index_worktree_submodules("configured" if submodules else "all", check_dirty=submodules)
         )
         dirty = False
-        with status.into_iter(patterns) as entries:
+        with status.into_iter([safe_encode(pattern) for pattern in patterns]) as entries:
             for item in entries:
                 if item.summary() is None:
                     continue
@@ -594,7 +556,7 @@ def untracked_files(command: Any, args: Tuple[Any, ...], options: Dict[str, Any]
             raise _Unsupported("invalid pathspec")
         walk_options = repo.dirwalk_options().emit_untracked("matching").emit_tracked(False)
         result = []
-        with repo.dirwalk_iter(index, patterns, walk_options) as entries:
+        with repo.dirwalk_iter(index, [safe_encode(pattern) for pattern in patterns], walk_options) as entries:
             for item in entries:
                 entry = item.entry
                 if entry.status == "Untracked":
@@ -739,7 +701,7 @@ def _date(signature: Any) -> bytes:
 
 def _reflog(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) == 3 and args[:2] == ["exists", "--"]:
-        reference = repo.try_find_reference(args[-1])
+        reference = repo.try_find_reference(safe_encode(args[-1]))
         if reference is None:
             raise _Unsupported("orphan reflog lookup")
         if not reference.log_exists():
@@ -761,7 +723,7 @@ def _reflog(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
         or args[-1] != "--"
     ):
         raise _Unsupported("reflog writing or format")
-    reference = repo.try_find_reference(args[-2])
+    reference = repo.try_find_reference(safe_encode(args[-2]))
     if reference is None:
         raise _Unsupported("orphan reflog lookup")
     cursor = reference.log_iter().rev()
@@ -1174,7 +1136,7 @@ def _update_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if delete:
         if len(operands) != 1 or deref:
             raise _Unsupported("reference deletion options")
-        edit = gix.RefEdit.delete(operands[0], gix.PreviousValue.Any).with_deref(False)
+        edit = gix.RefEdit.delete(safe_encode(operands[0]), gix.PreviousValue.Any).with_deref(False)
         _write("update_ref", lambda: repo.edit_references_as([edit]))
         return b""
     if len(operands) != 2:
@@ -1184,7 +1146,8 @@ def _update_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     kind = repo.find_header(oid).kind()
     if (name == "HEAD" or name.startswith("refs/heads/")) and kind != "commit":
         raise _Unsupported("branch target validation")
-    reference = repo.try_find_reference(name)
+    encoded_name = safe_encode(name)
+    reference = repo.try_find_reference(encoded_name)
     if reference is not None:
         if deref and name != "HEAD" and reference.target().try_name() is not None:
             raise _Unsupported("symbolic reference update (GIX-10)")
@@ -1196,13 +1159,15 @@ def _update_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     for _ in range(5):
         if head is None or head.target().try_name() is None:
             break
-        if head.target().try_name() == os.fsencode(name):
+        if head.target().try_name() == encoded_name:
             raise _Unsupported("active branch HEAD reflog (GIX-10)")
         head = head.follow()
     log = gix.LogChange()
     log.force_create_reflog = force_log
     log.message = message
-    edit = gix.RefEdit.update_with_log(name, gix.Target.Object(oid), gix.PreviousValue.Any, log).with_deref(deref)
+    edit = gix.RefEdit.update_with_log(encoded_name, gix.Target.Object(oid), gix.PreviousValue.Any, log).with_deref(
+        deref
+    )
     signature = _committer(repo, kwargs.get("env", {}))
     _write("update_ref", lambda: repo.edit_references_as([edit], signature))
     return b""

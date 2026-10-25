@@ -1,8 +1,8 @@
 # GixPython backend
 
-Install the `gix` extra to make GitPython use GixPython for supported operations:
-`GitPython[gix]`, or `.[gix]` from this checkout. GixPython is the distribution
-name; `gix` is its import name. The extra uses the official PyPI release
+This backend is unreleased. Install `.[gix]` from this checkout to make GitPython
+use GixPython for supported operations. GixPython is the distribution name;
+`gix` is its import name. The extra uses the official PyPI release
 `GixPython==0.3.0` on CPython 3.11 or newer. On older Python versions, the
 dependency is omitted and GitPython uses the CLI backend. The ordinary
 GitPython installation still supports Python 3.8 or newer.
@@ -14,7 +14,7 @@ uv venv --python .venv/bin/python .tox/gix
 uv pip install --python .tox/gix/bin/python --editable '.[test,gix]'
 ```
 
-`tox -e gix` also resolves the published release from the package index.
+`tox -e gix` also resolves the published GixPython release from the package index.
 
 GixPython 0.3.0 publishes macOS wheels. On Windows and Linux, installation
 builds the released source distribution and requires Rust 1.89 or newer and
@@ -39,7 +39,7 @@ selection also fails. With the variable unset, GitPython selects Gix when it
 can be imported and otherwise uses CLI. Test and benchmark runners select a
 backend explicitly, because both installations contain GixPython for fixtures.
 
-Git 2.52 or newer remains required. Unsupported operations and call options use
+Git 2.52 or newer is required. Unsupported operations and call options use
 the existing CLI implementation. Public `repo.git.<command>()` calls retain
 their command-line behavior. Native dispatch applies to library-managed calls.
 
@@ -55,7 +55,7 @@ fallbacks.
 
 ## Index and object metadata lifecycle
 
-`Repo(..., expand_vars=False)` remains accepted for callers such as sbxloop
+`Repo(..., expand_vars=False)` accepts literal paths for callers such as sbxloop
 2.1.36 that explicitly require literal paths. The default also keeps environment
 variables literal; `expand_vars=True` is unsupported. Callers wanting expansion
 must perform it before passing the path. Discovery still uses Gix/Git after
@@ -79,10 +79,11 @@ the old constructor. Downstream must construct its trusted metadata view before
 opening it with `Repo`, and handle native discovery errors explicitly; its
 original tests remain failed in the audit.
 
-`git.GitDB` and `git.db.GitDB` remain compatibility aliases for
+`git.GitDB` and `git.db.GitDB` are compatibility aliases for
 `GitCmdObjectDB`, so legacy `Repo(..., odbt=GitDB)` selectors use the same
 managed backend. Aider 0.86.2 uses that selector for every repository open.
-This does not restore gitdb's Python object database or its specialized APIs.
+These aliases select managed storage; gitdb's Python object database and its
+specialized APIs are unsupported.
 Object queries continue through `object_data()` and the supported
 `Repository.try_find_header()`/`find_object()` APIs, with the existing large-object
 and diagnostic CLI fallbacks. Storage uses the existing `hash_object` dispatch.
@@ -90,9 +91,9 @@ and diagnostic CLI fallbacks. Storage uses the existing `hash_object` dispatch.
 `Head.tracking_branch()` asks Git's `rev-parse --symbolic-full-name` to resolve
 local upstreams configured with `branch.<name>.remote=.`. GixPython does not
 expose the corresponding Git-compatible upstream configuration resolver; this
-path retains CLI. Without it, both released GitPython 3.2.1 and the initial
-adapter return an invalid remote reference, preventing angr 10.0.4.post1 from
-reporting a valid local tracking branch. A native replacement must expose Git's
+path retains CLI. Released GitPython 3.2.1 returns an invalid remote reference
+for these upstreams, preventing angr 10.0.4.post1 from reporting a valid local
+tracking branch. A native replacement must expose Git's
 local-upstream resolution, including its validation and diagnostics.
 
 Revision path results retain the root tree's empty path so `Repo.rev_parse("HEAD:")`
@@ -130,11 +131,13 @@ these editing fallbacks.
 
 Commit metadata uses `Repository.find_commit().decode()` plus structured
 `Commit.author()`/`committer()` signatures. Tag metadata uses
-`Repository.find_tag().decode()` and `Tag.tagger()`. Decoded extra headers retain
+`Repository.find_tag().decode()` and `Tag.tagger()`. A missing native tagger maps
+to GitPython's empty actor and zero date/offset; tag reads remain native.
+Decoded extra headers retain
 `gpgsig`. Raw Gix object bytes are used only for object streams. If repository
 capabilities require CLI fallback, metadata uses `git cat-file`: general formatted
 Git queries cannot faithfully expose all signature headers or arbitrary tags.
-The bounded public identity helpers remain Python glue. Human date parsing uses
+The public identity helpers use Python glue. Human date parsing uses
 Git until GIX-27 is exposed; trailer extraction already uses Git.
 
 Benchmark remeasurement on 2026-10-09 used the same fixed SHA-1/files fixture
@@ -344,11 +347,11 @@ include explicit CLI tests and fixture commands, including non-Git commands
 passed directly to `Git.execute`; they are a local baseline, not a count of
 only fallback calls. The expanded warm benchmark instead isolates a user journey:
 43 CLI launches versus one Gix launch, opening nine versus one, and nested
-discovery eleven versus three after restoring the reference-format fallback
-and sharing successful version checks.
-The historical full-suite counts above predate this correction. A constant
-`files` answer was not a Gix query; `GIX-1` records the remaining native
-repository-format validation gap.
+discovery eleven versus three, including the reference-format fallback and
+shared successful version checks.
+The historical full-suite counts above include Python reference-format inference
+and predate the current fallback; they do not establish native coverage.
+`GIX-1` records the native repository-format validation gap.
 
 | GitPython entry point / managed command | Gix implementation | Remaining CLI cases |
 | --- | --- | --- |
@@ -366,7 +369,7 @@ repository-format validation gap.
 | Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics |
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options; GIX-25 |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
-| Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
+| Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Non-UTF-8 subsection names, other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
 | Commit hooks | No bound native lookup/execution API | All hooks, including absent hooks; GIX-23 |
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |
 | `Repo.merge_base`, `Repo.is_ancestor` | Native graph queries for two revisions | Octopus/fork-point and other options |
@@ -389,6 +392,27 @@ repository-format validation gap.
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal, unsupported path normalization, and unavailable path metadata |
 
+Reference names and revisions are encoded with `surrogateescape` before calling
+GixPython's byte-capable `Target.Symbolic`, `Repository.try_find_reference`,
+`Repository.rev_parse_single`, `Repository.rev_parse` and `RefEdit` APIs.
+Status and untracked-file filters likewise pass byte patterns to
+`StatusPlatform.into_iter()` and `Repository.dirwalk_iter()`. Their regression
+checks matching and nonmatching patterns containing undecodable bytes, and
+prohibits CLI fallback in Gix mode.
+This preserves non-UTF-8 packed tag names without interpreting reference storage
+in Python. `test_non_utf8_tag_names_preserve_bytes` covers lightweight and annotated
+tag enumeration in SHA-1 and SHA-256 repositories on both backends and all platforms.
+`test_non_utf8_tag_names_resolve` forbids CLI fallback during native resolution.
+Resolution requires POSIX: Windows command-line arguments cannot preserve
+the original non-UTF-8 bytes, and native Windows lookup has GIX-32. Windows CI
+with Git 2.56.0.windows.2 and CPython
+3.15.1 free-threaded enumerates both packed names, but resolving the
+surrogate-escaped `annotated-\udce3` name through `git rev-parse --verify` exits 128
+with `fatal: Needed a single revision`. Enumeration remains tested on Windows
+on both backends, along with the GIX-32 native diagnostic fallback. This
+corrects adapter input conversion; GixPython 0.3.0 accepts the original bytes
+through those APIs on POSIX.
+
 Repository-backed native operations fall back for reftable (GIX-1) and repositories
 with `extensions.compatObjectFormat` (GIX-19). Process-returning calls, timeouts,
 custom storage/environment, global Git options, and unhandled command options
@@ -398,6 +422,9 @@ only an absent top-level `gix` selects CLI mode.
 
 ## Performance work
 
+All measurements in this document describe unreleased GitPython development
+revisions, using the GixPython and Git versions stated for each run. They are
+validation evidence, not a history of changes between GitPython releases.
 Use the [measurements after the Gix-only audit](#measurements-after-the-gix-only-audit)
 for the corrected implementation. Older snapshots retain their original
 workloads and include shortcuts that were subsequently removed.
@@ -430,9 +457,9 @@ environment metadata.
 operations and their complete journey on one already-open `git.Repo`, plus
 separate direct opening and discovery from `git/objects`. Fresh high-level
 wrappers preserve the cost of actual operations; imports, fixture preparation
-and parity preflight are outside timing. Native repository refresh remains
-inside operation timing, so these measurements include the cost of keeping
-retained state current.
+and parity preflight are outside timing. Native repository opening remains inside
+operation timing. Historical retained-handle results below included refresh
+costs instead.
 
 Submodule inventory, revision path/mode lookup and raw commit/tree readback
 extend the already-open journey, each with a zero-CLI ceiling. The readback
@@ -515,9 +542,8 @@ this machine and workload rather than a general speed guarantee.
 
 The full Gix suite without coverage passed **1,678 tests and 38 subtests**,
 with 79 skips and one expected failure, in **337.51 seconds (5m 37.51s)**.
-One expected path-expansion deprecation warning was reported. It recorded
-**22,319 `Git.execute` launches**: 3,833 setup, 18,486 call, zero teardown or
-collection/session. The process-lifetime count is 22,320 including the import
+It recorded **22,319 `Git.execute` launches**: 3,833 setup, 18,486 call, zero
+teardown or collection/session. The process-lifetime count is 22,320 including the import
 probe. Against the preceding 408.81-second/30,898-launch baseline, this local
 run took 17.4% less time and launched 27.8% fewer CLI processes; the suite has
 four additional regressions, and the timing comparison is observational.
@@ -526,10 +552,7 @@ Affected tests ran with Gix before CLI: 304/264 repository, command, backend
 and safety tests; 136 command-guard tests per backend; 31 positional tests per
 backend; 13 process-count/budget tests per backend. Repository suites also
 passed 14 subtests, with three skips. Ruff lint/format, mypy and basedpyright
-passed. Both code changes are separate Tix commits: `02e2cc44` retains native
-handles and the original `c49bbec0` attempted zero-launch opening/discovery.
-The rewritten opening commit restores real format queries and native metadata
-fallbacks; the current coverage table and ceilings reflect those requirements.
+passed.
 
 ### Measurements after the Gix-only audit
 
@@ -544,7 +567,7 @@ The full-suite and timed benchmark figures in this section describe that
 snapshot, before the subsequent metadata and discovery changes.
 
 The full Gix suite without coverage passed **1,710 tests and 38 subtests**,
-with 79 skips, one expected failure and one existing path-deprecation warning.
+with 79 skips and one expected failure.
 It took **342.36 pytest seconds / 342.80 seconds including the runner
 (5m 42.80s)** on existing CPython 3.12.14/macOS arm64, official GixPython 0.1.0
 and Git 2.54.0. This includes CLI-inventory and Trace2 overhead.
@@ -613,8 +636,8 @@ used Gix; CLI validation used the affected selections. Repository-wide Ruff
 lint/format, mypy and basedpyright passed. The benchmark comparison independently
 checked result parity, fixture/source identity and all process ceilings.
 Generic configuration and standalone reference-name gaps remain documented
-under GIX-12/20. `Repo._get_gix_repository(recreate=True)` still explicitly
-recreates retained native state; its snapshot limitations are documented below.
+under GIX-12/20. That snapshot retained native repository state; the current
+accessor opens a fresh handle for each operation, as documented below.
 
 Raw benchmarks, comparison tables and logs from that snapshot are under
 `.cache/gix-only-audit/benchmark-*` and `.cache/gix-only-audit/pyperf-comparison.md`.
@@ -628,8 +651,7 @@ fresh measurements and enforce the checked-in operation-specific ceilings.
 
 The follow-up used the same official GixPython 0.1.0 and existing CPython
 3.12.14, with runtime and test code at
-`ee947c98540396d5644f3a7fea7c807633f4b5b8`. Each implementation change was
-amended into its corresponding Tix commit and checked with Gix before CLI.
+`ee947c98540396d5644f3a7fea7c807633f4b5b8`, checked with Gix before CLI.
 
 - Reference storage can already be identified through native config. Direct
   SHA-1 and SHA-256 regressions confirm that reftable `HEAD` access raises
@@ -767,39 +789,34 @@ expected failure. Operation reporting counted 114,800 native operations and
 39,002 CLI fallback decisions. Those decisions are not a complete subprocess
 count: raw `repo.git` calls and subprocesses started by Git are not all counted.
 
-### Retain native repository state (implemented)
+### Open fresh native repository state
 
-Each `git.Repo` owns a native `gix.Repository`. Managed operations access it through
-`Repo._get_gix_repository()`, which reuses the instance by default.
-`Repo._get_gix_repository(recreate=True)` replaces it explicitly; this method is
-the control point for a future configurable reuse policy. Managed operations reuse it;
-`close()` releases it, and a later operation can reopen it. Pickling excludes
-native resources and restores the command's weak owner reference. Gix provides
-thread-safe handle access and automatic index/ODB snapshot refresh. A per-Repo
-lock serializes handle refresh, without serializing read operations.
+Managed operations access Gix through `Repo._get_gix_repository()`, which opens
+a fresh `gix.Repository` for each call. Standalone commands use the same opening
+path. No native handle, environment/file fingerprint or refresh lock is cached
+on `Repo`; configuration, includes and storage metadata are read by Gix again
+on each open. Concurrent operations therefore receive independent handles.
 
-Retaining native state is an intentional deviation from Git's fresh process per
-command. Configuration/environment and observed CLI changes trigger best-effort
-refresh, but this is not a promise that every external filesystem change is
-immediately visible in every native cache. Explicit recreation or closing and
-reopening the `Repo` provides fresh native state. Configuration queries currently
-use a separate fresh handle because the retained execution handle overrides
-hooks, fsmonitor and automatic maintenance; those overrides must not leak into
-configuration results. The accessor itself removes no CLI calls: ten supported
-metadata queries launch zero processes before and after this refactor.
+Execution handles override hooks, fsmonitor and automatic maintenance.
+Configuration queries omit those overrides so synthetic settings do not appear
+as user settings. Storage overrides, reftable and compatibility object formats
+retain their existing CLI guards. Reopening itself adds no Git CLI calls.
 
-Configuration and storage metadata changes, environment changes and raw CLI
-launches cause `reload()` before reuse. Configuration queries use a separate
-fresh handle so synthetic safety settings never appear as user settings.
-Configurations with includes conservatively reload on each operation because
-the binding does not expose all included source paths. Storage overrides,
-reftable and compatibility object formats retain their existing CLI guards.
+`Repo.close()` releases persistent CLI object readers. Native handles remain
+local to operations; callers holding separately opened handles or iterators
+must release them before deleting their repository, especially on Windows.
+Pickling restores the command's weak owner reference without native resources.
+
+This replaces the retained-handle policy and its best-effort invalidation via
+file metadata, environment changes and CLI launches. Reopening repeats native
+initialization work but avoids fingerprint construction and unconditional
+reloads for configurations with includes.
 
 An earlier 1,000-call benchmark without coverage measured an object read using
-one native handle at 0.046 ms per call, compared with 0.635 ms through the
-fresh-open stream adapter. Opening and validating a native repository alone
-took 0.418 ms per call. These small repeated-read measurements do not estimate
-whole-suite speedup.
+one retained native handle at 0.046 ms per call, compared with 0.635 ms through
+the fresh-open stream adapter. Opening and validating a native repository alone
+took 0.418 ms per call. Those historical measurements do not describe the current
+accessor or estimate whole-suite speedup; rerun the backend harness to measure it.
 
 ### Reuse prepared test fixtures (implemented)
 
@@ -924,7 +941,7 @@ identify the historical fixture where needed.
 | GIX-20 | Bug; missing API | `Target.Symbolic(name)` validates full names but rejects standalone names accepted by `git check-ref-format --allow-onelevel`. Four of 430 audited calls differed: `refs` twice, `hellothere`, and `valid_one_level_refname`. Further probes include digits, punctuation and Unicode (`1`, `A1`, `HEAD_1`, `A-B`, `A.B`, `Ä`). | Expose Git-compatible partial/one-level name validation, or correct the native restriction where appropriate. This is a binding/behavior shortcoming to revisit upstream; standalone names rejected natively retain CLI validation. |
 | GIX-21 | Bug; missing API | `Repository.committer()` preserves a process identity of ` Name. ` / ` email@example.invalid ` while `git var GIT_COMMITTER_IDENT` returns `Name.` / `email@example.invalid`. Native snapshot overrides for name, email and date work, but modifying the retained snapshot would leak per-command identity across threads. GixPython 0.1.0 has no general independent repository clone: Python copying fails and internal `RepoHandle::clone()` shares its `Arc` state. | Expose Git-compatible identity cleanup and a cheap independent native clone with isolated config, including per-command removal semantics. Reopening isolates state but repeats setup; `with_object_memory()` changes object-write behavior and is not a general clone. Keep `_checked_signature` validation and CLI fallback for cleanup/overrides. Never clean identity fields in Python or mutate shared snapshots/process environment to handle a command. |
 | GIX-22 | Missing API | The native Git directory is sufficient for the two fixed metadata leaves used here: `modules` and `COMMIT_EDITMSG`. Git's `path.c` applies no special relocation to either, including in linked worktrees. The adapter appends only these names to the canonical native Git directory. | No new binding is needed for these ordinary paths. Other `--git-path` names and symlinked metadata leaves retain CLI resolution; a general resolver must handle config/environment overrides, common/private storage and canonical targets. `Repository.modules_path()` means `.gitmodules`, not the `modules` storage directory. |
-| GIX-23 | Missing API | No hook lookup or execution API is bound in GixPython 0.1.0. The removed absence fast path read config through Gix but used Python `os.stat()` to declare success. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops, preceded by a Git discovery/ownership check that removes only `Repo`'s automatic environment bindings. Each valid hook request therefore makes two CLI calls. Explicit caller overrides retain Git's behavior. A Python filesystem check is not a Gix implementation. |
+| GIX-23 | Missing API | No hook lookup or execution API is bound in GixPython 0.1.0. | Bind native hook lookup with configured/default path, linked-worktree, missing/nonexecutable-hook and diagnostic semantics, plus execution where needed. Until then all managed hook calls use Git, including `--ignore-missing` no-ops, preceded by a Git discovery/ownership check that removes only `Repo`'s automatic environment bindings. Each valid hook request therefore makes two CLI calls. Explicit caller overrides retain Git's behavior. A Python filesystem check is not a Gix implementation. |
 | GIX-24 | Bug | In both object formats, `new_commit_as()` accepts a blob as the tree or a parent where `git commit-tree` rejects it. Tree-editor `upsert()`/`write()` accepts object IDs whose actual kinds disagree with blob/tree/gitlink modes; `git mktree --missing` rejects all three tested mismatches. `edit_references_as()` accepts a blob target under `refs/heads/`, rejected by `git update-ref`. | Provide checked commit/tree construction and reference edits, at least in Git-strict mode. Match Git's kind and direct-branch target validation before writing and under the required ref locks, including its distinct handling of symbolic aliases. Existing `_commit_tree`, `_write_tree` and `_update_ref` guards query Gix headers and select CLI on invalid inputs; they do not replace Gix writes with Python. |
 | GIX-25 | Bug; missing API | After `git symbolic-ref refs/heads/dangling refs/heads/missing`, `Repository.references().all()` enumerates the dangling name, while `git for-each-ref --format=%(refname)` omits it. Valid symbolic aliases must remain present. Both SHA-1 and SHA-256 probes reproduce this difference. | Expose Git-compatible enumeration with the same dangling-reference and diagnostic behavior, retaining the raw iterator for callers that need it. `_for_each_ref` forces Gix to resolve symbolic targets and falls back to Git on failure; keep that fallback until a compatible Gix API/mode is verified. |
 | GIX-26 | Bug; missing API | `dangerously_push_entry(IndexStat(), oid, 0, 0o120000, b".gitmodules")`, followed by `sort_entries()`, `verify_entries()` and `write()`, succeeds and retains the unsafe symlink. Protected Git `update-index -z --index-info` ignores it with exit 0 and `Ignoring path .gitmodules`; protected `read-tree` rejects it. The native fresh `index_from_tree` also rejects it. | A Git-strict checked index batch editor that validates names/modes, preserves metadata and reports rejected records. `verify_entries()` verifies ordering, not pathname safety. All private-index edits use Git with `core.protectHFS=true` and `core.protectNTFS=true`, followed by requested-entry readback; no Python dictionary reconstruction or native dangerous insertion remains. |
@@ -933,6 +950,7 @@ identify the historical fixture where needed.
 | GIX-29 | Missing API | GixPython 0.2.0 exposes raw identity/message/signature bytes without a Git-compatible text reencoder. Git 2.54.0 recodes the complete commit or retains all bytes when conversion fails; per-field Python conversion differs. The Latin-1, unknown/non-text codecs, malformed UTF-16 and signed-header cases in `test_deserialization_declared_encoding` reproduce the required behavior. | Expose whole-commit text conversion, including failed/unknown-encoding behavior. `object_metadata()` retains CLI for non-UTF-8 declarations. The fallback obtains identities/message from Git's fixed UTF-8 text projection and signatures from its recoded raw header block, retaining the original declaration separately. |
 | GIX-30 | Bug (open) | GixPython 0.2.0 `Commit.decode()` reports `encoding=None` when `encoding ISO-8859-1` follows `x-extra value`; Git 2.54.0 selects `ISO-8859-1` and renders Latin-1 identity/message bytes correctly. Gix retains `(b"encoding", b"ISO-8859-1")` in `extra_headers`, but its encoding field disagrees with Git. The `late-latin1` read-only `commit.sh` fixture in `test_deserialization_declared_encoding` reproduces this and asserts the fallback. | Recognize encoding headers in Git-compatible order. `object_metadata()` conservatively retains CLI when an encoding appears in `extra_headers`; it does not select the header in Python. Keep this bug open until an upstream fix or compatible mode is verified. |
 | GIX-31 | Bug (open) | GixPython 0.2.0 `Commit.decode()` rejects commit headers containing a CR-only or tab-only line with `object parsing failed, at gix-object/src/commit/decode.rs:20`. Git 2.54.0 accepts both objects with `fsck --strict`, continues through their header block and renders the later Latin-1 declaration and message correctly. A space-only continuation line decodes natively but retains the late encoding declaration in `extra_headers` (GIX-30). `test_deserialization_headers_end_at_empty_line` reproduces all three using the `commit.sh whitespace-headers` fixtures and checks Git's projection. | Accept Git-compatible header lines and end headers only at an empty line. The existing `object_metadata()` native decoder diagnostics fallback retains Git for CR/tab inputs; the existing GIX-30 fallback covers the space input. Neither fallback closes these bugs. |
+| GIX-32 | Missing capability (open); no demonstrated Git compatibility mismatch | Windows CI on GixPython 0.3.0, Git 2.56.0.windows.2 and CPython 3.12.10 enumerates the non-UTF-8 packed names in `legacy-refs.sh`, but exact byte-name lookup selects `Reference.read: CLI: native read diagnostics`; the no-CLI guard fails for SHA-1 and SHA-256. POSIX lookup succeeds. Git's Windows CLI likewise cannot address those original bytes through UTF-16 arguments, so there is no demonstrated equivalent Windows CLI operand. Git enumeration does preserve both names. | Provide native Windows packed-reference lookup for byte names without first converting the name to a loose-reference filesystem path. Keep `reference_info()`'s existing diagnostic fallback; `test_non_utf8_tag_names_preserve_bytes` checks it on Windows. Resolution coverage and native claims remain POSIX-only. The upstream lookup source attempts loose-path conversion before consulting packed refs; CI demonstrates the fallback, but does not capture the underlying Gix error text. |
 
 The PR #2306 regression exposed an adapter ownership-check bypass in both
 backends: `Repo`'s automatic `GIT_DIR` made Git 2.54.0 treat hook execution as
@@ -1074,6 +1092,16 @@ runtime validation and timings remain attributed to their measured snapshots.
 
 ### Remaining configuration reads (GIX-12)
 
+Native `.gitmodules` reads preserve arbitrary bytes in paths, URLs and branch
+values through `surrogateescape`. Non-UTF-8 subsection names use the CLI fallback:
+GixPython 0.3.0's `ConfigFile.string()` and `.boolean()` require text keys.
+Although `ModulesFile.path()` and `.url()` accept byte names, `.branch()`
+interprets the value: an empty value becomes `HEAD`, and missing and implicit
+values both become `None`. A byte-key raw configuration accessor is needed to
+retain GitPython's configuration contract natively. The scripted
+`submodule-bytes.sh` regressions cover values, names and cached-field rereads;
+the native value test prohibits CLI execution.
+
 The October 7 inventory identified 951 remote-enumeration reads, 674 actor
 lookups, 262 remote-property reads, 202 tracking-branch lookups and 111 fetch
 refspec checks. These are historical call-site counts, not additive savings.
@@ -1185,7 +1213,7 @@ or serialized in Python. GixPython needs a supported native configuration edit
 that creates sections before this contract can be restored.
 
 Kas's separate identity cleanup uses nonempty section assignment, which is
-restored through existing Git config remove/set operations under GIX-12. Values
+supported through Git config remove/set operations under GIX-12. Values
 are validated before mutation; individual Git operations lock independently,
 so replacement does not claim transaction-wide atomicity. Downstream can avoid
 the empty-section API by calling `set_value('gpg "ssh"', 'allowedSignersFile',
@@ -1211,8 +1239,7 @@ can use Git to preserve its public diagnostics. Once `_write()` begins,
 `gix.Error` failures become `GitCommandError`; other exceptions propagate.
 Neither may trigger a second CLI mutation.
 Access native repository state through `Repo._get_gix_repository()` for bound
-commands. Reuse is the default, with explicit recreation available; keep the
-snapshot deviation and refresh behavior above documented. Close native iterators
+commands. Each access opens a fresh handle through Gix. Close native iterators
 when partially consumed.
 
 Add each conversion with a no-subprocess check and a Git parity check where
@@ -1248,8 +1275,8 @@ The full baseline at `f6779dbb` reproduced all 17 failures described above:
 16 ordinary failures and the subtest with malformed `commondir`. The full
 patched suite passed with **1,760 tests and 40 subtests**, 58 skipped, nine
 expected failures and three unexpected passes in 2,242.66 seconds. The three
-unexpected passes and the path-deprecation warning also appeared in the
-baseline. Ruff, mypy, basedpyright and the pinned pre-commit checks passed.
+unexpected passes also appeared in the baseline. Ruff, mypy, basedpyright and
+the pinned pre-commit checks passed.
 
 The baseline recorded 21,598 CLI launches in 2,279.10 seconds; the patched
 run recorded 21,826 CLI launches and 86,936 native operations. Totals include the additional
@@ -1265,7 +1292,7 @@ reference and mutation-error cases also passed under Ubuntu WSL: 43 tests
 and 14 subtests, using CPython 3.14.4, Git 2.53.0 and a separate released-source
 GixPython build. This includes the POSIX newline-filename cases.
 
-## Published release validation
+## GixPython 0.1.0 artifact validation
 
 The official Apple Silicon ABI3 wheel for GixPython 0.1.0 has SHA-256
 `6b68758cb54a90c8eb893ac7815e74ccd9b48b197aaecec951366a6326168f52`.

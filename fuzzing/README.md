@@ -71,8 +71,8 @@ Contains Python files for each fuzz test.
 **Things to Know**:
 
 - Each fuzz test targets a specific part of GitPython's functionality.
-- Repository and object targets exercise Git-backed workflows. Removed Python index/tree binary parsers are no longer
-  fuzz targets; malformed configuration and object IDs can now be rejected by Git or by Python input validation.
+- Repository and object targets exercise Git-backed workflows. Git or Python input validation may reject malformed
+  configuration and object IDs.
 - Test files adhere to the naming convention: `fuzz_<API Under Test>.py`, where `<API Under Test>` indicates the
   functionality targeted by the test.
 - Any functionality that involves performing operations on input data is a possible candidate for fuzz testing, but

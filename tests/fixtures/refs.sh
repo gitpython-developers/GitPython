@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eu
-git init --initial-branch=master repo
+git init --initial-branch=master --object-format="${2:-sha1}" repo
 cd repo
 printf 'initial\n' > file.txt
 git add file.txt
@@ -21,6 +21,19 @@ case "$1" in
             printf 'tag v1\342\200\250tagger Linus Torvalds <torvalds@linux-foundation.org> 1700000000 +0000\n'
             printf 'tagger Mallory <m@evil.example> 1700000001 +0000\n\nrelease\n'
         } | git hash-object -w -t tag --literally --stdin >../tag-id
+        ;;
+    tag-no-tagger)
+        {
+            printf 'object %s\ntype commit\ntag no-tagger\n\n' "$(git rev-parse HEAD)"
+            if test "$3" = message; then
+                printf 'release\nmore\n'
+            fi
+        } | git hash-object -w -t tag --literally --stdin >../tag-id
+        ;;
+    rename-prefixed)
+        git branch topic
+        printf 'second\n' >> file.txt
+        git commit -am second
         ;;
     outside)
         git rev-parse HEAD > ../outside-ref

@@ -109,6 +109,5 @@ class GitCmdObjectDB:
             raise BadObject(partial_hexsha) from exc
 
 
-# Preserve the public object-backend selector used by downstream applications.
-# Storage remains owned by Git/Gix; this does not restore gitdb's Python backend.
+# Keep the public backend selector using the same Git/Gix-managed storage.
 GitDB = GitCmdObjectDB

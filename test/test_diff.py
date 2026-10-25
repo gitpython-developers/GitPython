@@ -6,8 +6,10 @@
 import os.path as osp
 
 import ddt
+import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, Repo
+from git.compat import safe_encode
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
 
@@ -17,6 +19,38 @@ from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 def to_raw(input):
     return input.replace(b"\t", b"\x00")
+
+
+@pytest.mark.parametrize("change", [b"A", b"D", b"M", b"R100", b"C100"])
+def test_raw_diff_preserves_non_utf8_paths(change):
+    before = b"legacy-\xf5\t:\n.pas"
+    after = b"renamed-\xe3.pas"
+    output = b":100644 100644 " + b"1" * 40 + b" " + b"2" * 40 + b" " + change + b"\0" + before + b"\0"
+    if change.startswith((b"R", b"C")):
+        output += after + b"\0"
+    diffs = DiffIndex()
+    Diff._handle_diff_line(output, None, diffs)
+    assert len(diffs) == 1
+    assert diffs[0].a_rawpath == before
+    assert diffs[0].b_rawpath == (after if change.startswith((b"R", b"C")) else before)
+    if change.startswith(b"R"):
+        assert (diffs[0].raw_rename_from, diffs[0].raw_rename_to) == (before, after)
+
+
+@pytest.mark.parametrize("create_patch", [False, True])
+@pytest.mark.parametrize("quote_path", ["false", "true"])
+def test_diff_paths_and_renames_preserve_non_utf8_bytes(create_patch, quote_path):
+    with fixture_repo("diff-byte-paths.sh", quote_path) as repo:
+        before, after = repo.commit("HEAD^"), repo.head.commit
+        (diff,) = before.diff(after, create_patch=create_patch)
+        assert (diff.a_rawpath, diff.b_rawpath) == (b"legacy-\xff", b"legacy-\xfe")
+        assert (diff.raw_rename_from, diff.raw_rename_to) == (diff.a_rawpath, diff.b_rawpath)
+        assert (safe_encode(diff.a_path), safe_encode(diff.b_path)) == (diff.a_rawpath, diff.b_rawpath)
+        assert (safe_encode(diff.rename_from), safe_encode(diff.rename_to)) == (diff.a_rawpath, diff.b_rawpath)
+        assert diff.renamed_file
+        if not create_patch:  # Exact-rename patches omit the blob IDs.
+            assert before.tree[diff.a_blob.path].binsha == diff.a_blob.binsha
+            assert after.tree[diff.b_blob.path].binsha == diff.b_blob.binsha
 
 
 @ddt.ddt
@@ -334,7 +368,7 @@ class TestDiff(TestBase):
         self.assertEqual(res[8].b_path, "path/¯\\_(ツ)_|¯")
         self.assertEqual(res[9].b_path, "path/💩.txt")
         self.assertEqual(res[9].b_rawpath, b"path/\xf0\x9f\x92\xa9.txt")
-        self.assertEqual(res[10].b_path, "path/�-invalid-unicode-path.txt")
+        self.assertEqual(safe_encode(res[10].b_path), b"path/\x80-invalid-unicode-path.txt")
         self.assertEqual(res[10].b_rawpath, b"path/\x80-invalid-unicode-path.txt")
 
         # The "Moves"

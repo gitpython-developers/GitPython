@@ -47,34 +47,43 @@ Git executable and safety
 * Known command outcomes retain established GitPython/configparser exceptions
   where distinguishable. Other failures raise ``GitCommandError`` with Git's
   exit status and diagnostic output; exact error text may differ.
+  Text and streamed command output preserve undecodable bytes with
+  ``surrogateescape``, including fetch/push results, clone errors and timeout
+  diagnostics containing byte names.
 
 API changes
 -----------
 
+* Packed tag names containing non-UTF-8 bytes are represented losslessly as
+  surrogate-escaped strings. ``safe_encode()`` recovers their original bytes,
+  and Gix reference validation and resolution receive those bytes directly.
+  Reference enumeration, fetch results, stale references and remote URLs preserve
+  Unicode line separators within names instead of treating them as record breaks.
+* Raw diffs preserve non-UTF-8 filename bytes in ``a_rawpath``, ``b_rawpath``,
+  and raw rename fields. Staged-file diffs no longer fail while decoding legacy
+  filenames; blob contents remain byte streams regardless of their encoding.
+  Text paths and rename properties use ``surrogateescape`` instead of replacing
+  undecodable bytes. Diff blob paths can be used for tree lookup, and renames
+  between distinct byte names are detected correctly. Patch rename fields
+  contain unquoted filename bytes.
+* Tree serialization now delegates construction to Git or the supported Gix
+  backend. ``Tree.cache`` and ``TreeModifier`` edit one tree's in-memory entries;
+  ``set_done()`` orders entries by filename bytes, including undecodable names.
+  Object IDs and parent trees do not change automatically. Prefer
+  ``IndexFile.write_tree()`` for changes to staged paths.
 * ``Commit.stats`` preserves Unicode line separators in filenames when
   ``core.quotePath=false``. Git's LF-delimited output remains intact for root,
-  subsequent and empty commits, including the Gix backend's existing filename
-  quoting fallback.
-* ``GitConfigParser[section] = values`` again replaces a nonempty section,
-  restoring Kas's Git identity cleanup. Git performs each mutation and locks
-  it independently; replacement is not one atomic transaction. Empty sections
-  and ``add_section()`` remain unsupported, including Kas's SSH key setup.
-* Explicit ``from git import Union`` and ``Optional`` imports remain available
-  for Demisto SDK's validator registration and MkDocs RSS Plugin imports,
-  retaining the historical ``typing`` aliases.
-* Editable/source imports expose the release version in ``git.__version__``,
-  matching built distributions. Salt's GitPython provider checks can parse the
-  version instead of rejecting the unstamped ``"git"`` build placeholder.
+  subsequent and empty commits, including the Gix backend's filename
+  quoting fallback. File keys contain the actual names, unquoting Git's C-style
+  escapes and preserving undecodable bytes with ``surrogateescape``.
+* Imports from a source checkout now read ``git.__version__`` from ``VERSION``.
+  Built wheels and source distributions continue to carry their stamped release
+  version.
 * ``Repo`` construction validates repository configuration through Git/Gix.
   A subclass override of ``config_reader()`` no longer controls discovery or
   suppresses its include graph. Malformed configuration and invalid repository
-  extensions can fail before downstream custom validation runs. sbxloop's
-  metadata-reader subclass exposes this remaining compatibility break; callers
-  must prepare their trusted metadata view before opening it with ``Repo``.
-* Revision root trees such as ``Repo.rev_parse("HEAD:")`` retain their empty
-  path and can be iterated. Missing paths within a valid tree revision retain
-  ``Tree.join()``'s ``KeyError`` and missing-component message, restoring MCP
-  Server Git's directory display and path-error reporting.
+  extensions can fail before downstream custom validation runs. Callers using
+  custom metadata views must prepare them before opening with ``Repo``.
 * ``Head.tracking_branch()`` returns a local ``Head`` when Git configures the
   current repository (``branch.<name>.remote=.``) as the upstream, instead of
   constructing an invalid ``refs/remotes/./...`` reference. Git resolves the
@@ -122,17 +131,23 @@ API changes
   including updates when ``logmsg`` is omitted.
 * ``GitConfigParser`` uses Git's configuration syntax and canonical key spelling,
   and no longer subclasses ``configparser.RawConfigParser``.
+  Subsection names and values preserve undecodable bytes with ``surrogateescape``.
   Common getters, typed values, duplicate values, file/stream inputs and mutation
-  methods remain. Invalid Git syntax previously accepted by Python is rejected.
-  Empty-section creation and valueless writes are removed; valueless reads remain.
-  Relative includes from streams are rejected by Git. Locks cover each native
-  mutation rather than the writer object's lifetime.
+  methods remain, including ``GitConfigParser[section] = values`` for replacing
+  nonempty sections. Invalid Git syntax previously accepted by Python is rejected.
+  Empty-section creation, including ``add_section()``, and valueless writes are
+  removed; valueless reads remain. Relative includes from streams are rejected
+  by Git. Locks cover each native mutation rather than the writer object's
+  lifetime; replacing a section is not one atomic transaction.
 * ``Submodule.rename()`` is removed. Moving a submodule preserves its logical name,
   matching Git. Normal removal retains Git's recoverable submodule metadata.
   Re-adding with ``no_checkout=True`` can reuse that metadata without changing refs;
   incompatible URLs, branches, and clone-only options are rejected before mutation.
   Fetch/pull results are derived from command output rather than ``FETCH_HEAD``
-  file parsing. Revision strings follow Git's native revision grammar.
+  file parsing. Revision strings follow Git's native revision grammar. Root trees
+  such as ``Repo.rev_parse("HEAD:")`` have an empty path and can be iterated.
+  Missing paths within a valid tree revision raise ``Tree.join()``'s ``KeyError``
+  with its missing-component message.
 
 * ``IndexFile.entries`` returns an immutable snapshot keyed by ``(path, stage)``
   for compatibility with existing readers. Each access queries the current
@@ -156,8 +171,8 @@ API changes
 * Commit/tag metadata uses structured Gix decoders when the Gix backend supports
   the repository. The CLI backend retains raw decoding because Git has no faithful
   formatted query for all commit headers or arbitrary tag objects. ``gpgsig``
-  remains readable. The small ``Actor.from_string()`` and
-  ``parse_actor_and_date()`` identity helpers remain supported.
+  remains readable. ``Actor.from_string()`` and ``parse_actor_and_date()`` provide
+  identity parsing.
 * ``parse_date()`` delegates text syntax and timezone interpretation to Git;
   aware datetimes retain direct conversion and invalid inputs raise ``ValueError``.
   ISO/RFC dates now apply their timezone to the UTC timestamp, correcting the
@@ -172,9 +187,10 @@ API changes
   ``Actor.from_string``), ``git.util.Iterable`` (use ``IterableObj``),
   ``git.compat.is_win/is_posix/is_darwin`` (use ``os.name``/``sys.platform``), and
   ``git.types.Lit_commit_ish`` (use ``Literal["commit", "tag"]`` or
-  ``GitObjectTypeString``). Top-level typing exports and private module aliases
-  are removed; import from ``typing`` or the owning module. ``git.util`` now
-  exposes the actual utility module. Abstract ``Traversable.traverse`` and
+  ``GitObjectTypeString``). Top-level typing exports other than explicit
+  ``Union`` and ``Optional`` imports are removed, along with private module
+  aliases; import from ``typing`` or the owning module. ``git.util`` now exposes
+  the actual utility module. Abstract ``Traversable.traverse`` and
   ``list_traverse`` raise ``NotImplementedError``; use concrete implementations.
 * Paths and URLs no longer expand ``$VAR``/``%VAR%`` automatically. ``Repo``
   still accepts ``expand_vars=False`` for callers that explicitly select literal
@@ -1135,7 +1151,6 @@ Please note that due to breaking changes, we have to increase the major version.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
   divisiblej by 3600 seconds. This would happen if the timezone was something like `+0530` for instance.
 * A list of all additional fixes can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`__
-* CRITICAL: `Tree.cache` was removed without replacement. It is technically impossible to change individual trees and expect their serialization results to be consistent with what *git* expects. Instead, use the `IndexFile` facilities to adjust the content of the staging area, and write it out to the respective tree objects using `IndexFile.write_tree()` instead.
 
 1.0.1 - Fixes
 =============

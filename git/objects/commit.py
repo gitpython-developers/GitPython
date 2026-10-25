@@ -17,8 +17,9 @@ import tempfile
 
 from git import _backend
 from git.cmd import Git
+from git.compat import safe_decode, safe_encode
 from git.exc import BadObject, GitCommandError, UnsafeOptionError
-from git.diff import Diffable
+from git.diff import Diffable, decode_path
 from git.util import Actor, Stats, finalize_process, hex_to_bin
 
 from . import base
@@ -47,7 +48,7 @@ from typing import (
     cast,
 )
 
-from git.types import PathLike
+from git.types import Files_TD, PathLike
 
 if TYPE_CHECKING:
     from git.refs import SymbolicReference
@@ -529,7 +530,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
                 "diff", self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True, raw=True
             ).split("\n")
             text = process_lines(lines)
-        return Stats._list_from_string(self.repo, text)
+        stats = Stats._list_from_string(self.repo, text)
+        # Unquote after parsing: filenames themselves may contain tabs and newlines.
+        files: Dict[PathLike, Files_TD] = {
+            safe_decode(cast(bytes, decode_path(safe_encode(os.fspath(path)), has_ab_prefix=False))): values
+            for path, values in stats.files.items()
+        }
+        stats.files = files
+        return stats
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:

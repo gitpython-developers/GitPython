@@ -94,50 +94,44 @@ def test_native_worktree_inventory_includes_bare_main(repo):
 def test_native_repository_lifetime_and_refresh(repo):
     handle = repo._get_gix_repository()
     assert isinstance(handle, gix.Repository)
-    with patch.object(gix, "open_opts", side_effect=AssertionError("unexpected reopen")):
-        assert repo.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
-        assert repo._gix_repository is handle
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            assert list(
-                pool.map(lambda _: repo.git._call_process_safe("rev_parse", "--show-object-format"), range(2))
-            ) == [
-                repo.object_format,
-                repo.object_format,
-            ]
+    with patch.object(gix, "open_opts", wraps=gix.open_opts) as opened:
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected CLI call")):
+            assert repo._get_gix_repository() is not handle
+            assert repo.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                handles = list(pool.map(lambda _: repo._get_gix_repository(), range(2)))
+            assert handles[0] is not handles[1]
+            assert all(
+                current is not handle and str(current.object_hash()) == repo.object_format for current in handles
+            )
+        assert opened.call_count == 4
     repo.index.add(["file"])
     first = repo.index.commit("native", skip_hooks=True)
     assert repo.commit().hexsha == first.hexsha
     repo.git.commit("--allow-empty", "-m", "CLI", "--no-verify", "--no-gpg-sign")
     assert repo.commit().message == "CLI\n"
-    assert repo._gix_repository is handle
     assert {(e.path, e.stage) for e in repo.index.iter_entries()} == {("file", 0)}
 
     with repo.config_writer() as writer:
         writer.set_value("core", "abbrev", "9")
+        writer.set_value("gc", "auto", "7")
     assert _backend._repository(repo.git, {}).config_snapshot().integer("core.abbrev") == 9
-    assert repo._gix_repository is handle
+    assert repo._get_gix_repository().config_snapshot().integer("gc.auto") == 0
+    assert repo._get_gix_repository(query_config=True).config_snapshot().integer("gc.auto") == 7
+    with repo.git.custom_environment(GIT_WORK_TREE=str(Path(repo.working_dir).parent)):
+        assert repo._get_gix_repository().workdir() == Path(repo.working_dir).parent
+    assert repo._get_gix_repository().workdir() == Path(repo.working_tree_dir)
     include = Path(repo.working_dir).parent / "included"
     repo.git.config("include.path", str(include))
     assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"first"
     include.write_text("[test]\nvalue = second\n")
     assert _backend._repository(repo.git, {}).config_snapshot().string("test.value") == b"second"
 
-    count = _backend.statistics().get(("Git.execute", "CLI process"), 0)
-    with patch.object(gix, "open_opts", wraps=gix.open_opts) as opened:
-        replacement = repo._get_gix_repository(recreate=True)
-        assert replacement is not handle
-        assert repo._get_gix_repository() is replacement
-        opened.assert_called_once()
-    assert _backend.statistics().get(("Git.execute", "CLI process"), 0) == count
-
     with pickle.loads(pickle.dumps(repo)) as restored:
-        assert restored._gix_repository is None
         assert restored.commit().hexsha == repo.commit().hexsha
-        assert restored._gix_repository is not None
+        assert restored.git._repo() is restored
     repo.close()
-    assert repo._gix_repository is None
     assert repo.commit().message == "CLI\n"
-    assert repo._gix_repository is not handle
 
 
 def test_opening_and_discovery_use_gix_with_explicit_fallbacks(repo):
@@ -179,7 +173,6 @@ def test_opening_and_discovery_use_gix_with_explicit_fallbacks(repo):
                     assert opened.object_format == repo.object_format
                     assert opened.ref_format == "files"
                     assert opened.bare is expected_bare
-                    assert isinstance(opened._gix_repository, gix.Repository)
                     assert opened._empty_tree_hexsha == repo._empty_tree_hexsha
                     assert opened.git._call_process_safe("rev_parse", "--show-object-format") == repo.object_format
                     assert (
@@ -236,7 +229,6 @@ def test_gitfile_reopens_canonical_native_repository(repo, target):
     with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as cli:
         with Repo(gitfile) as opened:
             assert (opened.git_dir, str(opened.working_tree_dir), opened.bare) == expected
-            assert isinstance(opened._gix_repository, gix.Repository)
         assert all("version" in call.args[1] or "--show-ref-format" in call.args[1] for call in cli.call_args_list)
 
 

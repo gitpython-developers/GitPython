@@ -334,6 +334,8 @@ class Traversable(Protocol):
     @abstractmethod
     def _get_intermediate_items(cls, item: Any) -> Sequence["Traversable"]:
         """
+        :meta public:
+
         :return:
             Tuple of items connected to the given item.
             Must be implemented in subclass.
@@ -353,6 +355,8 @@ class Traversable(Protocol):
         self, as_edge: bool = False, *args: Any, **kwargs: Any
     ) -> IterableList[Union["Commit", "Submodule", "Tree", "Blob"]]:
         """Traverse self and collect all items found.
+
+        :meta public:
 
         :return:
             :class:`~git.util.IterableList` with the results of the traversal as
@@ -400,6 +404,8 @@ class Traversable(Protocol):
         as_edge: bool = False,
     ) -> Union[Iterator[Union["Traversable", "Blob"]], Iterator[TraversedTup]]:
         """Iterator yielding items found when traversing `self`.
+
+        :meta public:
 
         :param predicate:
             A function ``f(i,d)`` that returns ``False`` if item i at depth ``d`` should

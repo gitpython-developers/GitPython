@@ -12,6 +12,28 @@ from test.lib.helper import with_rw_directory, with_rw_repo
 from test.lib.fixtures import writable_fixture
 
 
+def test_repo_context_releases_resources_before_removal():
+    with writable_fixture("repo-close.sh") as temporary:
+        path = temporary.path() / "repo"
+        # [close-repo-context]
+        from git import Repo
+
+        with Repo(path) as repo:
+            print(repo.head.commit.hexsha)
+            # ![close-repo-context]
+            assert repo.head.commit.tree["file"].data_stream.read() == b"contents\n"
+            processes = [reader.proc for reader in (repo.git.cat_file_header, repo.git.cat_file_all) if reader]
+
+        assert repo.git.cat_file_header is repo.git.cat_file_all is None
+        assert all(process.poll() is not None for process in processes)
+        # [remove-repo-directory]
+        from git.util import rmtree
+
+        rmtree(path)
+        # ![remove-repo-directory]
+        assert not path.exists()
+
+
 class Tutorials(TestBase):
     def tearDown(self):
         gc.collect()

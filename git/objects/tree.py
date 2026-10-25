@@ -10,7 +10,7 @@ import tempfile
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
-from git.compat import defenc, safe_decode
+from git.compat import defenc, safe_decode, safe_encode
 from git.cmd import Git
 
 from . import util
@@ -55,12 +55,16 @@ def cmp(a: str, b: str) -> int:
 
 
 class TreeModifier:
-    """A utility class providing methods to alter the underlying cache in a list-like
-    fashion.
+    """Edit the entries cached by one :class:`Tree` instance.
 
-    Once all adjustments are complete, the :attr:`_cache`, which really is a reference
-    to the cache of a tree, will be sorted. This ensures it will be in a serializable
-    state.
+    Changes affect only that instance's in-memory entries. They do not update its
+    object ID, the stored tree, parent trees, the index, or any commit. Call
+    :meth:`set_done` to restore entry order for iteration after editing.
+
+    Tree serialization delegates construction and ordering to Git or the supported
+    Gix backend. Prefer :class:`~git.index.base.IndexFile` and
+    :meth:`~git.index.base.IndexFile.write_tree` when building a new tree from staged
+    paths, especially when changes must propagate through nested trees.
     """
 
     __slots__ = ("_cache",)
@@ -87,7 +91,7 @@ class TreeModifier:
         :return:
             self
         """
-        self._cache.sort(key=lambda x: (x[2] + "/") if x[1] == Tree.tree_id << 12 else x[2])
+        self._cache.sort(key=lambda x: safe_encode(x[2]) + (b"/" if x[1] == Tree.tree_id << 12 else b""))
         return self
 
     # } END interface
@@ -214,7 +218,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
             output = self.repo.git._call_process_safe(
                 "ls_tree", "-z", "--full-tree", self.hexsha, stdout_as_string=False
             )
-            self._cache: List[TreeCacheTup] = []
+            cache: List[TreeCacheTup] = []
             for record in output.split(b"\0"):
                 if not record:
                     continue
@@ -225,7 +229,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
                 binsha = bytes.fromhex(oid.decode("ascii"))
                 if len(binsha) != self.repo._oid_size:
                     raise ValueError("Invalid tree object ID returned by Git")
-                self._cache.append((binsha, int(mode, 8), name))
+                cache.append((binsha, int(mode, 8), name))
+            self._cache = cache
         else:
             super()._set_cache_(attr)
         # END handle attribute
@@ -303,10 +308,10 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
     def cache(self) -> TreeModifier:
         """
         :return:
-            An object allowing modification of the internal cache. This can be used to
-            change the tree's contents. When done, make sure you call
-            :meth:`~TreeModifier.set_done` on the tree modifier, or serialization
-            behaviour will be incorrect.
+            A supported editor for this instance's cached entries. Call
+            :meth:`~TreeModifier.set_done` after editing to restore iteration order.
+            Editing does not change this tree's object ID or persist changes to its
+            stored object, parents, or commits.
 
         :note:
             See :class:`TreeModifier` for more information on how to alter the cache.
@@ -323,8 +328,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]]:
-        """For documentation, see
-        `Traversable._traverse() <git.objects.util.Traversable._traverse>`.
+        """For documentation, see :meth:`~git.objects.util.Traversable._traverse`.
 
         Trees are set to ``visit_once = False`` to gain more performance in the
         traversal.

@@ -7,8 +7,8 @@ instance open per worker, but creates fresh commit/tree/index wrappers per
 invocation so their cached properties cannot turn the measurement into a no-op.
 The CLI's persistent `cat-file` processes and the filesystem cache are warmed.
 Repository creation, imports, preflight and result hashing are outside timing.
-Native handle refresh and compatibility checks remain inside timing, exposing
-the benefit of retaining a Gix repository across operations. Opening and
+Native repository opening and compatibility checks remain inside operation
+timing; each native operation opens a fresh Gix handle. Opening and
 discovery retain explicit CLI fallbacks tracked in `cli-budget.json`.
 `open_repository` and `discover_repository` instead create and close a new
 `Repo` in each timed invocation; they do not join the already-open journey.

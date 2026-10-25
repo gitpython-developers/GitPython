@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from typing import Any, Dict, Generic, Iterator, List, OrderedDict, Sequence, Tuple, TypeVar, Union, TYPE_CHECKING
 from typing import Mapping
 
-from git.compat import defenc, force_text
+from git.compat import safe_decode
 from git.exc import GitCommandError
 from git.types import _T, ConfigLevels_Tup, Lit_config_levels, PathLike, assert_never
 
@@ -368,11 +368,11 @@ class GitConfigParser:
                 if not record:
                     continue
                 key, separator, value = record.partition(b"\n")
-                prefix, option = key.decode(defenc).rsplit(".", 1)
+                prefix, option = safe_decode(key).rsplit(".", 1)
                 section = self._public_section(prefix)
                 if section not in sections:
                     sections[section] = _OMD()
-                sections[section].add(option, value.decode(defenc) if separator else None)
+                sections[section].add(option, safe_decode(value) if separator else None)
         self._sections = sections
         self._is_initialized = True
 
@@ -476,7 +476,7 @@ class GitConfigParser:
     def _value(value: Any) -> str:
         if value is None:
             raise ValueError("Writing valueless Git configuration options is unsupported")
-        value = str(value) if isinstance(value, (int, float, bool)) else force_text(value)
+        value = str(value) if isinstance(value, (int, float, bool)) else safe_decode(value)
         if any(c in value for c in "\0\r"):
             raise ValueError("Git configuration values must not contain CR or NUL")
         return value

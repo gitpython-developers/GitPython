@@ -15,6 +15,7 @@ from unittest.mock import Mock
 from gitdb import IStream
 
 from git import Actor, Commit, Repo, _backend
+from git.compat import safe_decode, safe_encode
 from git.exc import UnsafeOptionError
 from git.objects.util import tzoffset, utc
 
@@ -224,6 +225,52 @@ class TestCommit(TestCommitSerialization):
             empty_stats = repo.commit("empty").stats
             assert empty_stats.files == {}
             assert empty_stats.total == {"insertions": 0, "deletions": 0, "lines": 0, "files": 0}
+
+    def test_stats_preserve_quoted_filename_bytes(self):
+        paths = (
+            b"byte-\xff",
+            b'"byte-\\377"',
+            "utf8-é".encode(),
+            b"tab\tname",
+            b"line\nname",
+            b'quote"name',
+            b"back\\slash",
+        )
+        for quote_path in ("true", "false"):
+            with self.subTest(quote_path=quote_path), fixture_repo("commit-stats-byte-paths.sh", quote_path) as repo:
+                for revision, kind, added, deleted in (
+                    ("update-1", "A", 1, 0),
+                    ("update-2", "M", 1, 0),
+                    ("HEAD", "D", 0, 2),
+                ):
+                    with self.subTest(revision=revision):
+                        stats = repo.commit(revision).stats
+                        expected = {
+                            safe_decode(path): {
+                                "insertions": added,
+                                "deletions": deleted,
+                                "lines": added + deleted,
+                                "change_type": kind,
+                            }
+                            for path in paths
+                        }
+                        if kind != "M":
+                            expected["binary\tfile"] = {
+                                "insertions": 0,
+                                "deletions": 0,
+                                "lines": 0,
+                                "change_type": kind,
+                            }
+                        assert stats.files == expected
+                        assert {safe_encode(path) for path in stats.files} == set(paths) | (
+                            {b"binary\tfile"} if kind != "M" else set()
+                        )
+                        assert stats.total == {
+                            "insertions": len(paths) * added,
+                            "deletions": len(paths) * deleted,
+                            "lines": len(paths) * (added + deleted),
+                            "files": len(expected),
+                        }
 
     def test_renames(self):
         commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")

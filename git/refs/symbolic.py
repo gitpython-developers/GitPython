@@ -11,6 +11,7 @@ from gitdb.exc import BadName, BadObject
 
 from git import _backend
 from git.cmd import Git
+from git.compat import safe_encode
 from git.exc import GitCommandError, UnsafeOptionError
 from git.objects.base import Object
 from git.objects.commit import Commit
@@ -462,7 +463,7 @@ class SymbolicReference:
             if first_line:
                 options.extend(("-m", first_line))
         with tempfile.TemporaryFile() as stream:
-            stream.write(commands.encode("utf-8"))
+            stream.write(safe_encode(commands))
             stream.seek(0)
             repo.git._call_process_safe("update_ref", "--no-deref", "--stdin", "-z", *options, istream=stream)
 
@@ -697,7 +698,7 @@ class SymbolicReference:
         output = repo.git._call_process_safe(
             "for_each_ref", "--format=%(refname)", *options, "--", *([prefix] if prefix else [])
         )
-        for path in sorted(output.splitlines()):
+        for path in sorted(output.split("\n")):
             try:
                 yield cls.from_path(repo, path)
             except ValueError:

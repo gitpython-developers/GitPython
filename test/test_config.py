@@ -69,6 +69,42 @@ def test_config_values_and_mutations(config_directory, stream):
     assert (source.getvalue() if stream else path.read_bytes()).startswith(b"[CoRe]\nFlag\n")
 
 
+@pytest.mark.parametrize("stream", [False, True])
+def test_config_preserves_non_utf8_subsections_and_values(stream):
+    path = read_only_fixture("config-bytes.sh")
+    source = BytesIO((path / "config").read_bytes()) if stream else path / "config"
+    assert (
+        Git()
+        .config("list", "--file", str(path / "config"), "--null", stdout_as_string=False)
+        .endswith(b"remote.origin-\xff.url\ntarget-\xfe\0")
+    )
+    with GitConfigParser(source) as config:
+        assert 'remote "origin-\udcff"' in config.sections()
+        assert config.get('remote "origin-\udcff"', "url") == "target-\udcfe"
+    with Repo(path / "repo") as repo:
+        remote = repo.remotes[0]
+        assert remote.name == "origin-\udcff"
+        assert remote.url == "target-\udcfe"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Windows command arguments cannot carry arbitrary bytes")
+@pytest.mark.parametrize("stream", [False, True])
+def test_config_mutations_preserve_non_utf8_values(stream):
+    with writable_fixture("config-bytes.sh") as fixture:
+        path = fixture.path() / "config"
+        source = BytesIO(path.read_bytes()) if stream else path
+        with GitConfigParser(source, read_only=False) as config:
+            section = 'remote "origin-\udcff"'
+            assert config.get(section, "url") == "target-\udcfe"
+            config.set_value(section, "url", "updated-\udcfd")
+            config.add_value(section, "url", b"bytes-\xfc")
+            assert config.get_values(section, "url") == ["updated-\udcfd", "bytes-\udcfc"]
+        content = source.getvalue() if stream else path.read_bytes()
+        assert b'"origin-\xff"' in content
+        assert b"updated-\xfd" in content
+        assert b"bytes-\xfc" in content
+
+
 def test_config_includes_and_repository_conditions():
     path = read_only_fixture("config.sh", "includes")
     with Repo(path / "repo") as repo:

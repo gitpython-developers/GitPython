@@ -16,7 +16,6 @@ import re
 import shlex
 import sys
 import tempfile
-from threading import RLock
 import weakref
 
 import gitdb
@@ -125,8 +124,6 @@ class Repo:
 
     # Must exist, or  __del__  will fail in case we raise on `__init__()`.
     git = cast("Git", None)
-    _gix_repository: Any = None
-    _gix_state: Any = None
 
     working_dir: PathLike
     """The working directory of the git command."""
@@ -266,7 +263,8 @@ class Repo:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
             used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
-            and its subclasses are supported.
+            and its subclasses are supported. ``GitDB`` is an alias for
+            ``GitCmdObjectDB``.
 
         :param search_parent_directories:
             If ``True``, all parent directories will be searched for a valid repo as
@@ -276,9 +274,8 @@ class Repo:
             GitPython, which is considered a bug though.
 
         :param expand_vars:
-            The legacy ``False`` option remains accepted to select literal paths.
-            ``True`` is unsupported; expand environment variables explicitly
-            before opening a repository. Initial ``~`` expansion remains enabled.
+            Only ``False`` is supported. Expand environment variables explicitly
+            before opening a repository. Initial ``~`` expansion is enabled.
 
         :raise git.exc.InvalidGitRepositoryError:
 
@@ -460,7 +457,6 @@ class Repo:
                     break
 
         self.working_dir = self._working_tree_dir or self.common_dir
-        self._gix_lock = RLock()
         self.git = self.GitCommandWrapperType(self.working_dir)
         self.git._repo = weakref.ref(self)
         self.git._environment.update(GIT_DIR=git_dir, **environment)
@@ -471,7 +467,6 @@ class Repo:
             if "GIT_WORK_TREE" not in environment:
                 self.git._repository_environment["GIT_WORK_TREE"] = os.fspath(self._working_tree_dir)
         if native is not NotImplemented:
-            self._gix_repository = native
             self._empty_tree_hexsha = str(native.empty_tree().id)
         else:
             with tempfile.TemporaryFile() as empty:
@@ -494,32 +489,18 @@ class Repo:
         command: Optional[Git] = None,
         env: Optional[Dict[str, Any]] = None,
         query_config: bool = False,
-        recreate: bool = False,
     ) -> Any:
-        """Access native state, reusing the repository unless recreation is requested.
+        """Open a fresh native repository for each operation.
 
-        This method owns the reuse policy so it can later become configurable.
-        Configuration queries currently open a separate handle without the execution
-        restrictions applied to the retained handle. Other operations retain the
-        existing best-effort refresh of configuration, environment and CLI changes.
+        Configuration queries omit execution restrictions so synthetic settings
+        do not appear in configuration results.
         """
-        with self._gix_lock:
-            if recreate:
-                self._gix_repository = self._gix_state = None
-            return _backend._open_repository(
-                command if command is not None else self.git, env or {}, query_config=query_config
-            )
-
-    def __getstate__(self) -> Dict[str, Any]:
-        return {
-            key: value
-            for key, value in self.__dict__.items()
-            if key not in ("_gix_repository", "_gix_state", "_gix_lock")
-        }
+        return _backend._open_repository(
+            command if command is not None else self.git, env or {}, query_config=query_config
+        )
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
-        self._gix_lock = RLock()
         self.git._repo = weakref.ref(self)
 
     def __enter__(self) -> "Repo":
@@ -535,7 +516,14 @@ class Repo:
             pass
 
     def close(self) -> None:
-        self._gix_repository = self._gix_state = None
+        """Release persistent Git object readers.
+
+        Use ``with Repo(path) as repo:`` to close automatically, including on errors.
+        Close every repository instance and release any separately opened native
+        handles or readers before removing its directory, especially on Windows
+        where open handles prevent deletion. :func:`git.util.rmtree` also handles
+        Git's read-only files.
+        """
         if self.git:
             self.git.clear_cache()
             # Tempfiles objects on Windows are holding references to open files until
@@ -1595,7 +1583,8 @@ class Repo:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
             used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
-            and its subclasses are supported.
+            and its subclasses are supported. ``GitDB`` is an alias for
+            ``GitCmdObjectDB``.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, such as ``--template`` and
@@ -1779,8 +1768,8 @@ class Repo:
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned :class:`Repo` instance. The
-              backend must be ``GitCmdObjectDB`` or its subclass; use the default
-              :class:`~git.db.GitCmdObjectDB` instead.
+              backend must be :class:`~git.db.GitCmdObjectDB` or its subclass.
+              ``GitDB`` is an alias for ``GitCmdObjectDB``.
             * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
               command.
 

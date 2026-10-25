@@ -10,7 +10,7 @@ import re
 
 from git import _backend
 from git.cmd import Git, handle_process_output
-from git.compat import defenc
+from git.compat import defenc, safe_decode
 from git.objects.base import IndexObject
 from git.objects.blob import Blob
 from git.objects.util import mode_str_to_int
@@ -486,7 +486,7 @@ class Diff:
         # we need to overwrite "repo" to the corresponding submodule's repo instead.
         if repo and a_rawpath and (self.a_mode == 0o160000 or self.b_mode == 0o160000):
             for submodule in repo.submodules:
-                if submodule.path == a_rawpath.decode(defenc, "replace"):
+                if submodule.path == safe_decode(a_rawpath):
                     if submodule.module_exists():
                         repo = submodule.module()
                     break
@@ -582,24 +582,24 @@ class Diff:
 
     @property
     def a_path(self) -> Optional[str]:
-        return self.a_rawpath.decode(defenc, "replace") if self.a_rawpath else None
+        return safe_decode(self.a_rawpath) if self.a_rawpath else None
 
     @property
     def b_path(self) -> Optional[str]:
-        return self.b_rawpath.decode(defenc, "replace") if self.b_rawpath else None
+        return safe_decode(self.b_rawpath) if self.b_rawpath else None
 
     @property
     def rename_from(self) -> Optional[str]:
-        return self.raw_rename_from.decode(defenc, "replace") if self.raw_rename_from else None
+        return safe_decode(self.raw_rename_from) if self.raw_rename_from else None
 
     @property
     def rename_to(self) -> Optional[str]:
-        return self.raw_rename_to.decode(defenc, "replace") if self.raw_rename_to else None
+        return safe_decode(self.raw_rename_to) if self.raw_rename_to else None
 
     @property
     def renamed_file(self) -> bool:
         """:return: ``True`` if the blob of our diff has been renamed"""
-        return self.rename_from != self.rename_to
+        return self.raw_rename_from != self.raw_rename_to
 
     @classmethod
     def _pick_best_path(cls, path_match: bytes, rename_match: bytes, path_fallback_match: bytes) -> Optional[bytes]:
@@ -742,8 +742,8 @@ class Diff:
                     new_file,
                     deleted_file,
                     copied_file,
-                    rename_from,
-                    rename_to,
+                    decode_path(rename_from, has_ab_prefix=False) if rename_from else None,
+                    decode_path(rename_to, has_ab_prefix=False) if rename_to else None,
                     None,
                     None,
                     None,
@@ -761,34 +761,29 @@ class Diff:
 
     @staticmethod
     def _handle_diff_line(lines_bytes: bytes, repo: "Repo", index: DiffIndex["Diff"]) -> None:
-        lines = lines_bytes.decode(defenc)
-
         # Discard everything before the first colon, and the colon itself.
-        _, _, lines = lines.partition(":")
+        _, _, lines = lines_bytes.partition(b":")
 
         # Each record is a metadata field starting with a colon, followed by one path,
         # or two for copies and renames, each terminated by NUL. A path may itself
         # start with a colon or contain a line feed, so read the fields in order
         # instead of splitting at colons.
-        fields = iter(lines.rstrip("\n").split("\x00"))
+        fields = iter(lines.rstrip(b"\n").split(b"\x00"))
         for meta in fields:
             if not meta:
                 # The line data is empty, skip.
                 continue
-            if meta.startswith(":"):
-                meta = meta[1:]
+            metadata = (meta[1:] if meta.startswith(b":") else meta).decode("ascii")
             a_blob_id: Optional[str]
             b_blob_id: Optional[str]
-            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
+            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = metadata.split(None, 4)
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
             change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = "".join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
-            path = next(fields, "")
-            a_path = path.encode(defenc)
-            b_path = path.encode(defenc)
+            a_path = b_path = next(fields, b"")
             deleted_file = False
             new_file = False
             copied_file = False
@@ -805,9 +800,9 @@ class Diff:
                 new_file = True
             elif change_type == "C":
                 copied_file = True
-                b_path = next(fields, "").encode(defenc)
+                b_path = next(fields, b"")
             elif change_type == "R":
-                b_path = next(fields, "").encode(defenc)
+                b_path = next(fields, b"")
                 rename_from, rename_to = a_path, b_path
             elif change_type == "T":
                 # Nothing to do.

@@ -2,14 +2,14 @@
 
 ## Known incompatibilities
 
-The October 22–23, 2026 audit covered 115 projects on both CLI and Gix backends.
-These differences remain after the audit fixes; later passing selections do not close them.
-Released GitPython **3.2.1** is the API compatibility baseline.
+The October 22–23, 2026 audit covered 115 projects on both CLI and Gix backends
+of the unreleased migration. These incompatibilities are relative to released
+GitPython **3.2.1**; passing selections do not close them.
 
 ### Read-only index entries
 
 `IndexFile.entries` is an immutable `(path, stage)` snapshot. Readers used by dlt
-and Renku work again, but dictionary mutation remains unsupported. Callers that
+and Renku can read these snapshots; dictionary mutation is unsupported. Callers that
 write entries directly must use supported index operations. This is an intentional
 API break, not a demonstrated Gitoxide bug; the audit does not count an untested writer as passing.
 
@@ -29,7 +29,7 @@ It calls `add_section('gpg "ssh"')` before assigning `allowedSignersFile` throug
 The available Git/Gix config edit APIs do not create empty sections, and the inherited
 ConfigParser section API was removed. Callers can use
 `set_value('gpg "ssh"', 'allowedSignersFile', path)` directly. Nonempty section
-assignment is restored; empty-section support remains a missing capability/API break.
+assignment is supported; empty-section support is a missing capability/API break.
 
 ### Mistral Vibe: repository finalization timing
 
@@ -73,30 +73,32 @@ incorrect. Four other real LFS/helper supplements pass. Its five branch incompat
 are separate from these ten outcomes. Initial dependency, fixture and quota errors
 were kept separately from corrected final runs; source expectations were unchanged.
 
-## Compatibility fixes established by the audit
+## Verified compatibility
 
-Regressions failed before the corresponding fixes. Counts below remain the recorded
-audit results, rather than a new run of these downstreams against the current branch head.
+The commits identify unreleased development revisions used to verify these contracts.
+Counts are the recorded audit results, rather than a new run of these downstreams
+against the current branch head.
 
-| Commit | Affected caller / correction |
+| Commit | Affected caller / verified behavior |
 | --- | --- |
-| `b3a4ba8d` | dlt/Renku: restore immutable `IndexFile.entries` readers, including merge stages; writers remain unsupported. |
-| `2fd0d008` | Mistral Vibe: stop automatic `GIT_DIR`/`GIT_WORK_TREE` from overriding global `-C`; preserve explicit environment precedence. Fixes 22 cases and avoids staging in the original dirty checkout. |
-| `8ce71f5c` | Mistral Vibe: preserve checkout context for separate Git directories; fixes two staging cases using Git/Gix-resolved worktree metadata. |
-| `97921e3e` | Aider: restore `git.GitDB`/`git.db.GitDB` as selectors for managed `GitCmdObjectDB`; all 21 repository tests pass. |
+| `b3a4ba8d` | dlt/Renku: support immutable `IndexFile.entries` readers, including merge stages; writers are unsupported. |
+| `2fd0d008` | Mistral Vibe: respect global `-C` despite automatic `GIT_DIR`/`GIT_WORK_TREE`; preserve explicit environment precedence. The 22 affected cases pass, with staging isolated from the original dirty checkout. |
+| `8ce71f5c` | Mistral Vibe: preserve checkout context for separate Git directories; two staging cases pass using Git/Gix-resolved worktree metadata. |
+| `97921e3e` | Aider: accept `git.GitDB`/`git.db.GitDB` as selectors for managed `GitCmdObjectDB`; all 21 repository tests pass. |
 | `8877d095` | Angr: resolve branches tracking another local branch through Git's upstream resolver; five real checks pass. Released GitPython also had this bug; the operation retains a CLI fallback. |
-| `44403026` | MCP Server Git: restore root-tree paths and missing-component `KeyError` diagnostics; three regressions fixed, complete 186-test selection passes. |
-| `47a668ce` | sbxloop: accept explicit `expand_vars=False` in its original constructor position; fixes 91 cases. Paths remain literal and `True` rejects automatic expansion. |
+| `44403026` | MCP Server Git: preserve root-tree paths and missing-component `KeyError` diagnostics; three focused regressions and the complete 186-test selection pass. |
+| `47a668ce` | sbxloop: accept explicit `expand_vars=False` in its original constructor position; 91 affected cases pass. Paths are literal and `True` rejects automatic expansion. |
 | `2d84a6ae` | Salt: resolve the editable/source `git.__version__` from `VERSION`; provider detection and 34 unchanged tests pass. |
 | `a88e46a4` | Packaging: keep that source-only version fallback inactive in wheels; isolated installation profiles pass. |
 | `617a0586` | Demisto SDK: retain the explicit `typing.Union` import from `git`; validator registration and 25 upstream tests pass. |
-| `5749f6db` | Kas: restore nonempty config section assignment through Git config remove/set operations; 11 real supplements pass. Values are validated first; replacement is not transaction-wide atomic. |
+| `5749f6db` | Kas: support nonempty config section assignment through Git config remove/set operations; 11 real supplements pass. Values are validated first; replacement is not transaction-wide atomic. |
 | `3640db47` | MkDocs RSS Plugin: retain the explicit `typing.Optional` import from `git`; five upstream and ten supplemental cases pass. |
 
 Scripted regressions in [test_downstream_compatibility.py](../test_downstream_compatibility.py)
 cover SHA-1/SHA-256, files/reftable, index snapshots, revision paths, linked worktrees,
 explicit environments, literal paths, and separate Git directories. Config and
-installation regressions cover the later fixes. Git/Gix retain ownership and input validation.
+installation regressions cover section assignment, typing imports and source versions.
+Git/Gix retain ownership and input validation.
 
 ## Selection, method and recorded totals
 
@@ -217,7 +219,7 @@ those suites nor the 115 downstream audits; later branch changes have their own 
 | siliconcompiler | 0.38.11 | 264 | 8 | 0 | 0 | Resolver/updater/issue suite includes clones/metadata plus many mocks; real clone/checkout/cache/submodule/version supplements; EDA tools omitted. |
 | pyats-reporter | 26.9 | 0 | 9 | 0 | 0 | Actual closed-source Cython get_git_info helper on real repositories; verified aarch64 wheel; no public source or upstream suite. |
 | zenml | 0.98.0 | 3 | 16 | 0 | 0 | 3 upstream CodeArchive mocks; 16 real clone/repository-context/archive checks; onboarding/Jupyter and ML pipelines omitted. |
-| mcp-server-git | 2026.10.19 | 186 | 0 | 0 | 0 | Complete unchanged server/protocol/eras/entrypoint suite; real Git tools and protocol calls; 3 revision-path regressions fixed. |
+| mcp-server-git | 2026.10.19 | 186 | 0 | 0 | 0 | Complete unchanged server/protocol/eras/entrypoint suite; real Git tools and protocol calls; 3 revision-path regressions pass. |
 | cruft | 2.16.0 | 182 | 0 | 0 | 0 | Complete API/CLI/utilities selection with real template clones, recursive submodules and updates; subprocess display abbreviation normalized. |
 | sbxloop | 2.1.36 | 210 | 4 | 15 | 0 | 224 upstream cases: 210 pass, 5 remaining compatibility failures, 1 inherited assertion, 8 LFS PATH setup failures; 4 supplemental pass and 1 bounded LFS timeout. |
 
@@ -227,7 +229,7 @@ those suites nor the 115 downstream audits; later branch changes have their own 
 | --- | --- | ---: | ---: | ---: | ---: | --- |
 | duplocloud-client | 0.4.5 | 0 | 12 | 0 | 0 | 12 real build/version helper checks; no upstream Git tests; whole unchanged module. |
 | phidata | 2.7.10 | 0 | 17 | 0 | 0 | 17 real origin/workspace clone/progress checks; no upstream Git tests; final cloud setup boundary replaced. |
-| salt | 3008.3 | 34 | 0 | 0 | 0 | 34 unchanged real GitFS/fileserver/pillar cases; provider detection fixed; 50 alternative-provider cases deselected. |
+| salt | 3008.3 | 34 | 0 | 0 | 0 | 34 unchanged real GitFS/fileserver/pillar cases; provider detection accepts the source-checkout version; 50 alternative-provider cases deselected. |
 | tinybird | 5.0.2 | 0 | 0 | 0 | 0 | Unused declaration: verified source and wheel have no GitPython caller; current Git paths use subprocess. |
 | demisto-sdk | 1.39.13 | 25 | 20 | 1 | 0 | 25 upstream cases, five real and 20 mocked/helper; 20 real supplemental passes; root listing also fails with the release. |
 | langchain-cli | 0.0.37 | 4 | 8 | 0 | 0 | Four upstream parsing cases and eight real clone/pull/cache supplements of the whole helper module. |
@@ -252,13 +254,13 @@ those suites nor the 115 downstream audits; later branch changes have their own 
 | opentimestamps-client | 0.7.2 | 1 | 11 | 0 | 0 | One upstream hash-only test and 11 real offline extraction/tree/blob supplements; synthetic signature/pending proof; no calendar/GnuPG validation. |
 | robot-descriptions | 3.3.0 | 11 | 11 | 0 | 0 | 11 byte-identical upstream clone/progress cases and 11 real cache/tag/SHA/shallow supplements; local fixtures avoid assets; test initializer isolated. |
 | wily | 1.25.0 | 117 | 0 | 0 | 0 | 117 unchanged integration/archiver tests, two with Repo mocks; all pass with the release; branch/quota setup failures retained. |
-| kas | 5.5 | 0 | 11 | 3 | 0 | 11 real diff/shallow/identity supplements pass after the fix; three upstream SSH empty-section compatibility failures retained. |
+| kas | 5.5 | 0 | 11 | 3 | 0 | 11 real diff/shallow/identity supplements pass; three upstream SSH empty-section compatibility failures retained. |
 | exasol-integration-test-docker-environment | 6.5.1 | 0 | 7 | 0 | 0 | Seven real get_commit_id supplements; normal module without Docker constructor; no upstream Git tests or Docker workflow. |
 | comfy-cli | 1.23.0 | 20 | 19 | 0 | 0 | 20 upstream cases and 19 real repository/workspace installation checks; other Git helpers use subprocesses; no server/model actions. |
 | airbyte-internal-ops | 0.126.5 | 0 | 20 | 2 | 0 | 20 real supplements pass; two nested third-party path failures also released; whole utilities module and three AST helpers; cloud stack omitted. |
 | nipype | 1.12.0 | 0 | 7 | 0 | 0 | Seven real full Zenodo maintainer-script supplements; no upstream Git caller tests; neuroimaging stack omitted. |
 | sam3 | 0.1.4 | 0 | 0 | 0 | 0 | Unused development pin; 140 Python files have no direct/dynamic Git imports; zero tests; model/Torch stack omitted. |
-| mkdocs-rss-plugin | 1.19.0 | 5 | 10 | 0 | 0 | Five unchanged date/no-repo builds and ten real history/meta/shallow/CiHandler supplements; Optional import fixed; normal modules. |
+| mkdocs-rss-plugin | 1.19.0 | 5 | 10 | 0 | 0 | Five unchanged date/no-repo builds and ten real history/meta/shallow/CiHandler supplements; Optional import supported; normal modules. |
 | pytextrank | 3.3.0 | 0 | 16 | 0 | 0 | 16 real version/commit/tag supplements; complete version module imported by file; spaCy omitted; no upstream Git tests. |
 | apm-cli | 0.34.0 | 184 | 10 | 0 | 0 | 184 unchanged metadata/cache/contract cases and ten real clone/progress/detached/worktree/locked-HEAD supplements; no MCP/API services. |
 | hf-doc-builder | 0.5.0 | 0 | 16 | 0 | 0 | 16 real ls_remote/tag and local HTTP inventory supplements; normal external module; CLI-only Git caller; no upstream Git tests. |

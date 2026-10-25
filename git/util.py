@@ -85,6 +85,7 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
 
+from git.compat import safe_decode
 from git.types import (
     HSH_TD,
     Files_TD,
@@ -712,6 +713,8 @@ class RemoteProgress:
         """Parse progress information from the given line as retrieved by
         :manpage:`git-push(1)` or :manpage:`git-fetch(1)`.
 
+        :meta public:
+
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
           are stored in :attr:`error_lines`.
@@ -726,7 +729,7 @@ class RemoteProgress:
         # Compressing objects: 100% (2/2)
         # Compressing objects: 100% (2/2), done.
         if isinstance(line, bytes):  # mypy argues about ternary assignment.
-            line_str = line.decode("utf-8")
+            line_str = safe_decode(line)
         else:
             line_str = line
         self._cur_line = line_str
@@ -810,7 +813,7 @@ class RemoteProgress:
         """
 
         def handler(line: AnyStr) -> None:
-            self._parse_progress_line(line.rstrip())
+            self._parse_progress_line(line.rstrip(b"\r\n") if isinstance(line, bytes) else line.rstrip("\r\n"))
 
         # END handler
 
@@ -1170,6 +1173,8 @@ class LockFile:
 
     def _obtain_lock(self) -> None:
         """The default implementation will raise if a lock cannot be obtained.
+
+        :meta public:
 
         Subclasses may override this method to provide a different implementation.
         """

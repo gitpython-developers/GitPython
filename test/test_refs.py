@@ -4,11 +4,14 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import os
 import os.path as osp
 import unittest
 from itertools import chain
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+import pytest
 
 from gitdb.exc import BadName
 
@@ -17,18 +20,147 @@ from git import (
     Commit,
     GitCommandError,
     GitConfigParser,
+    Git,
     Head,
     Reference,
     RefLog,
+    Remote,
+    RemoteProgress,
     RemoteReference,
     SymbolicReference,
     TagReference,
+    _backend,
 )
+from git.compat import safe_encode
 from git.exc import UnsafeOptionError
 from git.objects.tag import TagObject
 from git.util import Actor
 from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_reference_names_preserve_unicode_line_separators(object_format):
+    names = [
+        before + separator + after
+        for separator in ("\x85", "\u2028", "\u2029")
+        for before, after in (("", "after"), ("before", "after"), ("before", ""))
+    ]
+    with fixture_repo("ref-line-separators.sh", object_format) as repo:
+        expected = {
+            f"{prefix}/{name}" for prefix in ("refs/heads", "refs/tags", "refs/remotes/origin") for name in names
+        } | {"refs/heads/main"}
+        assert set(repo.git.for_each_ref("--format=%(refname)").split("\n")) == expected
+        assert {ref.path for ref in repo.references} == expected
+        assert {head.name for head in repo.heads} == set(names) | {"main"}
+        assert {tag.name for tag in repo.tags} == set(names)
+        assert {ref.remote_head for ref in RemoteReference.iter_items(repo, remote="origin")} == set(names)
+        for ref in repo.references:
+            assert ref.commit == repo.head.commit
+
+
+@pytest.mark.parametrize("separator", ["\x85", "\u2028", "\u2029"])
+@pytest.mark.parametrize("before,after", [("", "after"), ("before", "after"), ("before", "")])
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_fetch_resolves_unicode_line_separator_names_from_inventory(separator, before, after, as_bytes):
+    name = before + separator + after
+    with fixture_repo("ref-line-separators.sh", "sha1") as repo:
+        progress = RemoteProgress()
+        line = f" * [new branch] {name}     -> origin/{name}"
+        progress.new_message_handler()((line + "\n").encode() if as_bytes else line + "\n")
+        assert progress.other_lines == [line]
+        with patch("git.remote.handle_process_output"):
+            result = Remote(repo, "inventory")._get_fetch_info_from_stderr(Mock(), progress)
+        assert len(result) == 1
+        assert result[0].ref.path == f"refs/remotes/origin/{name}"
+        assert result[0].remote_ref_path == name
+
+
+def test_remote_urls_preserve_unicode_line_separators():
+    with fixture_repo("ref-line-separators.sh", "sha1") as repo:
+        assert list(repo.remote("unicode").urls) == [
+            f"https://example.invalid/before{separator}after" for separator in ("\x85", "\u2028", "\u2029")
+        ]
+        with patch.object(Git, "_call_process_safe", return_value=""):
+            assert list(Remote(repo, "empty").urls) == []
+
+
+def test_stale_refs_preserve_unicode_line_separators():
+    with fixture_repo("ref-line-separators.sh", "sha1") as repo:
+        origin = repo.remote("origin")
+        assert {ref.path for ref in origin.stale_refs} == {ref.path for ref in origin.refs}
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_non_utf8_tag_names_preserve_bytes(object_format):
+    with fixture_repo("legacy-refs.sh", object_format) as repo:
+        tags = repo.tags
+        assert len(tags) == 2
+        assert {safe_encode(tag.path) for tag in tags} == {b"refs/tags/release-\xf5", b"refs/tags/annotated-\xe3"}
+        if _backend.name == "gix":
+            if os.name == "nt":
+                # GIX-32: byte-name lookup cannot reach packed refs on Windows.
+                for tag in tags:
+                    assert _backend.reference_info(repo.git, tag.path) is NotImplemented
+            with patch.object(_backend, "gix", None):
+                assert {tag.path for tag in repo.tags} == {tag.path for tag in tags}
+
+
+@pytest.mark.skipif(
+    os.name == "nt", reason="Windows CLI arguments cannot preserve non-UTF-8 bytes; native lookup has GIX-32"
+)
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_non_utf8_tag_names_resolve(object_format):
+    with fixture_repo("legacy-refs.sh", object_format) as repo:
+        tags = repo.tags
+        native_guard = (
+            patch.object(Git, "execute", side_effect=AssertionError("unexpected reference CLI call"))
+            if _backend.name == "gix"
+            else contextlib.nullcontext()
+        )
+        with native_guard:
+            for tag in tags:
+                assert tag.commit == repo.head.commit
+                assert repo.rev_parse(tag.path).hexsha == tag.object.hexsha
+                assert repo.commit(tag.path) == repo.head.commit
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("message", ["", "release\nmore"])
+def test_tag_without_tagger_initializes_all_metadata(object_format, message):
+    with fixture_repo("refs.sh", "tag-no-tagger", object_format, "message" if message else "empty") as repo:
+        oid = (Path(repo.working_tree_dir).parent / "tag-id").read_text().strip()
+        expected = repo.head.commit
+        tag = TagObject(repo, bytes.fromhex(oid))
+        native_guard = (
+            patch.object(Git, "execute", side_effect=AssertionError("unexpected tag metadata CLI call"))
+            if _backend.name == "gix"
+            else contextlib.nullcontext()
+        )
+        with native_guard:
+            assert tag.object == expected
+            assert tag.tag == "no-tagger"
+            assert tag.tagger == Actor("", None)
+            assert tag.tagged_date == 0
+            assert tag.tagger_tz_offset == 0
+            assert tag.message == message
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_head_rename_retains_literal_prefixed_branch_name(object_format):
+    with fixture_repo("refs.sh", "rename-prefixed", object_format, write=True) as repo:
+        original_topic = repo.heads.topic.commit
+        source = repo.head.reference
+        source_commit = source.commit
+        assert source_commit != original_topic
+        renamed = source.rename("refs/heads/topic")
+        assert renamed is source
+        assert renamed.path == "refs/heads/refs/heads/topic"
+        assert renamed.name == "refs/heads/topic"
+        assert renamed.commit == source_commit
+        assert repo.head.reference == renamed
+        assert repo.head.commit == source_commit
+        assert repo.heads.topic.commit == original_topic
 
 
 class TestRefs(TestBase):

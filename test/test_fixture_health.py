@@ -32,7 +32,6 @@ def test_scripted_writable_fixture_copies_and_closes_repository():
         (root / "file").write_text("private")
         repo.index.add(["file"])
         repo.index.commit("Private change", skip_hooks=True)
-    assert repo._gix_repository is None
     assert not root.exists()
     assert (baseline / "repo/file").read_text() == "initial"
 

@@ -12,12 +12,56 @@ import pytest
 
 from gitdb import IStream
 
+from git.compat import safe_encode
 from git.objects import Blob, Tree
 from git.objects.tree import TreeModifier
 from test.lib import TestBase, with_rw_repo
-from test.lib.fixtures import read_only_fixture
+from test.lib.fixtures import fixture_repo, read_only_fixture
 
 from .lib.helper import PathLikeMock
+
+
+def test_tree_cache_edits_do_not_update_object_ids_or_parents():
+    with fixture_repo("tree-cache.sh", write=True) as repo:
+        root = repo.head.commit.tree
+        subtree = root["sub"]
+        original_oid = subtree.hexsha
+        del subtree.cache["file"]
+        subtree.cache.set_done()
+        assert not list(subtree)
+        assert subtree.hexsha == original_oid
+        assert root["sub"].hexsha == original_oid
+        assert [item.name for item in repo.head.commit.tree["sub"]] == ["file"]
+
+        data = BytesIO()
+        subtree._serialize(data)
+        data.seek(0)
+        stored = repo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert stored.binsha != subtree.binsha
+        assert not list(Tree(repo, stored.binsha, path=""))
+        assert repo.head.commit.tree["sub"].hexsha == original_oid
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("invalid_position", ["first", "last"])
+def test_invalid_tree_does_not_retain_partial_cache(object_format, invalid_position):
+    with fixture_repo("tree-invalid.sh", object_format, invalid_position) as repo:
+        root = read_only_fixture("tree-invalid.sh", object_format, invalid_position)
+        oid = (root / "tree-id").read_text().strip()
+        names = [line.split("\t")[1] for line in (root / "entries").read_text().splitlines()]
+        assert names == ([".git", "valid"] if invalid_position == "first" else ["!valid", ".git"])
+        tree = Tree(repo, bytes.fromhex(oid), path="")
+        for _ in range(2):
+            with pytest.raises(ValueError, match="aliases Git metadata"):
+                list(tree)
+
+
+def test_tree_modifier_orders_non_utf8_names_as_git_does():
+    with fixture_repo("tree-byte-order.sh") as repo:
+        expected = (read_only_fixture("tree-byte-order.sh") / "order").read_bytes().split(b"\0")[:-1]
+        tree = repo.head.commit.tree
+        tree.cache.set_done()
+        assert [safe_encode(item.name) for item in tree] == expected
 
 
 @ddt.ddt
