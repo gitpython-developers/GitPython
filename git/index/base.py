@@ -23,7 +23,7 @@ from types import MappingProxyType
 from gitdb.base import IStream
 
 from git import _backend
-from git.compat import defenc, force_bytes, safe_decode
+from git.compat import defenc, safe_decode
 from git.cmd import Git
 import git.diff as git_diff
 from git.exc import CheckoutError, GitCommandError, GitError, InvalidGitRepositoryError, UnmergedEntriesError
@@ -754,8 +754,7 @@ class IndexFile(LazyMixin, git_diff.Diffable):
 
         stream_size = st.st_size
         if S_ISLNK(st.st_mode):
-            # readlink is a string, but we need bytes.
-            target = force_bytes(os.readlink(filepath), encoding=defenc)
+            target = os.fsencode(os.readlink(filepath))
             stream_size = len(target)
 
             def open_stream() -> BinaryIO:

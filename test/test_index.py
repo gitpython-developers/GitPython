@@ -52,6 +52,17 @@ def test_staged_legacy_filename_and_blob_bytes():
         }
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows symlink targets are Unicode paths")
+def test_staging_preserves_non_utf8_symlink_targets():
+    if not symlinks_supported():
+        pytest.skip("Symlinks unavailable")
+    # Native fixture copying follows symlinks instead of preserving their targets.
+    with fixture_repo("index-byte-symlink.sh", write=True, execute=True) as repo:
+        (entry,) = repo.index.add(["link"])
+        assert entry.mode == 0o120000
+        assert repo.odb.stream(entry.binsha).read() == b"../target-\xff"
+
+
 @ddt.ddt
 class TestIndex(TestBase):
     @with_rw_repo("HEAD")
