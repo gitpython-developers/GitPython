@@ -18,6 +18,7 @@ import pytest
 
 from git import NULL_TREE, BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
 from git.diff import NULL_TREE_SHA
+from git.compat import defenc
 from git.exc import (
     CheckoutError,
     GitCommandError,
@@ -36,6 +37,19 @@ from test.lib.helper import symlinks_supported, xfail_if_raises
 from test.lib.fixtures import ROOT, fixture_repo, writable_fixture
 
 _logger = logging.getLogger(__name__)
+
+
+def test_staged_legacy_filename_and_blob_bytes():
+    with fixture_repo("legacy-index.sh") as repo:
+        (entry,) = repo.index.iter_entries()
+        assert entry.path.encode(defenc, "surrogateescape") == b"fonte-\xf5.pas"
+        assert repo.odb.stream(entry.binsha).read() == b"// vers\xe3o nova\n"
+        (diff,) = repo.index.diff("HEAD")
+        assert (diff.a_rawpath, diff.b_rawpath) == (b"fonte-\xf5.pas", b"fonte-\xf5.pas")
+        assert {blob.data_stream.read() for blob in (diff.a_blob, diff.b_blob)} == {
+            b"// vers\xe3o original\n",
+            b"// vers\xe3o nova\n",
+        }
 
 
 @ddt.ddt

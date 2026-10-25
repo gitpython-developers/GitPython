@@ -761,34 +761,29 @@ class Diff:
 
     @staticmethod
     def _handle_diff_line(lines_bytes: bytes, repo: "Repo", index: DiffIndex["Diff"]) -> None:
-        lines = lines_bytes.decode(defenc)
-
         # Discard everything before the first colon, and the colon itself.
-        _, _, lines = lines.partition(":")
+        _, _, lines = lines_bytes.partition(b":")
 
         # Each record is a metadata field starting with a colon, followed by one path,
         # or two for copies and renames, each terminated by NUL. A path may itself
         # start with a colon or contain a line feed, so read the fields in order
         # instead of splitting at colons.
-        fields = iter(lines.rstrip("\n").split("\x00"))
+        fields = iter(lines.rstrip(b"\n").split(b"\x00"))
         for meta in fields:
             if not meta:
                 # The line data is empty, skip.
                 continue
-            if meta.startswith(":"):
-                meta = meta[1:]
+            metadata = (meta[1:] if meta.startswith(b":") else meta).decode("ascii")
             a_blob_id: Optional[str]
             b_blob_id: Optional[str]
-            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
+            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = metadata.split(None, 4)
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
             change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = "".join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
-            path = next(fields, "")
-            a_path = path.encode(defenc)
-            b_path = path.encode(defenc)
+            a_path = b_path = next(fields, b"")
             deleted_file = False
             new_file = False
             copied_file = False
@@ -805,9 +800,9 @@ class Diff:
                 new_file = True
             elif change_type == "C":
                 copied_file = True
-                b_path = next(fields, "").encode(defenc)
+                b_path = next(fields, b"")
             elif change_type == "R":
-                b_path = next(fields, "").encode(defenc)
+                b_path = next(fields, b"")
                 rename_from, rename_to = a_path, b_path
             elif change_type == "T":
                 # Nothing to do.

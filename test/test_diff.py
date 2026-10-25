@@ -6,6 +6,7 @@
 import os.path as osp
 
 import ddt
+import pytest
 
 from git import NULL_TREE, Diff, DiffIndex, Diffable, Repo
 from git.diff import decode_path
@@ -17,6 +18,22 @@ from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 def to_raw(input):
     return input.replace(b"\t", b"\x00")
+
+
+@pytest.mark.parametrize("change", [b"A", b"D", b"M", b"R100", b"C100"])
+def test_raw_diff_preserves_non_utf8_paths(change):
+    before = b"legacy-\xf5\t:\n.pas"
+    after = b"renamed-\xe3.pas"
+    output = b":100644 100644 " + b"1" * 40 + b" " + b"2" * 40 + b" " + change + b"\0" + before + b"\0"
+    if change.startswith((b"R", b"C")):
+        output += after + b"\0"
+    diffs = DiffIndex()
+    Diff._handle_diff_line(output, None, diffs)
+    assert len(diffs) == 1
+    assert diffs[0].a_rawpath == before
+    assert diffs[0].b_rawpath == (after if change.startswith((b"R", b"C")) else before)
+    if change.startswith(b"R"):
+        assert (diffs[0].raw_rename_from, diffs[0].raw_rename_to) == (before, after)
 
 
 @ddt.ddt

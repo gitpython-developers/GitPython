@@ -51,6 +51,9 @@ Git executable and safety
 API changes
 -----------
 
+* Raw diffs preserve non-UTF-8 filename bytes in ``a_rawpath``, ``b_rawpath``,
+  and raw rename fields. Staged-file diffs no longer fail while decoding legacy
+  filenames; blob contents remain byte streams regardless of their encoding.
 * ``Tree.cache`` and ``TreeModifier`` remain supported. They edit one tree's
   in-memory entries; object IDs and parent trees do not change automatically.
   Tree serialization now delegates construction to Git or the supported Gix
