@@ -24,7 +24,6 @@ def test_repo_context_releases_resources_before_removal():
             assert repo.head.commit.tree["file"].data_stream.read() == b"contents\n"
             processes = [reader.proc for reader in (repo.git.cat_file_header, repo.git.cat_file_all) if reader]
 
-        assert repo._gix_repository is None
         assert repo.git.cat_file_header is repo.git.cat_file_all is None
         assert all(process.poll() is not None for process in processes)
         # [remove-repo-directory]

@@ -1166,7 +1166,7 @@ class Git:
         # Extra environment variables to pass to git commands
         self._environment: Dict[str, Optional[str]] = {}
         self._repository_environment: Dict[str, Optional[str]] = {}
-        self._repo: Any = None  # Weak reference; the Repo owns native resources.
+        self._repo: Any = None  # Weak reference to the Repo's native repository accessor.
 
         # Cached version slots
         self._version_info = None
@@ -1587,9 +1587,6 @@ class Git:
             raise GitCommandNotFound(redacted_command, err) from err
         else:
             _backend.record("Git.execute", "CLI process")
-            owner = self._repo() if self._repo is not None else None
-            if owner is not None:
-                owner._gix_state = None
             # Replace with a typeguard for Popen[bytes]?
             proc.stdout = cast(BinaryIO, proc.stdout)
             proc.stderr = cast(BinaryIO, proc.stderr)

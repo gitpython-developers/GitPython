@@ -16,7 +16,6 @@ import re
 import shlex
 import sys
 import tempfile
-from threading import RLock
 import weakref
 
 import gitdb
@@ -125,8 +124,6 @@ class Repo:
 
     # Must exist, or  __del__  will fail in case we raise on `__init__()`.
     git = cast("Git", None)
-    _gix_repository: Any = None
-    _gix_state: Any = None
 
     working_dir: PathLike
     """The working directory of the git command."""
@@ -460,7 +457,6 @@ class Repo:
                     break
 
         self.working_dir = self._working_tree_dir or self.common_dir
-        self._gix_lock = RLock()
         self.git = self.GitCommandWrapperType(self.working_dir)
         self.git._repo = weakref.ref(self)
         self.git._environment.update(GIT_DIR=git_dir, **environment)
@@ -471,7 +467,6 @@ class Repo:
             if "GIT_WORK_TREE" not in environment:
                 self.git._repository_environment["GIT_WORK_TREE"] = os.fspath(self._working_tree_dir)
         if native is not NotImplemented:
-            self._gix_repository = native
             self._empty_tree_hexsha = str(native.empty_tree().id)
         else:
             with tempfile.TemporaryFile() as empty:
@@ -494,32 +489,18 @@ class Repo:
         command: Optional[Git] = None,
         env: Optional[Dict[str, Any]] = None,
         query_config: bool = False,
-        recreate: bool = False,
     ) -> Any:
-        """Access native state, reusing the repository unless recreation is requested.
+        """Open a fresh native repository for each operation.
 
-        This method owns the reuse policy so it can later become configurable.
-        Configuration queries currently open a separate handle without the execution
-        restrictions applied to the retained handle. Other operations retain the
-        existing best-effort refresh of configuration, environment and CLI changes.
+        Configuration queries omit execution restrictions so synthetic settings
+        do not appear in configuration results.
         """
-        with self._gix_lock:
-            if recreate:
-                self._gix_repository = self._gix_state = None
-            return _backend._open_repository(
-                command if command is not None else self.git, env or {}, query_config=query_config
-            )
-
-    def __getstate__(self) -> Dict[str, Any]:
-        return {
-            key: value
-            for key, value in self.__dict__.items()
-            if key not in ("_gix_repository", "_gix_state", "_gix_lock")
-        }
+        return _backend._open_repository(
+            command if command is not None else self.git, env or {}, query_config=query_config
+        )
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
-        self._gix_lock = RLock()
         self.git._repo = weakref.ref(self)
 
     def __enter__(self) -> "Repo":
@@ -535,14 +516,14 @@ class Repo:
             pass
 
     def close(self) -> None:
-        """Release native repository state and persistent Git object readers.
+        """Release persistent Git object readers.
 
         Use ``with Repo(path) as repo:`` to close automatically, including on errors.
-        Close every repository instance and any separately opened readers before
-        removing its directory, especially on Windows where open handles prevent
-        deletion. :func:`git.util.rmtree` also handles Git's read-only files.
+        Close every repository instance and release any separately opened native
+        handles or readers before removing its directory, especially on Windows
+        where open handles prevent deletion. :func:`git.util.rmtree` also handles
+        Git's read-only files.
         """
-        self._gix_repository = self._gix_state = None
         if self.git:
             self.git.clear_cache()
             # Tempfiles objects on Windows are holding references to open files until

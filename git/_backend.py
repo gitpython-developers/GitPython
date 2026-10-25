@@ -144,56 +144,17 @@ def _open_repository(command: Any, env: Dict[str, Any], *, query_config: bool = 
         options = options.config_overrides(
             ["core.fsmonitor=false", "gc.auto=0", "maintenance.auto=false", "core.hooksPath=" + os.devnull]
         )
-    owner = command._repo() if command._repo is not None else None
-    state = None
-    repo = None
-    if owner is not None and not query_config:
-        # Gix refreshes index/ODB snapshots itself; configuration is loaded at open.
-        paths = [
-            path,
-            os.fspath(owner.common_dir),
-            os.path.join(owner.common_dir, "config"),
-            os.path.join(path, "config.worktree"),
-        ]
-        paths += [
-            effective.get("GIT_CONFIG_SYSTEM", "/etc/gitconfig"),
-            effective.get("GIT_CONFIG_GLOBAL", os.path.expanduser("~/.gitconfig")),
-            os.path.join(effective.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "git", "config"),
-            os.path.join(owner.common_dir, "objects", "info", "alternates"),
-            os.path.join(path, "commondir"),
-            os.path.join(path, "gitdir"),
-        ]
-        stamps: List[Any] = []
-        for filename in paths:
-            try:
-                info = os.stat(filename)
-                stamps.append((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns))
-            except FileNotFoundError:
-                stamps.append(None)
-        state = (path, tuple(sorted(effective.items())), tuple(stamps))
-        repo = owner._gix_repository
-        if repo is not None and os.path.realpath(repo.git_dir()) != os.path.realpath(path):
-            repo = None
-        if repo is not None and state != owner._gix_state:
-            repo.reload()
-    if repo is None:
-        repo = gix.open_opts(path, options)
+    repo = gix.open_opts(path, options)
     snapshot = repo.config_snapshot()
     if snapshot.string("extensions.refStorage") == b"reftable":
         raise _Unsupported("reftable (GIX-1)")
     if snapshot.string("extensions.compatObjectFormat") is not None:
         raise _Unsupported("compatibility object format (GIX-19)")
-    if effective.get("GIT_WORK_TREE") and (owner is None or query_config or state != owner._gix_state):
+    if effective.get("GIT_WORK_TREE"):
         workdir = effective["GIT_WORK_TREE"]
         if not os.path.isabs(workdir):
             workdir = os.path.join(command.working_dir or os.getcwd(), workdir)
         repo.set_workdir(workdir)
-    if owner is not None and not query_config:
-        owner._gix_repository = repo
-        # ponytail: includes can load arbitrary files; reopen until Gix exposes their source paths.
-        if state != owner._gix_state:
-            included = re.search(rb"\[include(?:if)?[\s\]]", repo.config_snapshot().plumbing().to_bstring(), re.I)
-            owner._gix_state = None if included else state
     return repo
 
 

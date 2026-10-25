@@ -11,11 +11,9 @@ bindings to execute supported operations through Gitoxide while exposing GitPyth
 high-level repository, commit, tree and index interfaces.
 
 Supported object reads, tree traversal, reference/index queries and commit history
-can run without launching Git subprocesses. GitPython also retains and reuses a Gix
-repository handle across operations, reducing repeated initialization work. These
-changes reduce subprocess overhead, particularly for repeated repository queries;
-the [backend benchmarks](test/performance/README.md) measure results and CLI launch
-counts for both backends.
+can run without launching Git subprocesses. Each native operation opens a fresh
+Gix repository handle. The [backend benchmarks](test/performance/README.md) measure
+results and CLI launch counts for both backends.
 
 ### Activate the Gix backend
 

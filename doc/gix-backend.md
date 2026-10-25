@@ -453,9 +453,9 @@ environment metadata.
 operations and their complete journey on one already-open `git.Repo`, plus
 separate direct opening and discovery from `git/objects`. Fresh high-level
 wrappers preserve the cost of actual operations; imports, fixture preparation
-and parity preflight are outside timing. Native repository refresh remains
-inside operation timing, so these measurements include the cost of keeping
-retained state current.
+and parity preflight are outside timing. Native repository opening remains inside
+operation timing. Historical retained-handle results below included refresh
+costs instead.
 
 Submodule inventory, revision path/mode lookup and raw commit/tree readback
 extend the already-open journey, each with a zero-CLI ceiling. The readback
@@ -632,8 +632,8 @@ used Gix; CLI validation used the affected selections. Repository-wide Ruff
 lint/format, mypy and basedpyright passed. The benchmark comparison independently
 checked result parity, fixture/source identity and all process ceilings.
 Generic configuration and standalone reference-name gaps remain documented
-under GIX-12/20. `Repo._get_gix_repository(recreate=True)` still explicitly
-recreates retained native state; its snapshot limitations are documented below.
+under GIX-12/20. That snapshot retained native repository state; the current
+accessor opens a fresh handle for each operation, as documented below.
 
 Raw benchmarks, comparison tables and logs from that snapshot are under
 `.cache/gix-only-audit/benchmark-*` and `.cache/gix-only-audit/pyperf-comparison.md`.
@@ -785,39 +785,34 @@ expected failure. Operation reporting counted 114,800 native operations and
 39,002 CLI fallback decisions. Those decisions are not a complete subprocess
 count: raw `repo.git` calls and subprocesses started by Git are not all counted.
 
-### Retain native repository state (implemented)
+### Open fresh native repository state
 
-Each `git.Repo` owns a native `gix.Repository`. Managed operations access it through
-`Repo._get_gix_repository()`, which reuses the instance by default.
-`Repo._get_gix_repository(recreate=True)` replaces it explicitly; this method is
-the control point for a future configurable reuse policy. Managed operations reuse it;
-`close()` releases it, and a later operation can reopen it. Pickling excludes
-native resources and restores the command's weak owner reference. Gix provides
-thread-safe handle access and automatic index/ODB snapshot refresh. A per-Repo
-lock serializes handle refresh, without serializing read operations.
+Managed operations access Gix through `Repo._get_gix_repository()`, which opens
+a fresh `gix.Repository` for each call. Standalone commands use the same opening
+path. No native handle, environment/file fingerprint or refresh lock is cached
+on `Repo`; configuration, includes and storage metadata are read by Gix again
+on each open. Concurrent operations therefore receive independent handles.
 
-Retaining native state is an intentional deviation from Git's fresh process per
-command. Configuration/environment and observed CLI changes trigger best-effort
-refresh, but this is not a promise that every external filesystem change is
-immediately visible in every native cache. Explicit recreation or closing and
-reopening the `Repo` provides fresh native state. Configuration queries currently
-use a separate fresh handle because the retained execution handle overrides
-hooks, fsmonitor and automatic maintenance; those overrides must not leak into
-configuration results. The accessor itself removes no CLI calls: ten supported
-metadata queries launch zero processes before and after this refactor.
+Execution handles override hooks, fsmonitor and automatic maintenance.
+Configuration queries omit those overrides so synthetic settings do not appear
+as user settings. Storage overrides, reftable and compatibility object formats
+retain their existing CLI guards. Reopening itself adds no Git CLI calls.
 
-Configuration and storage metadata changes, environment changes and raw CLI
-launches cause `reload()` before reuse. Configuration queries use a separate
-fresh handle so synthetic safety settings never appear as user settings.
-Configurations with includes conservatively reload on each operation because
-the binding does not expose all included source paths. Storage overrides,
-reftable and compatibility object formats retain their existing CLI guards.
+`Repo.close()` releases persistent CLI object readers. Native handles remain
+local to operations; callers holding separately opened handles or iterators
+must release them before deleting their repository, especially on Windows.
+Pickling restores the command's weak owner reference without native resources.
+
+This replaces the retained-handle policy and its best-effort invalidation via
+file metadata, environment changes and CLI launches. Reopening repeats native
+initialization work but avoids fingerprint construction and unconditional
+reloads for configurations with includes.
 
 An earlier 1,000-call benchmark without coverage measured an object read using
-one native handle at 0.046 ms per call, compared with 0.635 ms through the
-fresh-open stream adapter. Opening and validating a native repository alone
-took 0.418 ms per call. These small repeated-read measurements do not estimate
-whole-suite speedup.
+one retained native handle at 0.046 ms per call, compared with 0.635 ms through
+the fresh-open stream adapter. Opening and validating a native repository alone
+took 0.418 ms per call. Those historical measurements do not describe the current
+accessor or estimate whole-suite speedup; rerun the backend harness to measure it.
 
 ### Reuse prepared test fixtures (implemented)
 
@@ -1230,8 +1225,7 @@ can use Git to preserve its public diagnostics. Once `_write()` begins,
 `gix.Error` failures become `GitCommandError`; other exceptions propagate.
 Neither may trigger a second CLI mutation.
 Access native repository state through `Repo._get_gix_repository()` for bound
-commands. Reuse is the default, with explicit recreation available; keep the
-snapshot deviation and refresh behavior above documented. Close native iterators
+commands. Each access opens a fresh handle through Gix. Close native iterators
 when partially consumed.
 
 Add each conversion with a no-subprocess check and a Git parity check where

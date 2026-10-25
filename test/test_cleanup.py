@@ -229,7 +229,7 @@ def test_decorators_preserve_success_with_locked_cleanup(source_repo, tmp_path, 
         assert (directory / "locked").exists()
         assert not (directory / "removable").exists()
     for repo in repositories:
-        assert repo._gix_repository is None
+        assert repo.git.cat_file_header is repo.git.cat_file_all is None
 
 
 def test_directory_decorator_preserves_failed_test_artifacts(tmp_path, monkeypatch):
