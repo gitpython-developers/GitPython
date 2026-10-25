@@ -125,6 +125,7 @@ API changes
   including updates when ``logmsg`` is omitted.
 * ``GitConfigParser`` uses Git's configuration syntax and canonical key spelling,
   and no longer subclasses ``configparser.RawConfigParser``.
+  Subsection names and values preserve undecodable bytes with ``surrogateescape``.
   Common getters, typed values, duplicate values, file/stream inputs and mutation
   methods remain, including ``GitConfigParser[section] = values`` for replacing
   nonempty sections. Invalid Git syntax previously accepted by Python is rejected.
