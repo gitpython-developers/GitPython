@@ -57,10 +57,9 @@ def cmp(a: str, b: str) -> int:
 class TreeModifier:
     """Edit the entries cached by one :class:`Tree` instance.
 
-    This interface is supported; it is not deprecated. Changes affect only that
-    instance's in-memory entries. They do not update its object ID, the stored tree,
-    parent trees, the index, or any commit. Call :meth:`set_done` to restore entry
-    order for iteration after editing.
+    Changes affect only that instance's in-memory entries. They do not update its
+    object ID, the stored tree, parent trees, the index, or any commit. Call
+    :meth:`set_done` to restore entry order for iteration after editing.
 
     Tree serialization delegates construction and ordering to Git or the supported
     Gix backend. Prefer :class:`~git.index.base.IndexFile` and

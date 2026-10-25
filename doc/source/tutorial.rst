@@ -548,9 +548,10 @@ resolves abbreviated object IDs through persistent ``git cat-file`` processes::
     # Equivalent explicit selection:
     repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
 
-Only ``GitCmdObjectDB`` and subclasses can be selected through ``odbt``. The
-legacy ``GitDB`` backend is removed. The ``gitdb`` package remains a dependency
-for shared types and utilities.
+Only ``GitCmdObjectDB`` and subclasses can be selected through ``odbt``.
+``GitDB`` is an alias for ``GitCmdObjectDB``; passing ``odbt=GitDB`` selects the
+same backend. The pure-Python storage implementation is unavailable. The
+``gitdb`` package provides shared types and utilities.
 
 Git Command Debugging and Customization
 ***************************************

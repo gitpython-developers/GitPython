@@ -266,7 +266,8 @@ class Repo:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
             used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
-            and its subclasses are supported.
+            and its subclasses are supported. ``GitDB`` is an alias for
+            ``GitCmdObjectDB``.
 
         :param search_parent_directories:
             If ``True``, all parent directories will be searched for a valid repo as
@@ -276,9 +277,8 @@ class Repo:
             GitPython, which is considered a bug though.
 
         :param expand_vars:
-            The legacy ``False`` option remains accepted to select literal paths.
-            ``True`` is unsupported; expand environment variables explicitly
-            before opening a repository. Initial ``~`` expansion remains enabled.
+            Only ``False`` is supported. Expand environment variables explicitly
+            before opening a repository. Initial ``~`` expansion is enabled.
 
         :raise git.exc.InvalidGitRepositoryError:
 
@@ -1602,7 +1602,8 @@ class Repo:
             Object DataBase type - a type which is constructed by providing the
             directory containing the database objects, i.e. ``.git/objects``. It will be
             used to access all object data. Only :class:`~git.db.GitCmdObjectDB`
-            and its subclasses are supported.
+            and its subclasses are supported. ``GitDB`` is an alias for
+            ``GitCmdObjectDB``.
 
         :param allow_unsafe_options:
             Allow unsafe options to be used, such as ``--template`` and
@@ -1786,8 +1787,8 @@ class Repo:
         :param kwargs:
             * ``odbt`` = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned :class:`Repo` instance. The
-              backend must be ``GitCmdObjectDB`` or its subclass; use the default
-              :class:`~git.db.GitCmdObjectDB` instead.
+              backend must be :class:`~git.db.GitCmdObjectDB` or its subclass.
+              ``GitDB`` is an alias for ``GitCmdObjectDB``.
             * All remaining keyword arguments are given to the :manpage:`git-clone(1)`
               command.
 
