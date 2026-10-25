@@ -161,8 +161,12 @@ GitPython is not suited for long-running processes (like daemons) as it tends to
 leak system resources. It was written in a time where destructors (as implemented
 in the `__del__` method) still ran deterministically.
 
-In case you still want to use it in such a context, you will want to search the
-codebase for `__del__` implementations and call these yourself when you see fit.
+Use `Repo` as a context manager (`with Repo(path) as repo:`), or call
+`repo.close()` explicitly when finished, to release its native repository handle
+and persistent Git object readers. Close every repository instance and any
+separately opened readers before removing its directory. On Windows,
+`git.util.rmtree(path)` also handles Git's read-only files, which plain
+`shutil.rmtree()` may be unable to remove even after handles are closed.
 
 Another way assure proper cleanup of resources is to factor out GitPython into a
 separate process which can be dropped periodically.

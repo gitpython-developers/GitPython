@@ -63,6 +63,32 @@ Archive the repository contents to a tar file.
     :start-after: # [6-test_init_repo_object]
     :end-before: # ![6-test_init_repo_object]
 
+Closing a repository
+====================
+
+Use a :class:`~git.repo.base.Repo` context manager, or call
+:meth:`~git.repo.base.Repo.close` explicitly when finished. Exiting the context
+releases its native handle and persistent Git object readers, including when an
+exception is raised.
+
+.. literalinclude:: ../../test/test_docs.py
+    :language: python
+    :dedent: 8
+    :start-after: # [close-repo-context]
+    :end-before: # ![close-repo-context]
+
+Close every repository instance and any separately opened readers before deleting
+the directory. Windows prevents deletion while files remain open; Git's read-only
+object files can also make plain ``shutil.rmtree()`` fail. The existing
+:func:`git.util.rmtree` helper handles those read-only files while still reporting
+deletion failures:
+
+.. literalinclude:: ../../test/test_docs.py
+    :language: python
+    :dedent: 8
+    :start-after: # [remove-repo-directory]
+    :end-before: # ![remove-repo-directory]
+
 Advanced Repo Usage
 ===================
 

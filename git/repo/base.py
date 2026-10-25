@@ -535,6 +535,13 @@ class Repo:
             pass
 
     def close(self) -> None:
+        """Release native repository state and persistent Git object readers.
+
+        Use ``with Repo(path) as repo:`` to close automatically, including on errors.
+        Close every repository instance and any separately opened readers before
+        removing its directory, especially on Windows where open handles prevent
+        deletion. :func:`git.util.rmtree` also handles Git's read-only files.
+        """
         self._gix_repository = self._gix_state = None
         if self.git:
             self.git.clear_cache()
