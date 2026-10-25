@@ -51,6 +51,10 @@ Git executable and safety
 API changes
 -----------
 
+* ``Tree.cache`` and ``TreeModifier`` remain supported. They edit one tree's
+  in-memory entries; object IDs and parent trees do not change automatically.
+  Tree serialization now delegates construction to Git or the supported Gix
+  backend. Prefer ``IndexFile.write_tree()`` for changes to staged paths.
 * ``Commit.stats`` preserves Unicode line separators in filenames when
   ``core.quotePath=false``. Git's LF-delimited output remains intact for root,
   subsequent and empty commits, including the Gix backend's existing filename
@@ -1135,7 +1139,10 @@ Please note that due to breaking changes, we have to increase the major version.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
   divisiblej by 3600 seconds. This would happen if the timezone was something like `+0530` for instance.
 * A list of all additional fixes can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`__
-* CRITICAL: `Tree.cache` was removed without replacement. It is technically impossible to change individual trees and expect their serialization results to be consistent with what *git* expects. Instead, use the `IndexFile` facilities to adjust the content of the staging area, and write it out to the respective tree objects using `IndexFile.write_tree()` instead.
+* Historical correction: ``Tree.cache`` was announced as removed, but the interface
+  remained available. Its current behavior and limitations are documented in
+  :class:`~git.objects.tree.TreeModifier`. Prefer ``IndexFile.write_tree()`` when
+  building trees from the staging area.
 
 1.0.1 - Fixes
 =============

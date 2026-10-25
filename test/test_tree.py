@@ -15,9 +15,30 @@ from gitdb import IStream
 from git.objects import Blob, Tree
 from git.objects.tree import TreeModifier
 from test.lib import TestBase, with_rw_repo
-from test.lib.fixtures import read_only_fixture
+from test.lib.fixtures import fixture_repo, read_only_fixture
 
 from .lib.helper import PathLikeMock
+
+
+def test_tree_cache_edits_do_not_update_object_ids_or_parents():
+    with fixture_repo("tree-cache.sh", write=True) as repo:
+        root = repo.head.commit.tree
+        subtree = root["sub"]
+        original_oid = subtree.hexsha
+        del subtree.cache["file"]
+        subtree.cache.set_done()
+        assert not list(subtree)
+        assert subtree.hexsha == original_oid
+        assert root["sub"].hexsha == original_oid
+        assert [item.name for item in repo.head.commit.tree["sub"]] == ["file"]
+
+        data = BytesIO()
+        subtree._serialize(data)
+        data.seek(0)
+        stored = repo.odb.store(IStream("tree", len(data.getvalue()), data))
+        assert stored.binsha != subtree.binsha
+        assert not list(Tree(repo, stored.binsha, path=""))
+        assert repo.head.commit.tree["sub"].hexsha == original_oid
 
 
 @ddt.ddt

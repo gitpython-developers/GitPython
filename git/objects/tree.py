@@ -55,12 +55,17 @@ def cmp(a: str, b: str) -> int:
 
 
 class TreeModifier:
-    """A utility class providing methods to alter the underlying cache in a list-like
-    fashion.
+    """Edit the entries cached by one :class:`Tree` instance.
 
-    Once all adjustments are complete, the :attr:`_cache`, which really is a reference
-    to the cache of a tree, will be sorted. This ensures it will be in a serializable
-    state.
+    This interface is supported; it is not deprecated. Changes affect only that
+    instance's in-memory entries. They do not update its object ID, the stored tree,
+    parent trees, the index, or any commit. Call :meth:`set_done` to restore entry
+    order for iteration after editing.
+
+    Tree serialization delegates construction and ordering to Git or the supported
+    Gix backend. Prefer :class:`~git.index.base.IndexFile` and
+    :meth:`~git.index.base.IndexFile.write_tree` when building a new tree from staged
+    paths, especially when changes must propagate through nested trees.
     """
 
     __slots__ = ("_cache",)
@@ -303,10 +308,10 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
     def cache(self) -> TreeModifier:
         """
         :return:
-            An object allowing modification of the internal cache. This can be used to
-            change the tree's contents. When done, make sure you call
-            :meth:`~TreeModifier.set_done` on the tree modifier, or serialization
-            behaviour will be incorrect.
+            A supported editor for this instance's cached entries. Call
+            :meth:`~TreeModifier.set_done` after editing to restore iteration order.
+            Editing does not change this tree's object ID or persist changes to its
+            stored object, parents, or commits.
 
         :note:
             See :class:`TreeModifier` for more information on how to alter the cache.
