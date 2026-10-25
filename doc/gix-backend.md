@@ -393,10 +393,17 @@ Reference names and revisions are encoded with `surrogateescape` before calling
 GixPython's byte-capable `Target.Symbolic`, `Repository.try_find_reference`,
 `Repository.rev_parse_single`, `Repository.rev_parse` and `RefEdit` APIs.
 This preserves non-UTF-8 packed tag names without interpreting reference storage
-in Python. `test_non_utf8_tag_names_preserve_bytes_and_resolve` covers lightweight
-and annotated tags in SHA-1 and SHA-256 repositories and forbids CLI fallback
-during native resolution. This corrects adapter input conversion; GixPython 0.3.0
-already accepts the original bytes through those APIs.
+in Python. `test_non_utf8_tag_names_preserve_bytes` covers lightweight and annotated
+tag enumeration in SHA-1 and SHA-256 repositories on both backends and all platforms.
+`test_non_utf8_tag_names_resolve` forbids CLI fallback during native resolution.
+Its CLI variant requires POSIX: Windows command-line arguments cannot preserve
+the original non-UTF-8 bytes. Windows CI with Git 2.56.0.windows.2 and CPython
+3.15.1 free-threaded enumerates both packed names, but resolving the
+surrogate-escaped `annotated-\udce3` name through `git rev-parse --verify` exits 128
+with `fatal: Needed a single revision`. Enumeration remains tested on Windows
+CLI; Gix resolution remains tested on Windows through the byte-capable APIs.
+This corrects adapter input conversion; GixPython 0.3.0 already accepts the
+original bytes through those APIs.
 
 Repository-backed native operations fall back for reftable (GIX-1) and repositories
 with `extensions.compatObjectFormat` (GIX-19). Process-returning calls, timeouts,

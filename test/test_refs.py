@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import os
 import os.path as osp
 import unittest
 from itertools import chain
@@ -37,11 +38,23 @@ from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
-def test_non_utf8_tag_names_preserve_bytes_and_resolve(object_format):
+def test_non_utf8_tag_names_preserve_bytes(object_format):
     with fixture_repo("legacy-refs.sh", object_format) as repo:
         tags = repo.tags
         assert len(tags) == 2
         assert {safe_encode(tag.path) for tag in tags} == {b"refs/tags/release-\xf5", b"refs/tags/annotated-\xe3"}
+        if _backend.name == "gix":
+            with patch.object(_backend, "gix", None):
+                assert {tag.path for tag in repo.tags} == {tag.path for tag in tags}
+
+
+@pytest.mark.skipif(
+    os.name == "nt" and _backend.name == "cli", reason="Windows command-line arguments cannot preserve non-UTF-8 bytes"
+)
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_non_utf8_tag_names_resolve(object_format):
+    with fixture_repo("legacy-refs.sh", object_format) as repo:
+        tags = repo.tags
         native_guard = (
             patch.object(Git, "execute", side_effect=AssertionError("unexpected reference CLI call"))
             if _backend.name == "gix"
@@ -52,9 +65,6 @@ def test_non_utf8_tag_names_preserve_bytes_and_resolve(object_format):
                 assert tag.commit == repo.head.commit
                 assert repo.rev_parse(tag.path).hexsha == tag.object.hexsha
                 assert repo.commit(tag.path) == repo.head.commit
-        if _backend.name == "gix":
-            with patch.object(_backend, "gix", None):
-                assert {tag.path for tag in repo.tags} == {tag.path for tag in tags}
 
 
 class TestRefs(TestBase):
