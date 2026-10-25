@@ -59,12 +59,12 @@ jobs:
         shell: bash --noprofile --norc -exo pipefail {0}
 
     steps:
-    - uses: actions/checkout@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
@@ -97,7 +97,7 @@ jobs:
 
     - name: Set up WSL (Windows)
       if: matrix.os-type == 'windows'
-      uses: Vampire/setup-wsl@v7.2.0
+      uses: Vampire/setup-wsl@4c48163d9f981914dd8caa0fc335fe19cca5bff4 # v7.2.0
       with:
         wsl-version: 1
 
@@ -232,7 +232,7 @@ jobs:
 
     - name: Retain test results and backend operation counts
       if: always()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: tests-${{ matrix.os-type }}-${{ matrix.python-version }}-${{ matrix.backend }}
         path: test-results/
@@ -265,8 +265,8 @@ jobs:
     env:
       GIT_PYTHON_BACKEND: cli
     steps:
-    - uses: actions/checkout@v7
-    - uses: actions/setup-python@v7
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
         python-version: ${{ matrix.python }}
     - name: Install the supported runtime
