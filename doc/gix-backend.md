@@ -396,14 +396,15 @@ This preserves non-UTF-8 packed tag names without interpreting reference storage
 in Python. `test_non_utf8_tag_names_preserve_bytes` covers lightweight and annotated
 tag enumeration in SHA-1 and SHA-256 repositories on both backends and all platforms.
 `test_non_utf8_tag_names_resolve` forbids CLI fallback during native resolution.
-Its CLI variant requires POSIX: Windows command-line arguments cannot preserve
-the original non-UTF-8 bytes. Windows CI with Git 2.56.0.windows.2 and CPython
+Resolution requires POSIX: Windows command-line arguments cannot preserve
+the original non-UTF-8 bytes, and native Windows lookup has GIX-32. Windows CI
+with Git 2.56.0.windows.2 and CPython
 3.15.1 free-threaded enumerates both packed names, but resolving the
 surrogate-escaped `annotated-\udce3` name through `git rev-parse --verify` exits 128
 with `fatal: Needed a single revision`. Enumeration remains tested on Windows
-CLI; Gix resolution remains tested on Windows through the byte-capable APIs.
-This corrects adapter input conversion; GixPython 0.3.0 already accepts the
-original bytes through those APIs.
+on both backends, along with the GIX-32 native diagnostic fallback. This
+corrects adapter input conversion; GixPython 0.3.0 accepts the original bytes
+through those APIs on POSIX.
 
 Repository-backed native operations fall back for reftable (GIX-1) and repositories
 with `extensions.compatObjectFormat` (GIX-19). Process-returning calls, timeouts,
@@ -949,6 +950,7 @@ identify the historical fixture where needed.
 | GIX-29 | Missing API | GixPython 0.2.0 exposes raw identity/message/signature bytes without a Git-compatible text reencoder. Git 2.54.0 recodes the complete commit or retains all bytes when conversion fails; per-field Python conversion differs. The Latin-1, unknown/non-text codecs, malformed UTF-16 and signed-header cases in `test_deserialization_declared_encoding` reproduce the required behavior. | Expose whole-commit text conversion, including failed/unknown-encoding behavior. `object_metadata()` retains CLI for non-UTF-8 declarations. The fallback obtains identities/message from Git's fixed UTF-8 text projection and signatures from its recoded raw header block, retaining the original declaration separately. |
 | GIX-30 | Bug (open) | GixPython 0.2.0 `Commit.decode()` reports `encoding=None` when `encoding ISO-8859-1` follows `x-extra value`; Git 2.54.0 selects `ISO-8859-1` and renders Latin-1 identity/message bytes correctly. Gix retains `(b"encoding", b"ISO-8859-1")` in `extra_headers`, but its encoding field disagrees with Git. The `late-latin1` read-only `commit.sh` fixture in `test_deserialization_declared_encoding` reproduces this and asserts the fallback. | Recognize encoding headers in Git-compatible order. `object_metadata()` conservatively retains CLI when an encoding appears in `extra_headers`; it does not select the header in Python. Keep this bug open until an upstream fix or compatible mode is verified. |
 | GIX-31 | Bug (open) | GixPython 0.2.0 `Commit.decode()` rejects commit headers containing a CR-only or tab-only line with `object parsing failed, at gix-object/src/commit/decode.rs:20`. Git 2.54.0 accepts both objects with `fsck --strict`, continues through their header block and renders the later Latin-1 declaration and message correctly. A space-only continuation line decodes natively but retains the late encoding declaration in `extra_headers` (GIX-30). `test_deserialization_headers_end_at_empty_line` reproduces all three using the `commit.sh whitespace-headers` fixtures and checks Git's projection. | Accept Git-compatible header lines and end headers only at an empty line. The existing `object_metadata()` native decoder diagnostics fallback retains Git for CR/tab inputs; the existing GIX-30 fallback covers the space input. Neither fallback closes these bugs. |
+| GIX-32 | Missing capability (open); no demonstrated Git compatibility mismatch | Windows CI on GixPython 0.3.0, Git 2.56.0.windows.2 and CPython 3.12.10 enumerates the non-UTF-8 packed names in `legacy-refs.sh`, but exact byte-name lookup selects `Reference.read: CLI: native read diagnostics`; the no-CLI guard fails for SHA-1 and SHA-256. POSIX lookup succeeds. Git's Windows CLI likewise cannot address those original bytes through UTF-16 arguments, so there is no demonstrated equivalent Windows CLI operand. Git enumeration does preserve both names. | Provide native Windows packed-reference lookup for byte names without first converting the name to a loose-reference filesystem path. Keep `reference_info()`'s existing diagnostic fallback; `test_non_utf8_tag_names_preserve_bytes` checks it on Windows. Resolution coverage and native claims remain POSIX-only. The upstream lookup source attempts loose-path conversion before consulting packed refs; CI demonstrates the fallback, but does not capture the underlying Gix error text. |
 
 The PR #2306 regression exposed an adapter ownership-check bypass in both
 backends: `Repo`'s automatic `GIT_DIR` made Git 2.54.0 treat hook execution as
