@@ -19,7 +19,7 @@ jobs:
         project: [langchain, mlflow, bandit, swebench, datahub]
         backend: [gix, cli]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Ensure Git 2.52 or newer
@@ -48,4 +48,7 @@ jobs:
           version: '0.12.13'
           enable-cache: false
       - name: Test latest release against this checkout
-        run: uv run test/downstream/run.py "${{ matrix.project }}" --backend "${{ matrix.backend }}"
+        env:
+          PROJECT: ${{ matrix.project }}
+          BACKEND: ${{ matrix.backend }}
+        run: uv run test/downstream/run.py "$PROJECT" --backend "$BACKEND"

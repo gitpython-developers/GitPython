@@ -1,0 +1,27 @@
+name: zizmor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}  # Expanded in the `zizmor` job.
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-slim
+
+    permissions:
+      security-events: write  # Required for uploading SARIF to view in the Security tab.
+      contents: read  # Not needed in public repos. (Kept for private forks/reuploads.)
+      actions: read  # Not needed in public repos. (Kept for private forks/reuploads.)
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+      with:
+        persona: pedantic
