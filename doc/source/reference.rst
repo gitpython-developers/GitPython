@@ -91,7 +91,6 @@ Objects.Util
 .. automodule:: git.objects.util
    :members:
    :undoc-members:
-   :private-members: _get_intermediate_items, _list_traverse, _traverse
    :special-members:
 
 Index.Base

@@ -48,6 +48,12 @@ Attributing AI assistance in commit metadata, for example with a `Co-authored-by
 trailer, is welcome but not required. Code is reviewed the same way regardless of its
 origin.
 
+## Documenting subclass interfaces
+
+Use Sphinx's `:meta public:` field in docstrings of underscore-prefixed methods
+that form a supported interface for subclasses. This includes their documentation
+in the API reference without exposing unrelated private implementation details.
+
 ## Temporary test directories
 
 Tests require Python 3.11+, Git 2.52+, Bash, and the `test` extra, which installs

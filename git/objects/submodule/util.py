@@ -99,8 +99,11 @@ def _find_last_dir_sep(url: str) -> int:
 
 
 def is_relative_url(url: str) -> bool:
-    """:return: ``True`` if `url` starts with ``./`` or ``../``, which git resolves
-    against the superproject's remote rather than treating as a path"""
+    """Check whether Git resolves a URL against the superproject's remote.
+
+    :return:
+        ``True`` if `url` starts with ``./`` or ``../``.
+    """
     return _starts_with_dot_slash(url) or _starts_with_dot_dot_slash(url)
 
 

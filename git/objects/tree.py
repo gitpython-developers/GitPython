@@ -328,8 +328,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]]:
-        """For documentation, see
-        `Traversable._traverse() <git.objects.util.Traversable._traverse>`.
+        """For documentation, see :meth:`~git.objects.util.Traversable._traverse`.
 
         Trees are set to ``visit_once = False`` to gain more performance in the
         traversal.

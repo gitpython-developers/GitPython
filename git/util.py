@@ -712,6 +712,8 @@ class RemoteProgress:
         """Parse progress information from the given line as retrieved by
         :manpage:`git-push(1)` or :manpage:`git-fetch(1)`.
 
+        :meta public:
+
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
           are stored in :attr:`error_lines`.
@@ -1170,6 +1172,8 @@ class LockFile:
 
     def _obtain_lock(self) -> None:
         """The default implementation will raise if a lock cannot be obtained.
+
+        :meta public:
 
         Subclasses may override this method to provide a different implementation.
         """
