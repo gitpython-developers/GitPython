@@ -380,7 +380,7 @@ class FetchInfo(IterableObj):
         if match is None:
             raise ValueError("Failed to parse fetch output: %r" % line)
         control, operation, source, destination, note = match.groups()
-        source = source.strip()
+        source = source.strip(" ")
         if control not in cls._flag_map:
             raise ValueError("Unknown fetch status: %r" % control)
         flags = cls._flag_map[cast(flagKeyLiteral, control)]
@@ -393,7 +393,7 @@ class FetchInfo(IterableObj):
         old_commit = None
         if control in (" ", "+"):
             old_commit = repo.rev_parse(operation.split("..", 1)[0])
-        destination = destination.strip()
+        destination = destination.strip(" ")
         if destination == "FETCH_HEAD":
             ref = SymbolicReference(repo, destination)
         else:
@@ -618,7 +618,9 @@ class Remote(LazyMixin, IterableObj):
     @property
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
-        yield from self.repo.git._call_process_safe("remote", "get-url", "--all", "--", self.name).splitlines()
+        output = self.repo.git._call_process_safe("remote", "get-url", "--all", "--", self.name)
+        if output:
+            yield from output.split("\n")
 
     @property
     def refs(self) -> IterableList[RemoteReference]:
@@ -655,7 +657,7 @@ class Remote(LazyMixin, IterableObj):
         out_refs: IterableList[Reference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git._call_process_safe(
             "remote", "prune", "--dry-run", "--", self, _allow_network=True
-        ).splitlines()[2:]:
+        ).split("\n")[2:]:
             # expecting
             # * [would prune] origin/new_branch
             token = " * [would prune] "
@@ -817,7 +819,7 @@ class Remote(LazyMixin, IterableObj):
                     fetch_info_lines.append(line)
                     continue
 
-        refs = self.repo.git._call_process_safe("for_each_ref", "--format=%(refname)").splitlines()
+        refs = self.repo.git._call_process_safe("for_each_ref", "--format=%(refname)").split("\n")
         try:
             configured = self.config_reader.config.get_values(self._config_section_name(), "fetch")
         except (cp.NoSectionError, cp.NoOptionError):

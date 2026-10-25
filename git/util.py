@@ -812,7 +812,7 @@ class RemoteProgress:
         """
 
         def handler(line: AnyStr) -> None:
-            self._parse_progress_line(line.rstrip())
+            self._parse_progress_line(line.rstrip(b"\r\n") if isinstance(line, bytes) else line.rstrip("\r\n"))
 
         # END handler
 

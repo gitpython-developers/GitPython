@@ -698,7 +698,7 @@ class SymbolicReference:
         output = repo.git._call_process_safe(
             "for_each_ref", "--format=%(refname)", *options, "--", *([prefix] if prefix else [])
         )
-        for path in sorted(output.splitlines()):
+        for path in sorted(output.split("\n")):
             try:
                 yield cls.from_path(repo, path)
             except ValueError:
