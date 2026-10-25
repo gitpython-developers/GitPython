@@ -92,6 +92,23 @@ def test_tag_without_tagger_initializes_all_metadata(object_format, message):
             assert tag.message == message
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_head_rename_retains_literal_prefixed_branch_name(object_format):
+    with fixture_repo("refs.sh", "rename-prefixed", object_format, write=True) as repo:
+        original_topic = repo.heads.topic.commit
+        source = repo.head.reference
+        source_commit = source.commit
+        assert source_commit != original_topic
+        renamed = source.rename("refs/heads/topic")
+        assert renamed is source
+        assert renamed.path == "refs/heads/refs/heads/topic"
+        assert renamed.name == "refs/heads/topic"
+        assert renamed.commit == source_commit
+        assert repo.head.reference == renamed
+        assert repo.head.commit == source_commit
+        assert repo.heads.topic.commit == original_topic
+
+
 class TestRefs(TestBase):
     def test_from_path(self):
         # Should be able to create any reference directly.

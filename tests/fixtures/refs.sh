@@ -30,6 +30,11 @@ case "$1" in
             fi
         } | git hash-object -w -t tag --literally --stdin >../tag-id
         ;;
+    rename-prefixed)
+        git branch topic
+        printf 'second\n' >> file.txt
+        git commit -am second
+        ;;
     outside)
         git rev-parse HEAD > ../outside-ref
         ;;

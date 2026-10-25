@@ -252,10 +252,11 @@ class Head(Reference):
             flag = "-M"
 
         new_name = Git._check_operand(new_path, "branch")
+        new_full_path = "%s/%s" % (self._common_path_default, new_name)
         self._get_validated_ref_path(self.repo, self.path)
-        self._get_validated_ref_path(self.repo, self.to_full_path(new_name))
+        self._get_validated_ref_path(self.repo, new_full_path)
         self.repo.git._call_process_safe("branch", flag, "--", self.name, new_name)
-        self.path = str(self.to_full_path(new_name))
+        self.path = new_full_path
         return self
 
     def checkout(
