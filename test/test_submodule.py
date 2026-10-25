@@ -2,6 +2,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
+from io import BytesIO
 import os
 import os.path as osp
 from pathlib import Path
@@ -30,6 +31,34 @@ from git.util import cwd, join_path_native, to_native_path_linux
 
 from test.lib import TestBase, patch_git_config, with_rw_repo, PathLikeMock
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
+
+
+@pytest.mark.parametrize("scenario, name", [("ascii-name", "module"), ("byte-name", "module-\udcff")])
+def test_submodule_configuration_preserves_non_utf8_bytes(scenario, name):
+    with fixture_repo("submodule-bytes.sh", scenario) as repo:
+        data = repo.git.config("list", "--null", "--file", ".gitmodules", stdout_as_string=False)
+        assert b".path\npath-\xfe\0" in data
+        assert b".url\nurl-\xfd\0" in data
+        assert b".branch\nrefs/heads/branch-\xfc\0" in data
+        submodule = repo.submodules[0]
+        assert submodule.name == name
+        assert submodule.path == "path-\udcfe"
+        assert submodule.url == "url-\udcfd"
+        assert submodule.branch_path == "refs/heads/branch-\udcfc"
+        submodule._clear_cache()
+        assert (submodule.path, submodule.url, submodule.branch_path) == (
+            "path-\udcfe",
+            "url-\udcfd",
+            "refs/heads/branch-\udcfc",
+        )
+
+
+@pytest.mark.skipif(git._backend.name != "gix", reason="requires the native backend")
+def test_native_submodule_configuration_preserves_non_utf8_values():
+    path = read_only_fixture("submodule-bytes.sh", "ascii-name") / "repo" / ".gitmodules"
+    with mock.patch.object(Git, "execute", side_effect=AssertionError("Git must not run")):
+        native = git._backend.submodule_config(BytesIO(path.read_bytes()))
+    assert native == {"module": {"path": "path-\udcfe", "url": "url-\udcfd", "branch": "refs/heads/branch-\udcfc"}}
 
 
 @pytest.mark.parametrize("state", ["unborn", "untracked", "detached"])

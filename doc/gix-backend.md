@@ -369,7 +369,7 @@ and predate the current fallback; they do not establish native coverage.
 | Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics |
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options; GIX-25 |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
-| Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
+| Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Non-UTF-8 subsection names, other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12 |
 | Commit hooks | No bound native lookup/execution API | All hooks, including absent hooks; GIX-23 |
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |
 | `Repo.merge_base`, `Repo.is_ancestor` | Native graph queries for two revisions | Octopus/fork-point and other options |
@@ -1087,6 +1087,16 @@ This ledger update changes no runtime code or CLI budgets; the earlier
 runtime validation and timings remain attributed to their measured snapshots.
 
 ### Remaining configuration reads (GIX-12)
+
+Native `.gitmodules` reads preserve arbitrary bytes in paths, URLs and branch
+values through `surrogateescape`. Non-UTF-8 subsection names use the CLI fallback:
+GixPython 0.3.0's `ConfigFile.string()` and `.boolean()` require text keys.
+Although `ModulesFile.path()` and `.url()` accept byte names, `.branch()`
+interprets the value: an empty value becomes `HEAD`, and missing and implicit
+values both become `None`. A byte-key raw configuration accessor is needed to
+retain GitPython's configuration contract natively. The scripted
+`submodule-bytes.sh` regressions cover values, names and cached-field rereads;
+the native value test prohibits CLI execution.
 
 The October 7 inventory identified 951 remote-enumeration reads, 674 actor
 lookups, 262 remote-property reads, 202 tracking-branch lookups and 111 fetch

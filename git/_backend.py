@@ -425,7 +425,7 @@ def submodule_config(source: Any) -> Any:
                     if option != "branch" or config.boolean(key) is not None:
                         raise _Unsupported("missing or implicit submodule fields")
                 else:
-                    values[option] = value.decode(defenc)
+                    values[option] = safe_decode(value)
             result[name] = values
     except _Unsupported as exc:
         return _fallback("Submodule.config", str(exc))
