@@ -130,7 +130,9 @@ these editing fallbacks.
 
 Commit metadata uses `Repository.find_commit().decode()` plus structured
 `Commit.author()`/`committer()` signatures. Tag metadata uses
-`Repository.find_tag().decode()` and `Tag.tagger()`. Decoded extra headers retain
+`Repository.find_tag().decode()` and `Tag.tagger()`. A missing native tagger maps
+to GitPython's empty actor and zero date/offset; tag reads remain native.
+Decoded extra headers retain
 `gpgsig`. Raw Gix object bytes are used only for object streams. If repository
 capabilities require CLI fallback, metadata uses `git cat-file`: general formatted
 Git queries cannot faithfully expose all signature headers or arbitrary tags.

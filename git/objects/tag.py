@@ -113,7 +113,9 @@ class TagObject(base.Object):
                 self.object = object_type(self.repo, bytes.fromhex(data["target"]))
                 self.tag = data["name"].decode(defenc, "replace")
                 signature = data["tagger"]
-                if signature is not None:
+                if signature is None:
+                    self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date("")
+                else:
                     self.tagger = Actor(
                         signature.name.decode(defenc, "replace"), signature.email.decode(defenc, "replace")
                     )
@@ -144,21 +146,10 @@ class TagObject(base.Object):
 
             self.tag = lines[2][4:]  # tag <tag name>
 
-            if len(lines) > 3:
-                tagger_info = lines[3]  # tagger <actor> <date>
-                (
-                    self.tagger,
-                    self.tagged_date,
-                    self.tagger_tz_offset,
-                ) = parse_actor_and_date(tagger_info)
-
-            # Line 4 empty - it could mark the beginning of the next header.
-            # In case there really is no message, it would not exist.
-            # Otherwise a newline separates header from message.
-            if len(lines) > 5:
-                self.message = "\n".join(lines[5:])
-            else:
-                self.message = ""
+            has_tagger = len(lines) > 3 and lines[3].startswith("tagger ")
+            self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(lines[3] if has_tagger else "")
+            message_start = 5 if has_tagger else 4
+            self.message = "\n".join(lines[message_start:])
         # END check our attributes
         else:
             super()._set_cache_(attr)

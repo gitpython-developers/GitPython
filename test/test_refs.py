@@ -71,6 +71,27 @@ def test_non_utf8_tag_names_resolve(object_format):
                 assert repo.commit(tag.path) == repo.head.commit
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("message", ["", "release\nmore"])
+def test_tag_without_tagger_initializes_all_metadata(object_format, message):
+    with fixture_repo("refs.sh", "tag-no-tagger", object_format, "message" if message else "empty") as repo:
+        oid = (Path(repo.working_tree_dir).parent / "tag-id").read_text().strip()
+        expected = repo.head.commit
+        tag = TagObject(repo, bytes.fromhex(oid))
+        native_guard = (
+            patch.object(Git, "execute", side_effect=AssertionError("unexpected tag metadata CLI call"))
+            if _backend.name == "gix"
+            else contextlib.nullcontext()
+        )
+        with native_guard:
+            assert tag.object == expected
+            assert tag.tag == "no-tagger"
+            assert tag.tagger == Actor("", None)
+            assert tag.tagged_date == 0
+            assert tag.tagger_tz_offset == 0
+            assert tag.message == message
+
+
 class TestRefs(TestBase):
     def test_from_path(self):
         # Should be able to create any reference directly.
