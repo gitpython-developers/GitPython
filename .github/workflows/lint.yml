@@ -23,3 +23,30 @@ jobs:
         python-version: "3.x"
 
     - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+
+  # Check that all `actions/checkout` in CI jobs have `persist-credentials: false`.
+  check-no-persist-credentials:
+    runs-on: ubuntu-slim
+
+    env:
+      GLOB: .github/workflows/*.@(yaml|yml)
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+        sparse-checkout: ".github/workflows"
+    - name: List workflows to be scanned
+      run: |
+        shopt -s extglob
+        printf '%s\n' $GLOB  # Pathname expansion in $GLOB intended.
+    - name: Scan workflows
+      run: |
+        shopt -s extglob
+        yq '.jobs.*.steps[]
+          | select(.uses == "actions/checkout@*" and .with.["persist-credentials"]? != false)
+          | {"file": filename, "line": line, "name": (.name // .uses)}
+          | .file + ":" + (.line | tostring) + ": " + .name
+        ' -- $GLOB >query-output.txt  # Pathname expansion in $GLOB intended.
+        cat query-output.txt
+        test -z "$(<query-output.txt)"  # Report failure if we found anything.
