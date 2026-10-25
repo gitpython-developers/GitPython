@@ -41,6 +41,20 @@ def test_tree_cache_edits_do_not_update_object_ids_or_parents():
         assert repo.head.commit.tree["sub"].hexsha == original_oid
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("invalid_position", ["first", "last"])
+def test_invalid_tree_does_not_retain_partial_cache(object_format, invalid_position):
+    with fixture_repo("tree-invalid.sh", object_format, invalid_position) as repo:
+        root = read_only_fixture("tree-invalid.sh", object_format, invalid_position)
+        oid = (root / "tree-id").read_text().strip()
+        names = [line.split("\t")[1] for line in (root / "entries").read_text().splitlines()]
+        assert names == ([".git", "valid"] if invalid_position == "first" else ["!valid", ".git"])
+        tree = Tree(repo, bytes.fromhex(oid), path="")
+        for _ in range(2):
+            with pytest.raises(ValueError, match="aliases Git metadata"):
+                list(tree)
+
+
 @ddt.ddt
 class TestTree(TestBase):
     @with_rw_repo("HEAD")

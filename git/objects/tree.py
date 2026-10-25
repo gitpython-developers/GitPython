@@ -219,7 +219,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
             output = self.repo.git._call_process_safe(
                 "ls_tree", "-z", "--full-tree", self.hexsha, stdout_as_string=False
             )
-            self._cache: List[TreeCacheTup] = []
+            cache: List[TreeCacheTup] = []
             for record in output.split(b"\0"):
                 if not record:
                     continue
@@ -230,7 +230,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
                 binsha = bytes.fromhex(oid.decode("ascii"))
                 if len(binsha) != self.repo._oid_size:
                     raise ValueError("Invalid tree object ID returned by Git")
-                self._cache.append((binsha, int(mode, 8), name))
+                cache.append((binsha, int(mode, 8), name))
+            self._cache = cache
         else:
             super()._set_cache_(attr)
         # END handle attribute
