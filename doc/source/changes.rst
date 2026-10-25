@@ -63,7 +63,8 @@ API changes
   contain unquoted filename bytes.
 * Tree serialization now delegates construction to Git or the supported Gix
   backend. ``Tree.cache`` and ``TreeModifier`` edit one tree's in-memory entries;
-  object IDs and parent trees do not change automatically. Prefer
+  ``set_done()`` orders entries by filename bytes, including undecodable names.
+  Object IDs and parent trees do not change automatically. Prefer
   ``IndexFile.write_tree()`` for changes to staged paths.
 * ``Commit.stats`` preserves Unicode line separators in filenames when
   ``core.quotePath=false``. Git's LF-delimited output remains intact for root,

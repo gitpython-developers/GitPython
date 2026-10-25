@@ -12,6 +12,7 @@ import pytest
 
 from gitdb import IStream
 
+from git.compat import safe_encode
 from git.objects import Blob, Tree
 from git.objects.tree import TreeModifier
 from test.lib import TestBase, with_rw_repo
@@ -53,6 +54,14 @@ def test_invalid_tree_does_not_retain_partial_cache(object_format, invalid_posit
         for _ in range(2):
             with pytest.raises(ValueError, match="aliases Git metadata"):
                 list(tree)
+
+
+def test_tree_modifier_orders_non_utf8_names_as_git_does():
+    with fixture_repo("tree-byte-order.sh") as repo:
+        expected = (read_only_fixture("tree-byte-order.sh") / "order").read_bytes().split(b"\0")[:-1]
+        tree = repo.head.commit.tree
+        tree.cache.set_done()
+        assert [safe_encode(item.name) for item in tree] == expected
 
 
 @ddt.ddt

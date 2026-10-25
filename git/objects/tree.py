@@ -10,7 +10,7 @@ import tempfile
 
 import git.diff as git_diff
 from git.util import IterableList, join_path, to_bin_sha
-from git.compat import defenc, safe_decode
+from git.compat import defenc, safe_decode, safe_encode
 from git.cmd import Git
 
 from . import util
@@ -91,7 +91,7 @@ class TreeModifier:
         :return:
             self
         """
-        self._cache.sort(key=lambda x: (x[2] + "/") if x[1] == Tree.tree_id << 12 else x[2])
+        self._cache.sort(key=lambda x: safe_encode(x[2]) + (b"/" if x[1] == Tree.tree_id << 12 else b""))
         return self
 
     # } END interface
