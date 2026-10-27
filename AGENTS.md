@@ -9,6 +9,12 @@ when communicating through a person's account.
 issue with a fix attached. Do not create an issue solely to follow it immediately
 with a PR that fixes it; describe the problem in the PR instead.
 
+Agents creating a PR must state the underlying motivation in its description, such
+as the project that will benefit or where the bug was first discovered. Any
+motivation is valid; explain why the work was pursued rather than restating what
+the PR does. "Want to fix a bug" is insufficient because that is already evident
+from the PR itself.
+
 # Gix backend implementations
 
 Gix backend operations must use Gix through the supported GixPython (`gix`)
