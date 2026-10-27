@@ -582,6 +582,19 @@ class TestRemote(TestBase):
         self.assertEqual(results[0].ref.path, "refs/heads/pull/1/head")
         self.assertIsInstance(results[0].ref, Head)
 
+    def test_push_info_with_tab_in_summary(self):
+        # Summaries can contain tabs (e.g. remote hook messages), which must not
+        # break parsing of the tab-separated push porcelain line.
+        remote = Remote(self.rorepo, "origin")
+        info = PushInfo._from_line(
+            remote,
+            " \trefs/heads/main:refs/heads/main\tabc123..def456\textra note",
+        )
+        self.assertTrue(info.flags & PushInfo.FAST_FORWARD)
+        self.assertIsInstance(info.local_ref, Reference)
+        self.assertEqual(info.remote_ref_string, "refs/heads/main")
+        self.assertEqual(info.summary, "abc123..def456\textra note")
+
     @with_rw_repo("HEAD", bare=False)
     def test_multiple_urls(self, rw_repo):
         # Test addresses.
