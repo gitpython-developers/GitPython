@@ -35,7 +35,7 @@ from git.exc import (
 )
 from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
-from git.refs import HEAD, Head, Reference, TagReference
+from git.refs import HEAD, Head, Reference, SymbolicReference, TagReference
 from git.remote import Remote, _T_RemoteName, add_progress, to_progress_instance
 from git.util import (
     Actor,
@@ -88,7 +88,6 @@ from git.types import ConfigLevels_Tup, TypedDict
 if TYPE_CHECKING:
     from git.objects import Tree
     from git.objects.submodule.base import UpdateProgress
-    from git.refs.symbolic import SymbolicReference
     from git.remote import RemoteProgress
     from git.util import IterableList
 
@@ -1964,11 +1963,11 @@ class Repo:
         """
         if not self.git_dir:
             return None
-        status, oid, stderr = self.git._call_process_safe(
-            "rev_parse", "--verify", "--quiet", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
+        status, stdout, stderr = self.git._call_process_safe(
+            "show_ref", "--exists", "--", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
         )
-        if status == 1:
+        if status == 2:
             return None
         if status:
-            raise GitCommandError("git rev-parse", status, stderr, oid)
-        return self.commit(oid)
+            raise GitCommandError("git show-ref", status, stderr, stdout)
+        return self.commit(SymbolicReference.dereference_recursive(self, "REBASE_HEAD"))

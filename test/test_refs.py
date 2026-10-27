@@ -163,6 +163,113 @@ def test_head_rename_retains_literal_prefixed_branch_name(object_format):
         assert repo.heads.topic.commit == original_topic
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+@pytest.mark.parametrize("force_cli", [False, True])
+def test_reference_lookup_does_not_guess_missing_names(object_format, ref_format, force_cli):
+    with fixture_repo("exact-refs.sh", object_format, ref_format) as repo:
+        status, _, _ = repo.git.rev_parse(
+            "--verify", "--quiet", "HEAD", with_extended_output=True, with_exceptions=False
+        )
+        assert status == 1
+        with patch.object(_backend, "gix", None) if force_cli else contextlib.nullcontext():
+            for path in (
+                "refs/heads/unborn",
+                "REBASE_HEAD",
+                "ORIG_HEAD",
+                "refs/tags/missing",
+                "refs/remotes/origin/missing",
+            ):
+                tag = TagReference(repo, "refs/tags/" + path)
+                assert tag.commit == repo.commit(tag.path)
+                status, _, _ = repo.git.show_ref(
+                    "--exists", "--", path, with_extended_output=True, with_exceptions=False
+                )
+                assert status == 2
+                with pytest.raises(ValueError, match="does not exist or is invalid"):
+                    SymbolicReference(repo, path).object
+            assert not repo.head.is_valid()
+            with pytest.raises(ValueError):
+                repo.head.commit
+            # Revision APIs deliberately retain Git's name guessing.
+            assert repo.commit("REBASE_HEAD") == repo.tags.REBASE_HEAD.commit
+            assert repo.tags["nested/release"].object.type == "tag"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+def test_missing_root_reference_does_not_follow_symbolic_lookalike_tag(object_format):
+    with fixture_repo("exact-refs.sh", object_format, "files", "symbolic") as repo:
+        assert repo.tags.REBASE_HEAD.commit == repo.tags["refs/heads/unborn"].commit
+        status, _, _ = repo.git.symbolic_ref(
+            "--quiet", "--no-recurse", "--", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
+        )
+        assert status == 1
+        for force_cli in (False, True):
+            with patch.object(_backend, "gix", None) if force_cli else contextlib.nullcontext():
+                with pytest.raises(ValueError, match="does not exist or is invalid"):
+                    SymbolicReference(repo, "REBASE_HEAD").object
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_initial_commit_does_not_inherit_lookalike_tag_history(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, write=True) as repo:
+        foreign = repo.tags["refs/heads/unborn"].commit
+        initial = repo.index.commit("Local initial commit")
+        assert initial.parents == []
+        assert repo.head.commit == initial
+        assert repo.tags["refs/heads/unborn"].commit == foreign
+        assert repo.git.rev_list("--count", "HEAD") == "1"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_rebase_detection_ignores_tag_named_rebase_head(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, write=True) as repo:
+        assert repo.currently_rebasing_on() is None
+        replayed = repo.tags.REBASE_HEAD.commit
+        repo.git.update_ref("REBASE_HEAD", replayed.hexsha)
+        assert repo.currently_rebasing_on() == replayed
+        repo.git.update_ref("-d", "REBASE_HEAD")
+        assert repo.currently_rebasing_on() is None
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_rebase_detection_peels_nested_annotated_tags(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "nested", write=True) as repo:
+        tag = repo.tags["nested/outer"].object
+        assert tag.object.type == "tag"
+        repo.git.update_ref("REBASE_HEAD", tag.hexsha)
+        expected = repo.tags.REBASE_HEAD.commit
+        assert repo.git.rev_parse("REBASE_HEAD^{commit}") == expected.hexsha
+        assert repo.currently_rebasing_on() == expected
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_exact_reference_reads_preserve_existing_targets(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "existing", write=True) as repo:
+        commit = repo.tags.REBASE_HEAD.commit
+        paths = [
+            "HEAD",
+            "refs/heads/unborn",
+            "FETCH_HEAD",
+            "refs/tags/nested/release",
+            "refs/stash",
+            "ORIG_HEAD",
+            "MERGE_HEAD",
+            "REBASE_HEAD",
+        ]
+        repo.git.pack_refs("--all")
+        for path in paths:
+            expected = repo.git.rev_parse("--verify", path)
+            assert SymbolicReference(repo, path).object.hexsha == expected
+        repo.git.update_ref("--no-deref", "HEAD", commit.hexsha)
+        assert repo.head.is_detached
+        assert repo.head.commit == commit
+
+
 class TestRefs(TestBase):
     def test_from_path(self):
         # Should be able to create any reference directly.

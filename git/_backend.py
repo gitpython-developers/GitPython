@@ -166,7 +166,7 @@ def _canonical_repository(repo: Any) -> Any:
 
 
 def _check_revision_grammar(ref: str) -> None:
-    if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+", ref):
+    if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+|^[0-9a-fA-F]+-", ref):
         raise _Unsupported("revision grammar differences (GIX-17)")
 
 
@@ -363,7 +363,7 @@ def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 4 or args[:3] != ["--quiet", "--no-recurse", "--"]:
         raise _Unsupported("reference mutation or options")
     reference = repo.try_find_reference(safe_encode(args[-1]))
-    if reference is None:
+    if reference is None or reference.name() != safe_encode(args[-1]):
         raise _Unsupported("missing reference diagnostics")
     target = reference.target().try_name()
     if target is None:

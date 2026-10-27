@@ -2,11 +2,11 @@
 Changelog
 =========
 
-Unreleased: Git CLI migration
-=============================
+Unreleased: Git CLI migration - back to the roots
+=================================================
 
 GitPython now delegates repository discovery, references, configuration, object
-storage, tree construction, index operations, and revision parsing to Git. The
+storage, tree construction, index operations, and revision parsing to Git.The
 default backend supports SHA-1 and SHA-256 repositories with either files or
 reftable reference storage. Repository object IDs must no longer be assumed to
 contain 20 binary bytes or 40 hexadecimal characters.
@@ -54,6 +54,10 @@ Git executable and safety
 API changes
 -----------
 
+* Reference reads require the exact name. A missing branch no longer resolves to
+  a similarly named tag, so an unborn branch's initial commit has no parent.
+  A tag named ``REBASE_HEAD`` no longer reports a rebase in progress. Revision
+  APIs such as ``Repo.commit(rev)`` retain Git's name guessing.
 * Packed tag names containing non-UTF-8 bytes are represented losslessly as
   surrogate-escaped strings. ``safe_encode()`` recovers their original bytes,
   and Gix reference validation and resolution receive those bytes directly.
