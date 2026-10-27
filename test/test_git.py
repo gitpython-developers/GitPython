@@ -518,7 +518,7 @@ class TestGit(TestBase):
     def test_clone_redacts_config_urls_from_trace_and_error(self, option, expected):
         for trace in (True, "full"):
             with self.subTest(trace=trace), writable_fixture("repo.sh", "empty") as temporary:
-                directory = temporary.path()
+                directory = temporary.path() / "alice-bob-user-token"
                 with mock.patch.object(Git, "GIT_PYTHON_TRACE", trace):
                     with self.assertLogs("git.cmd", level="INFO") as logs:
                         with self.assertRaises(GitCommandError) as context:
@@ -532,6 +532,9 @@ class TestGit(TestBase):
                 message = str(context.exception)
                 assert logs is not None
                 log_output = " ".join(logs.output)
+                for path in (str(directory), directory.as_posix()):
+                    message = message.replace(path, "<fixture>")
+                    log_output = log_output.replace(path, "<fixture>")
                 self.assertIn(expected, log_output)
                 for credential in ("alice", "bob", "user", "token"):
                     self.assertNotIn(credential, message)

@@ -198,7 +198,8 @@ class SymbolicReference:
             if exc.status != 1:
                 raise ValueError("Invalid symbolic reference %r" % path) from exc
         try:
-            oid = repo.git._call_process_safe("rev_parse", "--verify", "--end-of-options", path)
+            # Revision parsing can guess a tag when the exact reference is absent.
+            oid = repo.git._call_process_safe("show_ref", "--verify", "--hash", "--", path)
         except GitCommandError as exc:
             raise ValueError("Reference at %r does not exist or is invalid" % path) from exc
         if not repo.re_hexsha_only.fullmatch(oid):

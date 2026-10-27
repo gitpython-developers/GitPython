@@ -40,6 +40,12 @@ describe-collision)
     abbrev=$(git rev-parse --short=7 "$merge")
     git tag "anything-9-g$abbrev" "$release"
     ;;
+hex-prefix-collision)
+    blob=$(git rev-parse HEAD:README.md)
+    prefix=$(git rev-parse --short=7 "$blob")
+    git branch "$prefix-topic" "$release"
+    printf '%s\n' "$prefix" > ../hex-prefix
+    ;;
 rev_parse_preserves_path_metadata_with_colons)
     blob=$(git rev-parse HEAD:dir/file.txt)
     subtree=$(printf '100644 blob %s\tname:with:colons\n' "$blob" | git mktree)

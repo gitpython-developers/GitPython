@@ -80,6 +80,18 @@ def test_rev_parse_names_hex_and_describe_forms(rev_parse_repo):
         assert collision.rev_parse(describe_name).hexsha == release.hexsha
 
 
+def test_rev_parse_hex_prefix_with_arbitrary_suffix():
+    with fixture_repo("rev-parse.sh", "hex-prefix-collision") as repo:
+        prefix = (Path(repo.working_tree_dir).parent / "hex-prefix").read_text().strip()
+        name = prefix + "-topic"
+        assert repo.rev_parse(name).hexsha == repo.git.rev_parse("--verify", name)
+        missing = prefix + "-missing"
+        with pytest.raises(GitCommandError):
+            repo.git.rev_parse("--verify", missing)
+        with pytest.raises(BadName):
+            repo.rev_parse(missing)
+
+
 def test_rev_parse_navigation_and_peeling(rev_parse_repo):
     repo = rev_parse_repo["repo"]
     root = rev_parse_repo["root"]
