@@ -614,8 +614,10 @@ def _redact_url_credentials(text: str) -> Optional[str]:
     try:
         url = urlsplit(text)
     except ValueError:
-        # This is not a valid URL.
-        return None
+        # This is not a parseable URL (e.g. an unclosed IPv6 literal), but it
+        # may still carry credentials. Fall back to a syntactic redaction so
+        # they don't leak into logs and exception messages.
+        return _redact_malformed_url_credentials(text)
     if url.password is None and url.username is None:
         return None
 
@@ -624,6 +626,29 @@ def _redact_url_credentials(text: str) -> Optional[str]:
     _, _, hostinfo = url.netloc.rpartition("@")
     redacted = "*****:*****" if url.password is not None else "*****"
     return urlunsplit(url._replace(netloc=f"{redacted}@{hostinfo}"))
+
+
+def _redact_malformed_url_credentials(text: str) -> Optional[str]:
+    """Redact the userinfo of a URL that :func:`urlsplit` refuses to parse.
+
+    Only the authority section (between ``scheme://`` and the first ``/``,
+    ``?``, or ``#``) is considered, and only when it holds a non-empty
+    userinfo. Returns ``None`` when there is nothing to redact.
+    """
+    match = re.match(r"[A-Za-z][A-Za-z0-9+.-]*://", text)
+    if not match:
+        return None
+    rest = text[match.end() :]
+    end = len(rest)
+    for separator in ("/", "?", "#"):
+        index = rest.find(separator)
+        if index != -1:
+            end = min(end, index)
+    userinfo, at, hostinfo = rest[:end].rpartition("@")
+    if not at or not userinfo:
+        return None
+    redacted = "*****:*****" if ":" in userinfo else "*****"
+    return f"{text[: match.end()]}{redacted}@{hostinfo}{rest[end:]}"
 
 
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:

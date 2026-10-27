@@ -713,6 +713,18 @@ class TestUtils(TestBase):
         redacted = remove_password_if_present(["git", "clone", "https://:@fakerepo.example.com/testrepo"])
         assert redacted == ["git", "clone", "https://*****:*****@fakerepo.example.com/testrepo"]
 
+    def test_remove_password_from_malformed_url(self):
+        """Credentials must be redacted even when the URL does not parse.
+
+        ``urlsplit`` raises ``ValueError`` on malformed hosts such as an
+        unclosed IPv6 literal; redaction must still not leak the userinfo.
+        """
+        redacted = remove_password_if_present(["git", "clone", "https://user:pass@[::1/repo"])
+        assert redacted == ["git", "clone", "https://*****:*****@[::1/repo"]
+
+        redacted = remove_password_if_present(["git", "clone", "https://user@[::1/repo"])
+        assert redacted == ["git", "clone", "https://*****@[::1/repo"]
+
     @ddt.data(
         (
             "https://user%40example.com:p%40ss@GitHub.COM:00443/repo@name?q=a@b#c@d",
