@@ -1293,6 +1293,8 @@ class Repo:
         If you combine all line number ranges outputted by this command, you should get
         a continuous range spanning all line numbers in the file.
         """
+        from git.diff import _unquote_path
+
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([rev], kwargs),
@@ -1374,6 +1376,9 @@ class Repo:
                     if tag == b"filename":
                         orig_filename = value
                         break
+
+            if orig_filename.startswith(b'"') and orig_filename.endswith(b'"'):
+                orig_filename = _unquote_path(orig_filename[1:-1])
 
             yield BlameEntry(
                 commits[hexsha],
