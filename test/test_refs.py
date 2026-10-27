@@ -1134,6 +1134,29 @@ class TestSymbolicReferenceSecurity(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     ref.set_object(self.next_commit)
 
+    def test_missing_references_do_not_resolve_to_look_alike_names(self):
+        with self.fixture("lookalike"):
+            # Git's revision guessing finds the tag, but no such branch exists.
+            self.assertEqual(self.repo.git.rev_parse("--verify", "refs/heads/missing"), self.commit.hexsha)
+            self.assertEqual(self.repo.git.symbolic_ref("HEAD"), "refs/heads/missing")
+            for backend in (_backend.gix, None):
+                with patch.object(_backend, "gix", backend):
+                    with self.assertRaisesRegex(ValueError, "does not exist"):
+                        SymbolicReference._get_ref_info(self.repo, "refs/heads/missing")
+                    self.assertFalse(self.repo.head.is_valid())
+                    self.assertFalse(Head(self.repo, "refs/heads/missing").is_valid())
+                    self.assertEqual(self.repo.tags["refs/heads/missing"].commit, self.commit)
+                    self.assertEqual(self.repo.tags["REBASE_HEAD"].commit, self.commit)
+                    self.assertIsNone(self.repo.currently_rebasing_on())
+
+    def test_commit_on_unborn_head_ignores_look_alike_tag(self):
+        with self.fixture("lookalike", write=True):
+            with patch.object(_backend, "gix", None):
+                commit = self.repo.index.commit("root")
+            self.assertEqual(commit.parents, [])
+            self.assertEqual(self.repo.head.commit, commit)
+            self.assertEqual(self.repo.git.rev_parse("--verify", "refs/heads/missing"), commit.hexsha)
+
     def test_reference_reads_reject_symlinks_outside_repository(self):
         with self.fixture("external"):
             with self.assertRaisesRegex(ValueError, "escapes the repository"):

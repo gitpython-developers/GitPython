@@ -197,8 +197,11 @@ class SymbolicReference:
         except GitCommandError as exc:
             if exc.status != 1:
                 raise ValueError("Invalid symbolic reference %r" % path) from exc
+        # `rev-parse --verify` applies Git's name-guessing rules, so a missing
+        # `refs/heads/x` would resolve to a tag named `refs/heads/x`. Read the
+        # exact reference instead, which is what the native lookup does.
         try:
-            oid = repo.git._call_process_safe("rev_parse", "--verify", "--end-of-options", path)
+            oid = repo.git._call_process_safe("show_ref", "--verify", "--hash", "--", path)
         except GitCommandError as exc:
             raise ValueError("Reference at %r does not exist or is invalid" % path) from exc
         if not repo.re_hexsha_only.fullmatch(oid):

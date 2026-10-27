@@ -1964,11 +1964,13 @@ class Repo:
         """
         if not self.git_dir:
             return None
-        status, oid, stderr = self.git._call_process_safe(
-            "rev_parse", "--verify", "--quiet", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
+        # Read the pseudo-reference by its exact name: `rev-parse --verify` would
+        # also accept a tag named `REBASE_HEAD` while no rebase is in progress.
+        status, _, stderr = self.git._call_process_safe(
+            "show_ref", "--exists", "--", "REBASE_HEAD", with_extended_output=True, with_exceptions=False
         )
-        if status == 1:
+        if status == 2:
             return None
         if status:
-            raise GitCommandError("git rev-parse", status, stderr, oid)
-        return self.commit(oid)
+            raise GitCommandError("git show-ref", status, stderr)
+        return self.commit(self.git._call_process_safe("show_ref", "--verify", "--hash", "--", "REBASE_HEAD"))

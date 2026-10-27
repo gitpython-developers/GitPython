@@ -50,6 +50,11 @@ Git executable and safety
   Text and streamed command output preserve undecodable bytes with
   ``surrogateescape``, including fetch/push results, clone errors and timeout
   diagnostics containing byte names.
+* Reference reads on the Git CLI backend use exact names. A missing reference no
+  longer resolves through Git's revision guessing to a look-alike name such as a
+  tag called ``refs/heads/main``: an unborn ``HEAD`` is reported as invalid, the
+  first commit on it has no parent, and ``Repo.currently_rebasing_on()`` ignores a
+  tag named ``REBASE_HEAD``. This matches the Gix backend.
 
 API changes
 -----------

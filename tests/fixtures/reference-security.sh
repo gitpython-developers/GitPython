@@ -40,6 +40,12 @@ case "$1" in
             write_ref "$terminal" 'ref: refs/heads/link-1'
         fi
         ;;
+    lookalike)
+        # Valid names Git's revision guessing would accept for missing references.
+        git tag refs/heads/missing "$initial"
+        git tag REBASE_HEAD "$initial"
+        write_ref HEAD 'ref: refs/heads/missing'
+        ;;
     custom)
         write_ref CUSTOM_A 'ref: CUSTOM_B'
         write_ref CUSTOM_B 'ref: CUSTOM_A'
