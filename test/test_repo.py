@@ -36,6 +36,7 @@ from git import (
     Submodule,
     Tree,
 )
+from git.compat import safe_decode
 from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError
 from git.repo.fun import find_worktree_git_dir
 from git.util import bin_to_hex, cwd, rmfile, rmtree
@@ -753,6 +754,34 @@ class TestRepo(TestBase):
                     ]
                 ),
             )
+
+    def test_blame_incremental_preserves_historical_paths(self):
+        paths = (
+            b"plain.txt",
+            b" spaced name.txt ",
+            "café.txt".encode(),
+            b"byte-\xff.txt",
+            b'"literal-\\303\\251.txt"',
+            b'quote"name.txt',
+            b"back\\slash.txt",
+            b"control\a\b\t\n\v\f\r.txt",
+        )
+        for quote_path in ("true", "false"):
+            for i, path in enumerate(paths):
+                with self.subTest(quote_path=quote_path, path=path), fixture_repo(
+                    "blame-paths.sh", quote_path, subdir=str(i)
+                ) as repo:
+                    entries = list(repo.blame_incremental("HEAD", "current.txt"))
+                    original = repo.commit("HEAD~2")
+                    self.assertEqual(
+                        sorted(entries, key=lambda e: e.linenos.start),
+                        [
+                            (original, range(1, 2), safe_decode(path), range(1, 2)),
+                            (repo.head.commit, range(2, 3), "current.txt", range(2, 3)),
+                            (original, range(3, 4), safe_decode(path), range(3, 4)),
+                        ],
+                    )
+                    self.assertEqual(list(repo.blame("HEAD", "current.txt", incremental=True)), entries)
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_complex_revision(self, git):
