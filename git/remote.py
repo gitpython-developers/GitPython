@@ -214,7 +214,7 @@ class PushInfo(IterableObj):
     def _from_line(cls, remote: "Remote", line: str) -> "PushInfo":
         """Create a new :class:`PushInfo` instance as parsed from line which is expected
         to be like refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes."""
-        control_character, from_to, summary = line.split("\t", 3)
+        control_character, from_to, summary = line.split("\t", 2)
         flags = 0
 
         # Control character handling
