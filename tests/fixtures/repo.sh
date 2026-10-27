@@ -123,6 +123,14 @@ blame-carriage-returns)
     git -C repo add file.txt
     git -C repo commit -qm init --author='GitPython Tests <gitpython@example.com>'
     ;;
+blame-quoted-filename)
+    git init -q repo
+    printf 'first\nsecond\n' > "repo/$2"
+    git -C repo add -- "$2"
+    git -C repo commit -qm init --author='GitPython Tests <gitpython@example.com>'
+    git -C repo mv -- "$2" plain.txt
+    git -C repo commit -qm rename --author='GitPython Tests <gitpython@example.com>'
+    ;;
 relocated-git-dir)
     git init -q repo
     mv repo/.git repo/.real

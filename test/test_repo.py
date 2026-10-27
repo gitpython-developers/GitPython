@@ -792,6 +792,17 @@ class TestRepo(TestBase):
             self.assertEqual(blames[0][0].author.name, "GitPython Tests")
             self.assertEqual(blames[0][1], ["first", forged])
 
+    def test_blame_incremental_unquotes_filenames(self):
+        # Git C-quotes the filename line of its incremental output for a path with
+        # non-ASCII, control, quote or backslash bytes. The entry must name the path.
+        for name in ("caf\u00e9.txt", '"quoted".txt', "tab\tname.txt", "back\\slash.txt"):
+            with self.subTest(name=name), fixture_repo("repo.sh", "blame-quoted-filename", name) as repo:
+                quoted = repo.git.blame("HEAD", "-p", "--incremental", "--", "plain.txt", stdout_as_string=False)
+                assert b'\nfilename "' in quoted
+                entries = list(repo.blame_incremental("HEAD", "plain.txt"))
+                self.assertEqual([entry.orig_path for entry in entries], [name])
+                self.assertEqual([entry.linenos for entry in entries], [range(1, 3)])
+
     def test_untracked_files(self):
         for command in ("index", "git"):
             with fixture_repo("repo.sh", "untracked", write=True) as repo:
