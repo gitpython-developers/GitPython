@@ -756,6 +756,7 @@ class TestRepo(TestBase):
             )
 
     def test_blame_incremental_preserves_historical_paths(self):
+        self.maxDiff = None
         paths = (
             b"plain.txt",
             b" spaced name.txt ",
