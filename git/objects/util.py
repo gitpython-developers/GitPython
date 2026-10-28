@@ -161,8 +161,7 @@ def altz_to_utctz_str(altz: float) -> str:
     :param altz:
         Timezone offset in seconds west of UTC.
     """
-    hours = abs(altz) // 3600
-    minutes = (abs(altz) % 3600) // 60
+    hours, minutes = divmod(int(abs(altz) // 60), 60)
     sign = "-" if altz >= 60 else "+"
     return "{}{:02}{:02}".format(sign, hours, minutes)
 

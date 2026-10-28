@@ -280,6 +280,17 @@ class _Member:
         return f"{type(self).__name__}({self.name!r})"
 
 
+@pytest.mark.parametrize(
+    "offset, expected",
+    [(0.0, "+0000"), (19800.0, "-0530"), (-19800.0, "+0530"), (34200.9, "-0930"), (60.1, "-0001"), (-59.9, "+0000")],
+)
+def test_altz_to_utctz_str_accepts_float_seconds(offset, expected):
+    result = altz_to_utctz_str(offset)
+    assert result == expected
+    assert verify_utctz(result) == result
+    assert utctz_to_altz(result) == utctz_to_altz(expected)
+
+
 @ddt.ddt
 class TestUtils(TestBase):
     """Tests for most utilities in :mod:`git.util`."""
