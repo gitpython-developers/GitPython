@@ -79,6 +79,7 @@ if TYPE_CHECKING:
     from git import Remote, Repo
     from git.repo.base import BlameEntry
     from git.objects import Commit, Submodule
+    from git.objects.base import IndexObjUnion
 
     repo = Repo()
     remote = Remote(repo, "origin")
@@ -86,6 +87,11 @@ if TYPE_CHECKING:
     removed_remotes: List[Remote] = [Remote.remove(repo, remote), Remote.rm(repo, remote), repo.delete_remote(remote)]
     blame = BlameEntry(repo.head.commit, range(1), "file", range(1))
     commit: Commit = blame.commit
+    tree = commit.tree
+    indexed_tree_item: IndexObjUnion = tree[0]
+    named_tree_item: IndexObjUnion = tree["file"]
+    sliced_tree_items: List[IndexObjUnion] = tree[:2]
+    reversed_tree_items: List[IndexObjUnion] = list(reversed(tree))
     submodule_entry: IndexEntry = IndexEntry.from_blob(Submodule(repo, b"\0" * 20))
     Git().get_object_header(b"HEAD")
     Git().get_object_data(b"HEAD")
