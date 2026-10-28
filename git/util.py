@@ -402,7 +402,7 @@ def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
         ``True`` if the directory was created, ``False`` if it already existed.
     """
     if is_file:
-        path = osp.dirname(path)
+        path = osp.dirname(path) or osp.curdir
     # END handle file
     if not osp.isdir(path):
         os.makedirs(path, exist_ok=True)
