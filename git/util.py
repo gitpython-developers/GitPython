@@ -1333,10 +1333,10 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
     def __getitem__(  # type: ignore[override]  # pyright: ignore[reportIncompatibleMethodOverride]
         self, index: Union[SupportsIndex, int, slice, str]
     ) -> T_IterableObj:
-        if isinstance(index, int):
-            return list.__getitem__(self, index)
-        elif isinstance(index, slice):
+        if isinstance(index, slice):
             raise ValueError("Index should be an int or str")
+        elif not isinstance(index, str):
+            return list.__getitem__(self, index)
         else:
             try:
                 return self.__getattr__(cast(str, index))
