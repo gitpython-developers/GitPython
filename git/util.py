@@ -235,15 +235,16 @@ def stream_copy(source: SupportsRead[AnyStr], destination: SupportsWrite[AnyStr]
 
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
     R"""Join path tokens together similar to osp.join, but always use ``/`` instead of
-    possibly ``\`` on Windows."""
+    possibly ``\`` on Windows.
+
+    Later tokens are treated as relative, even when they start with ``/``.
+    """
     path = os.fspath(a)
     for b in p:
-        b = os.fspath(b)
+        b = os.fspath(b).lstrip("/")
         if not b:
             continue
-        if b.startswith("/"):
-            path += b[1:]
-        elif path == "" or path.endswith("/"):
+        if path == "" or path.endswith("/"):
             path += b
         else:
             path += "/" + b
