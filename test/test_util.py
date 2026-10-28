@@ -6,6 +6,7 @@
 import contextlib
 import errno
 from datetime import datetime
+from io import BytesIO, StringIO
 import os
 import pathlib
 import pickle
@@ -40,10 +41,68 @@ from git.util import (
     is_cygwin_git,
     remove_password_if_present,
     rmtree,
+    stream_copy,
 )
 from test.cleanup import cleanup_directory
 from test.lib.fixtures import writable_fixture
 from test.lib import TestBase, requires_symlinks, with_rw_repo
+
+
+@pytest.mark.parametrize(
+    "parts, expected",
+    [([b"ab", b"c", b"def"], b"abcdef"), (["ab", "c", "def"], "abcdef"), ([], b""), ([], "")],
+)
+def test_stream_copy_waits_for_an_empty_read(parts, expected):
+    chunks = iter(parts)
+
+    class Reader:
+        def read(self, size):
+            chunk = next(chunks, expected[:0])
+            assert len(chunk) <= size
+            return chunk
+
+    destination = BytesIO() if isinstance(expected, bytes) else StringIO()
+    assert stream_copy(Reader(), destination, chunk_size=4) == len(expected)
+    assert destination.getvalue() == expected
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="requires POSIX unbuffered pipe reads")
+def test_stream_copy_keeps_reading_an_unbuffered_pipe():
+    read_fd, write_fd = os.pipe()
+    first_copied = threading.Event()
+    errors = []
+
+    class Destination(BytesIO):
+        def write(self, data):
+            result = super().write(data)
+            if data:
+                first_copied.set()
+            return result
+
+    def produce():
+        try:
+            os.write(write_fd, b"first-")
+            if not first_copied.wait(5):
+                raise RuntimeError("first pipe chunk was not copied")
+            os.write(write_fd, b"second")
+        except Exception as error:
+            errors.append(error)
+        finally:
+            os.close(write_fd)
+
+    destination = Destination()
+    with os.fdopen(read_fd, "rb", buffering=0) as source:
+        thread = threading.Thread(target=produce)
+        thread.start()
+        try:
+            copied = stream_copy(source, destination, chunk_size=1024)
+        finally:
+            first_copied.set()
+            thread.join(5)
+        assert not thread.is_alive()
+        assert not errors
+    assert copied == len(b"first-second")
+    assert destination.getvalue() == b"first-second"
 
 
 @pytest.fixture
