@@ -90,38 +90,20 @@ def test_stream_copy_waits_for_an_empty_read(parts, expected):
 @pytest.mark.skipif(sys.platform == "win32", reason="requires POSIX unbuffered pipe reads")
 def test_stream_copy_keeps_reading_an_unbuffered_pipe():
     read_fd, write_fd = os.pipe()
-    first_copied = threading.Event()
-    errors = []
 
     class Destination(BytesIO):
         def write(self, data):
             result = super().write(data)
-            if data:
-                first_copied.set()
+            if data and not writer.closed:
+                # Make the second chunk available only after the first short read is copied.
+                writer.write(b"second")
+                writer.close()
             return result
 
-    def produce():
-        try:
-            os.write(write_fd, b"first-")
-            if not first_copied.wait(5):
-                raise RuntimeError("first pipe chunk was not copied")
-            os.write(write_fd, b"second")
-        except Exception as error:
-            errors.append(error)
-        finally:
-            os.close(write_fd)
-
     destination = Destination()
-    with os.fdopen(read_fd, "rb", buffering=0) as source:
-        thread = threading.Thread(target=produce)
-        thread.start()
-        try:
-            copied = stream_copy(source, destination, chunk_size=1024)
-        finally:
-            first_copied.set()
-            thread.join(5)
-        assert not thread.is_alive()
-        assert not errors
+    with os.fdopen(read_fd, "rb", buffering=0) as source, os.fdopen(write_fd, "wb", buffering=0) as writer:
+        writer.write(b"first-")
+        copied = stream_copy(source, destination, chunk_size=1024)
     assert copied == len(b"first-second")
     assert destination.getvalue() == b"first-second"
 
