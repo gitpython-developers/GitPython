@@ -34,6 +34,7 @@ from typing import (
     Type,
     Union,
     cast,
+    overload,
 )
 
 from git.types import PathLike
@@ -175,6 +176,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
 
     * Access a specific blob using the ``tree["filename"]`` notation.
     * You may likewise access by index, like ``blob = tree[0]``.
+    * Slicing, like ``tree[:2]``, returns a list of objects.
+    * ``reversed(tree)`` iterates over objects in reverse order.
     """
 
     type: Literal["tree"] = "tree"
@@ -377,7 +380,16 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
     def __len__(self) -> int:
         return len(self._cache)
 
-    def __getitem__(self, item: Union[str, int, slice]) -> IndexObjUnion:
+    @overload
+    def __getitem__(self, item: Union[str, int]) -> IndexObjUnion: ...
+
+    @overload
+    def __getitem__(self, item: slice) -> List[IndexObjUnion]: ...
+
+    def __getitem__(self, item: Union[str, int, slice]) -> Union[IndexObjUnion, List[IndexObjUnion]]:
+        if isinstance(item, slice):
+            return list(self._iter_convert_to_object(self._cache[item]))
+
         if isinstance(item, int):
             info = self._cache[item]
             return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
@@ -409,7 +421,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable):
         return False
 
     def __reversed__(self) -> Iterator[IndexObjUnion]:
-        return reversed(self._iter_convert_to_object(self._cache))  # type: ignore[call-overload]
+        return self._iter_convert_to_object(reversed(self._cache))
 
     def _serialize(self, stream: "BytesIO") -> "Tree":
         """Ask Git to build this cache as a tree, then copy its raw object contents."""

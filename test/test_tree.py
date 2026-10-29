@@ -64,6 +64,42 @@ def test_tree_modifier_orders_non_utf8_names_as_git_does():
         assert [safe_encode(item.name) for item in tree] == expected
 
 
+@pytest.mark.parametrize(
+    "selection",
+    [slice(None), slice(1, 4), slice(None, None, 2), slice(-3, None), slice(None, None, -1), slice(99, None)],
+)
+def test_tree_slicing_follows_list_order_without_changing_the_tree(selection):
+    with fixture_repo("tree-order.sh") as repo:
+        tree = repo.head.commit.tree
+        original = list(tree)
+        selected = tree[selection]
+        assert isinstance(selected, list)
+
+        def describe(items):
+            return [(type(item), item.path, item.mode, item.hexsha) for item in items]
+
+        assert describe(selected) == describe(original[selection])
+        selected.clear()
+        assert describe(list(tree)) == describe(original)
+
+
+def test_tree_slicing_rejects_a_zero_step():
+    with fixture_repo("tree-order.sh") as repo:
+        with pytest.raises(ValueError, match="slice step cannot be zero"):
+            repo.head.commit.tree[::0]
+
+
+def test_reversed_tree_preserves_order_and_nested_paths():
+    with fixture_repo("tree-order.sh") as repo:
+        tree = repo.head.commit.tree
+        forward = list(tree)
+        backward = list(reversed(tree))
+        assert [(type(item), item.path, item.mode, item.hexsha) for item in backward] == [
+            (type(item), item.path, item.mode, item.hexsha) for item in reversed(forward)
+        ]
+        assert [item.path for item in reversed(tree["file"])] == ["file/a"]
+
+
 @ddt.ddt
 class TestTree(TestBase):
     @with_rw_repo("HEAD")
