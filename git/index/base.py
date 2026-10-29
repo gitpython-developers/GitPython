@@ -1066,11 +1066,12 @@ class IndexFile(LazyMixin, git_diff.Diffable):
 
             - :class:`~git.objects.blob.Blob` object
 
-                Only the path portion is used in this case.
+                Only the path portion is used in this case. It is matched literally.
 
             - :class:`~git.index.typ.BaseIndexEntry` or compatible type
 
-                The only relevant information here is the path. The stage is ignored.
+                The only relevant information here is the path, which is matched
+                literally. The stage is ignored.
 
         :param working_tree:
             If ``True``, the entry will also be removed from the working tree,
@@ -1107,8 +1108,17 @@ class IndexFile(LazyMixin, git_diff.Diffable):
             args.append("--cached")
         args.append("--")
 
-        # Preprocess paths.
-        paths = list(map(os.fspath, self._items_to_rela_paths(items)))  # type: ignore[arg-type]
+        # Preprocess paths. Entries, blobs and submodules name exact paths, which Git
+        # must not expand as patterns. Path strings keep their pathspec semantics.
+        if isinstance(items, (str, os.PathLike)):
+            items = [items]
+        item_list = list(items)
+        paths = [
+            ":(literal)" + os.fspath(rela_path)
+            if isinstance(item, (BaseIndexEntry, Blob, Submodule))
+            else os.fspath(rela_path)
+            for item, rela_path in zip(item_list, self._items_to_rela_paths(item_list))
+        ]
         with self._materialized_index() as path:
             removed_paths = self.repo.git._call_process_safe(
                 "rm", args, paths, env={"GIT_INDEX_FILE": path}, **kwargs

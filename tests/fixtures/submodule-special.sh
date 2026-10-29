@@ -34,4 +34,14 @@ case "$1" in
         git init -q -b master --separate-git-dir="$PWD/metadata" checkout
         touch metadata/objects/held-open
         ;;
+    glob-path)
+        git init -q -b master parent
+        git -C parent commit --allow-empty -qm 'Initial commit'
+        printf content > parent/README
+        git -C parent config -f .gitmodules submodule.module.path '*'
+        git -C parent config -f .gitmodules submodule.module.url https://example.invalid/module.git
+        git -C parent add README .gitmodules
+        git -C parent update-index --add --cacheinfo "160000,$(git -C parent rev-parse HEAD),*"
+        git -C parent commit -qm 'Add submodule'
+        ;;
 esac

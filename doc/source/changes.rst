@@ -172,6 +172,10 @@ API changes
   happy paths, Python glue failures and representative compatibility regressions.
   Historical timing-only tests are removed; the maintained backend benchmark
   checks result parity and CLI budgets.
+* ``IndexFile.remove()`` matches the paths of index entries, blobs, and submodules
+  literally, so an entry named ``*.txt`` no longer removes every ``.txt`` file.
+  Path strings keep their pathspec semantics. ``Submodule.move()`` and
+  ``Submodule.remove()`` remove the submodule's own index entry the same way.
 * Commit/tag metadata uses structured Gix decoders when the Gix backend supports
   the repository. The CLI backend retains raw decoding because Git has no faithful
   formatted query for all commit headers or arbitrary tag objects. ``gpgsig``

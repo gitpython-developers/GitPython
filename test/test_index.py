@@ -1391,6 +1391,24 @@ class TestIndexCheckout:
             # Neither "nested/first" nor "outside" was requested.
             assert (root / "outside").read_bytes() == b"local"
 
+    @pytest.mark.skipif(os.name == "nt", reason="'*' and ':' are not valid Windows filenames")
+    def test_remove_matches_entry_paths_literally(self):
+        with fixture_repo("index.sh", "remove-literal", write=True) as repo:
+            root = Path(repo.working_tree_dir)
+            index = repo.index
+            entries = [index.entry("*.txt"), index.entry(":(glob)**")]
+            assert index.remove(entries, write=False) == ["*.txt", ":(glob)**"]
+            assert {entry.path for entry in index.iter_entries()} == {"a.txt", "b.txt", "src/app.py"}
+
+            entry = entries[0]
+            blob = Blob(repo, entry.binsha, entry.mode, entry.path)
+            assert repo.index.remove([blob], working_tree=True) == ["*.txt"]
+            assert not (root / "*.txt").exists()
+            assert (root / "a.txt").exists() and (root / "b.txt").exists()
+
+            # Path strings keep their pathspec semantics.
+            assert repo.index.remove(["*.txt"], write=False) == ["a.txt", "b.txt"]
+
 
 class TestIndexUtils:
     @pytest.mark.parametrize("file_path_type", [str, Path])

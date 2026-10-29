@@ -119,6 +119,12 @@ case "$scenario" in
         rm repo/nested/$'first\noutside' 'repo/"quoted"'
         printf local >repo/outside
         ;;
+    remove-literal)
+        mkdir repo/src
+        for name in a.txt b.txt '*.txt' ':(glob)**' src/app.py; do printf %s "$name" >"repo/$name"; done
+        git -C repo add -A
+        git -C repo commit -qm 'Add files'
+        ;;
     *) printf 'Unknown index fixture: %s\n' "$scenario" >&2; exit 1 ;;
 esac
 for hook in "$hooks/pre-commit" "$hooks/commit-msg"; do
