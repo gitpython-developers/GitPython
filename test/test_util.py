@@ -5,7 +5,6 @@
 
 import contextlib
 import errno
-from datetime import datetime
 import os
 import pathlib
 import pickle
@@ -13,6 +12,7 @@ import stat
 import sys
 import threading
 import time
+from datetime import datetime
 from unittest import SkipTest, mock
 
 import ddt
@@ -43,8 +43,8 @@ from git.util import (
     rmtree,
 )
 from test.cleanup import cleanup_directory
-from test.lib.fixtures import writable_fixture
 from test.lib import TestBase, requires_symlinks, with_rw_repo
+from test.lib.fixtures import writable_fixture
 
 
 @pytest.mark.parametrize(
@@ -310,6 +310,45 @@ def test_altz_to_utctz_str_accepts_float_seconds(offset, expected):
     assert result == expected
     assert verify_utctz(result) == result
     assert utctz_to_altz(result) == utctz_to_altz(expected)
+
+
+@pytest.mark.parametrize("prefix", ["", "refs/"])
+@pytest.mark.parametrize("position", [0, -1])
+def test_iterable_list_accepts_index_protocol(prefix, position):
+    class Index:
+        def __index__(self):
+            return position
+
+    values = IterableList("name", prefix)
+    members = [_Member(prefix + name) for name in ("one", "two")]
+    values.extend(members)
+    assert values[Index()] is members[position]
+
+
+@pytest.mark.parametrize("position", [2, -3])
+def test_iterable_list_index_protocol_preserves_bounds_errors(position):
+    class Index:
+        def __index__(self):
+            return position
+
+    values = IterableList("name")
+    values.extend([_Member("one"), _Member("two")])
+    with pytest.raises(IndexError):
+        values[Index()]
+
+
+def test_iterable_list_index_protocol_preserves_named_lookup_and_slice_rejection():
+    values = IterableList("name", "refs/")
+    named = _Member("refs/0")
+    values.extend([named, _Member("refs/one")])
+    assert values["0"] is named
+    assert values[False] is named
+    with pytest.raises(IndexError):
+        values["missing"]
+    with pytest.raises(ValueError):
+        values[:1]
+    with pytest.raises(TypeError):
+        values[0.0]
 
 
 @ddt.ddt
