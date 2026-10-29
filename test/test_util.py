@@ -38,12 +38,33 @@ from git.util import (
     decygpath,
     get_user_id,
     is_cygwin_git,
+    join_path,
     remove_password_if_present,
     rmtree,
 )
 from test.cleanup import cleanup_directory
 from test.lib.fixtures import writable_fixture
 from test.lib import TestBase, requires_symlinks, with_rw_repo
+
+
+@pytest.mark.parametrize(
+    "parts, expected",
+    [
+        (("parent", "/child"), "parent/child"),
+        (("parent", "/child", "/leaf"), "parent/child/leaf"),
+        ((pathlib.Path("parent"), "/child"), "parent/child"),
+        (("parent/", "/child"), "parent/child"),
+        (("parent", "child"), "parent/child"),
+        (("", "/child"), "child"),
+        (("/", "/child"), "/child"),
+        (("parent", "", "child"), "parent/child"),
+        (("parent", "//child"), "parent/child"),
+        (("/parent/", "///child"), "/parent/child"),
+        (("parent", "///"), "parent"),
+    ],
+)
+def test_join_path_keeps_later_tokens_relative(parts, expected):
+    assert join_path(*parts) == expected
 
 
 @pytest.fixture
