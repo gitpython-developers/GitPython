@@ -8,7 +8,7 @@ from test.lib.fixtures import writable_fixture
 
 @pytest.fixture
 def directory_fixture(monkeypatch):
-    with writable_fixture("assure-directory.sh") as temporary:
+    with writable_fixture("empty.sh") as temporary:
         directory = temporary.path().resolve()
         with monkeypatch.context() as context:
             context.chdir(directory)
@@ -32,11 +32,13 @@ def test_nested_file_creates_only_missing_parent_directories(directory_fixture, 
 
 @pytest.mark.parametrize("path_type", [str, Path])
 def test_existing_directory_is_unchanged(directory_fixture, path_type):
+    (directory_fixture / "existing").mkdir()
     assert assure_directory_exists(path_type("existing")) is False
 
 
 @pytest.mark.parametrize("path_type", [str, Path])
 def test_file_cannot_be_used_as_parent_directory(directory_fixture, path_type):
+    (directory_fixture / "blocked").write_text("occupied\n")
     with pytest.raises(FileExistsError):
         assure_directory_exists(path_type("blocked/notes.txt"), is_file=True)
     assert (directory_fixture / "blocked").read_text() == "occupied\n"
