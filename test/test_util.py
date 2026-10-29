@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 from datetime import datetime
+from io import BytesIO, StringIO
 from unittest import SkipTest, mock
 
 import ddt
@@ -41,6 +42,7 @@ from git.util import (
     join_path,
     remove_password_if_present,
     rmtree,
+    stream_copy,
 )
 from test.cleanup import cleanup_directory
 from test.lib import TestBase, requires_symlinks, with_rw_repo
@@ -65,6 +67,45 @@ from test.lib.fixtures import writable_fixture
 )
 def test_join_path_keeps_later_tokens_relative(parts, expected):
     assert join_path(*parts) == expected
+
+
+@pytest.mark.parametrize(
+    "parts, expected",
+    [([b"ab", b"c", b"def"], b"abcdef"), (["ab", "c", "def"], "abcdef"), ([], b""), ([], "")],
+)
+def test_stream_copy_waits_for_an_empty_read(parts, expected):
+    chunks = iter(parts)
+
+    class Reader:
+        def read(self, size):
+            chunk = next(chunks, expected[:0])
+            assert len(chunk) <= size
+            return chunk
+
+    destination = BytesIO() if isinstance(expected, bytes) else StringIO()
+    assert stream_copy(Reader(), destination, chunk_size=4) == len(expected)
+    assert destination.getvalue() == expected
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="requires POSIX unbuffered pipe reads")
+def test_stream_copy_keeps_reading_an_unbuffered_pipe():
+    read_fd, write_fd = os.pipe()
+
+    class Destination(BytesIO):
+        def write(self, data):
+            result = super().write(data)
+            if data and not writer.closed:
+                # Make the second chunk available only after the first short read is copied.
+                writer.write(b"second")
+                writer.close()
+            return result
+
+    destination = Destination()
+    with os.fdopen(read_fd, "rb", buffering=0) as source, os.fdopen(write_fd, "wb", buffering=0) as writer:
+        writer.write(b"first-")
+        copied = stream_copy(source, destination, chunk_size=1024)
+    assert copied == len(b"first-second")
+    assert destination.getvalue() == b"first-second"
 
 
 @pytest.fixture

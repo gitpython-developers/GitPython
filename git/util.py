@@ -219,6 +219,8 @@ def stream_copy(source: SupportsRead[AnyStr], destination: SupportsWrite[AnyStr]
     """Copy all data from the `source` stream into the `destination` stream in chunks
     of size `chunk_size`.
 
+    Keep reading after short reads until the source returns an empty chunk.
+
     :return:
         Number of bytes written
     """
@@ -227,7 +229,7 @@ def stream_copy(source: SupportsRead[AnyStr], destination: SupportsWrite[AnyStr]
         chunk = source.read(chunk_size)
         destination.write(chunk)
         br += len(chunk)
-        if len(chunk) < chunk_size:
+        if not chunk:
             break
     # END reading output stream
     return br
