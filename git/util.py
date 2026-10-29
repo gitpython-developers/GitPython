@@ -1340,7 +1340,7 @@ class IterableList(List[T_IterableObj]):  # type: ignore[type-var]
             return list.__getitem__(self, index)
         else:
             try:
-                return self.__getattr__(cast(str, index))
+                return self.__getattr__(index)
             except AttributeError as e:
                 raise IndexError(f"No item found with id {self._prefix}{index}") from e
         # END handle getattr
