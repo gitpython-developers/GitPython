@@ -41,6 +41,7 @@ from git.util import (
     is_cygwin_git,
     join_path,
     remove_password_if_present,
+    rmfile,
     rmtree,
     stream_copy,
 )
@@ -211,6 +212,21 @@ class TestRmtree:
 
         new_mode = (dir1 / "file").stat().st_mode
         assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
+
+
+class TestRmfile:
+    """Tests for :func:`git.util.rmfile`."""
+
+    def test_deletes_readonly_file(self):
+        # Automatically works on Unix, but requires special handling on Windows.
+        with writable_fixture("rmfile.sh") as temporary:
+            file = temporary.path().resolve() / "readonly"
+            # rmfile ignores missing paths, so check that the fixture made a read-only file.
+            assert file.is_file()
+            assert not file.stat().st_mode & stat.S_IWUSR
+
+            rmfile(file)
+            assert not file.exists()
 
 
 def _xfail_param(*values, **xfail_kwargs):
