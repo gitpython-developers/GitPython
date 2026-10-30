@@ -211,7 +211,7 @@ def rmfile(path: PathLike) -> None:
     treatment."""
     if osp.isfile(path):
         if sys.platform == "win32":
-            os.chmod(path, 0o777)
+            os.chmod(path, stat.S_IWUSR)
         os.remove(path)
 
 
