@@ -352,7 +352,7 @@ class RootModule(Submodule):
                                         # change easily.
                                         _logger.warning(
                                             "Current sha %s was not contained in the tracking\
-             branch at the new remote, setting it the the remote's tracking branch",
+             branch at the new remote, setting it to the remote's tracking branch",
                                             sm.hexsha,
                                         )
                                         sm.binsha = rref.commit.binsha

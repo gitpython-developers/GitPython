@@ -1392,7 +1392,7 @@ class IterableObj(Protocol):
 
         Subclasses can specify `args` and `kwargs` differently, and may use them for
         filtering. However, when the method is called with no additional positional or
-        keyword arguments, subclasses are obliged to to yield all items.
+        keyword arguments, subclasses are obliged to yield all items.
 
         :return:
             Iterator yielding Items
