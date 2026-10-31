@@ -326,6 +326,21 @@ def test_submodule_cli_lifecycle(monkeypatch, object_format, ref_format):
             assert not parent.submodules
 
 
+@pytest.mark.skipif(os.name == "nt", reason="'*' is not a valid Windows filename")
+@pytest.mark.parametrize("operation", ["remove", "move"])
+def test_submodule_index_update_matches_its_path_literally(operation):
+    with fixture_repo("submodule-special.sh", "glob-path", write=True, subdir="parent") as repo:
+        submodule = repo.submodules[0]
+        assert submodule.path == "*"
+        if operation == "remove":
+            submodule.remove()
+            expected = {".gitmodules", "README"}
+        else:
+            submodule.move("moved", module=False)
+            expected = {".gitmodules", "README", "moved"}
+        assert {entry.path for entry in repo.index.iter_entries()} == expected
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows locks files against directory renames")
 @pytest.mark.parametrize("use_short_path", [False, True])
 def test_submodule_reconnect_with_open_metadata_file(use_short_path):

@@ -1361,7 +1361,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             if configuration:
                 try:
                     entry = index.entry(self.path)
-                    index.remove(self.path, write=False, force=True)
+                    index.remove([entry], write=False, force=True)
                     nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
                     index.add([nentry], write=False)
                 except KeyError as e:
@@ -1572,8 +1572,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # First the index-entry.
             parent_index = self.repo.index
             try:
-                parent_index.entry(self.path)
-                parent_index.remove(self.path, write=False, force=True)
+                parent_index.remove([parent_index.entry(self.path)], write=False, force=True)
             except KeyError:
                 pass
             # END delete entry
