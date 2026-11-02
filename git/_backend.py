@@ -245,8 +245,8 @@ def object_metadata(command: Any, oid: str, kind: str) -> Any:
             else ((data.tagger, result["tagger"]),)
         )
         for raw, signature in signatures:
-            # Gix reads a time zone of 0 when other fields follow the date (GIX-34).
-            if signature is not None and not raw.endswith(b"> " + _date(signature)):
+            # Gix reads a time zone of 0 with trailing fields (GIX-34); accept either UTC sign.
+            if signature is not None and not raw.replace(b" -0000", b" +0000").endswith(b"> " + _date(signature)):
                 raise _Unsupported("signature trailing fields (GIX-34)")
     except _Unsupported as exc:
         return _fallback(kind + ".decode", str(exc))
