@@ -98,3 +98,20 @@ Commit messages must stand on their own. Put the information needed to understan
 and review the change in the commit body, even when it also appears in a pull
 request description. PR and issue links may provide additional context, but must
 not substitute for that explanation.
+
+## Agent trailers
+
+Every commit created by an agent must include an `Agent-Model` trailer identifying
+the model and version reported by its session or runtime. Include an
+`Agent-Reasoning-Effort` trailer when the configured reasoning effort is available.
+
+For example:
+
+```text
+Agent-Model: gpt-6.1-sol
+Agent-Reasoning-Effort: high
+```
+
+Do not guess these values or infer them from global defaults. If the model version
+is unavailable, use `Agent-Model: unknown`; omit the reasoning-effort trailer when
+its value is unavailable.
