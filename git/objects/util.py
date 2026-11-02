@@ -266,6 +266,9 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
 # Check the line ending once, before parsing fields, to avoid repeated backtracking.
 # Keep the field name from consuming spaces belonging to the actor.
 _re_actor_epoch = re.compile(r"^(?=[^\n]*$).[^ \n]* (.*) (\d+) ([+-]\d+)")
+# Like Git's split_ident_line, take the date only from right after the last '>'.
+_re_actor_mail = re.compile(r"^(?=[^\n]*$).[^ \n]* (.*>)(.*)$")
+_re_epoch = re.compile(r"[ \t\r]*(\d+)[ \t\r]*([+-]\d+)")
 _re_only_actor = re.compile(r"^.[^ \n]* (.*)$")
 
 
@@ -278,12 +281,19 @@ def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
         [Actor, int_seconds_since_epoch, int_timezone_offset]
     """
     actor, epoch, offset = "", "0", "0"
-    m = _re_actor_epoch.search(line)
+    m = _re_actor_mail.search(line)
     if m:
-        actor, epoch, offset = m.groups()
+        actor, rest = m.groups()
+        m = _re_epoch.match(rest)
+        if m:
+            epoch, offset = m.groups()
     else:
-        m = _re_only_actor.search(line)
-        actor = m.group(1) if m else line or ""
+        m = _re_actor_epoch.search(line)
+        if m:
+            actor, epoch, offset = m.groups()
+        else:
+            m = _re_only_actor.search(line)
+            actor = m.group(1) if m else line or ""
     return (Actor._from_string(actor), int(epoch), utctz_to_altz(offset))
 
 

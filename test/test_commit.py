@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 from gitdb import IStream
 
-from git import Actor, Commit, Repo, _backend
+from git import Actor, Commit, Repo, TagObject, _backend
 from git.compat import safe_decode, safe_encode
 from git.exc import UnsafeOptionError
 from git.objects.util import tzoffset, utc
@@ -645,6 +645,57 @@ class TestCommit(TestCommitSerialization):
                     )
                     key = ("commit.decode", "CLI: " + reason)
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
+    def test_deserialization_reads_date_after_email(self):
+        """Only the date right after the email counts, as in Git's split_ident_line."""
+        with fixture_repo("commit.sh", "trailing-date") as repo:
+            root = Path(repo.working_dir).parent
+            oid = (root / "object-id").read_text().strip()
+            tag_oid = (root / "tag-id").read_text().strip()
+            expected = repo.git.show("--no-patch", "--format=%ad%n%cd", "--date=raw", oid, "--")
+            self.assertEqual(expected, "1112591163 +0200\n1112591163 +0200")
+            self.assertTrue(repo.git.cat_file("-p", tag_oid).split("\n")[3].endswith(" +0200 1700000000 -0500"))
+            self.assertEqual(repo.git.for_each_ref("--format=%(taggerdate:raw)", "refs/tags/v1"), "1112591163 +0200")
+            raw = repo.git.cat_file("commit", oid, stdout_as_string=False, strip_newline_in_stdout=False)
+            before = _backend.statistics()
+            for cmt in (Commit(repo, bytes.fromhex(oid))._deserialize(BytesIO(raw)), Commit(repo, bytes.fromhex(oid))):
+                self.assertEqual((cmt.authored_date, cmt.author_tz_offset), (1112591163, -7200))
+                self.assertEqual((cmt.committed_date, cmt.committer_tz_offset), (1112591163, -7200))
+                self.assertEqual((cmt.author.email, cmt.committer.email), ("a@example.com", "c@example.com"))
+            tag = TagObject(repo, bytes.fromhex(tag_oid))
+            self.assertEqual(
+                (tag.tagged_date, tag.tagger_tz_offset, tag.tagger.email), (1112591163, -7200, "t@example.com")
+            )
+            if _backend.name == "gix":
+                for kind in ("commit", "tag"):
+                    key = (kind + ".decode", "CLI: signature trailing fields (GIX-34)")
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
+    def test_deserialization_negative_zero_offset_stays_native(self):
+        with fixture_repo("commit.sh", "zero-offset") as repo:
+            root = Path(repo.working_dir).parent
+            oid = (root / "object-id").read_text().strip()
+            tag_oid = (root / "tag-id").read_text().strip()
+            repo.git.fsck("--strict", oid, tag_oid)
+            self.assertTrue(repo.git.cat_file("-p", tag_oid).split("\n")[3].endswith(" -0000"))
+            self.assertEqual(
+                repo.git.show("--no-patch", "--format=%ad%n%cd", "--date=raw", oid, "--"),
+                "1112591163 +0000\n1112591163 +0000",
+            )
+            self.assertEqual(repo.git.for_each_ref("--format=%(taggerdate:raw)", "refs/tags/v1"), "1112591163 +0000")
+            before = _backend.statistics()
+            cmt = Commit(repo, bytes.fromhex(oid))
+            self.assertEqual((cmt.authored_date, cmt.author_tz_offset), (1112591163, 0))
+            self.assertEqual((cmt.committed_date, cmt.committer_tz_offset), (1112591163, 0))
+            tag = TagObject(repo, bytes.fromhex(tag_oid))
+            self.assertEqual((tag.tagged_date, tag.tagger_tz_offset), (1112591163, 0))
+            if _backend.name == "gix":
+                after = _backend.statistics()
+                for kind in ("commit", "tag"):
+                    key = (kind + ".decode", "native")
+                    self.assertEqual(after.get(key, 0), before.get(key, 0) + 1)
+                key = ("Git.execute", "CLI process")
+                self.assertEqual(after.get(key, 0), before.get(key, 0))
 
     def test_identity_cannot_alter_headers(self):
         """A name or email must not add header lines or present another identity."""
