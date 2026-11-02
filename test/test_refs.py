@@ -4,8 +4,10 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import io
 import os
 import os.path as osp
+import tarfile
 import unittest
 from itertools import chain
 from pathlib import Path
@@ -22,6 +24,8 @@ from git import (
     GitConfigParser,
     Git,
     Head,
+    IndexFile,
+    Object,
     Reference,
     RefLog,
     Remote,
@@ -220,6 +224,39 @@ def test_initial_commit_does_not_inherit_lookalike_tag_history(object_format, re
         assert repo.head.commit == initial
         assert repo.tags["refs/heads/unborn"].commit == foreign
         assert repo.git.rev_list("--count", "HEAD") == "1"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_reference_arguments_do_not_resolve_same_named_tags(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed", write=True) as repo:
+        local = repo.heads.main.commit
+        foreign = repo.tags.main.commit
+        assert repo.tags["origin/main"].commit == foreign != local
+        # Git's name guessing prefers the tags, as for any short name.
+        assert repo.commit("main") == repo.commit("origin/main") == foreign
+        branches = (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"))
+        for index, ref in enumerate(branches):
+            assert repo.commit(ref) == Object.new(repo, ref) == local
+            assert repo.tree(ref) == local.tree
+            assert list(repo.iter_commits(ref)) == [local]
+            assert repo.merge_base(ref, local) == [local]
+            assert not repo.is_ancestor(foreign, ref)
+            assert local.diff(ref) == []
+            assert [commit for commit, _ in repo.blame(ref, "file")] == [local]
+            assert [entry.commit for entry in repo.blame_incremental(ref, "file")] == [local]
+            stream = io.BytesIO()
+            repo.archive(stream, ref)
+            with tarfile.open(fileobj=io.BytesIO(stream.getvalue())) as archive:
+                assert archive.getnames() == ["file"]
+            assert IndexFile.from_tree(repo, ref).write_tree() == local.tree
+            assert repo.create_head(f"copy-{index}", ref).commit == local
+            assert repo.create_tag(f"copy-{index}", ref=ref).commit == local
+            repo.head.reset(ref, index=True)
+            repo.index.reset(ref, head=True)
+            repo.index.merge_tree(ref)
+            assert repo.head.commit == local
+            assert repo.index.write_tree() == local.tree
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

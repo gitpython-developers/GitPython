@@ -465,8 +465,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
             args_list.extend(paths_tup)
         # END if paths
 
-        Git._check_operand(str(rev), "revision")
-        native = _backend.history(repo.git, str(rev), paths, kwargs)
+        rev = Git._check_revision(rev)
+        native = _backend.history(repo.git, rev, paths, kwargs)
         if native is not NotImplemented:
             return (cls(repo, hex_to_bin(oid)) for oid in native)
         proc = repo.git._call_process_safe("rev_list", rev, args_list, as_process=True, **kwargs)

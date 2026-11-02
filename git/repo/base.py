@@ -909,7 +909,7 @@ class Repo:
         """
         if rev is None:
             return self.head.commit
-        return to_commit(self.rev_parse(str(rev)))
+        return to_commit(self.rev_parse(Git._check_revision(rev)))
 
     def iter_trees(self, *args: Any, **kwargs: Any) -> Iterator["Tree"]:
         """:return: Iterator yielding :class:`~git.objects.tree.Tree` objects
@@ -939,7 +939,7 @@ class Repo:
         """
         if rev is None:
             return self.head.commit.tree
-        obj = self.rev_parse(str(rev))
+        obj = self.rev_parse(Git._check_revision(rev))
         if obj.type == "tree":
             obj.path = getattr(obj, "path", "")
             return obj
@@ -1029,10 +1029,12 @@ class Repo:
                 options=Git._option_candidates(rev, kwargs), unsafe_options=self.unsafe_git_revision_options
             )
 
+        # Resolve reference objects before flattening turns them into short names.
+        revs = [item if isinstance(item, (list, tuple)) else Git._check_revision(item) for item in rev]
         res: List[Commit] = []
         try:
             lines: List[str] = self.git._call_process_safe(
-                "merge_base", "--", *(Git._check_operand(item, "revision") for item in Git._unpack_args(rev)), **kwargs
+                "merge_base", "--", *(Git._check_operand(item, "revision") for item in Git._unpack_args(revs)), **kwargs
             ).splitlines()
         except GitCommandError as err:
             if err.status != 1:
@@ -1065,8 +1067,8 @@ class Repo:
                 "merge_base",
                 "--is-ancestor",
                 "--",
-                Git._check_operand(ancestor_rev, "revision"),
-                Git._check_operand(rev, "revision"),
+                Git._check_revision(ancestor_rev),
+                Git._check_revision(rev),
             )
         except GitCommandError as err:
             if err.status == 1:
@@ -1303,7 +1305,7 @@ class Repo:
 
         data: bytes = self.git._call_process_safe(
             "blame",
-            Git._check_operand(rev, "revision") if rev is not None else None,
+            Git._check_revision(rev) if rev is not None else None,
             "--no-textconv" if not allow_unsafe_options else None,
             "--",
             file,
@@ -1424,7 +1426,7 @@ class Repo:
             )
         data: bytes = self.git._call_process_safe(
             "blame",
-            Git._check_operand(rev, "revision") if rev is not None else None,
+            Git._check_revision(rev) if rev is not None else None,
             *rev_opts_list,
             "--no-textconv" if not allow_unsafe_options else None,
             "--",
@@ -1925,7 +1927,7 @@ class Repo:
         self.git._call_process_safe(
             "archive",
             "--",
-            Git._check_operand(treeish, "revision"),
+            Git._check_revision(treeish),
             *path,
             _allow_network=bool(kwargs.get("remote")),
             _config=()

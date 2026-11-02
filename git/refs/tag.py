@@ -170,7 +170,7 @@ class TagReference(Reference):
 
         name = Git._check_operand(path, "tag")
         cls._get_validated_ref_path(repo, cls.to_full_path(name))
-        reference = Git._check_operand(reference, "revision")
+        reference = Git._check_revision(reference)
         oid = repo.rev_parse(reference).hexsha
         options = [] if allow_unsafe_options else ["--no-sign"]
         repo.git._call_process_safe("tag", *options, "--", name, oid, **kwargs)

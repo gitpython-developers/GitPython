@@ -57,7 +57,12 @@ API changes
 * Reference reads require the exact name. A missing branch no longer resolves to
   a similarly named tag, so an unborn branch's initial commit has no parent.
   A tag named ``REBASE_HEAD`` no longer reports a rebase in progress. Revision
-  APIs such as ``Repo.commit(rev)`` retain Git's name guessing.
+  APIs such as ``Repo.commit(rev)`` retain Git's name guessing for strings.
+  A reference object passed as a revision, for example to ``Repo.commit()``,
+  ``Repo.iter_commits()``, ``Repo.merge_base()``, ``IndexFile.from_tree()`` or
+  ``HEAD.reset()``, is read by its exact name, so a tag named like a branch or
+  remote-tracking branch no longer takes its place. A missing reference raises
+  ``ValueError``, as its ``object`` property does.
 * Packed tag names containing non-UTF-8 bytes are represented losslessly as
   surrogate-escaped strings. ``safe_encode()`` recovers their original bytes,
   and Gix reference validation and resolution receive those bytes directly.
