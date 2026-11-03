@@ -12,6 +12,8 @@ from unittest.mock import patch
 
 from gitdb import OInfo
 
+import pytest
+
 from git import Repo
 from git.objects import Blob, Commit, TagObject, Tree
 import git.objects.base as base
@@ -122,6 +124,7 @@ class TestBase(_TestBase):
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
         assert osp.isdir(rw_repo.working_dir)
 
+    @pytest.mark.net
     @skipIf(sys.platform == "win32", "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):

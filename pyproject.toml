@@ -74,6 +74,9 @@ testpaths = "test"  # Space separated list of paths from root e.g test tests doc
 # -ra   # test summary: list all non-passing (fail, error, skip, xfail, xpass)
 # --ignore-glob=**/gitdb/*  # ignore glob paths
 # filterwarnings ignore::WarningType  # ignores those warnings
+markers = [
+       "net: tests requiring network access",
+   ]
 
 [tool.mypy]
 files = ["git/", "test/test_typing.py", "test/test_remote_progress.py"]

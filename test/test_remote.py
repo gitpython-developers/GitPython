@@ -441,6 +441,7 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path, kill_after_timeout=10.0)
 
+    @pytest.mark.net
     @skipIf(sys.platform == "win32", "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_base(self, rw_repo, remote_repo):
@@ -1031,6 +1032,7 @@ class TestRemote(TestBase):
                 with self.assertRaises(GitCommandError):
                     rw_repo.git.ls_remote(".", **unsafe_option, allow_unsafe_options=True)
 
+    @pytest.mark.net
     @with_rw_and_rw_remote_repo("0.1.6")
     def test_fetch_unsafe_branch_name(self, rw_repo, remote_repo):
         # Create branch with a name containing a NBSP
