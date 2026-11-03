@@ -10,6 +10,25 @@ relative_target=${args[6]}
 modules="$root/parent/.git/modules"
 target="$root/outside"
 case "$scenario" in
+    test_submodule_writes_use_checked_worktree)
+        if test "${args[5]}" = update; then
+            printf updated > parent/module/file
+            git -C parent/module add file
+            git -C parent/module commit -qm 'Advance submodule'
+            git -C parent add module
+            git -C parent commit -qm 'Record updated submodule'
+            git -C parent/module reset -q --hard HEAD^
+        fi
+        mkdir "$target"
+        ln -s "$target" parent/redirect
+        worktree="$root/parent/redirect"
+        if test "$kind" = intermediate; then
+            mkdir "$target/worktree"
+            worktree="$worktree/worktree"
+        fi
+        printf content > "$worktree/file"
+        git -C parent/module config core.worktree "$worktree"
+        ;;
     test_move_leaf_symlink_compatibility)
         case "$kind" in
             empty|nonempty) mkdir "$target" ;;
