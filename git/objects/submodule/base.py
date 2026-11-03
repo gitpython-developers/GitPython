@@ -1727,7 +1727,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         module_checkout_abspath = self.abspath
         self._module_abspath(self.repo, self.path, self.name)
         try:
-            repo = git.Repo(module_checkout_abspath)
+            # Keep core.worktree from redirecting writes past the validated checkout.
+            repo = git.Repo(module_checkout_abspath, _env={"GIT_WORK_TREE": os.fspath(module_checkout_abspath)})
             if repo != self.repo:
                 return repo
             # END handle repo uninitialized

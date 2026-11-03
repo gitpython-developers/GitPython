@@ -968,6 +968,18 @@ identify the historical fixture where needed.
 | GIX-33 | Bug (open); missing exact-name mode | With Git 2.54.0 and GixPython 0.3.0, `exact-refs.sh sha1 files symbolic` makes `refs/tags/REBASE_HEAD` a symbolic ref to another tag while the root `REBASE_HEAD` is absent. `Repository.try_find_reference("REBASE_HEAD")` returns that tag; native `_symbolic_ref` formerly returned its target, whereas `git symbolic-ref --quiet --no-recurse -- REBASE_HEAD` exits 1. GitPython's root-reference object read consequently returned a commit through Gix and raised `ValueError` through CLI. SHA-256 reproduces the same mismatch. | Expose an exact-name lookup mode, including root references, whose absence and error behavior matches Git. `_symbolic_ref()` compares the native reference's name with the requested bytes and selects CLI for a lookalike. `test_missing_root_reference_does_not_follow_symbolic_lookalike_tag` verifies parity and forced CLI fallback. This adapter guard does not close the upstream compatibility bug. |
 | GIX-34 | Bug (open) | With Git 2.54.0 and GixPython 0.3.0, an author, committer or tagger line with fields after its time zone, such as `A <a@example.com> 1112591163 +0200 1700000000 -0500`, decodes through `Commit.author()`/`committer()` and `Tag.tagger()` with the correct seconds but an offset of 0. Git reads only the first date and time zone after the last `>` (`split_ident_line`) and reports `1112591163 +0200` through `git show --format=%ad --date=raw` and `%(taggerdate:raw)`. `git fsck` reports `badTimezone` for such objects, but the default `transfer.fsckObjects=false` accepts them. The `trailing-date` read-only `commit.sh` fixture in `test_deserialization_reads_date_after_email` reproduces both object kinds. | Report the time zone Git reads for identity lines with trailing fields, or reject them consistently. `object_metadata()` selects CLI when the decoded signature does not reproduce the end of its raw header line. This adapter guard does not close the upstream compatibility bug. |
 
+GIX-14 also covers configured worktree symlink resolution. On macOS with
+GixPython 0.3.0, CPython 3.12.14 and Git 2.54.0, set a submodule's
+`core.worktree` to `parent/redirect`, where `redirect` links to `outside`.
+`Repository.workdir()` retains `parent/redirect`; Git's
+`rev-parse --show-toplevel` returns `outside`. A trailing `/worktree` reproduces
+the same difference for an intermediate symlink. Opening the canonical gitfile
+or reopening the canonical native Git directory does not resolve it.
+`test_submodule_writes_use_checked_worktree` exercises both layouts: submodule
+handles now pass the validated checkout as `GIT_WORK_TREE` to prevent redirected
+writes in either backend. General native discovery still needs Git-compatible
+configured-worktree resolution; this guard does not close GIX-14.
+
 The PR #2306 regression exposed an adapter ownership-check bypass in both
 backends: `Repo`'s automatic `GIT_DIR` made Git 2.54.0 treat hook execution as
 explicitly selecting the repository, so it ran a hook where an ordinary

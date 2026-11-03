@@ -949,6 +949,36 @@ def test_submodule_rejects_checkout_and_gitmodules_symlinks(configured_submodule
     assert (root / "moved").is_dir()
 
 
+@pytest.mark.parametrize("implementation", ["git", "gitpython"])
+@pytest.mark.parametrize("operation", ["update", "remove"])
+@pytest.mark.parametrize("kind", ["leaf", "intermediate"])
+def test_submodule_writes_use_checked_worktree(configured_submodule, implementation, operation, kind):
+    """A configured worktree must not redirect writes past the checked checkout."""
+    sm = configured_submodule
+    root = Path(sm.repo.working_tree_dir)
+    outside = root.parent / "outside"
+    if kind == "intermediate":
+        outside /= "worktree"
+    before = {path.name: path.read_bytes() for path in outside.iterdir()}
+    if implementation == "git":
+        if operation == "update":
+            sm.repo.git.submodule("update", "--force", "--no-fetch", "--", sm.path)
+        else:
+            sm.repo.git.submodule("deinit", "--force", "--", sm.path)
+    elif operation == "update":
+        sm.update(force=True, no_fetch=True)
+    else:
+        sm.remove(configuration=False)
+
+    assert outside.is_dir()
+    assert {path.name: path.read_bytes() for path in outside.iterdir()} == before
+    assert (root / "redirect").is_symlink()
+    if operation == "update":
+        assert (root / "module/file").read_text() == "updated"
+    else:
+        assert not (root / "module/file").exists()
+
+
 def test_add_closes_checkout_processes(movable_submodule, monkeypatch):
     """Adding a submodule must not leave a child process holding its checkout open."""
     # Native reads have no persistent process; keep exercising the CLI fallback.
