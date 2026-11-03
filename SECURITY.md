@@ -9,6 +9,37 @@ Only the latest version of GitPython can receive security updates. If a vulnerab
 | 3.x.x   | :white_check_mark: |
 | < 3.0   | :x:                |
 
+## Threat Model
+
+GitPython inherits its threat model directly from Git. The trust boundaries in
+[Git's security documentation](https://github.com/git/git/blob/master/Documentation/git.adoc#security)
+apply to both the CLI and Gix backends:
+
+- **Repository content may be untrusted.** Cloning an untrusted repository and
+  inspecting its history are supported operations. A clone creates local
+  repository metadata without copying the source repository's configuration or
+  hooks. Tracked files, including `.gitmodules`, remain untrusted input.
+- **Local repository metadata must be trusted.** Running commands in an
+  attacker-supplied `.git` directory, bare repository, or surrounding worktree is
+  unsafe: configuration and hooks can execute commands. This includes repositories
+  received in archives or copied directories. Owning the extracted files or listing
+  a repository in `safe.directory` does not make its contents trustworthy.
+- **Repository paths are not a sandbox.** Git supports metadata and working trees
+  in [separate locations](https://github.com/git/git/blob/master/Documentation/git-clone.adoc),
+  including metadata reached through gitfiles or symlinks.
+  GitPython does not promise that all filesystem access stays within a checkout
+  or `.git` directory. Paths supplied by untrusted repository content must still
+  receive Git's intended protections.
+
+For an untrusted repository directory, Git recommends obtaining a clean copy with
+`git clone --no-local` before running other commands. Serving the source through
+`git-upload-pack` still has an attack surface; Git recommends using an
+unprivileged user for additional isolation. See
+[Git's `git-upload-pack` security guidance](https://github.com/git/git/blob/master/Documentation/git-upload-pack.adoc#security).
+
+Violations of these trust boundaries or bypasses of Git's intended protections
+remain reportable, including cases where Git itself is affected.
+
 ## Reporting a Vulnerability
 
 Please report private portions of a vulnerability to <https://github.com/gitpython-developers/GitPython/security/advisories/new>. Doing so helps to receive updates and collaborate on the matter, without disclosing it publicly right away.
