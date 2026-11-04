@@ -175,7 +175,7 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
         yield
     finally:
         if old_value is None:
-            del os.environ[name]
+            os.environ.pop(name, None)
         else:
             os.environ[name] = old_value
 
