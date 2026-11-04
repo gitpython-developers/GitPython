@@ -9,6 +9,7 @@ import os.path as osp
 
 import gitdb.typ as dbtyp
 
+from git.cmd import Git
 from git.compat import force_text
 from git.exc import WorkTreeRepositoryUnsupported
 from git.util import LazyMixin, bin_to_hex, join_path_native, stream_copy
@@ -138,7 +139,7 @@ class Object(LazyMixin):
             This cannot be a ``__new__`` method as it would always call :meth:`__init__`
             with the input id which is not necessarily a binsha.
         """
-        return repo.rev_parse(str(id))
+        return repo.rev_parse(Git._check_revision(id))
 
     @classmethod
     def new_from_sha(cls, repo: "Repo", sha1: bytes) -> AnyGitObject:

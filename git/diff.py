@@ -261,8 +261,10 @@ class Diffable:
                 clusterable_short_options="46abceflmnpqrstuvwzBCDMNRW",
             )
 
-        if isinstance(other, str):
-            other = self.repo.rev_parse(Git._check_operand(other, "revision")).hexsha
+        from git.refs.symbolic import SymbolicReference
+
+        if isinstance(other, (str, SymbolicReference)):
+            other = self.repo.rev_parse(Git._check_revision(other)).hexsha
         native = _backend.tree_diff(self.repo, self, other, paths, create_patch, kwargs)
         if native is not NotImplemented:
             return native

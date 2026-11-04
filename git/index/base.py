@@ -280,8 +280,7 @@ class IndexFile(LazyMixin, git_diff.Diffable):
             tree = tree[0]
         if isinstance(tree, bytes):
             tree = tree.hex() if len(tree) == self.repo._oid_size else tree.decode("ascii")
-        value = str(tree)
-        Git._check_operand(value, "tree revision")
+        value = Git._check_revision(tree, "tree revision")
         return self.repo.git._call_process_safe("rev_parse", "--verify", "--end-of-options", value + "^{tree}")
 
     def _index_path(self) -> PathLike:

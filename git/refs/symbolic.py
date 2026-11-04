@@ -575,7 +575,7 @@ class SymbolicReference:
     ) -> T_References:
         full_path = cls.to_full_path(path)
         cls._get_validated_ref_path(repo, full_path)
-        target = repo.rev_parse(str(reference)) if resolve else reference
+        target = repo.rev_parse(Git._check_revision(reference)) if resolve else reference
         ref = cls(repo, full_path)
         if force:
             ref.set_reference(target, logmsg)

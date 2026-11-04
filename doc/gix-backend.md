@@ -374,7 +374,7 @@ and predate the current fallback; they do not establish native coverage.
 | Worktree inventory, `worktree list` | Main and linked worktree metadata, including bare main repositories and locks | Prunable entries; GIX-14 |
 | `Repo.merge_base`, `Repo.is_ancestor` | Native graph queries for two revisions | Octopus/fork-point and other options |
 | `Commit.count` | Reachable commit count, skip/limit/first-parent | Path filters and other revision options |
-| `Commit.iter_items`, `Repo.iter_commits` | First-parent walks and a single tip | General history ordering; GIX-8 |
+| `Commit.iter_items`, `Repo.iter_commits` | First-parent walks and a single tip | Reflog walks, general history ordering; GIX-8 |
 | Index entry reads, `ls_files` | Stage/mode/OID/path and exposed index flags | Custom and sparse indexes; GIX-3/4 |
 | `IndexFile.version`, `update_index` query | Native index version | Actual `update-index` mutations |
 | Index editing and `IndexFile.write` | Opaque byte snapshots; atomic locked publication | Private-file edits always use Git: arbitrary native index loading and strict pathname validation are missing; GIX-3/4/13/26 |
@@ -391,6 +391,25 @@ and predate the current fallback; they do not establish native coverage.
 | `Repo.is_dirty` | Index/tree/worktree status, configured submodule checks and pathspecs | Custom/sparse indexes and non-root command directories |
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal, unsupported path normalization, and unavailable path metadata |
+
+Revision APIs preserve a reference object's validated full name. The shared
+`Git._check_revision()` first uses the exact reference reader to verify existence
+and the symbolic-reference chain; it passes the full name rather than the resolved
+object ID. Strings retain Git's name guessing, and commit objects retain their IDs.
+This prevents same-named tags from replacing branches without losing the ref
+identity needed by reflog walks, fork-point lookups and remote archives.
+`merge_base()` validates nested list/tuple operands before string conversion.
+`exact-refs.sh` covers these paths with shadowing tags and missing references in
+SHA-1/SHA-256 and files/reftable repositories on both backends.
+
+These name-sensitive operations retain CLI fallback. GixPython 0.3.0's
+`Repository.rev_walk()` has no Git-compatible reflog-walk mode,
+`Repository.merge_base()` exposes graph merge bases rather than reflog-based
+fork-point selection, and no upload-archive client API is exposed. The regressions
+compare Git 2.54.0's reflog history, old fork point after an upstream rewind,
+and default upload-archive server behavior, which rejects literal object IDs.
+Native replacements must expose matching reflog walking and fork-point selection
+and the upload-archive protocol; no Python implementation substitutes for them.
 
 Reference reads require an exact name, unlike revision APIs that intentionally
 apply Git's name guessing. `reference_info()` uses

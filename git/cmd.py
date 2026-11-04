@@ -1023,6 +1023,24 @@ class Git:
             raise UnsafeOptionError(f"Invalid {label}: {value!r}")
         return value
 
+    @staticmethod
+    def _check_revision(value: Any, label: str = "revision") -> str:
+        """Validate a revision, preserving a reference object's full name.
+
+        A reference converts to its short name, for which Git's revision lookup tries
+        other references, such as a same-named tag, before ``refs/heads/`` and
+        ``refs/remotes/``. Verify the exact reference exists before passing its full
+        name, retaining its identity for reflog walks and remote archives.
+        """
+        from git.refs.symbolic import SymbolicReference
+
+        if isinstance(value, SymbolicReference):
+            value.dereference_recursive(value.repo, value.path)
+            value = value.path
+        if isinstance(value, os.PathLike):
+            value = os.fsdecode(value)
+        return Git._check_operand(value, label)
+
     def _require_version(self) -> None:
         key = None
         if self._version_info_token is not self._refresh_token:

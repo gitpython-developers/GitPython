@@ -4,8 +4,10 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import io
 import os
 import os.path as osp
+import tarfile
 import unittest
 from itertools import chain
 from pathlib import Path
@@ -22,6 +24,8 @@ from git import (
     GitConfigParser,
     Git,
     Head,
+    IndexFile,
+    Object,
     Reference,
     RefLog,
     Remote,
@@ -220,6 +224,135 @@ def test_initial_commit_does_not_inherit_lookalike_tag_history(object_format, re
         assert repo.head.commit == initial
         assert repo.tags["refs/heads/unborn"].commit == foreign
         assert repo.git.rev_list("--count", "HEAD") == "1"
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_reference_arguments_do_not_resolve_same_named_tags(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed", write=True) as repo:
+        local = repo.heads.main.commit
+        foreign = repo.tags.main.commit
+        assert repo.tags["origin/main"].commit == foreign != local
+        # Git's name guessing prefers the tags, as for any short name.
+        assert repo.commit("main") == repo.commit("origin/main") == foreign
+        branches = (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"))
+        for index, ref in enumerate(branches):
+            assert repo.commit(ref) == Object.new(repo, ref) == local
+            assert repo.tree(ref) == local.tree
+            assert list(repo.iter_commits(ref)) == [local]
+            assert repo.merge_base(ref, local) == [local]
+            assert not repo.is_ancestor(foreign, ref)
+            assert local.diff(ref) == []
+            assert [commit for commit, _ in repo.blame(ref, "file")] == [local]
+            assert [entry.commit for entry in repo.blame_incremental(ref, "file")] == [local]
+            stream = io.BytesIO()
+            repo.archive(stream, ref)
+            with tarfile.open(fileobj=io.BytesIO(stream.getvalue())) as archive:
+                assert archive.getnames() == ["file"]
+            assert IndexFile.from_tree(repo, ref).write_tree() == local.tree
+            assert repo.create_head(f"copy-{index}", ref).commit == local
+            assert repo.create_tag(f"copy-{index}", ref=ref).commit == local
+            repo.head.reset(ref, index=True)
+            repo.index.reset(ref, head=True)
+            repo.index.merge_tree(ref)
+            assert repo.head.commit == local
+            assert repo.index.write_tree() == local.tree
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_merge_base_preserves_nested_reference_arguments(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main")):
+            for left, right in (([ref], ref), (([ref],), ref), (ref, [ref]), ([ref.path], (ref.path,))):
+                assert repo.merge_base(left, right) == [ref.commit]
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+@pytest.mark.parametrize("path_type", [Path, PathLikeMock])
+def test_revision_arguments_preserve_pathlike_paths(object_format, ref_format, path_type):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        local = repo.head.commit
+        for name in ("HEAD", "refs/heads/main", "refs/remotes/origin/main"):
+            path = path_type(name)
+            ref = SymbolicReference(repo, path)
+            assert repo.commit(ref) == ref.object == local
+            assert repo.merge_base(ref, local) == [local]
+            assert repo.merge_base(path, local) == [local]
+            assert repo.merge_base(([path],), [local]) == [local]
+
+
+@pytest.mark.parametrize("revision", ["HEAD", "--all", "HEAD\0", "HEAD\r", "HEAD\n"])
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_check_revision_normalizes_pathlike_before_validation(revision, as_bytes):
+    path = Mock(spec=os.PathLike, __fspath__=Mock(return_value=os.fsencode(revision) if as_bytes else revision))
+    if revision == "HEAD":
+        assert Git._check_revision(path) == revision
+    else:
+        with pytest.raises(UnsafeOptionError, match="Invalid revision"):
+            Git._check_revision(path)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_revision_arguments_validate_missing_references(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format) as repo:
+        for path in ("refs/heads/unborn", "REBASE_HEAD"):
+            ref = SymbolicReference(repo, path)
+            foreign = repo.tags[path].commit
+            assert repo.git.rev_parse("--verify", path) == foreign.hexsha
+            with pytest.raises(ValueError, match="does not exist or is invalid"):
+                repo.commit(ref)
+            with pytest.raises(ValueError, match="does not exist or is invalid"):
+                repo.merge_base([ref], foreign)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_reflog_walk_preserves_reference_names(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "reflog") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"), repo.head):
+            expected = repo.git.rev_list("--walk-reflogs", ref.path, "--").splitlines()
+            assert len(expected) >= 2
+            for options in ({"walk_reflogs": True}, {"walk-reflogs": True}):
+                assert [commit.hexsha for commit in repo.iter_commits(ref, **options)] == expected
+                assert [commit.hexsha for commit in Commit.iter_items(repo, ref, max_count=1, **options)] == expected[
+                    :1
+                ]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            list(repo.iter_commits(SymbolicReference(repo, "REBASE_HEAD"), walk_reflogs=True))
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_fork_point_preserves_upstream_reference_name(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "reflog") as repo:
+        topic = repo.heads.topic
+        old_tip = topic.commit.parents[0]
+        for upstream in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main")):
+            assert repo.merge_base(upstream, topic) == [upstream.commit]
+            assert repo.git.merge_base("--fork-point", upstream.path, topic.path) == old_tip.hexsha
+            for options in ({"fork_point": True}, {"fork_p": True}):
+                assert repo.merge_base(upstream, topic, **options) == [old_tip]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            repo.merge_base(SymbolicReference(repo, "REBASE_HEAD"), topic, fork_point=True)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_remote_archive_preserves_reference_name(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"), repo.head):
+            expected = io.BytesIO()
+            repo.git.archive("--remote=" + repo.git_dir, ref.path, output_stream=expected)
+            stream = io.BytesIO()
+            repo.archive(stream, ref, remote=repo.git_dir)
+            assert stream.getvalue() == expected.getvalue()
+            with tarfile.open(fileobj=io.BytesIO(stream.getvalue())) as archive:
+                assert archive.getnames() == ["file"]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            repo.archive(io.BytesIO(), SymbolicReference(repo, "REBASE_HEAD"), remote=repo.git_dir)
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])

@@ -121,7 +121,7 @@ class HEAD(SymbolicReference):
         # END working tree handling
 
         try:
-            oid = self.repo.rev_parse(Git._check_operand(commit, "revision")).hexsha
+            oid = self.repo.rev_parse(Git._check_revision(commit)).hexsha
             self.repo.git._call_process_safe("reset", mode, oid, "--", paths, **kwargs)
         except GitCommandError as e:
             # git nowadays may use 1 as status to indicate there are still unstaged
