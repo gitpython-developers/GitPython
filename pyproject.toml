@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "GitPython"
 description = "GitPython is a Python library used to interact with Git repositories"
 authors = [
-    {name = "Sebastian Thiel", email = "byronimo@gmail.com"},
-    {name = "Michael Trier", email = "mtrier@gmail.com"},
+    { name = "Sebastian Thiel", email = "byronimo@gmail.com" },
+    { name = "Michael Trier", email = "mtrier@gmail.com" },
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -51,10 +51,10 @@ doc = [
 include-package-data = true
 
 [tool.setuptools.dynamic]
-version = {file = "VERSION"}
-dependencies = {file = "requirements.txt"}
-optional-dependencies."test" = {file = "test-requirements.txt"}
-optional-dependencies."gix" = {file = "gix-requirements.txt"}
+version = { file = "VERSION" }
+dependencies = { file = "requirements.txt" }
+optional-dependencies."test" = { file = "test-requirements.txt" }
+optional-dependencies."gix" = { file = "gix-requirements.txt" }
 
 [tool.setuptools.packages.find]
 include = ["git", "git.*"]
@@ -64,7 +64,7 @@ addopts = "--cov=git --cov-report=term -rfEX"
 filterwarnings = "ignore::DeprecationWarning"
 python_files = "test_*.py"
 tmp_path_retention_policy = "failed"
-testpaths = "test"  # Space separated list of paths from root e.g test tests doc/testing.
+testpaths = "test"                            # Space separated list of paths from root e.g test tests doc/testing.
 # --cov   coverage
 # --cov-report term  # send report to terminal term-missing -> terminal with line numbers  html  xml
 # --cov-report term-missing # to terminal with line numbers
@@ -74,6 +74,9 @@ testpaths = "test"  # Space separated list of paths from root e.g test tests doc
 # -ra   # test summary: list all non-passing (fail, error, skip, xfail, xpass)
 # --ignore-glob=**/gitdb/*  # ignore glob paths
 # filterwarnings ignore::WarningType  # ignores those warnings
+markers = [
+    "net: tests requiring network access, including local/loopback sockets; skip with -m 'not net' on network-restricted builders",
+]
 
 [tool.mypy]
 files = ["git/", "test/test_typing.py", "test/test_remote_progress.py"]
@@ -100,14 +103,8 @@ include = [
     "test/test_git.py",
     "test/test_remote_progress.py",
 ]
-extraPaths = [
-    "gitdb",
-    "smmap",
-]
-exclude = [
-    "gitdb",
-    "smmap",
-]
+extraPaths = ["gitdb", "smmap"]
+exclude = ["gitdb", "smmap"]
 
 [tool.coverage.run]
 source = ["git"]
@@ -119,39 +116,33 @@ omit = ["*/git/ext/*"]
 [tool.ruff]
 line-length = 120
 # Exclude a variety of commonly ignored directories.
-exclude = [
-    "git/ext/",
-    "gitdb/",
-    "smmap/",
-    "build",
-    "dist",
-]
+exclude = ["git/ext/", "gitdb/", "smmap/", "build", "dist"]
 # Enable Pyflakes `E` and `F` codes by default.
 lint.select = [
     "E",
-    "W",     # See: https://pypi.org/project/pycodestyle
-    "F",     # See: https://pypi.org/project/pyflakes
+    "W", # See: https://pypi.org/project/pycodestyle
+    "F", # See: https://pypi.org/project/pyflakes
     # "I",   # See: https://pypi.org/project/isort/
     # "S",   # See: https://pypi.org/project/flake8-bandit
     # "UP",  # See: https://docs.astral.sh/ruff/rules/#pyupgrade-up
 ]
 lint.extend-select = [
     # "A",    # See: https://pypi.org/project/flake8-builtins
-    "B",      # See: https://pypi.org/project/flake8-bugbear
-    "C4",     # See: https://pypi.org/project/flake8-comprehensions
-    "TC004",  # See: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
+    "B",     # See: https://pypi.org/project/flake8-bugbear
+    "C4",    # See: https://pypi.org/project/flake8-comprehensions
+    "TC004", # See: https://docs.astral.sh/ruff/rules/runtime-import-in-type-checking-block/
 ]
 lint.ignore = [
     # If it becomes necessary to ignore any rules, list them here.
 ]
 lint.unfixable = [
-    "F401",  # Module imported but unused
+    "F401", # Module imported but unused
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "test/**" = [
-    "B018",  # useless-expression
+    "B018", # useless-expression
 ]
 "fuzzing/fuzz-targets/**" = [
-  "E402",  # environment setup must happen before the `git` module is imported, thus cannot happen at top of file
+    "E402", # environment setup must happen before the `git` module is imported, thus cannot happen at top of file
 ]
