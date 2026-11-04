@@ -1025,17 +1025,20 @@ class Git:
 
     @staticmethod
     def _check_revision(value: Any, label: str = "revision") -> str:
-        """Validate a revision, passing a reference object as the object ID it holds.
+        """Validate a revision, preserving a reference object's full name.
 
         A reference converts to its short name, for which Git's revision lookup tries
         other references, such as a same-named tag, before ``refs/heads/`` and
-        ``refs/remotes/``. Read the exact reference instead, as
-        ``SymbolicReference.object`` does.
+        ``refs/remotes/``. Verify the exact reference exists before passing its full
+        name, retaining its identity for reflog walks and remote archives.
         """
         from git.refs.symbolic import SymbolicReference
 
         if isinstance(value, SymbolicReference):
-            value = value.dereference_recursive(value.repo, value.path)
+            value.dereference_recursive(value.repo, value.path)
+            value = value.path
+        if isinstance(value, os.PathLike):
+            value = os.fsdecode(value)
         return Git._check_operand(value, label)
 
     def _require_version(self) -> None:

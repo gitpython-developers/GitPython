@@ -60,9 +60,11 @@ API changes
   APIs such as ``Repo.commit(rev)`` retain Git's name guessing for strings.
   A reference object passed as a revision, for example to ``Repo.commit()``,
   ``Repo.iter_commits()``, ``Repo.merge_base()``, ``IndexFile.from_tree()`` or
-  ``HEAD.reset()``, is read by its exact name, so a tag named like a branch or
-  remote-tracking branch no longer takes its place. A missing reference raises
-  ``ValueError``, as its ``object`` property does.
+  ``HEAD.reset()``, is validated by its exact name and passed using its full ref
+  name, so a tag named like a branch or remote-tracking branch no longer takes
+  its place. The ref name also preserves reflog walks, fork-point lookups and
+  remote archives. A missing reference raises ``ValueError``, as its ``object``
+  property does.
 * Packed tag names containing non-UTF-8 bytes are represented losslessly as
   surrogate-escaped strings. ``safe_encode()`` recovers their original bytes,
   and Gix reference validation and resolution receive those bytes directly.

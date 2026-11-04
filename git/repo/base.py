@@ -1029,12 +1029,18 @@ class Repo:
                 options=Git._option_candidates(rev, kwargs), unsafe_options=self.unsafe_git_revision_options
             )
 
-        # Resolve reference objects before flattening turns them into short names.
-        revs = [item if isinstance(item, (list, tuple)) else Git._check_revision(item) for item in rev]
+        def checked_revisions(items: Sequence[Any]) -> Iterator[str]:
+            # Preserve reference objects until each flattened operand is validated.
+            for item in items:
+                if isinstance(item, (list, tuple)):
+                    yield from checked_revisions(item)
+                else:
+                    yield Git._check_revision(item)
+
         res: List[Commit] = []
         try:
             lines: List[str] = self.git._call_process_safe(
-                "merge_base", "--", *(Git._check_operand(item, "revision") for item in Git._unpack_args(revs)), **kwargs
+                "merge_base", "--", *checked_revisions(rev), **kwargs
             ).splitlines()
         except GitCommandError as err:
             if err.status != 1:

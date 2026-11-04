@@ -261,6 +261,102 @@ def test_reference_arguments_do_not_resolve_same_named_tags(object_format, ref_f
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_merge_base_preserves_nested_reference_arguments(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main")):
+            for left, right in (([ref], ref), (([ref],), ref), (ref, [ref]), ([ref.path], (ref.path,))):
+                assert repo.merge_base(left, right) == [ref.commit]
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+@pytest.mark.parametrize("path_type", [Path, PathLikeMock])
+def test_revision_arguments_preserve_pathlike_paths(object_format, ref_format, path_type):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        local = repo.head.commit
+        for name in ("HEAD", "refs/heads/main", "refs/remotes/origin/main"):
+            path = path_type(name)
+            ref = SymbolicReference(repo, path)
+            assert repo.commit(ref) == ref.object == local
+            assert repo.merge_base(ref, local) == [local]
+            assert repo.merge_base(path, local) == [local]
+            assert repo.merge_base(([path],), [local]) == [local]
+
+
+@pytest.mark.parametrize("revision", ["HEAD", "--all", "HEAD\0", "HEAD\r", "HEAD\n"])
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_check_revision_normalizes_pathlike_before_validation(revision, as_bytes):
+    path = Mock(spec=os.PathLike, __fspath__=Mock(return_value=os.fsencode(revision) if as_bytes else revision))
+    if revision == "HEAD":
+        assert Git._check_revision(path) == revision
+    else:
+        with pytest.raises(UnsafeOptionError, match="Invalid revision"):
+            Git._check_revision(path)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_revision_arguments_validate_missing_references(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format) as repo:
+        for path in ("refs/heads/unborn", "REBASE_HEAD"):
+            ref = SymbolicReference(repo, path)
+            foreign = repo.tags[path].commit
+            assert repo.git.rev_parse("--verify", path) == foreign.hexsha
+            with pytest.raises(ValueError, match="does not exist or is invalid"):
+                repo.commit(ref)
+            with pytest.raises(ValueError, match="does not exist or is invalid"):
+                repo.merge_base([ref], foreign)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_reflog_walk_preserves_reference_names(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "reflog") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"), repo.head):
+            expected = repo.git.rev_list("--walk-reflogs", ref.path, "--").splitlines()
+            assert len(expected) >= 2
+            for options in ({"walk_reflogs": True}, {"walk-reflogs": True}):
+                assert [commit.hexsha for commit in repo.iter_commits(ref, **options)] == expected
+                assert [commit.hexsha for commit in Commit.iter_items(repo, ref, max_count=1, **options)] == expected[
+                    :1
+                ]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            list(repo.iter_commits(SymbolicReference(repo, "REBASE_HEAD"), walk_reflogs=True))
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_fork_point_preserves_upstream_reference_name(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "reflog") as repo:
+        topic = repo.heads.topic
+        old_tip = topic.commit.parents[0]
+        for upstream in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main")):
+            assert repo.merge_base(upstream, topic) == [upstream.commit]
+            assert repo.git.merge_base("--fork-point", upstream.path, topic.path) == old_tip.hexsha
+            for options in ({"fork_point": True}, {"fork_p": True}):
+                assert repo.merge_base(upstream, topic, **options) == [old_tip]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            repo.merge_base(SymbolicReference(repo, "REBASE_HEAD"), topic, fork_point=True)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
+def test_remote_archive_preserves_reference_name(object_format, ref_format):
+    with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
+        for ref in (repo.heads.main, RemoteReference(repo, "refs/remotes/origin/main"), repo.head):
+            expected = io.BytesIO()
+            repo.git.archive("--remote=" + repo.git_dir, ref.path, output_stream=expected)
+            stream = io.BytesIO()
+            repo.archive(stream, ref, remote=repo.git_dir)
+            assert stream.getvalue() == expected.getvalue()
+            with tarfile.open(fileobj=io.BytesIO(stream.getvalue())) as archive:
+                assert archive.getnames() == ["file"]
+        with pytest.raises(ValueError, match="does not exist or is invalid"):
+            repo.archive(io.BytesIO(), SymbolicReference(repo, "REBASE_HEAD"), remote=repo.git_dir)
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("ref_format", ["files", "reftable"])
 def test_rebase_detection_ignores_tag_named_rebase_head(object_format, ref_format):
     with fixture_repo("exact-refs.sh", object_format, ref_format, write=True) as repo:
         assert repo.currently_rebasing_on() is None
