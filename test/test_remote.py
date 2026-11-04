@@ -6,13 +6,13 @@
 import gc
 import os
 import os.path as osp
-from pathlib import Path
 import random
 import socket
 import sys
 import tempfile
 import threading
 import time
+from pathlib import Path
 from unittest import mock, skipIf
 
 import pytest
@@ -34,7 +34,6 @@ from git.cmd import Git
 from git.exc import UnsafeOptionError, UnsafeProtocolError
 from git.util import IterableList
 from test.cleanup import cleanup_directory
-from test.lib.fixtures import fixture_repo, writable_fixture
 from test.lib import (
     GIT_DAEMON_PORT,
     TestBase,
@@ -42,6 +41,7 @@ from test.lib import (
     with_rw_and_rw_remote_repo,
     with_rw_repo,
 )
+from test.lib.fixtures import fixture_repo, writable_fixture
 
 # Make sure we have repeatable results.
 random.seed(0)
@@ -1050,6 +1050,7 @@ class TestRemote(TestBase):
         Head.delete(remote_repo, bad_branch_name)
 
 
+@pytest.mark.net
 @pytest.mark.skipif(sys.platform == "win32", reason="kill_after_timeout is not supported on Windows")
 @pytest.mark.parametrize("protocol", ["git", "http", "https"])
 @pytest.mark.parametrize("operation", ["fetch", "pull", "push"])

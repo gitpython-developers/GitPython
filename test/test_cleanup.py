@@ -3,15 +3,15 @@
 
 """Cleanup failures must not fail, skip, or hide the result of a test."""
 
-from contextlib import nullcontext, suppress
 import errno
 import gc
 import os
-from pathlib import Path
 import socket
 import sys
-from types import SimpleNamespace
 import weakref
+from contextlib import nullcontext, suppress
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -19,10 +19,9 @@ from git import Repo
 from git.util import rmtree
 from test import cleanup
 from test.cleanup import TemporaryDirectory, cleanup_directory
-from test.lib import requires_symlinks, with_rw_and_rw_remote_repo, with_rw_directory, with_rw_repo
-from test.lib.helper import git_daemon_launched
+from test.lib import fixtures, requires_symlinks, with_rw_and_rw_remote_repo, with_rw_directory, with_rw_repo
 from test.lib.fixtures import fixture_repo, writable_fixture
-from test.lib import fixtures
+from test.lib.helper import git_daemon_launched
 
 
 @pytest.fixture
@@ -183,6 +182,7 @@ def source_repo():
         yield repo
 
 
+@pytest.mark.net
 def test_git_daemon_releases_port_and_can_restart(tmp_path):
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
@@ -202,7 +202,14 @@ def test_git_daemon_releases_port_and_can_restart(tmp_path):
                 pass
 
 
-@pytest.mark.parametrize("decorator", [with_rw_directory, with_rw_repo("HEAD"), with_rw_and_rw_remote_repo("HEAD")])
+@pytest.mark.parametrize(
+    "decorator",
+    [
+        with_rw_directory,
+        with_rw_repo("HEAD"),
+        pytest.param(with_rw_and_rw_remote_repo("HEAD"), marks=pytest.mark.net),
+    ],
+)
 def test_decorators_preserve_success_with_locked_cleanup(source_repo, tmp_path, monkeypatch, locked_file, decorator):
     monkeypatch.setattr(cleanup.tempfile, "tempdir", str(tmp_path))
     directories = []

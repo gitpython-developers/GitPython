@@ -77,6 +77,17 @@ Deletions and renames that exercise library behavior or prepare a fixture for
 reuse must remain strict. If a cached fixture cannot be cleaned up, rebuild it
 at a fresh location before handing it to another test.
 
+## Network-dependent tests
+
+Mark tests that use the network with `pytest.mark.net`, including tests whose
+fixtures start a local Git daemon or download packages. This includes binding,
+listening on, and connecting to loopback sockets, not just internet access.
+Network-restricted package builders, such as SUSE and openSUSE build servers, can
+exclude these tests with `pytest -m 'not net'` after installing test dependencies.
+If only some parameters use the network, mark those with
+`pytest.param(..., marks=pytest.mark.net)` so the other cases still run. Local
+filesystem clones and mocked network calls do not need this marker.
+
 ## Fuzzing Test Specific Documentation
 
 For details related to contributing to the fuzzing test suite and OSS-Fuzz integration, please 

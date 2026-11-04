@@ -4,23 +4,22 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-from io import BytesIO
 import os.path as osp
 import sys
+from io import BytesIO
 from unittest import skipIf
 from unittest.mock import patch
 
-from gitdb import OInfo
-
 import pytest
 
+import git.objects.base as base
 from git import Repo
 from git.objects import Blob, Commit, TagObject, Tree
-import git.objects.base as base
 from git.objects.util import get_object_type_by_name
 from git.util import hex_to_bin
-
-from test.lib import TestBase as _TestBase, with_rw_and_rw_remote_repo, with_rw_repo
+from gitdb import OInfo
+from test.lib import TestBase as _TestBase
+from test.lib import with_rw_and_rw_remote_repo, with_rw_repo
 from test.lib.fixtures import fixture_repo, writable_fixture
 
 

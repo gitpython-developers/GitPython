@@ -4,21 +4,18 @@
 import os
 import os.path as osp
 import pathlib
-import sys
-from unittest import skip
-from unittest import mock
-
-from git import Git, GitCommandError, Repo
-from git.exc import UnsafeOptionError, UnsafeProtocolError
-
-from test.lib.fixtures import writable_fixture
-from test.lib import TestBase, with_rw_directory, with_rw_repo, PathLikeMock
-
-from pathlib import Path
 import re
+import sys
+from pathlib import Path
+from unittest import mock, skip
+
+import pytest
 
 import git
-import pytest
+from git import Git, GitCommandError, Repo
+from git.exc import UnsafeOptionError, UnsafeProtocolError
+from test.lib import PathLikeMock, TestBase, with_rw_directory, with_rw_repo
+from test.lib.fixtures import writable_fixture
 
 
 @pytest.fixture
@@ -145,6 +142,7 @@ class TestClone(TestBase):
             except UnicodeEncodeError:
                 self.fail("Raised UnicodeEncodeError")
 
+    @pytest.mark.net
     @with_rw_directory
     @skip(
         """The referenced repository was removed, and one needs to set up a new

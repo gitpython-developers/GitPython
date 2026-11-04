@@ -7,12 +7,15 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 from git import __version__, _backend
 from test.lib import TestCase, requires_symlinks
 from test.lib.fixtures import ROOT, writable_fixture
 
 
 class TestInstallation(TestCase):
+    @pytest.mark.net
     @requires_symlinks
     def test_installation(self):
         # Virtualenv executables and its source symlink need their final location.
