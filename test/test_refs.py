@@ -10,7 +10,7 @@ import os.path as osp
 import tarfile
 import unittest
 from itertools import chain
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from unittest.mock import Mock, patch
 
 import pytest
@@ -270,7 +270,7 @@ def test_merge_base_preserves_nested_reference_arguments(object_format, ref_form
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
-@pytest.mark.parametrize("path_type", [Path, PathLikeMock])
+@pytest.mark.parametrize("path_type", [PurePosixPath, PathLikeMock])
 def test_revision_arguments_preserve_pathlike_paths(object_format, ref_format, path_type):
     with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
         local = repo.head.commit
