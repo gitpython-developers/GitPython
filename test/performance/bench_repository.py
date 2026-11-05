@@ -124,6 +124,14 @@ def worker_arguments(cmd, args):
     cmd.extend(["--repo", str(args.repo), "--expect-backend", args.expect_backend])
 
 
+def source_digest(root):
+    digest = sha256()
+    sources = [root / "VERSION", *(root / "git").rglob("*.py"), *(root / "test" / "performance").glob("*.py")]
+    for path in sorted(sources):
+        digest.update(path.relative_to(root).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
 def main():
     runner = pyperf.Runner(
         processes=6,
@@ -156,7 +164,7 @@ def main():
         backend=_backend.name,
         gixpython=version("GixPython"),
         git_version=git("version"),
-        gitpython_revision=git("rev-parse", "HEAD", cwd=Path.cwd()),
+        gitpython_source=source_digest(Path(__file__).resolve().parents[2]),
         fixture_revision=git("rev-parse", "HEAD"),
         fixture_tree=git("rev-parse", "HEAD^{tree}"),
         fixture_status=git("status", "--porcelain") or "clean",

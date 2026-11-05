@@ -19,7 +19,7 @@ def compare(cli_path, gix_path, cli_budget=None):
         if (lm["backend"], rm["backend"]) != ("cli", "gix"):
             raise ValueError("Expected CLI results followed by GixPython results")
         for key in (
-            "gitpython_revision",
+            "gitpython_source",
             "fixture_revision",
             "fixture_tree",
             "fixture_status",

@@ -443,7 +443,7 @@ class TestRemote(TestBase):
 
     @pytest.mark.net
     @skipIf(sys.platform == "win32", "FIXME: Freezes!")
-    @with_rw_and_rw_remote_repo("0.1.6")
+    @with_rw_and_rw_remote_repo("release")
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
         remote_set = set()
@@ -646,7 +646,7 @@ class TestRemote(TestBase):
         with self.assertRaisesRegex(GitCommandError, msg):
             rem.fetch("__BAD_REF__")
 
-    @with_rw_repo("0.1.6", bare=False)
+    @with_rw_repo("release", bare=False)
     def test_push_error(self, repo):
         rem = repo.remote("origin")
         with self.assertRaisesRegex(GitCommandError, "src refspec __BAD_REF__ does not match any"):
@@ -1033,7 +1033,7 @@ class TestRemote(TestBase):
                     rw_repo.git.ls_remote(".", **unsafe_option, allow_unsafe_options=True)
 
     @pytest.mark.net
-    @with_rw_and_rw_remote_repo("0.1.6")
+    @with_rw_and_rw_remote_repo("release")
     def test_fetch_unsafe_branch_name(self, rw_repo, remote_repo):
         # Create branch with a name containing a NBSP
         bad_branch_name = f"branch_with_{chr(160)}_nbsp"

@@ -118,10 +118,7 @@ To clone the [the GitHub repository](https://github.com/gitpython-developers/Git
 ```sh
 git clone https://github.com/gitpython-developers/GitPython
 cd GitPython
-./init-tests-after-clone.sh
 ```
-
-On Windows, `./init-tests-after-clone.sh` can be run in a Git Bash shell.
 
 If you are cloning [your own fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks), then replace the above `git clone` command with one that gives the URL of your fork. Or use this [`gh`](https://cli.github.com/) command (assuming you have `gh` and your fork is called `GitPython`):
 
@@ -175,9 +172,8 @@ See [Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
 
 ### RUNNING TESTS
 
-_Important_: Right after cloning this repository, please be sure to have executed
-the `./init-tests-after-clone.sh` script in the repository root. Otherwise
-you will encounter test failures.
+Test repositories are generated from scratch by fixture scripts. Tests work from
+a shallow clone or a source copy without `.git`; no checkout preparation is needed.
 
 #### Install test dependencies
 

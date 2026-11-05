@@ -10,7 +10,7 @@ import os.path as osp
 import tarfile
 import unittest
 from itertools import chain
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from unittest.mock import Mock, patch
 
 import pytest
@@ -270,7 +270,7 @@ def test_merge_base_preserves_nested_reference_arguments(object_format, ref_form
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 @pytest.mark.parametrize("ref_format", ["files", "reftable"])
-@pytest.mark.parametrize("path_type", [Path, PathLikeMock])
+@pytest.mark.parametrize("path_type", [PurePosixPath, PathLikeMock])
 def test_revision_arguments_preserve_pathlike_paths(object_format, ref_format, path_type):
     with fixture_repo("exact-refs.sh", object_format, ref_format, "shadowed") as repo:
         local = repo.head.commit
@@ -486,14 +486,14 @@ class TestRefs(TestBase):
             # END if we have a tag object
         # END for tag in repo-tags
         assert tag_object_refs
-        assert isinstance(self.rorepo.tags["0.1.5"], TagReference)
+        assert isinstance(self.rorepo.tags["base"], TagReference)
 
     def test_tags_author(self):
         tag = self.rorepo.tags[0]
         tagobj = tag.tag
         assert isinstance(tagobj.tagger, Actor)
         tagger_name = tagobj.tagger.name
-        assert tagger_name == "Michael Trier"
+        assert tagger_name == "Fixture Author"
 
     def test_tag_headers_split_at_line_feeds_only(self):
         with fixture_repo("refs.sh", "tag-headers") as repo:
@@ -638,7 +638,7 @@ class TestRefs(TestBase):
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) is SymbolicReference
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_head_checkout_detached_head(self, rw_repo):
         res = rw_repo.remotes.origin.refs.HEAD.reference.checkout()
         assert isinstance(res, SymbolicReference)
@@ -697,7 +697,7 @@ class TestRefs(TestBase):
         assert head.reset(**options) is head
         assert branch.checkout(**options) == branch
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_head_reset(self, rw_repo):
         cur_head = rw_repo.head
         old_head_commit = cur_head.commit
@@ -902,7 +902,7 @@ class TestRefs(TestBase):
         assert len(new_head.commit.diff(None))
 
         # Create a new branch that is likely to touch the file we changed.
-        far_away_head = rw_repo.create_head("far_head", "HEAD~100")
+        far_away_head = rw_repo.create_head("far_head", "root")
         self.assertRaises(GitCommandError, far_away_head.checkout)
         assert active_branch == active_branch.checkout(force=True)
         assert rw_repo.head.reference != far_away_head
@@ -914,7 +914,7 @@ class TestRefs(TestBase):
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit
 
-        self.assertRaises(OSError, Reference.create, rw_repo, full_ref, "HEAD~20")
+        self.assertRaises(OSError, Reference.create, rw_repo, full_ref, "root")
         # It works if it is at the same spot though and points to the same reference.
         assert Reference.create(rw_repo, full_ref, "HEAD").path == full_ref
         Reference.delete(rw_repo, full_ref)
@@ -1071,7 +1071,7 @@ class TestRefs(TestBase):
 
         # END for each path
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_tag_message(self, rw_repo):
         tag_ref = TagReference.create(rw_repo, "test-message-1", message="test")
         assert tag_ref.tag.message == "test"

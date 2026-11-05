@@ -61,7 +61,6 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        fetch-depth: 0
         persist-credentials: false
 
     - name: Set up Python ${{ matrix.python-version }}
@@ -114,10 +113,6 @@ jobs:
       run: |
         brew install git
         echo "$(brew --prefix git)/bin" >> "$GITHUB_PATH"
-
-    - name: Prepare this repo for tests
-      run: |
-        ./init-tests-after-clone.sh
 
     - name: Set git user identity and command aliases for the tests
       run: |
@@ -218,6 +213,9 @@ jobs:
       if: matrix.os-type == 'ubuntu' && matrix.python-version == '3.12'
       run: |
         basedpyright --warnings
+
+    - name: Remove source Git metadata to verify fixture isolation
+      run: python -c "from pathlib import Path; from git.util import rmtree; rmtree('.git'); assert not Path('.git').exists()"
 
     - name: Test with pytest
       run: |

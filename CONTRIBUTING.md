@@ -3,7 +3,8 @@
 The following is a short step-by-step rundown of what one typically would do to contribute.
 
 - [Fork this project](https://github.com/gitpython-developers/GitPython/fork) on GitHub.
-- For setting up the environment to run the self tests, please run `init-tests-after-clone.sh`.
+- Install the `test` extra and select a backend before running `pytest`. Test
+  repositories are generated automatically; no source Git history is required.
 - Please try to **write a test that fails unless the contribution is present.**
 - Try to avoid massive commits and prefer to take small steps, with one commit for each.
 - Feel free to add yourself to AUTHORS file.
@@ -64,8 +65,10 @@ Put initial repository and filesystem states in `tests/fixtures/*.sh` and use
 `test.lib.fixtures` to run them through `gix.testtools`. Read-only tests share
 cached output; mutating tests use writable copies. Use `execute=True` only when
 the fixture cannot be copied, and explain the reason at its call site. Keep
-operations under test in Python. Immutable parser byte samples remain in
-`test/fixtures`; generated caches and archives are ignored.
+operations under test in Python. Generate histories from scratch and refer to
+named fixture revisions; do not clone the source checkout, fetch project history,
+or depend on its refs, object IDs, index, or working-tree state. Immutable parser
+byte samples remain in `test/fixtures`; generated caches and archives are ignored.
 
 Use `test.cleanup.cleanup_directory` for cleanup outside the shared fixture
 owners. Close repository handles before removing their files. Cleanup is
