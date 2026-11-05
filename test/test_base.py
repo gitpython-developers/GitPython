@@ -28,10 +28,10 @@ class TestBase(_TestBase):
         gc.collect()
 
     type_tuples = (
-        ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"),
-        ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79", "directory"),
-        ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c", None),
-        ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None),
+        ("blob", "HEAD:git/objects/blob.py", "blob.py"),
+        ("tree", "HEAD:git", "directory"),
+        ("commit", "dated", None),
+        ("tag", "annotated", None),
     )
 
     def test_base_object(self):
@@ -42,7 +42,8 @@ class TestBase(_TestBase):
         s = set()
         num_objs = 0
         num_index_objs = 0
-        for obj_type, (typename, hexsha, path) in zip(types, self.type_tuples):
+        for obj_type, (typename, revision, path) in zip(types, self.type_tuples):
+            hexsha = self.rorepo.git.rev_parse(revision)
             binsha = hex_to_bin(hexsha)
             item = None
             if path is None:
@@ -116,7 +117,7 @@ class TestBase(_TestBase):
         assert osp.isdir(bare_rw_repo.working_dir)
         assert bare_rw_repo.working_tree_dir is None
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_with_rw_repo(self, rw_repo: Repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert osp.isdir(rw_repo.working_tree_dir)
@@ -125,7 +126,7 @@ class TestBase(_TestBase):
 
     @pytest.mark.net
     @skipIf(sys.platform == "win32", "FIXME: Freezes!  sometimes...")
-    @with_rw_and_rw_remote_repo("0.1.6")
+    @with_rw_and_rw_remote_repo("release")
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")

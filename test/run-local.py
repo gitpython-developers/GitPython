@@ -37,7 +37,6 @@ def main():
                 raise RuntimeError("Git executable not found in PATH")
             # Windows can share minimum-version checks for an absolute path.
             env["GIT_PYTHON_GIT_EXECUTABLE"] = os.path.abspath(executable)
-        env["GIT_PYTHON_TEST_GIT_REPO_BASE"] = str(root)
         # Separate CLI and gix runs can use their own localhost daemon.
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))

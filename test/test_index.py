@@ -215,7 +215,7 @@ class TestIndex(TestBase):
         }
         assert {(entry.path, entry.stage) for entry in index.iter_entries()} == expected
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_index_lock_handling(self, rw_repo):
         index = rw_repo.index
         index_path = Path(index.path)
@@ -240,7 +240,7 @@ class TestIndex(TestBase):
         assert not lock_path.exists()
         assert rw_repo.index.entry(*("foo", 0)).mode == 0o100644
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_read_tree_methods_reject_index_output(self, rw_repo):
         output_path = (Path(rw_repo.working_tree_dir) / "alternate-index").as_posix()
         unsafe_option = f"--index-output={output_path}"
@@ -256,11 +256,11 @@ class TestIndex(TestBase):
         with pytest.raises(UnsafeOptionError):
             rw_repo.index.merge_tree("HEAD", base=unsafe_option)
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_index_file_from_tree(self, rw_repo):
-        common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
-        cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
-        other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
+        common_ancestor_sha = "base"
+        cur_sha = "conflict-ours"
+        other_sha = "conflict-theirs"
 
         # Simple index from tree.
         base_index = IndexFile.from_tree(rw_repo, common_ancestor_sha)
@@ -309,7 +309,7 @@ class TestIndex(TestBase):
         # END for each blob
         self.assertEqual(num_blobs, len([(e.path, e.stage) for e in three_way_index.iter_entries()]))
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
         self.assertNotEqual(self.rorepo, rw_repo)
@@ -317,7 +317,7 @@ class TestIndex(TestBase):
 
         # SINGLE TREE MERGE
         # Current index is at the (virtual) cur_commit.
-        next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
+        next_commit = "manifest-update"
         parent_commit = rw_repo.head.commit.parents[0]
         manifest_key = IndexFile.entry_key("MANIFEST.in", 0)
         manifest_entry = rw_repo.index.entry(*manifest_key)
@@ -372,7 +372,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(unmerged_blobs), 1)
         self.assertEqual(list(unmerged_blobs.keys())[0], manifest_key[0])
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_index_file_diffing(self, rw_repo):
         # Default IndexFile instance points to our index.
         index = IndexFile(rw_repo)
@@ -388,7 +388,7 @@ class TestIndex(TestBase):
         # Resetting the head will leave the index in a different state, and the diff
         # will yield a few changes.
         cur_head_commit = rw_repo.head.reference.commit
-        rw_repo.head.reset("HEAD~6", index=True, working_tree=False)
+        rw_repo.head.reset("HEAD~2", index=True, working_tree=False)
 
         # Diff against same index is 0.
         diff = index.diff()
@@ -530,7 +530,7 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_index_mutation(self, rw_repo):
         with xfail_if_raises(
             sys.platform == "win32" and (Git().config("core.symlinks") == "true" or symlinks_supported()),
@@ -681,11 +681,11 @@ class TestIndex(TestBase):
             entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
             self._assert_entries(entries)
             self._assert_fprogress(entries)
-            self.assertEqual(len(entries), 14)
+            self.assertEqual({entry.path for entry in entries}, {"lib/git/__init__.py", "lib/git/blob.py"})
 
             # Same file.
             entries = index.reset(new_commit).add(
-                [osp.join(rw_repo.working_tree_dir, "lib", "git", "head.py")] * 2,
+                [osp.join(rw_repo.working_tree_dir, "lib", "git", "blob.py")] * 2,
                 fprogress=self._fprogress_add,
             )
             self._assert_entries(entries)
@@ -838,8 +838,8 @@ class TestIndex(TestBase):
             def make_paths():
                 """Help out the test by yielding two existing paths and one new path."""
                 yield "CHANGES"
-                yield "ez_setup.py"
-                yield index.entry(*index.entry_key("README", 0))
+                yield "setup.py"
+                yield index.entry(*index.entry_key("README.md", 0))
                 yield index.entry(*index.entry_key(".gitignore", 0))
 
                 for fid in range(3):
@@ -916,9 +916,9 @@ class TestIndex(TestBase):
             assert repo.index.remove(fp)
 
     def test_index_new(self):
-        B = self.rorepo.tree("6d9b1f4f9fa8c9f030e3207e7deacc5d5f8bba4e")
-        H = self.rorepo.tree("25dca42bac17d511b7e2ebdd9d1d679e7626db5f")
-        M = self.rorepo.tree("e746f96bcc29238b79118123028ca170adc4ff0f")
+        B = self.rorepo.tree("base")
+        H = self.rorepo.tree("conflict-ours")
+        M = self.rorepo.tree("conflict-theirs")
 
         for args in ((B.binsha,), (B.hexsha, H), (B, H.binsha, M.hexsha.encode("ascii"))):
             index = IndexFile.new(self.rorepo, *args)

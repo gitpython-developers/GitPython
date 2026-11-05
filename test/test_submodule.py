@@ -1231,6 +1231,21 @@ TestRootProgress.__test__ = False
 prog = TestRootProgress()
 
 
+@pytest.mark.parametrize("state", ["index", "worktree", "untracked"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_remove_preserves_dirty_submodule(state, dry_run):
+    source = read_only_fixture("sample-repositories.sh") / "smmap"
+    with writable_fixture("submodule-cases.sh", "remove-dirty-" + state, source) as temporary:
+        with git.Repo(temporary.path() / "parent") as repo:
+            submodule = repo.submodules[0]
+            path = Path(submodule.abspath, "untracked" if state == "untracked" else "file")
+            with pytest.raises(InvalidGitRepositoryError):
+                submodule.remove(dry_run=dry_run)
+            assert submodule.exists() and submodule.module_exists()
+            assert path.read_text() == "keep this data\n"
+            assert not repo.is_dirty(working_tree=False)
+
+
 class TestSubmodule(TestBase):
     def _fixture(self, scenario, *, write=True, execute=False):
         source = self._small_repo_url()
@@ -1243,9 +1258,9 @@ class TestSubmodule(TestBase):
     def tearDown(self):
         gc.collect()
 
-    k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
-    k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
-    k_no_subm_tag = "0.1.6"
+    k_subm_current = "submodule-current"
+    k_subm_changed = "submodule-old"
+    k_no_subm_tag = "release"
 
     def _do_base_tests(self, rwrepo):
         """Perform all tests in the given repository, it may be bare or nonbare"""
@@ -1264,7 +1279,7 @@ class TestSubmodule(TestBase):
 
         assert sm.path == "git/ext/gitdb"
         assert sm.path != sm.name  # In our case, we have ids there, which don't equal the path.
-        assert sm.url.endswith("github.com/gitpython-developers/gitdb.git")
+        assert sm.url == "../gitdb"
         assert sm.branch_path == "refs/heads/master"  # the default ...
         assert sm.branch_name == "master"
         assert sm.parent_commit == rwrepo.head.commit
@@ -1296,7 +1311,7 @@ class TestSubmodule(TestBase):
         new_csmclone_path = None  #
         if rwrepo.bare:
             with self.assertRaises(InvalidGitRepositoryError):
-                with sm.config_writer() as cw:
+                with sm.config_writer():
                     pass
         else:
             with sm.config_writer() as writer:
@@ -1467,6 +1482,7 @@ class TestSubmodule(TestBase):
             # If the head is detached, it still works (but warns).
             smref = sm.module().head.ref
             sm.module().head.ref = "HEAD~1"
+            sm.module().head.reset(index=True, working_tree=True)
             # If there is no tracking branch, we get a warning as well.
             csm_tracking_branch = csm.module().head.ref.tracking_branch()
             csm.module().head.ref.set_tracking_branch(None)
@@ -1480,60 +1496,28 @@ class TestSubmodule(TestBase):
             sm.module().head.ref = smref
             csm.module().head.ref.set_tracking_branch(csm_tracking_branch)
 
-            # REMOVAL OF REPOSITORY
-            #######################
-            # Must delete something.
+            # Test removal from an explicitly clean parent and a dirty child.
+            sm.module().head.reset(index=True, working_tree=True)
+            csm.set_parent_commit(csm.repo.head.commit)
             self.assertRaises(ValueError, csm.remove, module=False, configuration=False)
-
-            # module() is supposed to point to gitdb, which has a child-submodule whose
-            # URL is still pointing to GitHub. To save time, we will change it to:
-            csm.set_parent_commit(csm.repo.head.commit)
-            with csm.config_writer() as cw:
-                cw.set_value("url", self._small_repo_url())
-            csm.repo.index.commit("adjusted URL to point to local source, instead of the internet", skip_hooks=True)
-
-            # We have modified the configuration, hence the index is dirty, and the
-            # deletion will fail.
-            # NOTE: As we did a few updates in the meanwhile, the indices were reset.
-            # Hence we create some changes.
-            csm.set_parent_commit(csm.repo.head.commit)
-            with sm.config_writer() as writer:
-                writer.set_value("somekey", "somevalue")
-            with csm.config_writer() as writer:
-                writer.set_value("okey", "ovalue")
-            self.assertRaises(InvalidGitRepositoryError, sm.remove)
-            # If we remove the dirty index, it would work.
-            sm.module().index.reset()
-            # Still, we have the file modified.
-            self.assertRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
-            sm.module().index.reset(working_tree=True)
-
-            # Enforce the submodule to be checked out at the right spot as well.
-            csm.update()
-            assert csm.module_exists()
-            assert csm.exists()
-            assert osp.isdir(csm.module().working_tree_dir)
-
-            # This would work.
-            assert sm.remove(force=True, dry_run=True) is sm
-            assert sm.module_exists()
-            sm.remove(force=True, dry_run=True)
-            assert sm.module_exists()
-
-            # But... we have untracked files in the child submodule.
             fn = join_path_native(csm.module().working_tree_dir, "newfile")
             with open(fn, "w") as fd:
-                fd.write("hi")
+                fd.write("untracked child data")
+            self.assertRaises(InvalidGitRepositoryError, csm.remove)
             self.assertRaises(InvalidGitRepositoryError, sm.remove)
+            self.assertRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
+            assert Path(fn).read_text() == "untracked child data"
 
-            # Forcibly delete the child repository.
+            assert sm.remove(force=True, dry_run=True) is sm
+            assert sm.module_exists() and csm.module_exists()
+            assert csm.exists()
+            assert Path(fn).read_text() == "untracked child data"
+
             prev_count = len(sm.children())
             csm.remove(force=True)
             assert not csm.exists()
             assert not csm.module_exists()
             assert len(sm.children()) == prev_count - 1
-            # Now we have a changed index, as configuration was altered.
-            # Fix this.
             sm.module().index.reset(working_tree=True)
 
             # Now delete only the module of the main submodule.

@@ -214,6 +214,10 @@ installation/import smoke coverage, including the Cygwin Python 3.9 job.
 Running tests also requires Bash and Git 2.52+; `gix` here is GixPython's module.
 
 Initial repository and filesystem states live in `tests/fixtures/*.sh`.
+Histories are generated from scratch, including the shared sample repository and
+its nested dependency repositories. Tests use named revisions such as `root`,
+`release`, and `merge`, and require no source checkout history or Git metadata.
+CI removes the source `.git` directory before running the full suite.
 `test/lib/fixtures.py` calls `gix.testtools` with an explicit lifetime:
 
 - `read_only_fixture()` and the default `fixture_repo()` reuse cached output.

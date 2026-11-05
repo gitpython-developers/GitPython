@@ -337,7 +337,7 @@ class TestDiff(TestBase):
         self.assertEqual(res, [])
 
     def test_diff_initial_commit(self):
-        initial_commit = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
+        initial_commit = self.rorepo.commit("root")
 
         # Without creating a patch...
         diff_index = initial_commit.diff(NULL_TREE)
@@ -350,7 +350,7 @@ class TestDiff(TestBase):
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "CHANGES", repr(diff_index[0].b_path))
         self.assertIsNotNone(diff_index[0].new_file)
-        self.assertEqual(diff_index[0].diff, fixture("diff_initial"))
+        self.assertEqual(diff_index[0].diff, b"@@ -0,0 +1 @@\n+Initial changes\n")
 
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture("diff_patch_unsafe_paths"))
@@ -471,7 +471,7 @@ class TestDiff(TestBase):
     def test_diff_interface(self):
         """Test a few variations of the main diff routine."""
         assertion_map = {}
-        for i, commit in enumerate(self.rorepo.iter_commits("0.1.6", max_count=2)):
+        for i, commit in enumerate(self.rorepo.iter_commits("release", max_count=2)):
             diff_item = commit
             if i % 2 == 0:
                 diff_item = commit.tree

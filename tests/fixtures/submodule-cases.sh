@@ -15,6 +15,13 @@ add_module() {
     git -C parent commit -qm 'Add submodule'
 }
 case "$scenario" in
+    remove-dirty-index|remove-dirty-worktree|remove-dirty-untracked)
+        add_module module module
+        path="file"
+        if test "$scenario" = remove-dirty-untracked; then path=untracked; fi
+        printf 'keep this data\n' > "parent/module/$path"
+        if test "$scenario" = remove-dirty-index; then git -C parent/module add file; fi
+        ;;
     deinit|deinit-latest|deinit-gitlink|deinit-nonempty|deinit-nested)
         git init -q -b master source
         printf '%s' 'submodule content' > source/file

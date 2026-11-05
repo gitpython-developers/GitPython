@@ -105,7 +105,7 @@ class TestTree(TestBase):
     @with_rw_repo("HEAD")
     def test_serializable(self, rw_repo):
         # Tree at the given commit contains a submodule as well.
-        roottree = rw_repo.tree("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
+        roottree = rw_repo.tree("submodule-current")
         for item in roottree.traverse(ignore_self=False):
             if item.type != Tree.type:
                 continue
@@ -154,7 +154,7 @@ class TestTree(TestBase):
         """TreeModifier.set_done() sorts files in the same order git does."""
         git_file_names_in_order = self._get_git_ordered_files()
 
-        hexsha = "6c1faef799095f3990e9970bc2cb10aa0221cf9c"
+        hexsha = self.rorepo.commit("submodule-current").hexsha
         roottree = self.rorepo.tree(hexsha)
         blob_mode = Tree.blob_id << 12
         tree_mode = Tree.tree_id << 12
@@ -303,7 +303,7 @@ class TestTree(TestBase):
             assert Tree(rw_repo, stored.binsha, path="")._cache == cache
 
     def test_traverse(self):
-        root = self.rorepo.tree("0.1.6")
+        root = self.rorepo.tree("release")
         num_recursive = 0
         all_items = []
         for obj in root.traverse():
@@ -358,47 +358,47 @@ class TestTree(TestBase):
         assert found_slash
 
     def test_repo_lookup_string_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         blob = tree / ".gitignore"
         assert isinstance(blob, Blob)
-        assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
+        assert blob.data_stream.read() == b"*.pyc\n"
 
     def test_repo_lookup_pathlike_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         blob = tree / PathLikeMock(".gitignore")
         assert isinstance(blob, Blob)
-        assert blob.hexsha == "787b3d442a113b78e343deb585ab5531eb7187fa"
+        assert blob.data_stream.read() == b"*.pyc\n"
 
     def test_repo_lookup_invalid_string_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         with pytest.raises(KeyError):
             tree / "doesnotexist"
 
     def test_repo_lookup_invalid_pathlike_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         with pytest.raises(KeyError):
             tree / PathLikeMock("doesnotexist")
 
     def test_repo_lookup_nested_string_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         blob = tree / "git/__init__.py"
         assert isinstance(blob, Blob)
-        assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
+        assert blob.data_stream.read() == b"# Sample module\nvalue = 1\n"
 
     def test_repo_lookup_nested_pathlike_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         blob = tree / PathLikeMock("git/__init__.py")
         assert isinstance(blob, Blob)
-        assert blob.hexsha == "d87dcbdbb65d2782e14eea27e7f833a209c052f3"
+        assert blob.data_stream.read() == b"# Sample module\nvalue = 1\n"
 
     def test_repo_lookup_folder_string_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         tree = tree / "git"
         assert isinstance(tree, Tree)
-        assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
+        assert [entry.name for entry in tree] == ["__init__.py", "objects"]
 
     def test_repo_lookup_folder_pathlike_path(self):
-        tree = self.rorepo.tree("0.3.2.1")
+        tree = self.rorepo.tree("tree-layout")
         tree = tree / PathLikeMock("git")
         assert isinstance(tree, Tree)
-        assert tree.hexsha == "ec8ae429156d65afde4bbb3455570193b56f0977"
+        assert [entry.name for entry in tree] == ["__init__.py", "objects"]

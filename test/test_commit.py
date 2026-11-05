@@ -5,6 +5,7 @@
 
 import copy
 from datetime import datetime
+from hashlib import sha256
 from io import BytesIO
 from pathlib import Path
 import os.path as osp
@@ -40,9 +41,9 @@ class TestCommitSerialization(TestBase):
         st = time.time()
         for cm in [
             rwrepo.commit(commit_id),
-            rwrepo.commit("4c39f9da792792d4e73fc3a5effde66576ae128c"),
-            rwrepo.commit("0.1.6"),
-            next(rwrepo.commit("0.1.6").iter_parents(max_count=1)),
+            rwrepo.commit("root"),
+            rwrepo.commit("merge"),
+            rwrepo.commit("manifest-update"),
         ]:
             nds += 1
 
@@ -101,24 +102,24 @@ class TestCommitSerialization(TestBase):
 
 class TestCommit(TestCommitSerialization):
     def test_bake(self):
-        commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+        commit = self.rorepo.commit("manifest-update")
         # Commits have no dict.
         self.assertRaises(AttributeError, setattr, commit, "someattr", 1)
         commit.author  # bake
 
-        self.assertEqual("Sebastian Thiel", commit.author.name)
-        self.assertEqual("byronimo@gmail.com", commit.author.email)
+        self.assertEqual("Fixture Author", commit.author.name)
+        self.assertEqual("author@example.com", commit.author.email)
         self.assertEqual(commit.author, commit.committer)
         assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
         assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
         self.assertEqual(
             commit.message,
-            "Added missing information to docstrings of commit and stats module\n",
+            "Update manifest\n",
         )
 
     @with_rw_repo("HEAD")
     def test_replace_no_changes(self, rw_repo):
-        old_commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+        old_commit = rw_repo.commit("manifest-update")
         new_commit = old_commit.replace()
 
         for attr in old_commit.__slots__:
@@ -126,21 +127,22 @@ class TestCommit(TestCommitSerialization):
 
     @with_rw_repo("HEAD")
     def test_replace_new_sha(self, rw_repo):
-        commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+        commit = rw_repo.commit("manifest-update")
         new_commit = commit.replace(message="Added replace method")
 
-        assert new_commit.hexsha == "fc84cbecac1bd4ba4deaac07c1044889edd536e6"
+        assert new_commit.hexsha != commit.hexsha
+        assert rw_repo.commit(new_commit.hexsha).message == "Added replace method"
         assert new_commit.message == "Added replace method"
 
     @with_rw_repo("HEAD")
     def test_replace_invalid_attribute(self, rw_repo):
-        commit = rw_repo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
+        commit = rw_repo.commit("manifest-update")
 
         with self.assertRaises(ValueError):
             commit.replace(badattr="This will never work")
 
     def test_stats(self):
-        commit = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
+        commit = self.rorepo.commit("root")
         stats = commit.stats
 
         def check_entries(d, has_change_type=False):
@@ -163,14 +165,14 @@ class TestCommit(TestCommitSerialization):
         # END for each stated file
 
         # Check that data is parsed properly.
-        michael = Actor._from_string("Michael Trier <mtrier@gmail.com>")
-        self.assertEqual(commit.author, michael)
-        self.assertEqual(commit.committer, michael)
-        self.assertEqual(commit.authored_date, 1210193388)
-        self.assertEqual(commit.committed_date, 1210193388)
-        self.assertEqual(commit.author_tz_offset, 14400, commit.author_tz_offset)
-        self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
-        self.assertEqual(commit.message, "initial project\n")
+        author = Actor("Fixture Author", "author@example.com")
+        self.assertEqual(commit.author, author)
+        self.assertEqual(commit.committer, author)
+        self.assertEqual(commit.authored_date, 978307200)
+        self.assertEqual(commit.committed_date, 978307200)
+        self.assertEqual(commit.author_tz_offset, 0)
+        self.assertEqual(commit.committer_tz_offset, 0)
+        self.assertEqual(commit.message, "Initial commit\n")
 
     def test_stats_preserve_filename_spaces(self):
         paths = ("name", " name", "name ", " name ", " ")
@@ -273,7 +275,7 @@ class TestCommit(TestCommitSerialization):
                         }
 
     def test_renames(self):
-        commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
+        commit = self.rorepo.commit("renamed")
         files = commit.stats.files
 
         # When a file is renamed, the output of git diff is like "dir/{old => new}"
@@ -283,15 +285,15 @@ class TestCommit(TestCommitSerialization):
 
         def check_entries(path, changes):
             expected = {
-                ".github/workflows/Future.yml": {
-                    "insertions": 57,
+                "renamed.txt": {
+                    "insertions": 1,
                     "deletions": 0,
-                    "lines": 57,
+                    "lines": 1,
                 },
-                ".github/workflows/test_pytest.yml": {
+                "side.txt": {
                     "insertions": 0,
-                    "deletions": 55,
-                    "lines": 55,
+                    "deletions": 1,
+                    "lines": 1,
                 },
             }
             assert path in expected
@@ -312,8 +314,8 @@ class TestCommit(TestCommitSerialization):
         assert isinstance(special.name, str)
 
     def test_traversal(self):
-        start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
-        first = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
+        start = self.rorepo.commit("merge")
+        first = self.rorepo.commit("root")
         p0 = start.parents[0]
         p1 = start.parents[1]
         p00 = p0.parents[0]
@@ -333,9 +335,7 @@ class TestCommit(TestCommitSerialization):
         # At some point, both iterations should stop.
         self.assertEqual(list(bfirst)[-1], first)
 
-        stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(
-            ignore_self=0, as_edge=True
-        )
+        stoptraverse = self.rorepo.commit("merge").traverse(ignore_self=0, as_edge=True)
         stoptraverse_list = list(stoptraverse)
         for itemtup in stoptraverse_list:
             self.assertIsInstance(itemtup, (tuple)) and self.assertEqual(len(itemtup), 2)  # as_edge=True -> tuple
@@ -346,7 +346,7 @@ class TestCommit(TestCommitSerialization):
             else:
                 self.assertIsNone(src)  # ignore_self=0 -> first is (None, Commit)
 
-        stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
+        stoptraverse = self.rorepo.commit("merge").traverse(as_edge=True)
         self.assertEqual(len(next(stoptraverse)), 2)
 
         # Ignore self
@@ -374,7 +374,7 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(all_commits, list(self.rorepo.iter_commits()))
 
         # This includes merge commits.
-        mcomit = self.rorepo.commit("d884adc80c80300b4cc05321494713904ef1df2d")
+        mcomit = self.rorepo.commit("merge")
         assert mcomit in all_commits
 
         # We can limit the result to paths.
@@ -420,20 +420,14 @@ class TestCommit(TestCommitSerialization):
         in the commit header.  This test ensures that we properly parse it.
         """
         revs = self.rorepo.git.rev_list(
-            "933d23bf95a5bd1624fbcdf328d904e1fa173474",
+            "release",
             first_parent=True,
             bisect_all=True,
         )
 
         commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs.encode("ascii")))
-        expected_ids = (
-            "7156cece3c49544abb6bf7a0c218eb36646fad6d",
-            "1f66cfbbce58b4b552b041707a12d437cc5f400a",
-            "33ebe7acec14b25c5f84f35a664803fcab2f7781",
-            "933d23bf95a5bd1624fbcdf328d904e1fa173474",
-        )
-        for sha1, commit in zip(expected_ids, commits):
-            self.assertEqual(sha1, commit.hexsha)
+        assert " (" in revs
+        self.assertEqual([line.split()[0] for line in revs.splitlines()], [commit.hexsha for commit in commits])
 
     def test_iter_from_invalid_process_or_stream(self):
         for source, error in ((Mock(wait=Mock(), stdout=None), ValueError), (object(), TypeError)):
@@ -445,14 +439,15 @@ class TestCommit(TestCommitSerialization):
             assert list(repo.iter_commits(repo.head.ref)) == [repo.head.commit]
 
     def test_count(self):
-        self.assertEqual(self.rorepo.tag("refs/tags/0.1.5").commit.count(), 143)
+        self.assertEqual(self.rorepo.tag("refs/tags/root").commit.count(), 1)
+        self.assertEqual(self.rorepo.tag("refs/tags/base").commit.count(), 7)
 
     def test_list(self):
         # This doesn't work anymore, as we will either attempt getattr with bytes, or
         # compare 20 byte string with actual 20 byte bytes. This usage makes no sense
         # anyway.
         assert isinstance(
-            Commit.list_items(self.rorepo, "0.1.5", max_count=5)["5117c9c8a4d3af19a9958677e45cda9269de1541"],
+            Commit.list_items(self.rorepo, "base", max_count=5)[self.rorepo.commit("base").hexsha],
             Commit,
         )
 
@@ -473,7 +468,7 @@ class TestCommit(TestCommitSerialization):
 
     def test_iter_parents(self):
         # Should return all but ourselves, even if skip is defined.
-        c = self.rorepo.commit("0.1.5")
+        c = self.rorepo.commit("base")
         for skip in (0, 1):
             piter = c.iter_parents(skip=skip)
             first_parent = next(piter)
@@ -488,7 +483,7 @@ class TestCommit(TestCommitSerialization):
     @with_rw_repo("HEAD", bare=True)
     def test_serialization(self, rwrepo):
         # Create all commits of our repo.
-        self.assert_commit_serialization(rwrepo, "0.1.6")
+        self.assert_commit_serialization(rwrepo, "release")
 
     @with_rw_repo("HEAD")
     def test_serialization_unicode_support(self, rw_repo):
@@ -496,7 +491,7 @@ class TestCommit(TestCommitSerialization):
 
         # Create a commit with Unicode in the message, and the author's name.
         # Verify its serialization and deserialization.
-        cmt = rw_repo.commit("0.1.6")
+        cmt = rw_repo.commit("release")
         assert isinstance(cmt.message, str)  # It automatically decodes it as such.
         assert isinstance(cmt.author.name, str)  # Same here.
 
@@ -526,7 +521,7 @@ class TestCommit(TestCommitSerialization):
             "commit.sh",
             "raw",
             fixture_path("commit_invalid_data"),
-            Path(fixture_path("commit_invalid_data")).read_bytes().hex(),
+            sha256(Path(fixture_path("commit_invalid_data")).read_bytes()).hexdigest(),
         )
         with Repo(fixture / "repo") as repo:
             cmt = Commit(repo, bytes.fromhex((fixture / "object-id").read_text().strip()))
@@ -741,7 +736,7 @@ class TestCommit(TestCommitSerialization):
             "commit.sh",
             "raw",
             fixture_path("commit_with_gpgsig"),
-            Path(fixture_path("commit_with_gpgsig")).read_bytes().hex(),
+            sha256(Path(fixture_path("commit_with_gpgsig")).read_bytes()).hexdigest(),
         )
         repo = Repo(fixture / "repo")
         self.addCleanup(repo.close)
@@ -799,7 +794,7 @@ JzJMZDRLQLFvnzqZuCjE
             assert getattr(c, field) is not None
 
     def test_datetimes(self):
-        commit = self.rorepo.commit("4251bd5")
+        commit = self.rorepo.commit("dated")
         self.assertEqual(commit.authored_date, 1255018625)
         self.assertEqual(commit.committed_date, 1255026171)
         self.assertEqual(
@@ -878,7 +873,7 @@ JzJMZDRLQLFvnzqZuCjE
         assert commit.trailers_dict == {KEY_2: [VALUE_2]}
 
     def test_commit_co_authors(self):
-        commit = copy.copy(self.rorepo.commit("4251bd5"))
+        commit = copy.copy(self.rorepo.commit("dated"))
         commit.message = """Commit message
 
 Co-authored-by: Test User 1 <602352+test@users.noreply.github.com>
@@ -893,7 +888,7 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
 
     def test_commit_co_authors_bounds_malformed_trailer(self):
         """A malformed trailer line must not make co_authors run in quadratic time."""
-        commit = copy.copy(self.rorepo.commit("4251bd5"))
+        commit = copy.copy(self.rorepo.commit("dated"))
         # An unterminated trailer repeating " <" without a closing ">". The old
         # `(.*) <(.*?)>` regex backtracked over every " <" (O(n^2)); the crafted line
         # is fully attacker-controlled through the commit message.

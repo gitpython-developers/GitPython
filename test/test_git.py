@@ -558,15 +558,15 @@ class TestGit(TestBase):
 
     def test_persistent_cat_file_command(self):
         # Read header only.
-        hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
+        hexsha = self.rorepo.commit("root").hexsha
         g = self.git.cat_file(batch_check=True, istream=subprocess.PIPE, as_process=True)
-        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write((hexsha + "\n").encode("ascii"))
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # Read header + data.
         g = self.git.cat_file(batch=True, istream=subprocess.PIPE, as_process=True)
-        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write((hexsha + "\n").encode("ascii"))
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
         self.assertEqual(obj_info, obj_info_two)
@@ -577,7 +577,7 @@ class TestGit(TestBase):
         g.stdout.read(1)
 
         # Now we should be able to read a new object.
-        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write((hexsha + "\n").encode("ascii"))
         g.stdin.flush()
         self.assertEqual(g.stdout.readline(), obj_info)
 
@@ -588,7 +588,7 @@ class TestGit(TestBase):
         self.assertEqual(size, size_two)
 
     def test_object_header_sends_each_name_as_one_record(self):
-        hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
+        hexsha = self.rorepo.commit("root").hexsha
         git = Git(self.rorepo.working_dir)
         header = git.get_object_header(hexsha)
 

@@ -27,10 +27,4 @@ else
     git -C repo update-ref -m 'Create test branch' refs/heads/master "$revision"
     if test "$layout" != bare; then git -C repo checkout --force master; fi
 
-    if test "$layout" = baseline; then
-        test -n "$(git -C repo tag --list '[0-9]*' 'v[0-9]*')"
-        git -C repo tag -f __testing_point__ "$source_revision"
-        for _ in 1 2 3; do git -C repo reset --hard HEAD~1; done
-        git -C repo reset --hard "$source_revision"
-    fi
 fi

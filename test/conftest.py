@@ -5,11 +5,8 @@ import json
 from pathlib import Path
 
 import pytest
-from gix import testtools
 
 from git import _backend
-from test.lib import GIT_REPO, TestBase
-from test.lib.fixtures import read_only_fixture
 
 
 def pytest_addoption(parser):
@@ -99,29 +96,3 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         with open(path, "w", encoding="utf-8") as stream:
             json.dump(records, stream, indent=2)
             stream.write("\n")
-
-
-@pytest.fixture(scope="session")
-def dependency_repo_factory():
-    """Prepare each immutable historical clone source only when a test needs it."""
-    source = Path(GIT_REPO).resolve()
-    revision = testtools.git(source, "rev-parse HEAD").strip()
-    paths = {}
-
-    def get(name):
-        if name not in paths:
-            paths[name] = str(read_only_fixture("dependencies.sh", source, revision, name) / "repo")
-        return paths[name]
-
-    return get
-
-
-@pytest.fixture(scope="class", autouse=True)
-def historical_dependency_sources(request):
-    if request.cls is not None and issubclass(request.cls, TestBase):
-        factory = request.getfixturevalue("dependency_repo_factory")
-        request.cls._dependency_repo_factory = staticmethod(factory)
-        yield
-        del request.cls._dependency_repo_factory
-    else:
-        yield

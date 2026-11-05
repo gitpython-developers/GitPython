@@ -4,7 +4,6 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import gc
-import glob
 import io
 import itertools
 import os
@@ -39,7 +38,7 @@ from git import (
 from git.compat import safe_decode
 from git.exc import BadObject, UnsafeOptionError, UnsafeProtocolError
 from git.repo.fun import find_worktree_git_dir
-from git.util import bin_to_hex, cwd, rmfile, rmtree
+from git.util import bin_to_hex, cwd, rmtree
 from test.lib import PathLikeMock, TestBase, fixture, with_rw_directory, with_rw_repo
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
@@ -53,23 +52,8 @@ def flatten(lol):
     return list(iter_flatten(lol))
 
 
-_tc_lock_fpaths = osp.join(osp.dirname(__file__), "../../.git/*.lock")
-
-
-def _rm_lock_files():
-    for lfp in glob.glob(_tc_lock_fpaths):
-        rmfile(lfp)
-
-
 class TestRepo(TestBase):
-    def setUp(self):
-        _rm_lock_files()
-
     def tearDown(self):
-        for lfp in glob.glob(_tc_lock_fpaths):
-            if osp.isfile(lfp):
-                raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
-
         gc.collect()
 
     def test_new_should_raise_on_invalid_repo_location(self):
@@ -224,7 +208,7 @@ class TestRepo(TestBase):
 
     def test_repo_creation_from_different_paths(self):
         path = read_only_fixture(
-            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "0.3.2.1", "worktree"
+            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "tree-layout", "worktree"
         )
         rw_repo = Repo(path / "repo")
         r_from_gitdir = Repo(rw_repo.git_dir)
@@ -235,7 +219,7 @@ class TestRepo(TestBase):
 
     def test_repo_creation_pathlib(self):
         path = read_only_fixture(
-            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "0.3.2.1", "worktree"
+            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "tree-layout", "worktree"
         )
         rw_repo = Repo(path / "repo")
         r_from_gitdir = Repo(pathlib.Path(rw_repo.git_dir))
@@ -243,7 +227,7 @@ class TestRepo(TestBase):
 
     def test_repo_creation_pathlike(self):
         path = read_only_fixture(
-            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "0.3.2.1", "worktree"
+            "history.sh", self.rorepo.working_dir, self.rorepo.head.commit.hexsha, "tree-layout", "worktree"
         )
         rw_repo = Repo(path / "repo")
         r_from_gitdir = Repo(PathLikeMock(rw_repo.git_dir))
@@ -270,7 +254,7 @@ class TestRepo(TestBase):
         self.assertEqual(self.rorepo.heads[active_branch.name], active_branch)
 
     def test_tree_from_revision(self):
-        tree = self.rorepo.tree("0.1.6")
+        tree = self.rorepo.tree("release")
         self.assertEqual(len(tree.hexsha), 40)
         self.assertEqual(tree.type, "tree")
         self.assertEqual(self.rorepo.tree(tree), tree)
@@ -282,7 +266,7 @@ class TestRepo(TestBase):
         pickle.loads(pickle.dumps(self.rorepo))
 
     def test_commit_from_revision(self):
-        commit = self.rorepo.commit("0.1.4")
+        commit = self.rorepo.commit("annotated")
         self.assertEqual(commit.type, "commit")
         self.assertEqual(self.rorepo.commit(commit), commit)
 
@@ -294,31 +278,30 @@ class TestRepo(TestBase):
             self.assertEqual(repo.commit("@foo"), commit)
 
     def test_commits(self):
-        mc = 10
-        commits = list(self.rorepo.iter_commits("0.1.6", max_count=mc))
+        mc = 5
+        commits = list(self.rorepo.iter_commits("release", max_count=mc))
         self.assertEqual(len(commits), mc)
 
         c = commits[0]
-        self.assertEqual("9a4b1d4d11eee3c5362a4152216376e634bd14cf", c.hexsha)
-        self.assertEqual(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents])
-        self.assertEqual("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.hexsha)
-        self.assertEqual("Michael Trier", c.author.name)
-        self.assertEqual("mtrier@gmail.com", c.author.email)
-        self.assertEqual(1232829715, c.authored_date)
-        self.assertEqual(5 * 3600, c.author_tz_offset)
-        self.assertEqual("Michael Trier", c.committer.name)
-        self.assertEqual("mtrier@gmail.com", c.committer.email)
-        self.assertEqual(1232829715, c.committed_date)
-        self.assertEqual(5 * 3600, c.committer_tz_offset)
-        self.assertEqual("Bumped version 0.1.6\n", c.message)
+        self.assertEqual(self.rorepo.git.rev_parse("release"), c.hexsha)
+        self.assertEqual([self.rorepo.commit("base")], list(c.parents))
+        self.assertEqual(self.rorepo.git.rev_parse("release^{tree}"), c.tree.hexsha)
+        self.assertEqual("Fixture Author", c.author.name)
+        self.assertEqual("author@example.com", c.author.email)
+        self.assertEqual(978307200, c.authored_date)
+        self.assertEqual(0, c.author_tz_offset)
+        self.assertEqual(c.author, c.committer)
+        self.assertEqual(c.authored_date, c.committed_date)
+        self.assertEqual(0, c.committer_tz_offset)
+        self.assertEqual("Release sample project\n", c.message)
 
         c = commits[1]
         self.assertIsInstance(c.parents, tuple)
 
     def test_trees(self):
-        mc = 30
+        mc = 5
         num_trees = 0
-        for tree in self.rorepo.iter_trees("0.1.5", max_count=mc):
+        for tree in self.rorepo.iter_trees("base", max_count=mc):
             num_trees += 1
             self.assertIsInstance(tree, Tree)
         # END for each tree
@@ -555,10 +538,10 @@ class TestRepo(TestBase):
         self.assertIsInstance(index, IndexFile)
 
     def test_tag(self):
-        assert self.rorepo.tag("refs/tags/0.1.5").commit
+        assert self.rorepo.tag("refs/tags/base").commit
 
     def test_tag_to_full_tag_path(self):
-        tags = ["0.1.5", "tags/0.1.5", "refs/tags/0.1.5"]
+        tags = ["base", "tags/base", "refs/tags/base"]
         value_errors = []
         for tag in tags:
             try:
@@ -569,7 +552,7 @@ class TestRepo(TestBase):
 
     def test_archive(self):
         with tempfile.NamedTemporaryFile("wb", suffix="archive-test", delete=False) as stream:
-            self.rorepo.archive(stream, "0.1.6", path="doc")
+            self.rorepo.archive(stream, "release", path="doc")
             assert stream.tell()
         os.remove(stream.name)  # Do it this way so we can inspect the file on failure.
 
@@ -577,15 +560,15 @@ class TestRepo(TestBase):
         tdir = str(read_only_fixture("repo.sh", "empty"))
         output_marker = osp.join(tdir, "pwn")
         with self.assertRaises(UnsafeOptionError):
-            self.rorepo.archive(io.BytesIO(), "0.1.6", exec=f"touch {output_marker}")
+            self.rorepo.archive(io.BytesIO(), "release", exec=f"touch {output_marker}")
         assert not osp.exists(output_marker)
         with self.assertRaises(UnsafeOptionError):
-            self.rorepo.archive(io.BytesIO(), "0.1.6", output=output_marker)
+            self.rorepo.archive(io.BytesIO(), "release", output=output_marker)
         assert not osp.exists(output_marker)
         with self.assertRaises(UnsafeOptionError):
-            self.rorepo.archive(io.BytesIO(), "0.1.6", add_file=output_marker)
+            self.rorepo.archive(io.BytesIO(), "release", add_file=output_marker)
         with self.assertRaises(UnsafeOptionError):
-            self.rorepo.archive(io.BytesIO(), "0.1.6", add_virtual_file="file:content")
+            self.rorepo.archive(io.BytesIO(), "release", add_virtual_file="file:content")
 
     def test_archive_rejects_unsafe_remote_protocol(self):
         tdir = str(read_only_fixture("repo.sh", "empty"))
@@ -996,13 +979,13 @@ class TestRepo(TestBase):
         self._assert_rev_parse_types(rev, obj2)
 
         # History with number
-        ni = 11
-        history = [obj.parents[0]]
-        for _ in range(ni):
-            history.append(history[-1].parents[0])
-        # END get given amount of commits
+        history = []
+        ancestor = obj
+        while ancestor.parents and len(history) < 11:
+            ancestor = ancestor.parents[0]
+            history.append(ancestor)
 
-        for pn in range(11):
+        for pn in range(len(history)):
             rev = name + "~%i" % (pn + 1)
             obj2 = rev_parse(rev)
             self.assertEqual(obj2, history[pn])
@@ -1033,7 +1016,8 @@ class TestRepo(TestBase):
         rev_parse = self.rorepo.rev_parse
 
         # Try special case: This one failed at some point, make sure its fixed.
-        self.assertEqual(rev_parse("33ebe").hexsha, "33ebe7acec14b25c5f84f35a664803fcab2f7781")
+        root_sha = self.rorepo.git.rev_parse("root")
+        self.assertEqual(rev_parse(root_sha[:5]).hexsha, root_sha)
 
         # Start from reference.
         num_resolved = 0
@@ -1058,7 +1042,7 @@ class TestRepo(TestBase):
         assert num_resolved
 
         # It works with tags!
-        tag = self._assert_rev_parse("0.1.4")
+        tag = self._assert_rev_parse("annotated")
         self.assertEqual(tag.type, "tag")
 
         # try full sha directly (including type conversion).
@@ -1066,13 +1050,13 @@ class TestRepo(TestBase):
         self._assert_rev_parse_types(tag.object.hexsha, tag.object)
 
         # Multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
-        rev = "0.1.4^{tree}^{tree}"
+        rev = "annotated^{tree}^{tree}"
         self.assertEqual(rev_parse(rev), tag.object.tree)
         self.assertEqual(rev_parse(rev + ":CHANGES"), tag.object.tree["CHANGES"])
 
         # Try to get parents from first revision - it should fail as no such revision
         # exists.
-        first_rev = "33ebe7acec14b25c5f84f35a664803fcab2f7781"
+        first_rev = root_sha
         commit = rev_parse(first_rev)
         self.assertEqual(len(commit.parents), 0)
         self.assertEqual(commit.hexsha, first_rev)
@@ -1089,9 +1073,9 @@ class TestRepo(TestBase):
         # Needs a tag which points to a blob.
 
         # ref^0 returns commit being pointed to, same with ref~0, ^{}, and ^{commit}
-        tag = rev_parse("0.1.4")
+        tag = rev_parse("annotated")
         for token in ("~0", "^0", "^{}", "^{commit}"):
-            self.assertEqual(tag.object, rev_parse("0.1.4%s" % token))
+            self.assertEqual(tag.object, rev_parse("annotated%s" % token))
         # END handle multiple tokens
 
         # Try partial parsing.
@@ -1108,10 +1092,10 @@ class TestRepo(TestBase):
         # END for each binsha in repo
 
         # Missing closing brace: commit^{tree
-        self.assertRaises(BadName, rev_parse, "0.1.4^{tree")
+        self.assertRaises(BadName, rev_parse, "annotated^{tree")
 
         # Missing starting brace.
-        self.assertRaises(BadName, rev_parse, "0.1.4^tree}")
+        self.assertRaises(BadName, rev_parse, "annotated^tree}")
 
         # REVLOG
         #######
@@ -1153,7 +1137,7 @@ class TestRepo(TestBase):
             "history.sh",
             self.rorepo.working_dir,
             self.rorepo.head.commit.hexsha,
-            "c15a6e1923a14bc760851913858a3942a4193cdb",
+            "submodule-current",
             "bare",
         )
         rwrepo = Repo(path / "repo")
@@ -1198,7 +1182,7 @@ class TestRepo(TestBase):
         for _ in range(64):
             for repo_type in (GitCmdObjectDB,):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
-                last_commit(repo, "HEAD", "test/test_base.py")
+                last_commit(repo, "HEAD", "git/objects/blob.py")
             # END for each repository type
         # END for each iteration
 
@@ -1273,9 +1257,9 @@ class TestRepo(TestBase):
 
     def test_merge_base(self):
         repo = self.rorepo
-        c1 = "f6aa8d1"
-        c2 = repo.commit("d46e3fe")
-        c3 = "763ef75"
+        c1 = "merge^1"
+        c2 = repo.commit("side")
+        c3 = "merge"
         self.assertRaises(ValueError, repo.merge_base)
         self.assertRaises(ValueError, repo.merge_base, "foo")
 
@@ -1284,7 +1268,7 @@ class TestRepo(TestBase):
         self.assertIsInstance(res, list)
         self.assertEqual(len(res), 1)
         self.assertIsInstance(res[0], Commit)
-        self.assertTrue(res[0].hexsha.startswith("3936084"))
+        self.assertEqual(res[0], repo.commit("manifest-update"))
 
         for kw in ("a", "all"):
             res = repo.merge_base(c1, c2, c3, **{kw: True})
@@ -1301,8 +1285,8 @@ class TestRepo(TestBase):
             raise RuntimeError("git merge-base --is-ancestor feature unsupported (test needs git 1.8.0 or later)")
 
         repo = self.rorepo
-        c1 = "f6aa8d1"
-        c2 = "763ef75"
+        c1 = "base"
+        c2 = "merge"
         self.assertTrue(repo.is_ancestor(c1, c1))
         self.assertTrue(repo.is_ancestor("HEAD", "HEAD"))
         self.assertTrue(repo.is_ancestor(c1, c2))
@@ -1314,10 +1298,10 @@ class TestRepo(TestBase):
 
     def test_is_valid_object(self):
         repo = self.rorepo
-        commit_sha = "f6aa8d1"
-        blob_sha = "1fbe3e4375"
-        tree_sha = "960b40fe36"
-        tag_sha = "42c2f60c43"
+        commit_sha = repo.git.rev_parse("release")[:10]
+        blob_sha = repo.git.rev_parse("HEAD:README.md")[:10]
+        tree_sha = repo.git.rev_parse("HEAD^{tree}")[:10]
+        tag_sha = repo.git.rev_parse("annotated")[:10]
 
         # Check for valid objects.
         self.assertTrue(repo.is_valid_object(commit_sha))
@@ -1355,11 +1339,11 @@ class TestRepo(TestBase):
             assert Git(worktree).rev_parse("--is-bare-repository") == "false"
             assert not repo.bare
             assert osp.samefile(repo.working_tree_dir, worktree)
-            subdir = worktree / "git" / "repo"
+            subdir = worktree / "git" / "objects"
             with Repo(subdir, search_parent_directories=True) as sub_repo:
                 assert not sub_repo.bare
                 assert osp.samefile(sub_repo.working_dir, worktree)
-                expected = repo.git.log("-n", "1", "--format=%H", "--", "git/repo")
+                expected = repo.git.log("-n", "1", "--format=%H", "--", "git/objects")
                 assert sub_repo.git.log("-n", "1", "--format=%H", "--", str(subdir)) == expected
 
     def test_git_work_tree_dotgit_relative(self):

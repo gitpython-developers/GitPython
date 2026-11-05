@@ -33,12 +33,10 @@ class TestFun(TestBase):
         # END assert entry matches fully
 
     def test_aggressive_tree_merge(self):
-        # Head tree with additions, removals and modification compared to its
-        # predecessor.
+        # Trees with additions, removals and modifications, including a submodule.
         repo = self.rorepo
-        HC = self.rorepo.commit("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
-        H = HC.tree
-        B = HC.parents[0].tree
+        H = repo.tree("submodule-current")
+        B = repo.tree("side")
 
         # Entries from single tree.
         trees = [H.binsha]
@@ -50,16 +48,16 @@ class TestFun(TestBase):
 
         # Three way, no conflict.
         tree = self.rorepo.tree
-        B = tree("35a09c0534e89b2d43ec4101a5fb54576b577905")
-        H = tree("4fe5cfa0e063a8d51a1eb6f014e2aaa994e5e7d4")
-        M = tree("1f2b19de3301e76ab3a6187a49c9c93ff78bafbd")
+        B = tree("manifest-update")
+        H = tree("merge^1")
+        M = tree("side")
         trees = [B.binsha, H.binsha, M.binsha]
         self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
         # Three-way, conflict in at least one file, both modified.
-        B = tree("a7a4388eeaa4b6b94192dce67257a34c4a6cbd26")
-        H = tree("f9cec00938d9059882bb8eabdaf2f775943e00e5")
-        M = tree("44a601a068f4f543f73fd9c49e264c931b1e1652")
+        B = tree("base")
+        H = tree("conflict-ours")
+        M = tree("conflict-theirs")
         trees = [B.binsha, H.binsha, M.binsha]
         self._assert_index_entries(self.merge_trees(repo, trees), trees)
 
@@ -134,7 +132,7 @@ class TestFun(TestBase):
         self.assertIsNotNone(gitdir)
         self.assertTrue(stat(gitdir).st_mode & S_IFDIR)
 
-    @with_rw_repo("0.1.6")
+    @with_rw_repo("release")
     def test_tree_names_from_git_preserve_undecodable_bytes(self, repo):
         tree = Tree(repo, repo._null_binsha, path="")
         tree._cache = [(b"a" * repo._oid_size, 0o100644, "\udc9f")]

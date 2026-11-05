@@ -31,7 +31,7 @@ class TestDB(TestBase):
         gdb = GitCmdObjectDB(osp.join(self.rorepo.git_dir, "objects"), self.rorepo.git)
 
         # Partial to complete - works with everything.
-        hexsha = bin_to_hex(gdb.partial_to_complete_sha_hex("0.1.6"))
+        hexsha = bin_to_hex(gdb.partial_to_complete_sha_hex("release"))
         assert len(hexsha) == 40
 
         assert bin_to_hex(gdb.partial_to_complete_sha_hex(hexsha[:20])) == hexsha

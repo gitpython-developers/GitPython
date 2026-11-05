@@ -99,13 +99,15 @@ class Tutorials(TestBase):
         # [8-test_init_repo_object]
         active_branch = repo.active_branch
         self.assertEqual(repo.head.ref, active_branch)  # HEAD is a sym-ref pointing to the active branch.
-        self.assertEqual(repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5"))  # You can access tags in various ways too.
+        self.assertEqual(
+            repo.tags["release"], repo.tag("refs/tags/release")
+        )  # You can access tags in various ways too.
         self.assertEqual(repo.refs[active_branch.name], repo.heads[active_branch.name])  # .refs provides all refs...
 
         if "TRAVIS" not in os.environ:
             remote_branch = next(ref for ref in repo.remotes.origin.refs if ref.remote_head != "HEAD")
             self.assertEqual(repo.refs[remote_branch.name], remote_branch)  # ...remotes...
-        self.assertEqual(repo.refs["0.3.5"], repo.tags["0.3.5"])  # ... and tags.
+        self.assertEqual(repo.refs["release"], repo.tags["release"])  # ... and tags.
         # ![8-test_init_repo_object]
 
         # Create a new head/branch.
@@ -316,17 +318,17 @@ class Tutorials(TestBase):
 
         # [12-test_references_and_objects]
         repo.commit("master")
-        repo.commit("v0.8.1")
+        repo.commit("my_tag")
         repo.commit("HEAD~10")
         # ![12-test_references_and_objects]
 
         # [13-test_references_and_objects]
-        fifty_first_commits = list(repo.iter_commits("master", max_count=50))
-        assert len(fifty_first_commits) == 50
-        # This will return commits 21-30 from the commit list as traversed backwards master.
-        ten_commits_past_twenty = list(repo.iter_commits("master", max_count=10, skip=20))
-        assert len(ten_commits_past_twenty) == 10
-        assert fifty_first_commits[20:30] == ten_commits_past_twenty
+        first_twenty_commits = list(repo.iter_commits("master", max_count=20))
+        assert len(first_twenty_commits) == 20
+        # This will return commits 11-20 from the commit list as traversed backwards master.
+        ten_commits_past_ten = list(repo.iter_commits("master", max_count=10, skip=10))
+        assert len(ten_commits_past_ten) == 10
+        assert first_twenty_commits[10:20] == ten_commits_past_ten
         # ![13-test_references_and_objects]
 
         # [14-test_references_and_objects]
@@ -384,7 +386,7 @@ class Tutorials(TestBase):
         assert repo.tree() == repo.head.commit.tree
         past = repo.commit("HEAD~5")
         assert repo.tree(past) == repo.tree(past.hexsha)
-        self.assertEqual(repo.tree("v0.8.1").type, "tree")  # Yes, you can provide any refspec - works everywhere.
+        self.assertEqual(repo.tree("my_tag").type, "tree")  # Yes, you can provide any refspec - works everywhere.
         # ![21-test_references_and_objects]
 
         # [22-test_references_and_objects]
@@ -506,7 +508,7 @@ class Tutorials(TestBase):
 
         repo.git.clear_cache()
 
-    @with_rw_repo("c15a6e1923a14bc760851913858a3942a4193cdb")
+    @with_rw_repo("submodule-current")
     @patch_git_config("protocol.file.allow", "always")
     def test_submodules(self, repo):
         # [1-test_submodules]
