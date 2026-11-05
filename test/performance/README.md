@@ -23,13 +23,13 @@ uv pip install --python .tox/gix/bin/python -r test/performance/benchmark-requir
 uv pip install --python .venv/bin/python -r test/performance/benchmark-requirements.txt
 ```
 
-Prepare the same fixed repository used by CI (GitPython 3.1.45) through
-`gix.testtools`, outside the measured operations. Its Bash script lives in
-`tests/fixtures/benchmark.sh`; no remote access is needed if that revision
-already exists locally:
+Prepare the same generated repository used by CI through `gix.testtools`,
+outside the measured operations. `tests/fixtures/benchmark.sh` creates 30
+commits, an annotated tag, a nested directory, and a submodule from scratch.
+It requires neither network access nor source Git metadata:
 
 ```sh
-BENCH_REPO=$(.venv/bin/python -c 'from pathlib import Path; from gix import testtools; print((testtools.scripted_fixture_read_only_with_args("benchmark.sh", [str(Path.cwd())]) / "repo").resolve())')
+BENCH_REPO=$(.venv/bin/python -c 'from gix import testtools; print((testtools.scripted_fixture_read_only_with_args("benchmark.sh", []) / "repo").resolve())')
 ```
 
 Run from the source root, sequentially to avoid competing for CPU and disk:
@@ -48,7 +48,7 @@ The default uses six worker processes, three measured values per process and
 one warmup, with calibrated loop counts and a minimum value duration of 100 ms.
 Pass standard `pyperf` options such as `--rigorous` for more samples or
 `--debug-single-value` for a smoke check. Raw JSON retains sample distributions,
-environment details, fixture/source revisions, result digests, and one untimed
+environment details, fixture revisions, source content digests, result digests, and one untimed
 invocation's native/fallback decisions. The comparison rejects differing
 results, revisions, Python/Git versions and storage formats. The harness also
 rejects the wrong backend rather than silently comparing CLI against itself.
@@ -64,7 +64,7 @@ mutates that worktree, and ignores ambient Git environment/config overrides.
 The journey also enumerates submodules, resolves tree/index revisions with
 their paths and modes, and reads raw commit/tree bytes through the object
 database. The last operation covers serialization readback without rewriting
-objects; the pinned fixture's signed commit remains intact. These three
+objects. The generated fixture includes a submodule for the inventory check. These three
 measurements have zero-CLI ceilings and join the existing CI job automatically.
 
 Add a function returning JSON-compatible results to `MEASUREMENTS` in
@@ -98,4 +98,7 @@ Timing is observational: shared CI runners and local activity introduce noise.
 The CI job publishes all means, standard deviations and ratios, retains raw
 artifacts, and uses `pyperf compare_to` for significance reporting. It fails on
 execution/parity errors, without a noisy speed threshold. Compare like-for-like
-fixture and source revisions when tracking performance across backend changes.
+fixture revisions and source content digests when tracking performance across backend changes.
+The source digest covers `VERSION` and the Python package files, including local
+edits. Measurements from the old GitPython-history fixture are not comparable
+with this generated workload.

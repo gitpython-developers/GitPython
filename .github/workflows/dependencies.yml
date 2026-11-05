@@ -30,7 +30,6 @@ jobs:
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
-        fetch-depth: 0
         persist-credentials: false
     - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
       with:
@@ -45,8 +44,9 @@ jobs:
       run: flake8 "$PROJECT/$PROJECT" --count --select=E9,F63,F7,F82 --show-source --statistics
     - name: Test
       run: |
+        rm -rf .git
         if test "$PROJECT" = gitdb; then
-          GITDB_TEST_GIT_REPO_BASE="$(git rev-parse --git-common-dir)" pytest -o addopts= -v gitdb/gitdb/test
+          pytest -o addopts= -v gitdb/gitdb/test
         else
           pytest -o addopts= -v smmap/smmap/test
         fi

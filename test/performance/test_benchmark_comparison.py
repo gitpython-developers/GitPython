@@ -7,7 +7,9 @@ from test.lib.fixtures import read_only_fixture
 pytest.importorskip("pyperf")
 
 
-@pytest.mark.parametrize("changed", [None, "result_digest", "fixture_revision", "backend", "cli_processes"])
+@pytest.mark.parametrize(
+    "changed", [None, "result_digest", "fixture_revision", "gitpython_source", "backend", "cli_processes"]
+)
 def test_comparison_requires_parity(capsys, changed):
     from test.performance.compare_backends import compare
 
@@ -20,3 +22,11 @@ def test_comparison_requires_parity(capsys, changed):
         compare(*paths, cli_budget=fixture / "budget.json")
         assert "journey | 150.00" in capsys.readouterr().out
         compare(*paths, cli_budget=fixture / "relaxed-budget.json")
+
+
+def test_source_digest_detects_code_changes_without_git_metadata():
+    from test.performance.bench_repository import source_digest
+
+    fixture = read_only_fixture("benchmark-source.sh")
+    assert source_digest(fixture / "source") != source_digest(fixture / "copy")
+    assert source_digest(fixture / "source") == source_digest(fixture / "moved")

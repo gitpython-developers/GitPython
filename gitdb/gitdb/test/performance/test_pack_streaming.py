@@ -52,7 +52,7 @@ class TestPackStreamingPerformance(TestBigRepoR):
               (ni, elapsed, ni / (elapsed or 1)), file=sys.stderr)
 
         st = time()
-        PackEntity.write_pack((pdb.stream(sha) for sha in pdb.sha_iter()), ostream.write, object_count=ni)
+        PackEntity.write_pack((pdb.stream(sha) for sha in pdb.sha_iter()), ostream.write, object_count=pdb.size())
         elapsed = time() - st
         total_kb = ostream.bytes_written() / 1000
         print(sys.stderr, "PDB Streaming: Wrote pack of size %i kb in %f s (%f kb/s)" %

@@ -17,7 +17,7 @@ import tempfile
 import shutil
 import os
 import gc
-import logging
+import subprocess
 from functools import wraps
 
 
@@ -30,12 +30,8 @@ class TestBase(unittest.TestCase):
 
     * gitrepopath
 
-     * read-only base path of the git source repository, i.e. .../git/.git
+     * base path of a generated repository containing packed and loose objects
     """
-
-    #{ Invvariants
-    k_env_git_repo = "GITDB_TEST_GIT_REPO_BASE"
-    #} END invariants
 
     @classmethod
     def setUpClass(cls):
@@ -44,14 +40,18 @@ class TestBase(unittest.TestCase):
         except AttributeError:
             pass
 
-        cls.gitrepopath = os.environ.get(cls.k_env_git_repo)
-        if not cls.gitrepopath:
-            logging.info(
-                "You can set the %s environment variable to a .git repository of your choice - defaulting to the gitdb repository", cls.k_env_git_repo)
-            ospd = os.path.dirname
-            cls.gitrepopath = os.path.join(ospd(ospd(ospd(__file__))), '.git')
-        # end assure gitrepo is set
-        assert cls.gitrepopath.endswith('.git')
+        temporary = tempfile.TemporaryDirectory(prefix="gitdb-fixture-")
+        cls.addClassCleanup(temporary.cleanup)
+        env = {key: value for key, value in os.environ.items() if not key.startswith('GIT_')}
+        env.update(
+            GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_AUTHOR_NAME='GitDB Tests', GIT_AUTHOR_EMAIL='tests@example.invalid',
+            GIT_COMMITTER_NAME='GitDB Tests', GIT_COMMITTER_EMAIL='tests@example.invalid',
+            GIT_AUTHOR_DATE='2001-01-01T00:00:00 +0000', GIT_COMMITTER_DATE='2001-01-01T00:00:00 +0000',
+        )
+        # Keep the standalone suite usable on Python 3.8 without GixPython.
+        subprocess.run(['bash', fixture_path('repository.sh')], cwd=temporary.name, env=env, check=True)
+        cls.gitrepopath = os.path.join(temporary.name, 'repo', '.git')
 
 
 #} END bases

@@ -42,6 +42,9 @@ The source is available in the GitPython repository on GitHub:
 
 https://github.com/gitpython-developers/GitPython/tree/main/gitdb
 
+Tests require Git and Bash. Each test class gets a temporary repository generated
+from scratch with packed and loose objects; no source checkout history is needed.
+
 Run the tests with::
 
  pytest
