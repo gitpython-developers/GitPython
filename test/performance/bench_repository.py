@@ -126,7 +126,8 @@ def worker_arguments(cmd, args):
 
 def source_digest(root):
     digest = sha256()
-    for path in sorted([root / "VERSION", *(root / "git").rglob("*.py")]):
+    sources = [root / "VERSION", *(root / "git").rglob("*.py"), *(root / "test" / "performance").glob("*.py")]
+    for path in sorted(sources):
         digest.update(path.relative_to(root).as_posix().encode() + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
 

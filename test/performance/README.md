@@ -99,6 +99,7 @@ The CI job publishes all means, standard deviations and ratios, retains raw
 artifacts, and uses `pyperf compare_to` for significance reporting. It fails on
 execution/parity errors, without a noisy speed threshold. Compare like-for-like
 fixture revisions and source content digests when tracking performance across backend changes.
-The source digest covers `VERSION` and the Python package files, including local
-edits. Measurements from the old GitPython-history fixture are not comparable
+The source digest covers `VERSION`, the Python package files, and the benchmark
+harness sources in `test/performance`, including local edits.
+Measurements from the old GitPython-history fixture are not comparable
 with this generated workload.

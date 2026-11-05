@@ -29,4 +29,5 @@ def test_source_digest_detects_code_changes_without_git_metadata():
 
     fixture = read_only_fixture("benchmark-source.sh")
     assert source_digest(fixture / "source") != source_digest(fixture / "copy")
+    assert source_digest(fixture / "source") != source_digest(fixture / "harness")
     assert source_digest(fixture / "source") == source_digest(fixture / "moved")

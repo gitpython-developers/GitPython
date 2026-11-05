@@ -49,7 +49,7 @@ class TestPackStreamingPerformance(TestBigRepoR):
         # END gather objects for pack-writing
         elapsed = time() - st
         print("PDB Streaming: Got %i streams by sha in in %f s ( %f streams/s )" %
-              (ni, elapsed, ni / (elapsed or 1)), file=sys.stderr)
+              (count, elapsed, count / (elapsed or 1)), file=sys.stderr)
 
         st = time()
         PackEntity.write_pack((pdb.stream(sha) for sha in pdb.sha_iter()), ostream.write, object_count=pdb.size())
@@ -78,4 +78,4 @@ class TestPackStreamingPerformance(TestBigRepoR):
         elapsed = time() - st
         total_kib = total_size / 1000
         print(sys.stderr, "PDB Streaming: Got %i streams by sha and read all bytes totallying %i KiB ( %f KiB / s ) in %f s ( %f streams/s )" %
-              (ni, total_kib, total_kib / (elapsed or 1), elapsed, ni / (elapsed or 1)), sys.stderr)
+              (count, total_kib, total_kib / (elapsed or 1), elapsed, count / (elapsed or 1)), sys.stderr)

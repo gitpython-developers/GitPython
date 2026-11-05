@@ -51,7 +51,7 @@ class TestPackedDBPerformance(TestBigRepoR):
         # END for each random mode
 
         # query info and streams only
-        max_items = 10000           # can wait longer when testing memory
+        max_items = min(10000, ns)  # can wait longer when testing memory
         for pdb_fun in (pdb.info, pdb.stream):
             st = time()
             for sha in sha_list[:max_items]:
@@ -62,7 +62,7 @@ class TestPackedDBPerformance(TestBigRepoR):
         # END for each function
 
         # retrieve stream and read all
-        max_items = 5000
+        max_items = min(5000, ns)
         pdb_stream = pdb.stream
         total_size = 0
         st = time()
