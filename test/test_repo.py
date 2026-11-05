@@ -767,6 +767,12 @@ class TestRepo(TestBase):
                     )
                     self.assertEqual(list(repo.blame("HEAD", "current.txt", incremental=True)), entries)
 
+    def test_blame_preserves_line_content(self):
+        """Blame returns each line's exact bytes, not a whitespace-stripped version."""
+        with fixture_repo("blame-content.sh") as repo:
+            lines = [line for _commit, blamed in repo.blame("HEAD", "file.txt") for line in blamed]
+            self.assertEqual(lines, ["alpha   ", "beta", "\t", "crlf\r", "gamma"])
+
     @mock.patch.object(Git, "_call_process")
     def test_blame_complex_revision(self, git):
         git.return_value = fixture("blame_complex_revision")

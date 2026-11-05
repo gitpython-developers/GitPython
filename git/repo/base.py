@@ -1550,9 +1550,15 @@ class Repo:
                             if blames[-1][1] is not None:
                                 line: str | bytes
                                 if not is_binary:
-                                    if line_str and line_str[0] == "\t":
-                                        line_str = line_str[1:]
-                                    line = line_str
+                                    # Recover the exact line bytes. A porcelain content
+                                    # line is a leading tab, the blamed line's bytes, and
+                                    # git's terminating line feed, so rstrip() would drop
+                                    # the line's own trailing whitespace and the carriage
+                                    # return of a CRLF line.
+                                    content = line_bytes[1:] if line_bytes[:1] == b"\t" else line_bytes
+                                    if content.endswith(b"\n"):
+                                        content = content[:-1]
+                                    line = content.decode(defenc)
                                 else:
                                     line = line_bytes
                                     # NOTE: We are actually parsing lines out of binary
