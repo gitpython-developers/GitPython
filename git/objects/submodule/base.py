@@ -684,8 +684,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         cls._validated_name(name)
         path = cls._to_relative_path(repo, path)
 
-        # Ensure we never put backslashes into the URL, as might happen on Windows.
-        if url is not None:
+        # Ensure we never put backslashes into a local path, as might happen on Windows.
+        # Remote URLs keep them, since replacing one can change the host.
+        if url is not None and not Git._re_remote_url.match(url):
             url = to_native_path_linux(url)
         # END ensure URL correctness
 

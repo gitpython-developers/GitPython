@@ -471,6 +471,27 @@ class TestClone(TestBase):
 
                 assert call_process.call_args[0][3] == url
 
+    def test_clone_from_passes_remote_url_unchanged(self):
+        # Git and urllib read the host after the "@". With the backslash replaced by
+        # "/", the text before it would become the host.
+        urls = [
+            r"https://localhost:9\@127.0.0.1:7/repo.git",
+            r"git+ssh://evil.example\@good.example/repo.git",
+        ]
+        for url in urls:
+            with mock.patch.object(Git, "_call_process_safe", side_effect=RuntimeError) as call_process:
+                with self.assertRaises(RuntimeError):
+                    Repo.clone_from(url, "unused")
+
+            assert call_process.call_args[0][3] == url
+
+    def test_polish_url_converts_backslashes_only_in_local_paths(self):
+        for url in (r"https://localhost:9\@127.0.0.1:7/repo.git", r"good.example:org\repo.git"):
+            assert Git.polish_url(url, is_cygwin=False) == url
+        assert Git.polish_url(r"C:\repos\project", is_cygwin=False) == "C:/repos/project"
+        assert Git.polish_url(r"..\project", is_cygwin=False) == "../project"
+        assert Git.polish_url(r"file:///C:\repos\project", is_cygwin=False) == "file:///C:/repos/project"
+
     @with_rw_directory
     def test_clone_from_does_not_expand_environment_variables_in_stored_url(self, rw_dir):
         url = pathlib.Path(rw_dir) / "$GITPYTHON_TEST_SECRET" / "source"

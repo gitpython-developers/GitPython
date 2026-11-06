@@ -635,6 +635,10 @@ class Git:
     # Git also selects the command-executing ext helper for an ext:// URL.
     re_unsafe_protocol = re.compile(r"([A-Za-z0-9][A-Za-z0-9+.-]*|)::|ext://")
 
+    # A URL scheme or scp-style host before a colon. One letter is a Windows drive,
+    # and file: URLs name local paths.
+    _re_remote_url = re.compile(r"(?!file:)[A-Za-z][A-Za-z0-9+.-]+:", re.IGNORECASE)
+
     unsafe_git_ls_remote_options = [
         # This option allows arbitrary command execution in git-ls-remote.
         "--upload-pack",
@@ -862,13 +866,16 @@ class Git:
         stops liking them as it will escape the backslashes. Hence we undo the escaping
         just to be sure.
 
+        Remote URLs and scp-style addresses are returned unchanged. A backslash is not
+        a separator there, and replacing it can move the end of the host, as in
+        ``https://a\\@b/repo``.
         """
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
         if is_cygwin:
             url = cygpath(url)
-        else:
+        elif not cls._re_remote_url.match(url):
             if url.startswith("~"):
                 url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")

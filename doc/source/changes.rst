@@ -61,6 +61,10 @@ Git executable and safety
   Text and streamed command output preserve undecodable bytes with
   ``surrogateescape``, including fetch/push results, clone errors and timeout
   diagnostics containing byte names.
+* ``Git.polish_url`` converts backslashes only in local paths and ``file:`` URLs.
+  Remote URLs and scp-style addresses reach Git unchanged, so clones, submodule
+  updates and new remotes use the host Git reads from the URL; previously
+  ``https://a\@b/repo`` was rewritten to ``https://a/@b/repo``.
 
 API changes
 -----------
