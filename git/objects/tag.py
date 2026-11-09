@@ -134,10 +134,10 @@ class TagObject(base.Object):
                 )
             except GitCommandError as exc:
                 raise BadObject(self.binsha) from exc
-            # Git terminates tag headers only at line feeds.
-            lines: List[str] = raw.decode(defenc, "replace").split("\n")
-            if lines and lines[-1] == "":
-                lines.pop()
+            # Git terminates tag headers only at line feeds, and the header block at
+            # the first empty line.
+            headers, _, message = raw.decode(defenc, "replace").partition("\n\n")
+            lines: List[str] = headers.split("\n")
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")
@@ -146,10 +146,10 @@ class TagObject(base.Object):
 
             self.tag = lines[2][4:]  # tag <tag name>
 
-            has_tagger = len(lines) > 3 and lines[3].startswith("tagger ")
-            self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(lines[3] if has_tagger else "")
-            message_start = 5 if has_tagger else 4
-            self.message = "\n".join(lines[message_start:])
+            # Like Git, find the first tagger header by name rather than by position.
+            tagger = next((line for line in lines[3:] if line.startswith("tagger ")), "")
+            self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger)
+            self.message = message[:-1] if message.endswith("\n") else message
         # END check our attributes
         else:
             super()._set_cache_(attr)

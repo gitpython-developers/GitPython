@@ -979,7 +979,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         next_line = None
         while True:
             parent_line = readline()
-            if not parent_line.startswith(b"parent"):
+            if not parent_line.startswith(b"parent "):
                 next_line = parent_line
                 break
             # END abort reading parents
@@ -988,29 +988,24 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         self.parents = tuple(self.parents)
 
         # We don't know actual author encoding before we have parsed it, so keep the
-        # lines around.
-        author_line = next_line
-        committer_line = readline()
+        # lines around. Like Git, find them by header name rather than by position.
+        author_line = committer_line = b""
 
-        # We might run into one or more mergetag blocks, skip those for now.
-        next_line = readline()
-        while next_line.startswith(b"mergetag "):
-            next_line = readline()
-            while next_line.startswith(b" "):
-                next_line = readline()
-        # END skip mergetags
-
-        # Now we can have the encoding line, or an empty line followed by the optional
-        # message.
         self.encoding = self.default_encoding
         gpgsig = b""
         encoding_seen = False
 
-        # Read headers.
+        # Read headers. Continuation lines, such as those of a mergetag, start with a
+        # space and match no header name.
         enc = next_line
         buf = enc.rstrip(b"\n")
         while buf:
-            if buf.startswith(b"encoding "):
+            if buf.startswith(b"author "):
+                # Git uses the first header of each name (find_commit_header).
+                author_line = author_line or buf
+            elif buf.startswith(b"committer "):
+                committer_line = committer_line or buf
+            elif buf.startswith(b"encoding "):
                 if not encoding_seen:
                     encoding_seen = True
                     raw_encoding = buf[9:]

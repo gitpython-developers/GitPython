@@ -78,6 +78,32 @@ case "$1" in
         } | git hash-object --literally -w -t tag --stdin > ../tag-id
         git update-ref refs/tags/v1 "$(cat ../tag-id)"
         ;;
+    header-names)
+        tree=$(git mktree </dev/null)
+        other=$(git commit-tree "$tree" -m other)
+        note='x-note L <l@example.com> 1700000000 +0000'
+        {
+            printf 'tree %s\n' "$tree"
+            case "$2" in
+                before-author) printf '%s\n' "$note" ;;
+                parent-prefix) printf 'parentx %s\n' "$other" ;;
+                before-committer|no-committer) ;;
+                *) exit 1 ;;
+            esac
+            printf 'author A <a@example.com> 1112591163 +0200\n'
+            if [ "$2" = before-committer ]; then printf '%s\n' "$note"; fi
+            if [ "$2" != no-committer ]; then printf 'committer C <c@example.com> 1112591163 +0200\n'; fi
+            printf '\nsubject\n\nbody\n'
+        } | git hash-object --literally -w -t commit --stdin > ../object-id
+        {
+            printf 'object %s\ntype commit\ntag v1\n' "$other"
+            if [ "$2" = before-author ]; then printf '%s\n' "$note"; fi
+            printf 'tagger T <t@example.com> 1112591163 +0200\n'
+            if [ "$2" = before-committer ]; then printf '%s\n' "$note"; fi
+            printf '\nsubject\n\nbody\n'
+        } | git hash-object --literally -w -t tag --stdin > ../tag-id
+        git update-ref refs/tags/v1 "$(cat ../tag-id)"
+        ;;
     whitespace-headers)
         tree=$(git mktree </dev/null)
         {

@@ -681,6 +681,45 @@ class TestCommit(TestCommitSerialization):
                     key = ("commit.decode", "CLI: " + reason)
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
+    def test_deserialization_finds_headers_by_name(self):
+        """Like Git, read identities by header name and parents only from ``parent`` headers."""
+        for variant in ("before-author", "before-committer", "no-committer", "parent-prefix"):
+            with self.subTest(variant=variant), fixture_repo("commit.sh", "header-names", variant) as repo:
+                root = Path(repo.working_dir).parent
+                oid = (root / "object-id").read_text().strip()
+                expected = repo.git.show(
+                    "--no-patch",
+                    "--no-notes",
+                    "--no-show-signature",
+                    "--no-use-mailmap",
+                    "--format=format:%an%x00%ae%x00%at%x00%cn%x00%ce%x00%P%x00%B",
+                    oid,
+                    "--",
+                    strip_newline_in_stdout=False,
+                ).split("\0")
+                committer = ["", ""] if variant == "no-committer" else ["C", "c@example.com"]
+                self.assertEqual(expected, ["A", "a@example.com", "1112591163", *committer, "", "subject\n\nbody\n"])
+                raw = repo.git.cat_file("commit", oid, stdout_as_string=False, strip_newline_in_stdout=False)
+                before = _backend.statistics()
+                for cmt in (
+                    Commit(repo, bytes.fromhex(oid))._deserialize(BytesIO(raw)),
+                    Commit(repo, bytes.fromhex(oid)),
+                ):
+                    actual = [cmt.author.name, cmt.author.email, str(cmt.authored_date)]
+                    actual += [cmt.committer.name, cmt.committer.email or ""]
+                    actual += [" ".join(parent.hexsha for parent in cmt.parents), cmt.message]
+                    self.assertEqual(actual, expected)
+                expected = repo.git.for_each_ref("--format=%(taggername)%00%(contents)", "refs/tags/v1")
+                self.assertEqual(expected, "T\0subject\n\nbody\n")
+                tag = TagObject(repo, bytes.fromhex((root / "tag-id").read_text().strip()))
+                self.assertEqual((tag.tagger.name, tag.message), ("T", "subject\n\nbody"))
+                if _backend.name == "gix":
+                    key = ("commit.decode", "CLI: native decoder diagnostics")
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+                    key = ("tag.decode", "CLI: native decoder diagnostics")
+                    tag_fallback = variant in ("before-author", "before-committer")
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + tag_fallback)
+
     def test_deserialization_reads_date_after_email(self):
         """Only the date right after the email counts, as in Git's split_ident_line."""
         with fixture_repo("commit.sh", "trailing-date") as repo:
