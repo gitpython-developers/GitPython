@@ -39,10 +39,12 @@ case "$1" in
         git rev-parse HEAD > ../outside-ref
         ;;
     unsafe-branch)
-        git update-ref 'refs/heads/--pathspec-from-file=pathspecs' HEAD
-        git symbolic-ref HEAD 'refs/heads/--pathspec-from-file=pathspecs'
+        branch_name="$3"
+        git update-ref "refs/heads/$branch_name" HEAD
+        git symbolic-ref HEAD "refs/heads/$branch_name"
         cd ..
         git clone repo clone
         printf 'unmatched-private-content\n' > clone/pathspecs
+        printf 'uncommitted\n' >> clone/file.txt
         ;;
 esac

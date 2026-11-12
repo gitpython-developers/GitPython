@@ -13,6 +13,11 @@ contain 20 binary bytes or 40 hexadecimal characters.
 Legacy class-level ``NULL_BIN_SHA`` and ``NULL_HEX_SHA`` constants retain their
 SHA-1 values; do not use their width to interpret repository object IDs.
 
+Security fixes
+--------------
+
+- https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-f8wj-prgh-h9j7
+
 Git executable and safety
 -------------------------
 
@@ -23,6 +28,9 @@ Git executable and safety
   option/protocol checks remain, and operands and stdin records receive additional
   validation. NUL-delimited ``cat-file`` requests prevent newline injection.
   Previously accepted option-like revision/ref arguments can now be rejected.
+  ``Head.checkout()`` rejects every branch name starting with a dash, including
+  when ``allow_unsafe_options=True``. This setting permits explicit keyword
+  options while branch names remain operands.
 * New plumbing calls suppress implicit hooks, filesystem monitors, automatic
   maintenance, and lazy network fetches. Index staging continues to store raw
   content rather than introduce clean filters. Diffs disable external diff and
