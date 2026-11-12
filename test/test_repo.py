@@ -773,6 +773,30 @@ class TestRepo(TestBase):
             lines = [line for _commit, blamed in repo.blame("HEAD", "file.txt") for line in blamed]
             self.assertEqual(lines, ["alpha   ", "beta", "\t", "crlf\r", "gamma"])
 
+    def test_blame_preserves_timezones(self):
+        with fixture_repo("blame-content.sh") as repo:
+            for incremental in (False, True):
+                for rev in ("HEAD", None):
+                    with self.subTest(incremental=incremental, rev=rev):
+                        entry = next(iter(repo.blame(rev, "file.txt", incremental=incremental)))
+                        commit = entry[0]
+                        porcelain = repo.git.blame(rev, "--line-porcelain", "--", "file.txt")
+                        offsets = dict(
+                            line.split(" ", 1)
+                            for line in porcelain.splitlines()
+                            if line.startswith(("author-tz ", "committer-tz "))
+                        )
+                        with mock.patch.object(
+                            Commit, "_set_cache_", side_effect=AssertionError("unexpected object read")
+                        ):
+                            if rev is None:
+                                self.assertEqual(commit.hexsha, "0" * 40)
+                            else:
+                                self.assertEqual(commit.author_tz_offset, -19800)
+                                self.assertEqual(commit.committer_tz_offset, 14400)
+                            self.assertEqual(commit.authored_datetime.strftime("%z"), offsets["author-tz"])
+                            self.assertEqual(commit.committed_datetime.strftime("%z"), offsets["committer-tz"])
+
     @mock.patch.object(Git, "_call_process")
     def test_blame_complex_revision(self, git):
         git.return_value = fixture("blame_complex_revision")
