@@ -774,7 +774,7 @@ class TestRepo(TestBase):
             self.assertEqual(lines, ["alpha   ", "beta", "\t", "crlf\r", "gamma"])
 
     def test_blame_preserves_timezones(self):
-        with fixture_repo("blame-timezones.sh") as repo:
+        with fixture_repo("blame-content.sh") as repo:
             for incremental in (False, True):
                 for rev in ("HEAD", None):
                     with self.subTest(incremental=incremental, rev=rev):
