@@ -35,6 +35,7 @@ from git.exc import (
 )
 from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
+from git.objects.util import utctz_to_altz
 from git.refs import HEAD, Head, Reference, SymbolicReference, TagReference
 from git.remote import Remote, _T_RemoteName, add_progress, to_progress_instance
 from git.util import (
@@ -1363,11 +1364,13 @@ class Repo:
                         safe_decode(props[b"author-mail"].lstrip(b"<").rstrip(b">")),
                     ),
                     authored_date=int(props[b"author-time"]),
+                    author_tz_offset=utctz_to_altz(props[b"author-tz"].decode("ascii")),
                     committer=Actor(
                         safe_decode(props[b"committer"]),
                         safe_decode(props[b"committer-mail"].lstrip(b"<").rstrip(b">")),
                     ),
                     committed_date=int(props[b"committer-time"]),
+                    committer_tz_offset=utctz_to_altz(props[b"committer-tz"].decode("ascii")),
                 )
                 commits[hexsha] = c
             else:
@@ -1452,9 +1455,11 @@ class Repo:
             author: str
             author_email: str
             author_date: int
+            author_tz_offset: int
             committer: str
             committer_email: str
             committer_date: int
+            committer_tz_offset: int
 
         info: InfoTD = {}
 
@@ -1504,13 +1509,15 @@ class Repo:
                     # committer Tom Preston-Werner
                     # committer-mail <tom@mojombo.com>
                     # committer-time 1192271832
-                    # committer-tz -0700  - IGNORED BY US
+                    # committer-tz -0700
                     role = m.group(0)
                     if role == "author":
                         if firstpart.endswith("-mail"):
                             info["author_email"] = parts[-1]
                         elif firstpart.endswith("-time"):
                             info["author_date"] = int(parts[-1])
+                        elif firstpart.endswith("-tz"):
+                            info["author_tz_offset"] = utctz_to_altz(parts[-1])
                         elif role == firstpart:
                             info["author"] = parts[-1]
                     elif role == "committer":
@@ -1518,6 +1525,8 @@ class Repo:
                             info["committer_email"] = parts[-1]
                         elif firstpart.endswith("-time"):
                             info["committer_date"] = int(parts[-1])
+                        elif firstpart.endswith("-tz"):
+                            info["committer_tz_offset"] = utctz_to_altz(parts[-1])
                         elif role == firstpart:
                             info["committer"] = parts[-1]
                     # END distinguish mail,time,name
@@ -1540,8 +1549,10 @@ class Repo:
                                     hex_to_bin(sha),
                                     author=Actor._from_string(f"{info['author']} {info['author_email']}"),
                                     authored_date=info["author_date"],
+                                    author_tz_offset=info.get("author_tz_offset"),
                                     committer=Actor._from_string(f"{info['committer']} {info['committer_email']}"),
                                     committed_date=info["committer_date"],
+                                    committer_tz_offset=info.get("committer_tz_offset"),
                                 )
                                 commits[sha] = c
                             blames[-1][0] = c
