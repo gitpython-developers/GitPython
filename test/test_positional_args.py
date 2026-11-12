@@ -73,7 +73,9 @@ def test_rename_head_cannot_select_current_branch(repo, tmp_path):
 
 
 @pytest.mark.parametrize("allow_unsafe_options", [False, True])
-@pytest.mark.parametrize("name", ["--force", "--detach", "--ours"])
+@pytest.mark.parametrize(
+    "name", ["-f", "-Bcheckout-target", "--orphan=checkout-target", "--force", "--detach", "--ours", "-", "--"]
+)
 def test_checkout_rejects_option_shaped_branch_names(repo, tmp_path, name, allow_unsafe_options):
     branch = Head(repo, "refs/heads/" + name)
     with mock.patch.object(Git, "_call_process_safe", side_effect=AssertionError("Git must not run")) as run:

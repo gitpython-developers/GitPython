@@ -43,6 +43,30 @@ from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 
+@pytest.mark.parametrize(
+    "branch_name", ["--pathspec-from-file=pathspecs", "-f", "--orphan=checkout-target", "-Bcheckout-target"]
+)
+def test_cloned_head_checkout_rejects_option_shaped_branch_names(branch_name):
+    with fixture_repo("refs.sh", "unsafe-branch", "sha1", branch_name, write=True, subdir="clone") as cloned:
+        branch = cloned.active_branch
+        assert branch.name == branch_name
+        commit = cloned.head.commit
+        path = Path(cloned.working_tree_dir) / "file.txt"
+        content = path.read_bytes()
+        status = cloned.git.status("--porcelain")
+        assert status.startswith(" M file.txt")
+        for allow_unsafe_options in (False, True):
+            with patch.object(Git, "execute", autospec=True, side_effect=Git.execute) as run:
+                with pytest.raises(UnsafeOptionError) as error:
+                    branch.checkout(force=False, allow_unsafe_options=allow_unsafe_options)
+                run.assert_not_called()
+            assert "unmatched-private-content" not in str(error.value)
+            assert cloned.active_branch == branch
+            assert cloned.head.commit == commit
+            assert path.read_bytes() == content
+            assert cloned.git.status("--porcelain") == status
+
+
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 def test_reference_names_preserve_unicode_line_separators(object_format):
     names = [
@@ -657,16 +681,6 @@ class TestRefs(TestBase):
             branch = Head(rw_repo, f"refs/heads/{option_name}={pathspecs}")
             with self.assertRaises(UnsafeOptionError):
                 branch.checkout()
-
-    def test_cloned_head_checkout_rejects_pathspec_from_file(self):
-        with fixture_repo("refs.sh", "unsafe-branch", write=True, subdir="clone") as cloned:
-            branch_name = "--pathspec-from-file=pathspecs"
-            assert cloned.active_branch.name == branch_name
-            for allow_unsafe_options in (False, True):
-                with self.assertRaises(UnsafeOptionError) as error:
-                    cloned.active_branch.checkout(allow_unsafe_options=allow_unsafe_options)
-                assert "unmatched-private-content" not in str(error.exception)
-            assert cloned.active_branch.name == branch_name
 
     @with_rw_repo("HEAD")
     def test_head_reset_rejects_pathspec_from_file(self, rw_repo):

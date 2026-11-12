@@ -279,6 +279,7 @@ class Head(Reference):
         :param allow_unsafe_options:
             Allow unsafe options such as ``--pathspec-from-file`` to be passed to
             :manpage:`git-checkout(1)`.
+            Branch names are validated regardless of this setting.
 
         :param kwargs:
             Additional keyword arguments to be passed to git checkout, e.g.
@@ -289,6 +290,9 @@ class Head(Reference):
             branch has been created.
             If there is no active branch, as the HEAD is now detached, the HEAD
             reference will be returned instead.
+
+        :raise git.exc.UnsafeOptionError:
+            If the branch name starts with a dash or contains NUL, CR, or LF.
 
         :note:
             By default it is only allowed to checkout heads - everything else will leave
