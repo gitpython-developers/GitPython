@@ -61,6 +61,18 @@ def test_native_submodule_configuration_preserves_non_utf8_values():
     assert native == {"module": {"path": "path-\udcfe", "url": "url-\udcfd", "branch": "refs/heads/branch-\udcfc"}}
 
 
+@pytest.mark.parametrize("scenario", ["extra-setting", "header-setting", "key-comment"])
+def test_submodule_configuration_rejects_lines_git_rejects(scenario):
+    with fixture_repo("submodule-rejected-lines.sh", scenario) as repo:
+        with pytest.raises(GitCommandError, match="bad config line"):
+            repo.git.config("list", "--file", ".gitmodules")
+        with pytest.raises(cp.ParsingError):
+            repo.submodules
+        submodule = Submodule(repo, repo.head.commit.tree["module"].binsha, name="module")
+        with pytest.raises(cp.ParsingError):
+            submodule.url
+
+
 @pytest.mark.parametrize("state", ["unborn", "untracked", "detached"])
 @pytest.mark.parametrize("remote", [None, ".", "origin"], ids=["working-tree", "local-origin", "origin"])
 @patch_git_config("protocol.file.allow", "always")

@@ -403,6 +403,15 @@ def _for_each_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     )
 
 
+# The native parser accepts lines Git rejects, such as ``x url = ...`` (GIX-35).
+# Keep only blank and comment lines, bare submodule headers and single settings
+# native; Git parses everything else, including continued values.
+_NATIVE_SUBMODULE_CONFIG_LINE = re.compile(
+    rb'[ \t\r]*(?:[#;].*|\[submodule[ \t]+"(?:[^"\\]|\\.)*"\][ \t\r]*(?:[#;].*)?|[a-z][a-z0-9-]*[ \t]*(?:=.*|\r?))?',
+    re.I,
+)
+
+
 def submodule_config(source: Any) -> Any:
     """Read the fields used by submodule objects from their selected config source."""
     if gix is None:
@@ -417,6 +426,8 @@ def submodule_config(source: Any) -> Any:
         # occurrences and duplicate sections until GIX-12 can preserve their order.
         if b"\0" in data or re.search(rb"\[(?!submodule[ \t])", data, re.I):
             raise _Unsupported("non-submodule configuration sections (GIX-12)")
+        if not all(map(_NATIVE_SUBMODULE_CONFIG_LINE.fullmatch, data.split(b"\n"))):
+            raise _Unsupported("configuration lines Git may reject (GIX-35)")
         modules = gix.ModulesFile.from_bytes(data)
         with modules.names() as cursor:
             names = list(cursor)
