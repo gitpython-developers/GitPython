@@ -314,7 +314,16 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
 def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 3 or args[:2] != ["-z", "--full-tree"]:
         raise _Unsupported("tree options")
-    with repo.find_tree(_oid(repo, args[2])).iter() as entries:
+    oid = _oid(repo, args[2])
+    tree = repo.find_tree(oid)
+    # Native entries keep modes Git canonicalizes and read a 14xxxx gitlink as a
+    # tree (GIX-36); Git lists trees whose entries do not round-trip natively.
+    if repo.with_object_memory().write_object("tree", tree.data) != oid:
+        raise _Unsupported("tree entries Git canonicalizes (GIX-36)")
+    with tree.iter() as entries:
+        if any(entry.mode() not in _ENTRY_KINDS for entry in entries):
+            raise _Unsupported("tree entries Git canonicalizes (GIX-36)")
+    with tree.iter() as entries:
         return b"".join(
             b"%06o %s %s\t%s\0"
             % (

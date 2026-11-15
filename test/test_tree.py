@@ -56,7 +56,19 @@ def test_invalid_tree_does_not_retain_partial_cache(object_format, invalid_posit
                 list(tree)
 
 
-def test_tree_modifier_orders_non_utf8_names_as_git_does():
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("scenario", ["executable", "symlink", "gitlink"])
+def test_tree_entry_modes_match_git(object_format, scenario):
+    with fixture_repo("tree-modes.sh", object_format, scenario) as repo:
+        root = read_only_fixture("tree-modes.sh", object_format, scenario)
+        oid = (root / "tree-id").read_text().strip()
+        metadata, name = (root / "entries").read_text().rstrip("\n").split("\t")
+        mode, kind, entry_oid = metadata.split()
+        assert mode in ("100755", "120000", "160000")
+        tree = Tree(repo, bytes.fromhex(oid), path="")
+        assert [(entry.mode, entry.type, entry.hexsha, entry.path) for entry in tree] == [
+            (int(mode, 8), "submodule" if kind == "commit" else kind, entry_oid, name)
+        ]
     with fixture_repo("tree-byte-order.sh") as repo:
         expected = (read_only_fixture("tree-byte-order.sh") / "order").read_bytes().split(b"\0")[:-1]
         tree = repo.head.commit.tree
