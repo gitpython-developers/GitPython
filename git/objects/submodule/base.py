@@ -630,15 +630,15 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         :param no_checkout:
             If ``True``, and if the repository has to be cloned manually, no checkout
-            will be performed.
+            will be performed. Must be a boolean.
 
             Retained metadata can instead be reconnected without checking out files
             or changing refs. Its URL and any explicit branch must match; ``depth``
             and ``clone_multi_options`` require a new clone and are rejected here.
 
         :param depth:
-            Create a shallow clone with a history truncated to the specified number of
-            commits.
+            Create a shallow clone with a history truncated to the specified positive
+            number of commits.
 
         :param env:
             Optional dictionary containing the desired environment variables.
@@ -666,6 +666,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             Works atomically, such that no change will be done if, for example, the
             repository update fails.
         """
+        if not isinstance(no_checkout, bool):
+            raise TypeError("no_checkout must be a bool")
+        if depth is not None and (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0):
+            raise ValueError("depth must be a positive integer")
         if repo.bare:
             raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
         # END handle bare repos
@@ -725,8 +729,6 @@ class Submodule(IndexObject, TraversableIterableObj):
             if branch is not None:
                 args.extend(("--branch", Git._check_operand(branch, "branch")))
             if depth is not None:
-                if not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0:
-                    raise ValueError("depth must be a positive integer")
                 args.extend(("--depth", str(depth)))
             args.extend(("--", url, str(path)))
             # An explicitly requested local submodule is also supported by clone().
@@ -819,11 +821,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 kwargs["b"] = br.name
             # END setup checkout-branch
 
-            if depth:
-                if isinstance(depth, int):
-                    kwargs["depth"] = depth
-                else:
-                    raise ValueError("depth should be an integer")
+            if depth is not None:
+                kwargs["depth"] = depth
             if clone_multi_options:
                 kwargs["multi_options"] = clone_multi_options
 

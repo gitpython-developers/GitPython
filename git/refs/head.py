@@ -299,6 +299,8 @@ class Head(Reference):
             the HEAD detached which is allowed and possible, but remains a special state
             that some tools might not be able to handle.
         """
+        if not isinstance(force, bool):
+            raise TypeError("force must be a bool")
         if not allow_unsafe_options:
             Git.check_unsafe_options(
                 options=Git._option_candidates([self], kwargs),

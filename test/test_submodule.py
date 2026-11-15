@@ -33,6 +33,34 @@ from test.lib import TestBase, patch_git_config, with_rw_repo, PathLikeMock
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 
+@pytest.mark.parametrize("no_checkout", [None, 0, 1, "", "false", "--bare", b"--bare", ["--bare"], ("--bare",)])
+@pytest.mark.parametrize("allow_unsafe_options", [False, True])
+@pytest.mark.parametrize("positional", [False, True])
+def test_submodule_add_requires_boolean_no_checkout(no_checkout, allow_unsafe_options, positional):
+    with fixture_repo("empty.sh", "sha1") as repo:
+        for add, args in (
+            (Submodule.add, (repo, "module", "module", "source", None)),
+            (repo.create_submodule, ("module", "module", "source", None)),
+        ):
+            with mock.patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as run:
+                with pytest.raises(TypeError, match="no_checkout must be a bool"):
+                    if positional:
+                        add(*args, no_checkout, allow_unsafe_options=allow_unsafe_options)
+                    else:
+                        add(*args, no_checkout=no_checkout, allow_unsafe_options=allow_unsafe_options)
+                run.assert_not_called()
+
+
+@pytest.mark.parametrize("depth", [True, False, 0, -1, 1.5, "1", [1]])
+@pytest.mark.parametrize("no_checkout", [False, True])
+def test_submodule_add_requires_positive_integer_depth(depth, no_checkout):
+    with fixture_repo("empty.sh", "sha1") as repo:
+        with mock.patch.object(Git, "execute", side_effect=AssertionError("Git must not run")) as run:
+            with pytest.raises(ValueError, match="depth must be a positive integer"):
+                repo.create_submodule("module", "module", "source", no_checkout=no_checkout, depth=depth)
+            run.assert_not_called()
+
+
 @pytest.mark.parametrize("scenario, name", [("ascii-name", "module"), ("byte-name", "module-\udcff")])
 def test_submodule_configuration_preserves_non_utf8_bytes(scenario, name):
     with fixture_repo("submodule-bytes.sh", scenario) as repo:
