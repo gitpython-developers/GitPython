@@ -240,6 +240,12 @@ def object_metadata(command: Any, oid: str, kind: str) -> Any:
                 "committer": obj.committer(),
             }
         else:
+            # Gix omits the line feed before a signature, so a body starting with the
+            # signature decodes like one starting with an empty line, and adds a line
+            # feed to a body of only line feeds (GIX-46). An empty body decodes as one
+            # line feed, which TagObject's final line-feed trim already removes.
+            if data.signature is not None or (len(data.message) > 1 and not data.message.strip(b"\n")):
+                raise _Unsupported("tag message boundaries (GIX-46)")
             result = {
                 "target": data.target.decode("ascii"),
                 "target_kind": data.target_kind,

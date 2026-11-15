@@ -195,6 +195,31 @@ def test_tag_without_tagger_initializes_all_metadata(object_format, message):
 
 
 @pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize(
+    "variant, body",
+    [
+        pytest.param(variant, body, id=variant)
+        for variant, body in (
+            ("pgp", "release\n-----BEGIN PGP SIGNATURE-----\nc2ln\n-----END PGP SIGNATURE-----\n"),
+            ("ssh", "release\n-----BEGIN SSH SIGNATURE-----\nc2ln\n-----END SSH SIGNATURE-----\n"),
+            ("empty-line", "\n-----BEGIN PGP SIGNATURE-----\nc2ln\n-----END PGP SIGNATURE-----\n"),
+            ("line-feeds", "\n\n"),
+        )
+    ],
+)
+def test_tag_message_matches_git(object_format, variant, body):
+    with fixture_repo("refs.sh", "tag-message", object_format, variant) as repo:
+        oid = (Path(repo.working_tree_dir).parent / "tag-id").read_text().strip()
+        raw = repo.git.cat_file("tag", oid, stdout_as_string=False, strip_newline_in_stdout=False)
+        assert raw.partition(b"\n\n")[2] == body.encode()
+        before = _backend.statistics()
+        assert TagObject(repo, bytes.fromhex(oid)).message == body[:-1]
+        if _backend.name == "gix":
+            key = ("tag.decode", "CLI: tag message boundaries (GIX-46)")
+            assert _backend.statistics().get(key, 0) == before.get(key, 0) + 1
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
 def test_head_rename_retains_literal_prefixed_branch_name(object_format):
     with fixture_repo("refs.sh", "rename-prefixed", object_format, write=True) as repo:
         original_topic = repo.heads.topic.commit

@@ -30,6 +30,19 @@ case "$1" in
             fi
         } | git hash-object -w -t tag --literally --stdin >../tag-id
         ;;
+    tag-message)
+        {
+            printf 'object %s\ntype commit\ntag v1\n' "$(git rev-parse HEAD)"
+            printf 'tagger T <t@example.com> 1700000000 +0000\n\n'
+            case "$3" in
+                pgp) printf 'release\n-----BEGIN PGP SIGNATURE-----\nc2ln\n-----END PGP SIGNATURE-----\n' ;;
+                ssh) printf 'release\n-----BEGIN SSH SIGNATURE-----\nc2ln\n-----END SSH SIGNATURE-----\n' ;;
+                empty-line) printf '\n-----BEGIN PGP SIGNATURE-----\nc2ln\n-----END PGP SIGNATURE-----\n' ;;
+                line-feeds) printf '\n\n' ;;
+                *) exit 1 ;;
+            esac
+        } | git hash-object -w -t tag --literally --stdin >../tag-id
+        ;;
     rename-prefixed)
         git branch topic
         printf 'second\n' >> file.txt
