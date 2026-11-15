@@ -43,6 +43,26 @@ from test.lib import PathLikeMock, TestBase, requires_symlinks, with_rw_repo
 from test.lib.fixtures import fixture_repo, read_only_fixture, writable_fixture
 
 
+@pytest.mark.parametrize("force", [None, 0, 1, "", "false", "--detach", b"--detach", ["--detach"], ("--detach",)])
+@pytest.mark.parametrize("allow_unsafe_options", [False, True])
+@pytest.mark.parametrize("positional", [False, True])
+def test_head_checkout_requires_boolean_force(force, allow_unsafe_options, positional):
+    with fixture_repo("refs.sh", "rename-prefixed") as repo:
+        branch = repo.active_branch
+        for split_single_char_options in (False, True):
+            with patch.object(Git, "_call_process_safe", side_effect=AssertionError("Git must not run")) as run:
+                with pytest.raises(TypeError, match="force must be a bool"):
+                    options = {
+                        "allow_unsafe_options": allow_unsafe_options,
+                        "split_single_char_options": split_single_char_options,
+                    }
+                    if positional:
+                        branch.checkout(force, **options)
+                    else:
+                        branch.checkout(force=force, **options)
+                run.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "branch_name", ["--pathspec-from-file=pathspecs", "-f", "--orphan=checkout-target", "-Bcheckout-target"]
 )
