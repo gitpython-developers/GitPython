@@ -166,6 +166,9 @@ class Repo:
         "--separate-git-dir",
         # Fetches from an additional caller-controlled URI:
         "--bundle-uri",
+        # Reads objects from a caller-controlled local repository:
+        "--reference",
+        "--reference-if-able",
     ]
     """Options to :manpage:`git-clone(1)` that permit unsafe command execution or I/O.
 
