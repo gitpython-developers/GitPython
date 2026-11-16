@@ -8,6 +8,13 @@ case "$1" in
         git init --initial-branch=master source
         git -C source commit --allow-empty -m initial
         ;;
+    test_clone_reference_options_allowed)
+        git init --initial-branch=master source
+        printf 'content\n' > source/file
+        git -C source add file
+        git -C source commit -m initial
+        git clone --no-hardlinks source 'reference repo'
+        ;;
     source)
         git init --initial-branch=master repo
         ;;

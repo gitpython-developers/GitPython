@@ -5,6 +5,7 @@ import os
 import os.path as osp
 import pathlib
 import re
+import shlex
 import sys
 from pathlib import Path
 from unittest import mock, skip
@@ -69,6 +70,29 @@ def test_clone_clears_ambient_source_storage_environment(tmp_path, clone_method)
     assert cloned.head.commit == created
     cloned.close()
     source.close()
+
+
+@pytest.mark.parametrize("clone_method", ["clone", "clone_from"])
+@pytest.mark.parametrize("option", ["reference", "reference-if-able", "reference-if-ab"])
+@pytest.mark.parametrize("option_style", ["kwargs", "multi_equals", "multi_split"])
+def test_clone_reference_options_allowed(tmp_path, clone_method, option, option_style):
+    with Repo(tmp_path / "source") as source, Repo(tmp_path / "reference repo") as reference:
+        if option_style == "kwargs":
+            options = {option.replace("-", "_"): reference.git_dir}
+        else:
+            separator = "=" if option_style == "multi_equals" else " "
+            options = {"multi_options": [f"--{option}{separator}{shlex.quote(reference.git_dir)}"]}
+        destination = tmp_path / "clone"
+        options.update(allow_unsafe_options=True, no_local=True)
+        if clone_method == "clone":
+            cloned = source.clone(destination, **options)
+        else:
+            cloned = Repo.clone_from(source.git_dir, destination, **options)
+        with cloned:
+            assert cloned.head.commit == source.head.commit
+            assert cloned.head.commit.tree["file"].data_stream.read() == b"content\n"
+            alternates = Path(cloned.git_dir, "objects", "info", "alternates").read_text().strip()
+            assert Path(alternates).resolve() == Path(reference.git_dir, "objects").resolve()
 
 
 class TestClone(TestBase):
@@ -184,6 +208,10 @@ class TestClone(TestBase):
                 f"--template={tmp_dir}",
                 f"--bundle-uri=file://{tmp_dir}",
                 f"--separate-git-dir={tmp_dir / 'git-dir'}",
+                f"--reference={tmp_dir}",
+                f"--reference-if-able={tmp_dir}",
+                f"--reference-if-ab={tmp_dir}",
+                f"--ref={tmp_dir}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -201,6 +229,10 @@ class TestClone(TestBase):
                 {"template": tmp_dir},
                 {"bundle_uri": f"file://{tmp_dir}"},
                 {"separate_git_dir": tmp_dir / "git-dir"},
+                {"reference": tmp_dir},
+                {"reference_if_able": tmp_dir},
+                {"reference_if_ab": tmp_dir},
+                {"ref": tmp_dir},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -316,6 +348,10 @@ class TestClone(TestBase):
                 "-cprotocol.ext.allow=always",
                 "-vcprotocol.ext.allow=always",
                 f"--separate-git-dir={tmp_dir / 'git-dir'}",
+                f"--reference={tmp_dir}",
+                f"--reference-if-able={tmp_dir}",
+                f"--reference-if-ab={tmp_dir}",
+                f"--ref={tmp_dir}",
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
@@ -329,6 +365,10 @@ class TestClone(TestBase):
                 {"config": "protocol.ext.allow=always"},
                 {"c": "protocol.ext.allow=always"},
                 {"separate_git_dir": tmp_dir / "git-dir"},
+                {"reference": tmp_dir},
+                {"reference_if_able": tmp_dir},
+                {"reference_if_ab": tmp_dir},
+                {"ref": tmp_dir},
             ]
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
