@@ -410,10 +410,12 @@ class FetchInfo(IterableObj):
                     continue
                 if cls._display_ref(local) == destination:
                     candidates.add(local)
-            if destination.startswith("refs/"):
-                candidates = {destination}
             if not candidates:
                 candidates = {path for path in refs if cls._display_ref(path) == destination}
+            # Git shortens refs/tags/refs/heads/main to refs/heads/main, so a
+            # displayed name under refs/ is only a full name if nothing shortens to it.
+            if not candidates and destination.startswith("refs/"):
+                candidates = {destination}
             if len(candidates) > 1 and ("tag" in operation or control == "t"):
                 candidates = {path for path in candidates if path.startswith("refs/tags/")}
             if len(candidates) != 1:

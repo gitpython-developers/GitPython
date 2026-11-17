@@ -53,6 +53,17 @@ def test_fetch_and_pull_without_reading_fetch_head(remote_fixture):
     clone.close()
 
 
+@pytest.mark.parametrize("remote_fixture", [("tag-named-like-branch",)], indirect=True)
+def test_fetch_resolves_tag_named_like_a_full_branch_ref(remote_fixture):
+    # Git displays refs/tags/refs/heads/main as refs/heads/main.
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        branch = clone.heads.main.commit
+        [info] = [info for info in clone.remote().fetch() if info.flags & FetchInfo.NEW_TAG]
+        assert info.ref.path == "refs/tags/refs/heads/main"
+        assert info.commit == source.head.commit
+        assert clone.heads.main.commit == branch
+
+
 @pytest.mark.parametrize("remote_fixture", [("quoted",)], indirect=True)
 def test_quoted_remote_and_submodule_names(remote_fixture):
     tmp_path = remote_fixture

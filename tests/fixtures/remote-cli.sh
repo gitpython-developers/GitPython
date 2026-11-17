@@ -9,6 +9,12 @@ case "$1" in
         git -C clone remote set-url origin ../source
         git -C source commit --allow-empty -m second
         ;;
+    tag-named-like-branch)
+        git clone source clone
+        git -C clone remote set-url origin ../source
+        git -C source commit --allow-empty -m second
+        git -C source tag refs/heads/main
+        ;;
     quoted)
         git init --initial-branch=main parent
         ;;
