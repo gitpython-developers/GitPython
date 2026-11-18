@@ -930,7 +930,7 @@ def tree_diff(repository: Any, left: Any, right: Any, paths: Any, patch: bool, o
                 ):
                     raise _Unsupported("inexact or ambiguous rename detection (GIX-11)")
                 # Exact rewrites need no blob filters, textconv, or external diff drivers.
-                diff_options = diff_options.track_rewrites(gix.Rewrites(percentage=None))
+                diff_options = diff_options.track_rewrites(gix.Rewrites(percentage=None, track_empty=True))
                 changes = repo.diff_tree_to_tree(before, after, diff_options)
         result: DiffIndex[Diff] = DiffIndex()
         for change in changes:

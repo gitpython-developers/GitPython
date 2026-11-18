@@ -624,6 +624,18 @@ class TestDiff(TestBase):
             self.assertEqual("file_a.txt", diff.rename_from)
             self.assertEqual("file_b.txt", diff.rename_to)
 
+    def test_rename_of_empty_file(self):
+        # `git diff -M` pairs empty files like any other exact rename.
+        with fixture_repo("diff.sh", "empty-rename") as repo:
+            before, after = repo.commit("HEAD~1"), repo.commit("HEAD")
+            for diffs, paths in (
+                (before.diff(after), ("empty_a", "empty_b")),
+                (before.diff(after, R=True), ("empty_b", "empty_a")),
+            ):
+                (diff,) = diffs
+                self.assertTrue(diff.renamed_file)
+                self.assertEqual(paths, (diff.rename_from, diff.rename_to))
+
     def test_diff_patch_with_external_engine(self):
         with fixture_repo("diff.sh", "external") as repo:
             head_against_head = repo.head.commit.diff("HEAD^", create_patch=True)
