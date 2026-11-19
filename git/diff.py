@@ -413,10 +413,12 @@ class Diff:
         the version in the index or tree, and hence has been modified.
     """
 
-    # Precompiled regex.
+    # Precompiled regex. It starts with the literal and checks the line start with a
+    # lookbehind, so the regex engine can skip to each "diff --git" instead of trying
+    # the pattern at every position of the patch.
     re_header = re.compile(
         rb"""
-                                ^diff[ ]--git
+                                diff[ ]--git(?<=^diff[ ]--git)
                                     [ ](?P<header_names>(?P<a_path_fallback>"?[ab]/.+?"?)
                                         [ ](?P<b_path_fallback>"?[ab]/.+?"?))\n
                                 (?:^old[ ]mode[ ](?P<old_mode>\d+)\n

@@ -336,6 +336,28 @@ class TestDiff(TestBase):
         Diff._handle_diff_line(b"", None, res)
         self.assertEqual(res, [])
 
+    def test_patch_headers_start_only_at_line_starts(self):
+        blob_id, null_id = b"1" * 40, b"0" * 40
+        output = StringProcessAdapter(
+            b"diff --git a/fix.patch b/fix.patch\n"
+            b"new file mode 100644\n"
+            b"index " + null_id + b".." + blob_id + b"\n"
+            b"--- /dev/null\n"
+            b"+++ b/fix.patch\n"
+            b"@@ -0,0 +1,2 @@\n"
+            b"+diff --git a/x b/x\n"
+            b"+see diff --git a/y b/y\n"
+            b"diff --git a/z b/z\n"
+            b"deleted file mode 100644\n"
+            b"index " + blob_id + b".." + null_id + b"\n"
+        )
+        diffs = Diff._index_from_patch_format(None, output)
+        self.assertEqual(
+            [(d.a_path, d.b_path, d.new_file, d.deleted_file) for d in diffs],
+            [(None, "fix.patch", True, False), ("z", "z", False, True)],
+        )
+        self.assertEqual(diffs[0].diff, b"@@ -0,0 +1,2 @@\n+diff --git a/x b/x\n+see diff --git a/y b/y\n")
+
     def test_diff_initial_commit(self):
         initial_commit = self.rorepo.commit("root")
 
