@@ -58,15 +58,19 @@ def test_adding_a_file_does_not_keep_the_repository_alive():
     # Repo.close() does not force a garbage collection, so staging must not leave a
     # reference cycle that delays releasing a dropped repository's Git processes.
     with fixture_repo("index.sh", "file", "testfile.txt", "content of testfile", write=True) as owner:
+        gc_was_enabled = gc.isenabled()
         gc.disable()
         try:
-            repo = Repo(owner.working_dir)
-            repo.index.add(["testfile.txt"])
-            dropped = weakref.ref(repo)
-            del repo
-            assert dropped() is None
+            with mock.patch.object(gc, "collect") as collect:
+                repo = Repo(owner.working_dir)
+                repo.index.add(["testfile.txt"])
+                dropped = weakref.ref(repo)
+                del repo
+                assert dropped() is None
+                collect.assert_not_called()
         finally:
-            gc.enable()
+            if gc_was_enabled:
+                gc.enable()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows symlink targets are Unicode paths")
