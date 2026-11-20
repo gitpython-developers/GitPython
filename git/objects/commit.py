@@ -612,6 +612,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
             stream.seek(0)
             return repo.git._call_process_safe(
                 "interpret_trailers",
+                # The input is a commit message, not a patch e-mail. Git's own commit
+                # trailer handling (`%(trailers)`, `git commit --trailer`) does not end
+                # the message at a `---` line either.
+                "--no-divider",
                 *trailer_args,
                 istream=stream,
                 stdout_as_string=False,

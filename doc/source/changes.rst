@@ -97,6 +97,11 @@ API changes
   subsequent and empty commits, including the Gix backend's filename
   quoting fallback. File keys contain the actual names, unquoting Git's C-style
   escapes and preserving undecodable bytes with ``surrogateescape``.
+* ``Commit.trailers_list``, ``Commit.trailers_dict`` and the ``trailers`` argument
+  of ``Commit.create_from_tree()`` and ``IndexFile.commit()`` no longer treat a
+  ``---`` line as the end of the message, matching Git's ``%(trailers)`` and
+  ``git commit --trailer``. Trailers below such a line are reported, and added
+  trailers are placed at the end of the message.
 * Imports from a source checkout now read ``git.__version__`` from ``VERSION``.
   Built wheels and source distributions continue to carry their stamped release
   version.
