@@ -225,6 +225,13 @@ API changes
   ``os.path.expandvars`` if wanted; initial ``~`` expansion remains.
   ``HIDE_WINDOWS_KNOWN_ERRORS`` and ``HIDE_WINDOWS_FREEZE_ERRORS`` are removed.
   ``rmtree`` propagates filesystem errors rather than raising ``SkipTest``.
+* ``Repo.close()``, and therefore ``with Repo(...)`` and dropping a ``Repo``, no
+  longer forces two full garbage collections on Windows. It still stops the
+  repository's persistent Git processes. ``IndexFile.add()`` no longer leaves a
+  reference cycle that kept the index and repository alive until the next
+  collection. Close files and repositories you opened yourself before removing a
+  repository on Windows; call ``gc.collect()`` only if your own objects are
+  reachable solely through reference cycles.
 
 3.2.1
 =====

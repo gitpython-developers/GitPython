@@ -7,7 +7,6 @@ from __future__ import annotations
 
 __all__ = ["Repo"]
 
-import gc
 from io import BytesIO
 import logging
 import os
@@ -529,15 +528,7 @@ class Repo:
         """
         if self.git:
             self.git.clear_cache()
-            # Tempfiles objects on Windows are holding references to open files until
-            # they are collected by the garbage collector, thus preventing deletion.
-            # TODO: Find these references and ensure they are closed and deleted
-            # synchronously rather than forcing a gc collection.
-            if sys.platform == "win32":
-                gc.collect()
             gitdb.util.mman.collect()
-            if sys.platform == "win32":
-                gc.collect()
 
     def __eq__(self, rhs: object) -> bool:
         if isinstance(rhs, Repo):

@@ -464,7 +464,12 @@ class IndexFile(LazyMixin, git_diff.Diffable):
         """
 
         def raise_exc(e: Exception) -> NoReturn:
-            raise e
+            try:
+                raise e
+            finally:
+                # Break the exception -> traceback -> frame -> exception cycle, which
+                # would otherwise keep this index and its repository alive.
+                del e
 
         r = str(self.repo.working_tree_dir)
         rs = r + os.sep

@@ -4,10 +4,12 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import gc
 import logging
 import os
 import os.path as osp
 import sys
+import weakref
 from itertools import product
 from pathlib import Path
 from stat import S_ISLNK, ST_MODE
@@ -50,6 +52,25 @@ def test_staged_legacy_filename_and_blob_bytes():
             b"// vers\xe3o original\n",
             b"// vers\xe3o nova\n",
         }
+
+
+def test_adding_a_file_does_not_keep_the_repository_alive():
+    # Repo.close() does not force a garbage collection, so staging must not leave a
+    # reference cycle that delays releasing a dropped repository's Git processes.
+    with fixture_repo("index.sh", "file", "testfile.txt", "content of testfile", write=True) as owner:
+        gc_was_enabled = gc.isenabled()
+        gc.disable()
+        try:
+            with mock.patch.object(gc, "collect") as collect:
+                repo = Repo(owner.working_dir)
+                repo.index.add(["testfile.txt"])
+                dropped = weakref.ref(repo)
+                del repo
+                assert dropped() is None
+                collect.assert_not_called()
+        finally:
+            if gc_was_enabled:
+                gc.enable()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows symlink targets are Unicode paths")

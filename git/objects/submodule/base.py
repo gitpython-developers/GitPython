@@ -3,7 +3,6 @@
 
 __all__ = ["Submodule", "UpdateProgress"]
 
-import gc
 import logging
 import ntpath
 import os
@@ -1553,8 +1552,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if not dry_run:
                     self._clear_cache()
                     wtd = mod.working_tree_dir
-                    del mod  # Release file-handles (Windows).
-                    gc.collect()
+                    mod.close()
                     rmtree(str(wtd))
                 # END delete tree if possible
             # END handle force
