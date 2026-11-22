@@ -232,6 +232,8 @@ API changes
   collection. Close files and repositories you opened yourself before removing a
   repository on Windows; call ``gc.collect()`` only if your own objects are
   reachable solely through reference cycles.
+* ``FetchInfo.note`` carries Git's note for the reference, such as
+  ``(forced update)`` or ``(would clobber existing tag)``. It was always empty.
 
 3.2.1
 =====

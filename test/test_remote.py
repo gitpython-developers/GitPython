@@ -229,7 +229,7 @@ class TestRemote(TestBase):
         mkey = "%s/%s" % (remote, "master")
         master_info = res[mkey]
         self.assertTrue(master_info.flags & FetchInfo.FORCED_UPDATE)
-        self.assertIsNotNone(master_info.note)
+        self.assertEqual(master_info.note, "(forced update)")
 
         # Normal fast forward - set head back to previous one.
         rhead.commit = remote_commit
@@ -573,6 +573,14 @@ class TestRemote(TestBase):
             self.assertIsInstance(info.ref, ref_type)
             self.assertEqual(info.remote_ref_path, source)
             self.assertTrue(info.flags & FetchInfo.NEW_HEAD)
+            self.assertEqual(info.note, "")
+        info = FetchInfo._from_line(
+            self.rorepo,
+            "! [rejected]        tag -> subdir/tag  (would clobber existing tag)",
+            ["refs/tags/tag:refs/tags/subdir/tag"],
+        )
+        self.assertTrue(info.flags & FetchInfo.REJECTED)
+        self.assertEqual(info.note, "(would clobber existing tag)")
         with self.assertRaises(ValueError):
             FetchInfo._from_line(self.rorepo, "= [up to date] master -> ambiguous")
 
