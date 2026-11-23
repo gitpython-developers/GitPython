@@ -476,6 +476,21 @@ class TestCommit(TestCommitSerialization):
             self.assertEqual(first_parent, c.parents[0])
         # END for each
 
+    def test_iter_parents_when_self_is_filtered_out(self):
+        with fixture_repo("commit.sh", "iter-parents") as repo:
+            tip, merge = repo.commit("B"), repo.commit("M")
+            a1, a2 = repo.commit("A1"), repo.commit("A2")
+            for skip in (0, 1):
+                self.assertEqual(list(tip.iter_parents(paths="a", skip=skip)), [a2, a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", skip=2)), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", max_count=1)), [a2])
+            self.assertEqual(list(tip.iter_parents(paths="a", reverse=True)), [a1, a2])
+            self.assertEqual(list(merge.iter_parents(paths="a", first_parent=True)), [a2, a1])
+            self.assertEqual(list(merge.iter_parents(grep="^A")), [a2, a1])
+            # Commits that do match keep the old meaning of skip.
+            self.assertEqual(list(a2.iter_parents(paths="a")), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="b")), [])
+
     def test_name_rev(self):
         name_rev = self.rorepo.head.commit.name_rev
         assert isinstance(name_rev, str)

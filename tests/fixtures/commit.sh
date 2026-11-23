@@ -33,6 +33,16 @@ case "$1" in
         git tag removed "$commit"
         git update-ref refs/heads/master "$commit"
         ;;
+    iter-parents)
+        # A merge whose other side and own commit both leave `a` alone.
+        echo 1 > a && git add a && git commit -m A1 && git tag A1
+        echo 2 > a && git add a && git commit -m A2 && git tag A2
+        git checkout -b side A1
+        echo s > s && git add s && git commit -m S
+        git checkout master
+        git merge --no-ff -m M side && git tag M
+        echo x > b && git add b && git commit -m B && git tag B
+        ;;
     ambiguous)
         touch master
         git add master

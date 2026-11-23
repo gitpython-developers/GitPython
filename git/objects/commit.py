@@ -489,6 +489,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
         skip = kwargs.get("skip", 1)
         if skip == 0:  # skip ourselves
             skip = 1
+        if paths or kwargs.keys() - {"skip", "max_count"}:
+            # rev-list leaves us out when we don't match the paths or filters, so there
+            # is nothing of ours to skip.
+            probe = {**kwargs, "skip": 0, "max_count": 1}
+            if next(self.iter_items(self.repo, self, paths, **probe), None) != self:
+                skip -= 1
         kwargs["skip"] = skip
 
         return self.iter_items(self.repo, self, paths, **kwargs)
