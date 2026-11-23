@@ -1944,6 +1944,54 @@ class TestSubmodule(TestBase):
         assert osp.isfile(osp.join(submodule.abspath, "new-file"))
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_update_to_latest_revision_follows_superproject_branch(self):
+        for reread in (False, True):
+            with self.subTest(reread=reread):
+                # The submodule URL points to this private fixture's source.
+                rwdir = self._fixture("branch-dot", execute=True)
+                source_repo = git.Repo(rwdir / "source")
+                parent_repo = git.Repo(rwdir / "clone")
+                submodule = parent_repo.submodules[0]
+                if reread:
+                    # Re-reads the branch from .gitmodules as ".", not "refs/heads/.".
+                    submodule.set_parent_commit(parent_repo.head.commit)
+
+                submodule.update(to_latest_revision=True)
+
+                assert submodule.module().active_branch.name == "dev"
+                assert submodule.module().head.commit == source_repo.heads.dev.commit
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_update_to_latest_revision_after_reread_follows_named_branch(self):
+        rwdir = self._fixture("branch-dot", execute=True)
+        source_repo = git.Repo(rwdir / "source")
+        parent_repo = git.Repo(rwdir / "clone")
+        parent_repo.git.config("-f", ".gitmodules", "submodule.module.branch", "dev")
+        parent_repo.index.add([".gitmodules"])
+        parent_repo.index.commit("Track dev", skip_hooks=True)
+        submodule = parent_repo.submodules[0]
+        # Re-reads the branch from .gitmodules as "dev", not "refs/heads/dev".
+        submodule.set_parent_commit(parent_repo.head.commit)
+
+        submodule.update(to_latest_revision=True)
+
+        assert submodule.module().active_branch.name == "dev"
+        assert submodule.module().head.commit == source_repo.heads.dev.commit
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_update_branch_dot_with_detached_superproject_warns(self):
+        rwdir = self._fixture("branch-dot", execute=True)
+        parent_repo = git.Repo(rwdir / "clone")
+        parent_repo.head.set_reference(parent_repo.head.commit)
+        submodule = parent_repo.submodules[0]
+
+        # git refuses here too: there is no superproject branch to follow.
+        with self.assertLogs("git.objects.submodule.base", "WARNING") as logs:
+            submodule.update(to_latest_revision=True)
+
+        assert any("Failed to checkout tracking branch refs/heads/." in line for line in logs.output)
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_fetches_new_gitlink_commit(self):
         rwdir = self._fixture("deinit-gitlink", execute=True)
         source_repo = git.Repo(rwdir / "source")

@@ -46,6 +46,21 @@ case "$scenario" in
             deinit-nonempty) printf '%s' 'user content' > parent/module/file ;;
         esac
         ;;
+    branch-dot)
+        git init -q -b master source
+        git -C source commit --allow-empty -qm initial
+        git -C source branch dev
+        git -C source commit --allow-empty -qm 'Advance master'
+        git -C source checkout -q dev
+        git -C source commit --allow-empty -qm 'Advance dev'
+        git -C source checkout -q master
+        source="$root/source"
+        add_module module module
+        git -C parent config -f .gitmodules submodule.module.branch .
+        git -C parent commit -qam 'Track the superproject branch'
+        git -C parent branch dev
+        git clone -q -b dev parent clone
+        ;;
     add-empty) git init -q -b master empty-repo ;;
     relative)
         git init -q -b master module

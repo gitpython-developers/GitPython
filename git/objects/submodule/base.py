@@ -1097,10 +1097,14 @@ class Submodule(IndexObject, TraversableIterableObj):
 
                     if not dry_run:
                         # See whether we have a valid branch to check out.
+                        branch_path = git.Head.to_full_path(self.branch_path)
+                        # gitmodules(5): branch "." names the superproject's current branch.
+                        if branch_path == git.Head.to_full_path(".") and not self.repo.head.is_detached:
+                            branch_path = self.repo.head.reference.path
                         try:
                             mrepo = cast("Repo", mrepo)
-                            remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
-                            local_branch = mkhead(mrepo, self.branch_path)
+                            remote_branch = find_first_remote_branch(mrepo.remotes, git.Head(mrepo, branch_path).name)
+                            local_branch = mkhead(mrepo, branch_path)
                             local_branch.set_object(remote_branch.commit)
                             mrepo.head.set_reference(
                                 local_branch,
@@ -1108,7 +1112,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                             )
                             mrepo.head.reference.set_tracking_branch(remote_branch)
                         except (IndexError, InvalidGitRepositoryError):
-                            _logger.warning("Failed to checkout tracking branch %s", self.branch_path)
+                            _logger.warning("Failed to checkout tracking branch %s", branch_path)
 
                         with self.repo.config_writer() as writer:
                             writer.set_value(sm_section(self.name), "url", self.url)
