@@ -151,6 +151,23 @@ class TestDiff(TestBase):
         self.assertEqual(diff.b_path, "test2.txt")
         self.assertEqual(len(list(diffs.iter_change_type("C"))), 1)
 
+    def test_diff_with_dissimilarity_index(self):
+        # `git diff -B` writes "dissimilarity index" for a rewritten file, between the
+        # mode lines and the index line.
+        output = StringProcessAdapter(fixture("diff_dissimilarity_mode"))
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
+        self._assert_diff_format(diffs)
+
+        self.assertEqual(2, len(diffs))
+        for diff, (a_mode, b_mode) in zip(diffs, ((0o100644, 0o100755), (0o100644, 0o100644))):
+            self.assertEqual(diff.a_mode, a_mode)
+            self.assertEqual(diff.b_mode, b_mode)
+            self.assertEqual(diff.a_blob.hexsha, "6d50bddc95c032358a4d93f18a5efcc04eec2d4b")
+            self.assertEqual(diff.b_blob.hexsha, "ec4c9338a05077382eaf246acce3c01704b0e7b7")
+            self.assertTrue(diff.diff.startswith(b"@@ -1,5 +1,5 @@"))
+        self.assertEqual(diffs[0].a_path, "changed-mode.txt")
+        self.assertEqual(diffs[1].a_path, "same-mode.txt")
+
     def test_diff_with_change_in_type(self):
         output = StringProcessAdapter(fixture("diff_change_in_type"))
         diffs = Diff._index_from_patch_format(self.rorepo, output)

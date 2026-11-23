@@ -431,6 +431,7 @@ class Diff:
                                 (?:^similarity[ ]index[ ]\d+%\n
                                    ^copy[ ]from[ ](?P<copied_from_name>.*)\n
                                    ^copy[ ]to[ ](?P<copied_file_name>.*)(?:\n|$))?
+                                (?:^dissimilarity[ ]index[ ]\d+%(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
                                 (?:^---[ ](?P<a_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
