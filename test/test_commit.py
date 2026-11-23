@@ -483,6 +483,8 @@ class TestCommit(TestCommitSerialization):
             for skip in (0, 1):
                 self.assertEqual(list(tip.iter_parents(paths="a", skip=skip)), [a2, a1])
             self.assertEqual(list(tip.iter_parents(paths="a", skip=2)), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", skip="2")), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", skip=None)), [a2, a1])
             self.assertEqual(list(tip.iter_parents(paths="a", max_count=1)), [a2])
             self.assertEqual(list(tip.iter_parents(paths="a", reverse=True)), [a1, a2])
             self.assertEqual(list(merge.iter_parents(paths="a", first_parent=True)), [a2, a1])
