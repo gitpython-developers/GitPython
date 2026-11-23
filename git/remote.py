@@ -814,6 +814,9 @@ class Remote(LazyMixin, IterableObj):
                 in_submodule = True
             if in_submodule:
                 continue
+            # --prune lists each ref it deleted; there is no ref left to report.
+            if line[3:].startswith("[deleted]"):
+                continue
             for cmd in cmds:
                 if len(line) > 1 and line[0] == " " and line[1] == cmd:
                     fetch_info_lines.append(line)
