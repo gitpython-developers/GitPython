@@ -95,9 +95,16 @@ and cloned using::
 
 	$ git clone https://github.com/gitpython-developers/GitPython git-python
 
-Finally verify the installation by running unit tests::
+To run the test suite, change into the checkout and install the test dependencies.
+The tests require Python 3.11 or later, Git 2.52 or later, and Bash. Select a
+backend before running pytest::
 
-    $ python -m unittest
+    $ cd git-python
+    $ python -m pip install -e ".[test]"
+    $ GIT_PYTHON_BACKEND=cli python -m pytest
+
+See `CONTRIBUTING.md <https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md>`_
+for more information about running and contributing tests.
 
 Questions and Answers
 =====================
