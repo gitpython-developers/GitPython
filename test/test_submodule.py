@@ -2225,6 +2225,31 @@ class TestSubmodule(TestBase):
         with git.Repo(self._fixture("list-valid", write=False) / "parent") as repo:
             assert len(repo.submodules) == 0
 
+    @patch_git_config("protocol.file.allow", "always")
+    def test_reread_branch_matches_iter_items(self):
+        rwdir = self._fixture("module")
+        with git.Repo(rwdir / "parent") as repo:
+            for branch in ("1.10", "2", "true", "dev", "refs/heads/dev", None):
+                with self.subTest(branch=branch):
+                    if branch is None:
+                        repo.git.config("-f", ".gitmodules", "--unset", "submodule.module.branch")
+                        with open(rwdir / "parent" / ".gitmodules", "a") as gitmodules:
+                            gitmodules.write("\tbranch\n")
+                    else:
+                        repo.git.config("-f", ".gitmodules", "submodule.module.branch", branch)
+                    repo.index.add([".gitmodules"])
+                    repo.index.commit("Track %s" % branch, skip_hooks=True)
+                    expected = git.Head.to_full_path(Submodule.k_head_default if branch is None else branch)
+
+                    submodule = repo.submodules[0]
+                    assert submodule.branch_path == expected
+                    # Both clear the cache, so the branch is read from .gitmodules again.
+                    submodule.set_parent_commit(repo.head.commit)
+                    assert submodule.branch_path == expected
+                    assert submodule.branch_name == git.Head(repo, expected).name
+                    submodule._clear_cache()
+                    assert submodule.branch_path == expected
+
     @pytest.mark.xfail(
         sys.platform == "win32",
         reason=(

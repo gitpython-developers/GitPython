@@ -179,11 +179,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             if native is not NotImplemented and self.name in native:
                 values = native[self.name]
                 self.path, self._url = values["path"], values["url"]
-                self._branch_path = (
-                    GitConfigParser._string_to_value(values[self.k_head_option])
-                    if self.k_head_option in values
-                    else git.Head.to_full_path(self.k_head_default)
-                )
+                self._branch_path = git.Head.to_full_path(values.get(self.k_head_option, self.k_head_default))
                 return
             # Default submodule values.
             try:
@@ -197,7 +193,9 @@ class Submodule(IndexObject, TraversableIterableObj):
 
             self._url = reader.get("url")
             # GitPython extension values - optional.
-            self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
+            # Not get_value(): it turns `branch = 1.10` into the float 1.1.
+            branch = reader.get(self.k_head_option, fallback=None)
+            self._branch_path = git.Head.to_full_path(self.k_head_default if branch is None else branch)
         elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
         else:
@@ -1976,9 +1974,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             if native is NotImplemented:
                 p = parser.get(sms, "path")
                 u = parser.get(sms, "url")
-                b = cls.k_head_default
-                if parser.has_option(sms, cls.k_head_option):
-                    b = str(parser.get(sms, cls.k_head_option))
+                b = parser.get(sms, cls.k_head_option, fallback=None)
+                if b is None:
+                    b = cls.k_head_default
             else:
                 p, u = native[n]["path"], native[n]["url"]
                 b = native[n].get(cls.k_head_option, cls.k_head_default)
