@@ -5,9 +5,10 @@
 
 __all__ = ["Commit"]
 
-from collections import defaultdict
+from collections import defaultdict, deque
 import datetime
 from io import BytesIO
+from itertools import chain, islice
 import logging
 import os
 from subprocess import Popen
@@ -36,6 +37,7 @@ from .util import (
 
 from typing import (
     Any,
+    Deque,
     Dict,
     IO,
     Iterator,
@@ -480,24 +482,66 @@ class Commit(base.Object, TraversableIterableObj, Diffable):
             contain at least one of the paths.
 
         :param kwargs:
-            All arguments allowed by :manpage:`git-rev-list(1)`.
+            All arguments allowed by :manpage:`git-rev-list(1)`. ``skip`` values of
+            0 and 1 skip only ``self``; larger values also skip matching ancestors.
 
         :return:
             Iterator yielding :class:`Commit` objects which are parents of ``self``
         """
-        # skip ourselves
-        skip = kwargs.get("skip", 1)
-        if skip == 0:  # skip ourselves
-            skip = 1
-        if paths or kwargs.keys() - {"skip", "max_count"}:
-            # rev-list leaves us out when we don't match the paths or filters, so there
-            # is nothing of ours to skip.
-            probe = {**kwargs, "skip": 0, "max_count": 1}
-            if skip is not None and next(self.iter_items(self.repo, self, paths, **probe), None) != self:
-                skip = int(skip) - 1
-        kwargs["skip"] = skip
+        skip = max(0, int(kwargs.pop("skip", None) or 1) - 1)
+        count_options = {"max_count", "max-count", "n"}
+        if not paths and kwargs.keys() <= count_options:
+            return self.iter_items(self.repo, self, paths, skip=skip + 1, **kwargs)
 
-        return self.iter_items(self.repo, self, paths, **kwargs)
+        # Keep Git's option order when resolving alternate spellings of max_count.
+        limits = {key: kwargs.pop(key) for key in tuple(kwargs) if key in count_options}
+        count_args = self.repo.git.transform_kwargs(**limits) if limits else []
+        max_count = int(count_args[-1].rsplit("=", 1)[-1]) if count_args else -1
+        if max_count == 0:
+            return self.iter_items(self.repo, self, paths, max_count=0, **kwargs)
+
+        reverse_args = self.repo.git.transform_kwargs(reverse=kwargs["reverse"]) if "reverse" in kwargs else []
+        reverse = bool(reverse_args) and all(arg == "--reverse" for arg in reverse_args)
+        if reverse and max_count < 0:
+            commits = self.iter_items(self.repo, self, paths, **kwargs)
+
+            def skip_from_end() -> Iterator["Commit"]:
+                # Git applies skip before reversing. Hold back just the commits that
+                # might need to be skipped, including self if it is last.
+                tail: Deque[Commit] = deque()
+                for commit in commits:
+                    tail.append(commit)
+                    if len(tail) > skip + 1:
+                        yield tail.popleft()
+                if len(tail) == skip + 1 and tail[-1] != self:
+                    yield tail[0]
+
+            return skip_from_end()
+
+        if reverse:
+            del kwargs["reverse"]
+        if max_count > 0:
+            # Allow room for self even though filters may leave it out.
+            kwargs["max_count"] = skip + max_count + 1
+        commits = self.iter_items(self.repo, self, paths, **kwargs)
+
+        def skip_from_start() -> Iterator["Commit"]:
+            first = next(commits, None)
+            if first is None:
+                return
+            start = skip + (first == self)
+            stop = start + max_count if max_count > 0 else None
+            parents = islice(chain((first,), commits), start, stop)
+            if reverse:
+                yield from reversed(list(parents))
+            else:
+                yield from parents
+            if stop is not None:
+                # Finish the walk, consuming the one extra result if self was filtered out.
+                for _ in commits:
+                    pass
+
+        return skip_from_start()
 
     @property
     def stats(self) -> Stats:

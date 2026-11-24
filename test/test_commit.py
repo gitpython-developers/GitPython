@@ -11,7 +11,7 @@ from pathlib import Path
 import os.path as osp
 import sys
 import time
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from gitdb import IStream
 
@@ -492,6 +492,29 @@ class TestCommit(TestCommitSerialization):
             # Commits that do match keep the old meaning of skip.
             self.assertEqual(list(a2.iter_parents(paths="a")), [a1])
             self.assertEqual(list(tip.iter_parents(paths="b")), [])
+
+    def test_iter_parents_uses_one_walk(self):
+        with fixture_repo("commit.sh", "iter-parents") as repo:
+            tip, a1, a2 = repo.commit("B"), repo.commit("A1"), repo.commit("A2")
+            with patch.object(Commit, "iter_items", wraps=Commit.iter_items) as iter_items:
+                self.assertEqual(list(tip.iter_parents(paths="a", max_count=1)), [a2])
+            self.assertEqual(iter_items.call_count, 1)
+
+            self.assertEqual(list(tip.iter_parents(paths="a", max_count=0)), [])
+            self.assertEqual(list(tip.iter_parents(paths="a", n=1)), [a2])
+            self.assertEqual(list(a2.iter_parents(paths="a", max_count=1)), [a1])
+            self.assertEqual(list(a2.iter_parents(paths="a", skip=None)), [a1])
+
+    def test_iter_parents_reverses_after_applying_limits(self):
+        with fixture_repo("commit.sh", "iter-parents") as repo:
+            tip, a1, a2 = repo.commit("B"), repo.commit("A1"), repo.commit("A2")
+            self.assertEqual(list(tip.iter_parents(paths="a", reverse=True, max_count=1)), [a2])
+            self.assertEqual(list(tip.iter_parents(paths="a", reverse=True, skip=2, max_count=1)), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", reverse=True, skip=2)), [a1])
+            self.assertEqual(list(tip.iter_parents(paths="a", reverse=True, skip=3)), [])
+            self.assertEqual(list(a2.iter_parents(paths="a", reverse=True, max_count=1)), [a1])
+            self.assertEqual(list(a2.iter_parents(paths="a", reverse=True)), [a1])
+            self.assertEqual(list(a2.iter_parents(paths="a", reverse=True, skip=2)), [])
 
     def test_name_rev(self):
         name_rev = self.rorepo.head.commit.name_rev
