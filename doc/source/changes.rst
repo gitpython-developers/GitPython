@@ -175,6 +175,10 @@ API changes
   Missing paths within a valid tree revision raise ``Tree.join()``'s ``KeyError``
   with its missing-component message.
 
+* ``FetchInfo.refresh()`` is deprecated and no longer needed. Git has used
+  ``t`` for fetch tag updates since 2.10, and GitPython requires Git 2.52 or
+  newer. Remove calls to this method; ``git.refresh()`` still configures the
+  Git executable.
 * ``IndexFile.entries`` returns an immutable snapshot keyed by ``(path, stage)``
   for compatibility with existing readers. Each access queries the current
   on-disk or pending index; previously returned snapshots retain their values.

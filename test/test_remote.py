@@ -537,6 +537,23 @@ class TestRemote(TestBase):
             "deleted everything but master",
         )
 
+    @with_rw_repo("HEAD", bare=False)
+    def test_fetch_prune_skips_deleted_refs(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        rw_repo.create_head("to_be_pruned")
+        remote.fetch()
+        self.assertIn("self/to_be_pruned", [ref.name for ref in remote.refs])
+
+        rw_repo.delete_head("to_be_pruned", force=True)
+        with mock.patch("git.remote._logger.warning") as warning:
+            fetch_info = remote.fetch(prune=True)
+        self.assertNotIn("self/to_be_pruned", [info.name for info in fetch_info])
+        self.assertNotIn("self/to_be_pruned", [ref.name for ref in remote.refs])
+        self.assertFalse(
+            [call for call in warning.call_args_list if "Cannot decode" in call.args[0]],
+            "pruned refs are skipped without a warning",
+        )
+
     @with_rw_repo("HEAD", bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"

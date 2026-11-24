@@ -9,22 +9,11 @@ __all__ = ["RemoteProgress", "PushInfo", "FetchInfo", "Remote"]
 
 import logging
 import re
-
-from git.cmd import Git, handle_process_output
-from git.compat import force_text
-from git.config import GitConfigParser, SectionConstraint, cp
-from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
-from git.util import (
-    CallableRemoteProgress,
-    IterableList,
-    IterableObj,
-    LazyMixin,
-    RemoteProgress,
-)
+import warnings
 
 # typing-------------------------------------------------------
-
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -33,14 +22,24 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
-    TYPE_CHECKING,
     TypeVar,
     Union,
     cast,
     overload,
 )
 
+from git.cmd import Git, handle_process_output
+from git.compat import force_text
+from git.config import GitConfigParser, SectionConstraint, cp
+from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
+from git.util import (
+    CallableRemoteProgress,
+    IterableList,
+    IterableObj,
+    LazyMixin,
+    RemoteProgress,
+)
 
 if TYPE_CHECKING:
     from git.objects.commit import Commit
@@ -323,19 +322,17 @@ class FetchInfo(IterableObj):
         "*": 0,
         "=": HEAD_UPTODATE,
         " ": FAST_FORWARD,
-        "-": TAG_UPDATE,
+        "t": TAG_UPDATE,
     }
 
     @classmethod
     def refresh(cls) -> Literal[True]:
-        """Update information about which :manpage:`git-fetch(1)` flags are supported
-        by the git executable being used.
+        """Deprecated and no longer needed.
 
-        Called by the :func:`git.refresh` function in the top level ``__init__``.
+        Git has used ``t`` for fetch tag updates since Git 2.10. GitPython
+        requires Git 2.52 or newer, so no version-specific mapping is needed.
         """
-        cls._flag_map["t"] = cls.TAG_UPDATE
-        cls._flag_map["-"] = 0
-
+        warnings.warn("FetchInfo.refresh() is deprecated and no longer needed", DeprecationWarning, stacklevel=2)
         return True
 
     def __init__(
@@ -813,6 +810,9 @@ class Remote(LazyMixin, IterableObj):
             if line.startswith("Fetching submodule "):
                 in_submodule = True
             if in_submodule:
+                continue
+            # --prune lists each ref it deleted; there is no ref left to report.
+            if line[3:].startswith("[deleted]"):
                 continue
             for cmd in cmds:
                 if len(line) > 1 and line[0] == " " and line[1] == cmd:
