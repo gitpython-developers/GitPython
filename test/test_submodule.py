@@ -1987,6 +1987,28 @@ class TestSubmodule(TestBase):
                 assert module.head.commit == source.heads.dev.commit
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_update_to_latest_revision_respects_local_branch_override(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "source") as source, git.Repo(rwdir / "clone") as parent:
+            submodule = parent.submodules[0]
+            parent.git.config("--local", "submodule.module.branch", "master")
+            submodule.update(to_latest_revision=True)
+            with submodule.module() as module:
+                assert module.active_branch.name == "master"
+                assert module.head.commit == source.heads.master.commit
+
+            parent.git.config("--local", "submodule.module.branch", ".")
+            submodule.update(to_latest_revision=True, no_fetch=True)
+            with submodule.module() as module:
+                assert module.head.commit == source.heads.dev.commit
+
+            parent.git.config("--local", "submodule.module.branch", "master")
+            submodule.update(to_latest_revision=True, no_fetch=True)
+            with submodule.module() as module:
+                assert module.head.commit == source.heads.master.commit
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_to_latest_revision_after_reread_follows_named_branch(self):
         rwdir = self._fixture("branch-dot", execute=True)
         source_repo = git.Repo(rwdir / "source")

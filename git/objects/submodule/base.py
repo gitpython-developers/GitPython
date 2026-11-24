@@ -26,6 +26,7 @@ from typing import (
     Literal,
     Mapping,
     Sequence,
+    Tuple,
     Union,
     cast,
 )
@@ -901,9 +902,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             the remote will be fetched, and the local tracking branch updated. This only
             works if we have a local tracking branch, which is the case if the remote
             repository had a master branch, or if the ``branch`` option was specified
-            for this submodule and the branch existed remotely. With ``branch = .``
-            and an active superproject branch, the submodule follows the remote branch
-            of the same name and checks it out detached if it differs from the upstream.
+            for this submodule and the branch existed remotely. A superproject config
+            override selects the target branch. With ``branch = .`` and an active
+            superproject branch, the submodule follows the remote branch of the same
+            name. If the selected branch differs from the upstream, the checkout is detached.
 
         :param progress:
             :class:`UpdateProgress` instance, or ``None`` if no progress should be
@@ -981,6 +983,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         mrepo = None
         freshly_cloned = False
+        update_branch = None
         # END init mrepo
 
         def fetch_remotes(module_repo: "Repo") -> None:
@@ -1099,14 +1102,12 @@ class Submodule(IndexObject, TraversableIterableObj):
 
                     if not dry_run:
                         # See whether we have a valid branch to check out.
-                        branch_path = git.Head.to_full_path(self.branch_path)
-                        # gitmodules(5): branch "." names the superproject's current branch.
-                        if branch_path == git.Head.to_full_path(".") and not self.repo.head.is_detached:
-                            branch_path = self.repo.head.reference.path
+                        update_branch = self._branch_for_update()
+                        branch, _ = update_branch
                         try:
                             mrepo = cast("Repo", mrepo)
-                            remote_branch = find_first_remote_branch(mrepo.remotes, git.Head(mrepo, branch_path).name)
-                            local_branch = mkhead(mrepo, branch_path)
+                            remote_branch = find_first_remote_branch(mrepo.remotes, branch.name)
+                            local_branch = mkhead(mrepo, branch.path)
                             local_branch.set_object(remote_branch.commit)
                             mrepo.head.set_reference(
                                 local_branch,
@@ -1114,7 +1115,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                             )
                             mrepo.head.reference.set_tracking_branch(remote_branch)
                         except (IndexError, InvalidGitRepositoryError):
-                            _logger.warning("Failed to checkout tracking branch %s", branch_path)
+                            _logger.warning("Failed to checkout tracking branch %s", branch.path)
 
                         with self.repo.config_writer() as writer:
                             writer.set_value(sm_section(self.name), "url", self.url)
@@ -1135,12 +1136,10 @@ class Submodule(IndexObject, TraversableIterableObj):
                 msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
                 upstream = None if checkout_detached else mrepo.active_branch.tracking_branch()
                 rref = upstream
-                if (
-                    git.Head.to_full_path(self.branch_path) == git.Head.to_full_path(".")
-                    and not self.repo.head.is_detached
-                ):
+                branch, use_configured_branch = update_branch or self._branch_for_update()
+                if use_configured_branch:
                     remote = upstream.remote_name if isinstance(upstream, git.RemoteReference) else "origin"
-                    rref = git.RemoteReference(mrepo, f"refs/remotes/{remote}/{self.repo.active_branch.name}")
+                    rref = git.RemoteReference(mrepo, f"refs/remotes/{remote}/{branch.name}")
                     # Keep the local branch pointing at its own history when following another branch.
                     checkout_detached = rref != upstream
 
@@ -1825,6 +1824,23 @@ class Submodule(IndexObject, TraversableIterableObj):
         # Use an instance method, for this we create a temporary Head instance which
         # uses a repository that is available at least (it makes no difference).
         return git.Head(self.repo, self._branch_path).name
+
+    def _branch_for_update(self) -> Tuple["Head", bool]:
+        """Return the clone branch and whether it selects the latest revision."""
+        key = f"submodule.{self.name}.{self.k_head_option}"
+        try:
+            override = self.repo.git._call_process_safe("config", "--get", key)
+        except GitCommandError as exc:
+            if exc.status != 1:
+                raise
+            override = None
+
+        branch = mkhead(self.repo, self.branch_path if override is None else override)
+        if branch.name != ".":
+            return branch, override is not None
+        if not self.repo.head.is_detached:
+            return self.repo.active_branch, True
+        return branch, False
 
     @property
     def url(self) -> str:

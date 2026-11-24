@@ -471,7 +471,10 @@ def submodule_config(source: Any) -> Any:
 def _config(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) == 2 and args[0] == "--get":
         snapshot = repo.config_snapshot()
-        value = snapshot.string(args[1])
+        try:
+            value = snapshot.string(args[1])
+        except UnicodeEncodeError as exc:
+            raise _Unsupported("non-UTF-8 configuration key (GIX-12)") from exc
         if value is None:
             if snapshot.boolean(args[1]) is None:
                 raise GitCommandError(["git", "config"], 1)

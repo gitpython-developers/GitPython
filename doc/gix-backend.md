@@ -1180,6 +1180,12 @@ retain GitPython's configuration contract natively. The scripted
 `submodule-bytes.sh` regressions cover values, names and cached-field rereads;
 the native value test prohibits CLI execution.
 
+Repository `config --get` also uses Git for byte keys. Git 2.54.0 can read a raw
+key such as `remote.origin-<ff>.url`, while GixPython 0.3.0 raises
+`UnicodeEncodeError` for its surrogate-escaped form. The scalar lookup in
+`test_config_preserves_non_utf8_subsections_and_values` exercises this
+fallback, which also applies to submodule branch overrides.
+
 The October 7 inventory identified 951 remote-enumeration reads, 674 actor
 lookups, 262 remote-property reads, 202 tracking-branch lookups and 111 fetch
 refspec checks. These are historical call-site counts, not additive savings.
