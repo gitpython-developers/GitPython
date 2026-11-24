@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
+from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, Tree, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError, UnsafeOptionError
 from git.index.fun import run_commit_hook
 from git.repo.fun import find_submodule_git_dir, find_worktree_git_dir, is_git_dir
@@ -264,6 +264,18 @@ def test_native_objects_trees_commits_and_index_reads(repo):
         assert commit.replace(message="changed").message == "changed"
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("entry_types", ["blob-and-link", "gitlink"])
+def test_native_tree_entry_modes_match_git(object_format, entry_types):
+    with fixture_repo("tree-modes.sh", object_format, entry_types) as repo:
+        oid = (Path(repo.working_dir).parent / "tree-id").read_text().strip()
+        lines = repo.git.ls_tree(oid).splitlines()
+        expected = [(line.split("\t")[1], int(line.split()[0], 8)) for line in lines]
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected tree-listing CLI call")):
+            tree = Tree(repo, bytes.fromhex(oid), path="")
+            assert [(entry.path, entry.mode) for entry in tree] == expected
+
+
 def test_native_metadata_paths_match_git_in_each_worktree(repo):
     tmp_path = Path(repo.working_dir).parent
     linked_path = tmp_path / "linked"
@@ -374,6 +386,17 @@ def test_native_submodule_inventory_and_cached_fields_match_cli(repo, config_var
         assert [entry[0] for entry in expected[0]] == ["z-last", "a.first"]
     else:
         assert snapshot() == expected
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("syntax", ["implicit-extra", "inline-extra", "comment-in-key"])
+def test_submodule_configuration_rejects_lines_git_rejects(object_format, syntax):
+    with fixture_repo("submodule-rejected-lines.sh", object_format, syntax) as repo:
+        with pytest.raises(GitCommandError, match="bad config line"):
+            repo.git.config("--file", ".gitmodules", "--list")
+        data = (Path(repo.working_dir) / ".gitmodules").read_bytes()
+        with pytest.raises(gix.Error):
+            gix.ModulesFile.from_bytes(data)
 
 
 def test_native_revision_path_and_mode_match_cli(repo):

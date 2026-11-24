@@ -24,7 +24,7 @@ optional `gix` extra in a virtual environment:
 python -m pip install ".[gix]"
 ```
 
-The extra installs **GixPython 0.3.0** from PyPI; its Python import name is `gix`.
+The extra installs **GixPython 0.4.0** from PyPI; its Python import name is `gix`.
 Set `GIT_PYTHON_BACKEND=gix` **before importing GitPython**, either in your
 environment or in Python:
 
@@ -48,8 +48,8 @@ Explicit `gix` selection fails if GixPython cannot be imported.
   3.8 or newer; on Python 3.8–3.10 the extra omits GixPython and uses CLI.
 - **Git 2.52 or newer**, available in `PATH` or selected with
   `GIT_PYTHON_GIT_EXECUTABLE`, remains required for CLI fallbacks.
-- GixPython 0.3.0 publishes **macOS wheels**. On **Linux and Windows**, installation
-  builds its released source distribution and requires **Rust 1.89 or newer** and
+- GixPython 0.4.0 publishes **macOS wheels**. On **Linux and Windows**, installation
+  builds its released source distribution and requires **Rust 1.95 or newer** and
   a **system linker**. Default hashing, compression and HTTPS dependencies use
   pure Rust and do not require a C/C++ compiler.
 

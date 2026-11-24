@@ -245,9 +245,11 @@ def object_metadata(command: Any, oid: str, kind: str) -> Any:
             else ((data.tagger, result["tagger"]),)
         )
         for raw, signature in signatures:
-            # Gix reads a time zone of 0 with trailing fields (GIX-34); accept either UTC sign.
-            if signature is not None and not raw.replace(b" -0000", b" +0000").endswith(b"> " + _date(signature)):
-                raise _Unsupported("signature trailing fields (GIX-34)")
+            if signature is not None:
+                # Gix can decode a short offset such as +020 as UTC.
+                date = raw.rpartition(b">")[2].replace(b" -0000", b" +0000", 1)
+                if not (date + b" ").startswith(b" " + _date(signature) + b" "):
+                    raise _Unsupported("signature date differs from raw header (GIX-38)")
     except _Unsupported as exc:
         return _fallback(kind + ".decode", str(exc))
     except gix.Error as exc:
@@ -311,18 +313,21 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(_oid(repo, args[-1], kwargs.get("env"))).encode("ascii") + b"\n"
 
 
+_LS_TREE_MODES = {
+    "blob": b"100644 blob",
+    "exe": b"100755 blob",
+    "link": b"120000 blob",
+    "tree": b"040000 tree",
+    "commit": b"160000 commit",
+}
+
+
 def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 3 or args[:2] != ["-z", "--full-tree"]:
         raise _Unsupported("tree options")
     with repo.find_tree(_oid(repo, args[2])).iter() as entries:
         return b"".join(
-            b"%06o %s %s\t%s\0"
-            % (
-                entry.mode(),
-                b"tree" if entry.kind() == "tree" else b"commit" if entry.kind() == "commit" else b"blob",
-                str(entry.id()).encode("ascii"),
-                entry.filename(),
-            )
+            b"%s %s\t%s\0" % (_LS_TREE_MODES[entry.kind()], str(entry.id()).encode("ascii"), entry.filename())
             for entry in entries
         )
 

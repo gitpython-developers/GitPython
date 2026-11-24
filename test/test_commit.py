@@ -703,8 +703,20 @@ class TestCommit(TestCommitSerialization):
             )
             if _backend.name == "gix":
                 for kind in ("commit", "tag"):
-                    key = (kind + ".decode", "CLI: signature trailing fields (GIX-34)")
+                    key = (kind + ".decode", "native")
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
+    def test_deserialization_short_offset_matches_git(self):
+        with fixture_repo("commit.sh", "short-offset") as repo:
+            oid = (Path(repo.working_dir).parent / "object-id").read_text().strip()
+            self.assertEqual(repo.git.show("-s", "--format=%ad", "--date=raw", oid), "1112591163 +0020")
+            before = _backend.statistics()
+            commit = Commit(repo, bytes.fromhex(oid))
+            self.assertEqual((commit.authored_date, commit.author_tz_offset), (1112591163, -1200))
+            self.assertEqual((commit.committed_date, commit.committer_tz_offset), (1112591163, -1200))
+            if _backend.name == "gix":
+                key = ("commit.decode", "CLI: signature date differs from raw header (GIX-38)")
+                self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
     def test_deserialization_negative_zero_offset_stays_native(self):
         with fixture_repo("commit.sh", "zero-offset") as repo:

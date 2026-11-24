@@ -57,9 +57,10 @@ case "$1" in
     raw)
         git hash-object --literally -w -t commit "$2" > ../object-id
         ;;
-    trailing-date|zero-offset)
+    trailing-date|zero-offset|short-offset)
         date='1112591163 +0200 1700000000 -0500'
         if [ "$1" = zero-offset ]; then date='1112591163 -0000'; fi
+        if [ "$1" = short-offset ]; then date='1112591163 +020'; fi
         tree=$(git mktree </dev/null)
         {
             printf 'tree %s\n' "$tree"
