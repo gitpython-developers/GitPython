@@ -2003,6 +2003,7 @@ class TestSubmodule(TestBase):
             with submodule.module() as module:
                 assert module.head.commit == source.heads.dev.commit
 
+            parent.head.set_reference(parent.head.commit)
             parent.git.config("--local", "submodule.module.branch", "master")
             submodule.update(to_latest_revision=True, no_fetch=True)
             with submodule.module() as module:
@@ -2026,17 +2027,32 @@ class TestSubmodule(TestBase):
         assert submodule.module().head.commit == source_repo.heads.dev.commit
 
     @patch_git_config("protocol.file.allow", "always")
-    def test_update_branch_dot_with_detached_superproject_warns(self):
+    def test_update_branch_dot_rejects_latest_revision_with_detached_superproject(self):
+        # The submodule URL points to this private fixture's source.
         rwdir = self._fixture("branch-dot", execute=True)
-        parent_repo = git.Repo(rwdir / "clone")
-        parent_repo.head.set_reference(parent_repo.head.commit)
-        submodule = parent_repo.submodules[0]
+        with git.Repo(rwdir / "source") as source, git.Repo(rwdir / "clone") as parent:
+            parent.head.set_reference(parent.head.commit)
+            submodule = parent.submodules[0]
+            submodule.set_parent_commit(parent.head.commit)
+            assert submodule.branch_path == "."
+            remote_tip = source.index.commit("Advance master again", skip_hooks=True)
+            assert remote_tip.binsha != submodule.binsha
 
-        # git refuses here too: there is no superproject branch to follow.
-        with self.assertLogs("git.objects.submodule.base", "WARNING") as logs:
-            submodule.update(to_latest_revision=True)
+            assert submodule.update(init=False, to_latest_revision=True) is submodule
+            with pytest.raises(ValueError, match="superproject HEAD is detached"):
+                submodule.update(to_latest_revision=True)
+            assert not submodule.module_exists()
+            assert not (Path(parent.git_dir) / "modules" / submodule.name).exists()
 
-        assert any("Failed to checkout tracking branch refs/heads/." in line for line in logs.output)
+            with self.assertLogs("git.objects.submodule.base", "WARNING") as logs:
+                submodule.update()
+            assert any("Failed to checkout tracking branch refs/heads/." in line for line in logs.output)
+
+            with mock.patch.object(git.Remote, "fetch", side_effect=AssertionError("Unexpected fetch")):
+                with pytest.raises(ValueError, match="superproject HEAD is detached"):
+                    submodule.update(init=False, to_latest_revision=True)
+            with submodule.module() as module:
+                assert module.head.commit.binsha == submodule.binsha
 
     @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_fetches_new_gitlink_commit(self):

@@ -903,9 +903,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             works if we have a local tracking branch, which is the case if the remote
             repository had a master branch, or if the ``branch`` option was specified
             for this submodule and the branch existed remotely. A superproject config
-            override selects the target branch. With ``branch = .`` and an active
-            superproject branch, the submodule follows the remote branch of the same
-            name. If the selected branch differs from the upstream, the checkout is detached.
+            override selects the target branch. With ``branch = .``, the submodule
+            follows the remote branch named by the active superproject branch. If
+            the selected branch differs from the upstream, the checkout is detached.
 
         :param progress:
             :class:`UpdateProgress` instance, or ``None`` if no progress should be
@@ -966,6 +966,10 @@ class Submodule(IndexObject, TraversableIterableObj):
         :note:
             This method is definitely not atomic if `recursive` is ``True``.
 
+        :raise ValueError:
+            If a latest-revision update needs to inherit a branch and the
+            superproject's HEAD is detached.
+
         :return:
             self
         """
@@ -983,7 +987,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         mrepo = None
         freshly_cloned = False
-        update_branch = None
+        latest_branch = None
         # END init mrepo
 
         def fetch_remotes(module_repo: "Repo") -> None:
@@ -1026,6 +1030,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             #######################################
             try:
                 mrepo = self.module()
+                if to_latest_revision:
+                    latest_branch = self._branch_for_update(to_latest_revision=True)
                 if not no_fetch:
                     fetch_remotes(mrepo)
             except InvalidGitRepositoryError:
@@ -1033,6 +1039,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if not init:
                     return self
                 # END early abort if init is not allowed
+                if to_latest_revision and latest_branch is None:
+                    latest_branch = self._branch_for_update(to_latest_revision=True)
 
                 checkout_module_abspath = self.abspath
                 module_abspath = self._module_abspath(self.repo, self.path, self.name)
@@ -1102,8 +1110,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
                     if not dry_run:
                         # See whether we have a valid branch to check out.
-                        update_branch = self._branch_for_update()
-                        branch, _ = update_branch
+                        branch, _ = latest_branch or self._branch_for_update()
                         try:
                             mrepo = cast("Repo", mrepo)
                             remote_branch = find_first_remote_branch(mrepo.remotes, branch.name)
@@ -1132,11 +1139,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                 checkout_detached = mrepo.head.is_detached
             # END handle dry_run
 
-            if mrepo is not None and to_latest_revision:
+            if mrepo is not None and latest_branch is not None:
                 msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
                 upstream = None if checkout_detached else mrepo.active_branch.tracking_branch()
                 rref = upstream
-                branch, use_configured_branch = update_branch or self._branch_for_update()
+                branch, use_configured_branch = latest_branch
                 if use_configured_branch:
                     remote = upstream.remote_name if isinstance(upstream, git.RemoteReference) else "origin"
                     rref = git.RemoteReference(mrepo, f"refs/remotes/{remote}/{branch.name}")
@@ -1825,7 +1832,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # uses a repository that is available at least (it makes no difference).
         return git.Head(self.repo, self._branch_path).name
 
-    def _branch_for_update(self) -> Tuple["Head", bool]:
+    def _branch_for_update(self, *, to_latest_revision: bool = False) -> Tuple["Head", bool]:
         """Return the clone branch and whether it selects the latest revision."""
         key = f"submodule.{self.name}.{self.k_head_option}"
         try:
@@ -1840,6 +1847,11 @@ class Submodule(IndexObject, TraversableIterableObj):
             return branch, override is not None
         if not self.repo.head.is_detached:
             return self.repo.active_branch, True
+        if to_latest_revision:
+            raise ValueError(
+                f"Cannot update submodule {self.name!r} to the latest revision with branch = . "
+                "because the superproject HEAD is detached"
+            )
         return branch, False
 
     @property
