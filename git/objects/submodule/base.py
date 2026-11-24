@@ -1845,14 +1845,18 @@ class Submodule(IndexObject, TraversableIterableObj):
         branch = mkhead(self.repo, self.branch_path if override is None else override)
         if branch.name != ".":
             return branch, override is not None
-        if not self.repo.head.is_detached:
-            return self.repo.active_branch, True
-        if to_latest_revision:
-            raise ValueError(
-                f"Cannot update submodule {self.name!r} to the latest revision with branch = . "
-                "because the superproject HEAD is detached"
-            )
-        return branch, False
+        try:
+            target = self.repo.git._call_process_safe("symbolic_ref", "--quiet", "--", "HEAD")
+        except GitCommandError as exc:
+            if exc.status != 1:
+                raise
+            if to_latest_revision:
+                raise ValueError(
+                    f"Cannot update submodule {self.name!r} to the latest revision with branch = . "
+                    "because the superproject HEAD is detached"
+                ) from exc
+            return branch, False
+        return git.Head(self.repo, target), True
 
     @property
     def url(self) -> str:

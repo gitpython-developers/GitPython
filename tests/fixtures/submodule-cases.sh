@@ -46,7 +46,7 @@ case "$scenario" in
             deinit-nonempty) printf '%s' 'user content' > parent/module/file ;;
         esac
         ;;
-    branch-dot)
+    branch-dot|branch-dot-alias)
         git init -q -b master source
         git -C source commit --allow-empty -qm initial
         git -C source branch dev
@@ -60,6 +60,10 @@ case "$scenario" in
         git -C parent commit -qam 'Track the superproject branch'
         git -C parent branch dev
         git clone -q -b dev parent clone
+        if test "$scenario" = branch-dot-alias; then
+            git -C clone branch master refs/remotes/origin/master
+            git -C clone symbolic-ref refs/heads/dev refs/heads/master
+        fi
         ;;
     add-empty) git init -q -b master empty-repo ;;
     relative)

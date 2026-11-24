@@ -1962,6 +1962,24 @@ class TestSubmodule(TestBase):
                 assert submodule.module().head.commit == source_repo.heads.dev.commit
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_update_to_latest_revision_follows_superproject_branch_alias(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot-alias", execute=True)
+        with git.Repo(rwdir / "source") as source, git.Repo(rwdir / "clone") as parent:
+            assert parent.git.symbolic_ref("--no-recurse", "HEAD") == "refs/heads/dev"
+            assert parent.git.symbolic_ref("HEAD") == "refs/heads/master"
+            submodule = parent.submodules[0]
+            submodule.update(to_latest_revision=True)
+            with submodule.module() as module:
+                assert module.active_branch.name == "master"
+                assert module.head.commit == source.heads.master.commit
+
+            remote_tip = source.index.commit("Advance master again", skip_hooks=True)
+            submodule.update(to_latest_revision=True)
+            with submodule.module() as module:
+                assert module.head.commit == remote_tip
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_to_latest_revision_after_superproject_switch(self):
         # The submodule URL points to this private fixture's source.
         rwdir = self._fixture("branch-dot", execute=True)

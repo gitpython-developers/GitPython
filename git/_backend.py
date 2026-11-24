@@ -392,6 +392,8 @@ def reference_info(command: Any, path: str) -> Any:
 
 
 def _symbolic_ref(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
+    if args == ["--quiet", "--", "HEAD"]:
+        raise _Unsupported("recursive HEAD resolution (GIX-44)")
     if len(args) != 4 or args[:3] != ["--quiet", "--no-recurse", "--"]:
         raise _Unsupported("reference mutation or options")
     reference = repo.try_find_reference(safe_encode(args[-1]))
