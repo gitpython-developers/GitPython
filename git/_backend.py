@@ -257,8 +257,11 @@ def object_metadata(command: Any, oid: str, kind: str) -> Any:
             if signature is not None:
                 if signature.time.seconds < 0:
                     raise _Unsupported("negative signature timestamp (GIX-42)")
+                identity, _, date = raw.rpartition(b">")
+                if b">" in signature.email or identity != signature.name + b" <" + signature.email:
+                    raise _Unsupported("signature identity differs from raw header (GIX-43)")
                 # Gix can decode a short offset such as +020 as UTC.
-                date = raw.rpartition(b">")[2].replace(b" -0000", b" +0000", 1)
+                date = date.replace(b" -0000", b" +0000", 1)
                 if not (date + b" ").startswith(b" " + _date(signature) + b" "):
                     raise _Unsupported("signature date differs from raw header (GIX-38)")
     except _Unsupported as exc:

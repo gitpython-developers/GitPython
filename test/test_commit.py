@@ -706,6 +706,23 @@ class TestCommit(TestCommitSerialization):
                     key = (kind + ".decode", "native")
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
+    def test_deserialization_preserves_email_whitespace(self):
+        with fixture_repo("commit.sh", "spaced-email") as repo:
+            root = Path(repo.working_dir).parent
+            oid = (root / "object-id").read_text().strip()
+            tag_oid = (root / "tag-id").read_text().strip()
+            self.assertEqual(repo.git.show("-s", "--format=[%ae][%ce]", oid), "[ a@example.com ][ c@example.com ]")
+            before = _backend.statistics()
+            commit = Commit(repo, bytes.fromhex(oid))
+            self.assertEqual((commit.author.email, commit.committer.email), (" a@example.com ", " c@example.com "))
+            self.assertEqual(TagObject(repo, bytes.fromhex(tag_oid)).tagger.email, " t@example.com ")
+            if _backend.name == "gix":
+                for key in (
+                    ("commit.decode", "CLI: signature identity differs from raw header (GIX-43)"),
+                    ("tag.decode", "native"),
+                ):
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
     def test_deserialization_negative_timestamp_matches_git(self):
         with fixture_repo("commit.sh", "negative-date") as repo:
             root = Path(repo.working_dir).parent
