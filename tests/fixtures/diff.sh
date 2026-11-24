@@ -81,6 +81,14 @@ case "$1" in
         git add file_b.txt
         git commit -m 'Removed file_a.txt. Added file_b.txt'
         ;;
+    empty-rename)
+        empty=$(printf '' | git hash-object -w --stdin)
+        before=$(printf '100644 blob %s\tempty_a\0' "$empty" | git mktree -z)
+        after=$(printf '100644 blob %s\tempty_b\0' "$empty" | git mktree -z)
+        parent=$(git commit-tree "$before" -m 'Added empty_a')
+        commit=$(git commit-tree "$after" -p "$parent" -m 'Renamed empty_a to empty_b')
+        git update-ref refs/heads/master "$commit"
+        ;;
     external)
         printf 'first_line\n' > .gitignore
         git add .gitignore
