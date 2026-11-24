@@ -86,6 +86,18 @@ def test_fetch_resolves_notes_with_a_tag_wildcard(remote_fixture):
             assert info.flags == flags
 
 
+@pytest.mark.parametrize("remote_fixture", [("prefetch",)], indirect=True)
+def test_prefetch_indexes_displayed_refs_once(remote_fixture):
+    paths = {"refs/prefetch/remotes/origin/main", "refs/prefetch/remotes/origin/second"}
+    with Repo(remote_fixture / "clone") as clone:
+        with mock.patch.object(FetchInfo, "_display_ref", wraps=FetchInfo._display_ref) as display_ref:
+            result = clone.remote().fetch(prefetch=True)
+        assert {info.ref.path for info in result} == paths
+        assert all(info.flags == FetchInfo.HEAD_UPTODATE for info in result)
+        displayed = [args[0] for args, _ in display_ref.call_args_list if args[0] in paths]
+        assert len(displayed) == len(set(displayed))
+
+
 @pytest.mark.parametrize("remote_fixture", [("quoted",)], indirect=True)
 def test_quoted_remote_and_submodule_names(remote_fixture):
     tmp_path = remote_fixture

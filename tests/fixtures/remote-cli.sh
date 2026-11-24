@@ -34,6 +34,12 @@ case "$1" in
         git -C source update-ref refs/fixture/updated-notes refs/notes/commits
         git -C source update-ref refs/notes/commits "$initial_notes"
         ;;
+    prefetch)
+        git -C source branch second
+        git clone source clone
+        git -C clone remote set-url origin ../source
+        git -C clone fetch --prefetch
+        ;;
     quoted)
         git init --initial-branch=main parent
         ;;

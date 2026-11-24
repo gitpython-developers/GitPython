@@ -22,6 +22,7 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
+    Set,
     TypeVar,
     Union,
     cast,
@@ -371,7 +372,13 @@ class FetchInfo(IterableObj):
         return path
 
     @classmethod
-    def _from_line(cls, repo: "Repo", line: str, refspecs: Sequence[str] = (), refs: Sequence[str] = ()) -> "FetchInfo":
+    def _from_line(
+        cls,
+        repo: "Repo",
+        line: str,
+        refspecs: Sequence[str] = (),
+        refs_by_display: Optional[Dict[str, Set[str]]] = None,
+    ) -> "FetchInfo":
         """Decode Git's full verbose fetch output without reading FETCH_HEAD."""
         match = cls._re_fetch_result.match(line)
         if match is None:
@@ -425,10 +432,11 @@ class FetchInfo(IterableObj):
                     and cls._display_ref(local) == destination
                 ):
                     candidates.add(local)
+            matching_refs = refs_by_display.get(destination, ()) if refs_by_display is not None else ()
             if (control == "=" or old_commit is not None) and len(candidates) > 1:
-                candidates.intersection_update(refs)
+                candidates.intersection_update(matching_refs)
             if not candidates:
-                candidates = {path for path in refs if cls._display_ref(path) == destination}
+                candidates.update(matching_refs)
             # Git shortens refs/tags/refs/heads/main to refs/heads/main, so a
             # displayed name under refs/ is only a full name if nothing shortens to it.
             if not candidates and destination.startswith("refs/"):
@@ -839,6 +847,9 @@ class Remote(LazyMixin, IterableObj):
                     continue
 
         refs = self.repo.git._call_process_safe("for_each_ref", "--format=%(refname)").split("\n")
+        refs_by_display: Dict[str, Set[str]] = {}
+        for path in refs:
+            refs_by_display.setdefault(FetchInfo._display_ref(path), set()).add(path)
         try:
             configured = self.config_reader.config.get_values(self._config_section_name(), "fetch")
         except (cp.NoSectionError, cp.NoOptionError):
@@ -846,7 +857,7 @@ class Remote(LazyMixin, IterableObj):
         specs = [*refspecs, *configured]
         for line in fetch_info_lines:
             try:
-                output.append(FetchInfo._from_line(self.repo, line, specs, refs))
+                output.append(FetchInfo._from_line(self.repo, line, specs, refs_by_display))
             except ValueError as exc:
                 _logger.warning("Cannot decode fetch result %r: %s", line, exc)
         # A source-only refspec reports both FETCH_HEAD and any opportunistic
