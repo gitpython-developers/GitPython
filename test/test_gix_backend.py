@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, _backend
+from git import Actor, Commit, Git, Reference, Repo, SymbolicReference, Tree, _backend
 from git.exc import GitCommandError, InvalidGitRepositoryError, UnsafeOptionError
 from git.index.fun import run_commit_hook
 from git.repo.fun import find_submodule_git_dir, find_worktree_git_dir, is_git_dir
@@ -264,6 +264,37 @@ def test_native_objects_trees_commits_and_index_reads(repo):
         assert commit.replace(message="changed").message == "changed"
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("entry_types", ["blob-and-link", "gitlink"])
+def test_native_tree_entry_modes_match_git(object_format, entry_types):
+    with fixture_repo("tree-modes.sh", object_format, entry_types) as repo:
+        oid = (Path(repo.working_dir).parent / "tree-id").read_text().strip()
+        lines = repo.git.ls_tree(oid).splitlines()
+        expected = [(line.split("\t")[1], int(line.split()[0], 8)) for line in lines]
+        with patch.object(Git, "execute", side_effect=AssertionError("unexpected tree-listing CLI call")):
+            tree = Tree(repo, bytes.fromhex(oid), path="")
+            assert [(entry.path, entry.mode) for entry in tree] == expected
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("entry_types", ["missing-mode", "zero-mode"])
+def test_ambiguous_tree_entry_mode_uses_git(object_format, entry_types):
+    with fixture_repo("tree-modes.sh", object_format, entry_types) as repo:
+        oid = (Path(repo.working_dir).parent / "tree-id").read_text().strip()
+        tree = Tree(repo, bytes.fromhex(oid), path="")
+        before = _backend.statistics()
+        if entry_types == "missing-mode":
+            with pytest.raises(GitCommandError, match="malformed mode"):
+                repo.git.ls_tree(oid)
+            with pytest.raises(GitCommandError, match="malformed mode"):
+                list(tree)
+        else:
+            assert "160000 commit" in repo.git.ls_tree(oid)
+            assert tree["module"].mode == 0o160000
+        key = ("ls_tree", "CLI: ambiguous zero tree entry mode (GIX-41)")
+        assert _backend.statistics().get(key, 0) == before.get(key, 0) + 1
+
+
 def test_native_metadata_paths_match_git_in_each_worktree(repo):
     tmp_path = Path(repo.working_dir).parent
     linked_path = tmp_path / "linked"
@@ -374,6 +405,17 @@ def test_native_submodule_inventory_and_cached_fields_match_cli(repo, config_var
         assert [entry[0] for entry in expected[0]] == ["z-last", "a.first"]
     else:
         assert snapshot() == expected
+
+
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("syntax", ["implicit-extra", "inline-extra", "comment-in-key"])
+def test_submodule_configuration_rejects_lines_git_rejects(object_format, syntax):
+    with fixture_repo("submodule-rejected-lines.sh", object_format, syntax) as repo:
+        with pytest.raises(GitCommandError, match="bad config line"):
+            repo.git.config("--file", ".gitmodules", "--list")
+        data = (Path(repo.working_dir) / ".gitmodules").read_bytes()
+        with pytest.raises(gix.Error):
+            gix.ModulesFile.from_bytes(data)
 
 
 def test_native_revision_path_and_mode_match_cli(repo):
@@ -716,6 +758,16 @@ def test_native_status_tracks_submodule_dirtiness(repo):
     assert dirty == [True, False, False, True]
     with patch.object(_backend, "gix", None):
         assert dirty == [repo.is_dirty(**option) for option in options]
+
+
+@pytest.mark.parametrize("target", ["untracked", "file"])
+def test_embedded_status_uses_git_diff_policy(repo, target):
+    expected = target == "file"
+    assert bool(repo.git.diff("--raw")) == expected
+    before = _backend.statistics()
+    assert repo.is_dirty() == expected
+    key = ("Repo.is_dirty", "CLI: embedded repository diff policy (GIX-40)")
+    assert _backend.statistics().get(key, 0) == before.get(key, 0) + 1
 
 
 @pytest.mark.parametrize("error", [OSError(22, "Invalid filename"), PermissionError(13, "Permission denied")])

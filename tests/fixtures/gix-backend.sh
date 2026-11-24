@@ -163,6 +163,16 @@ native_status_tracks_submodule_dirtiness)
     git -C repo commit -qm 'add submodule'
     printf modified > repo/module/file
     ;;
+embedded_status_uses_git_diff_policy)
+    git init -q --object-format="$hash" repo/module
+    printf initial > repo/module/file
+    git -C repo/module add file
+    git -C repo/module commit -qm initial
+    oid=$(git -C repo/module rev-parse HEAD)
+    git -C repo update-index --add --cacheinfo "160000,$oid,module"
+    git -C repo commit -qm 'track embedded repository'
+    printf changed > "repo/module/$extra"
+    ;;
 native_commit_statistics_match_cli)
     cd repo
     git config diff.algorithm myers

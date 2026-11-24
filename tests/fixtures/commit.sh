@@ -57,19 +57,23 @@ case "$1" in
     raw)
         git hash-object --literally -w -t commit "$2" > ../object-id
         ;;
-    trailing-date|zero-offset)
+    trailing-date|zero-offset|short-offset|negative-date|spaced-email)
         date='1112591163 +0200 1700000000 -0500'
         if [ "$1" = zero-offset ]; then date='1112591163 -0000'; fi
+        if [ "$1" = short-offset ]; then date='1112591163 +020'; fi
+        if [ "$1" = negative-date ]; then date='-1 +0200 1700000000 -0500'; fi
+        space=''
+        if [ "$1" = spaced-email ]; then space=' '; fi
         tree=$(git mktree </dev/null)
         {
             printf 'tree %s\n' "$tree"
-            printf 'author A <a@example.com> %s\n' "$date"
-            printf 'committer C <c@example.com> %s\n' "$date"
+            printf 'author A <%sa@example.com%s> %s\n' "$space" "$space" "$date"
+            printf 'committer C <%sc@example.com%s> %s\n' "$space" "$space" "$date"
             printf '\nmessage\n'
         } | git hash-object --literally -w -t commit --stdin > ../object-id
         {
             printf 'object %s\ntype commit\ntag v1\n' "$(cat ../object-id)"
-            printf 'tagger T <t@example.com> %s\n' "$date"
+            printf 'tagger T <%st@example.com%s> %s\n' "$space" "$space" "$date"
             printf '\nmessage\n'
         } | git hash-object --literally -w -t tag --stdin > ../tag-id
         git update-ref refs/tags/v1 "$(cat ../tag-id)"

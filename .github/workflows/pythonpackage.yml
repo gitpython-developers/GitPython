@@ -82,7 +82,7 @@ jobs:
     - name: Prepare Rust for GixPython source builds
       id: rust
       run: |
-        # GixPython 0.3.0 publishes macOS wheels only and needs Rust >= 1.89.
+        # GixPython 0.4.0 publishes macOS wheels only and needs Rust >= 1.95.
         rustup toolchain install stable --profile minimal
         rustup default stable
         rustc --version

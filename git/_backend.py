@@ -168,6 +168,15 @@ def _canonical_repository(repo: Any) -> Any:
 def _check_revision_grammar(ref: str) -> None:
     if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+|^[0-9a-fA-F]+-", ref):
         raise _Unsupported("revision grammar differences (GIX-17)")
+    prefix, opener, remainder = ref.partition("@{")
+    if opener and ":" not in prefix:
+        selector, closer, _ = remainder.partition("}")
+        if closer and not (
+            re.fullmatch(r"[0-9]+", selector)
+            or (not prefix and re.fullmatch(r"-[0-9]+", selector))
+            or selector.lower() in {"u", "upstream", "p", "push"}
+        ):
+            raise _Unsupported("textual reflog dates (GIX-39)")
 
 
 def _oid(repo: Any, ref: Any, env: Optional[Dict[str, Any]] = None) -> Any:
@@ -245,9 +254,16 @@ def object_metadata(command: Any, oid: str, kind: str) -> Any:
             else ((data.tagger, result["tagger"]),)
         )
         for raw, signature in signatures:
-            # Gix reads a time zone of 0 with trailing fields (GIX-34); accept either UTC sign.
-            if signature is not None and not raw.replace(b" -0000", b" +0000").endswith(b"> " + _date(signature)):
-                raise _Unsupported("signature trailing fields (GIX-34)")
+            if signature is not None:
+                if signature.time.seconds < 0:
+                    raise _Unsupported("negative signature timestamp (GIX-42)")
+                identity, _, date = raw.rpartition(b">")
+                if b">" in signature.email or identity != signature.name + b" <" + signature.email:
+                    raise _Unsupported("signature identity differs from raw header (GIX-43)")
+                # Gix can decode a short offset such as +020 as UTC.
+                date = date.replace(b" -0000", b" +0000", 1)
+                if not (date + b" ").startswith(b" " + _date(signature) + b" "):
+                    raise _Unsupported("signature date differs from raw header (GIX-38)")
     except _Unsupported as exc:
         return _fallback(kind + ".decode", str(exc))
     except gix.Error as exc:
@@ -311,20 +327,27 @@ def _rev_parse(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     return str(_oid(repo, args[-1], kwargs.get("env"))).encode("ascii") + b"\n"
 
 
+_LS_TREE_MODES = {
+    "blob": b"100644 blob",
+    "exe": b"100755 blob",
+    "link": b"120000 blob",
+    "tree": b"040000 tree",
+    "commit": b"160000 commit",
+}
+
+
 def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 3 or args[:2] != ["-z", "--full-tree"]:
         raise _Unsupported("tree options")
     with repo.find_tree(_oid(repo, args[2])).iter() as entries:
-        return b"".join(
-            b"%06o %s %s\t%s\0"
-            % (
-                entry.mode(),
-                b"tree" if entry.kind() == "tree" else b"commit" if entry.kind() == "commit" else b"blob",
-                str(entry.id()).encode("ascii"),
-                entry.filename(),
+        records = []
+        for entry in entries:
+            if entry.mode() == 0:
+                raise _Unsupported("ambiguous zero tree entry mode (GIX-41)")
+            records.append(
+                b"%s %s\t%s\0" % (_LS_TREE_MODES[entry.kind()], str(entry.id()).encode("ascii"), entry.filename())
             )
-            for entry in entries
-        )
+        return b"".join(records)
 
 
 def check_ref_name(name: str) -> Any:
@@ -528,15 +551,22 @@ def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, sub
             for item in entries:
                 if item.summary() is None:
                     continue
+                details = item.details
                 if item.kind == "TreeIndex":
-                    if index and (submodules or item.details["entry_mode"] != 0o160000):
+                    if index and (submodules or details["entry_mode"] != 0o160000):
                         dirty = True
                         break
-                elif item.details["kind"] == "DirectoryContents":
-                    if untracked and item.details["entry"]["status"] == "Untracked":
+                elif details["kind"] == "DirectoryContents":
+                    if untracked and details["entry"]["status"] == "Untracked":
                         dirty = True
                         break
                 elif working_tree:
+                    change = details.get("status", {})
+                    if (
+                        change.get("change") == "SubmoduleModification"
+                        and not change["status"].state["superproject_configuration"]
+                    ):
+                        raise _Unsupported("embedded repository diff policy (GIX-40)")
                     dirty = True
                     break
     except _Unsupported as exc:
