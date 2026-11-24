@@ -22,6 +22,7 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
+    Set,
     TypeVar,
     Union,
     cast,
@@ -371,7 +372,13 @@ class FetchInfo(IterableObj):
         return path
 
     @classmethod
-    def _from_line(cls, repo: "Repo", line: str, refspecs: Sequence[str] = (), refs: Sequence[str] = ()) -> "FetchInfo":
+    def _from_line(
+        cls,
+        repo: "Repo",
+        line: str,
+        refspecs: Sequence[str] = (),
+        refs_by_display: Optional[Dict[str, Set[str]]] = None,
+    ) -> "FetchInfo":
         """Decode Git's full verbose fetch output without reading FETCH_HEAD."""
         match = cls._re_fetch_result.match(line)
         if match is None:
@@ -394,26 +401,46 @@ class FetchInfo(IterableObj):
         if destination == "FETCH_HEAD":
             ref = SymbolicReference(repo, destination)
         else:
+            # Git's "new" status describes the source namespace.
+            if flags & cls.NEW_TAG:
+                wildcard_sources = ["refs/tags/" + source]
+            elif flags & cls.NEW_HEAD:
+                wildcard_sources = ["refs/heads/" + source]
+            else:
+                wildcard_sources = ["refs/remotes/" + source]
+                if operation != "[new ref]":
+                    wildcard_sources.extend(("refs/heads/" + source, "refs/tags/" + source))
+                if cls._display_ref(source) == source:
+                    wildcard_sources.append(source)
+
             candidates = set()
             for spec in refspecs:
                 if spec.startswith("^") or ":" not in spec:
                     continue
                 remote, local = spec.lstrip("+").split(":", 1)
-                remote = cls._display_ref(remote)
                 if "*" in remote:
                     prefix, suffix = remote.split("*", 1)
-                    if not source.startswith(prefix) or not source.endswith(suffix):
-                        continue
-                    middle = source[len(prefix) : len(source) - len(suffix) if suffix else None]
-                    local = local.replace("*", middle)
-                elif remote != source:
-                    continue
-                if cls._display_ref(local) == destination:
+                    for path in wildcard_sources:
+                        if not path.startswith(prefix) or not path.endswith(suffix):
+                            continue
+                        middle = path[len(prefix) : len(path) - len(suffix) if suffix else None]
+                        mapped = local.replace("*", middle)
+                        if cls._display_ref(mapped) == destination:
+                            candidates.add(mapped)
+                elif (
+                    source in (cls._display_ref(remote), cls._display_ref("refs/" + remote))
+                    and cls._display_ref(local) == destination
+                ):
                     candidates.add(local)
-            if destination.startswith("refs/"):
-                candidates = {destination}
+            matching_refs = refs_by_display.get(destination, ()) if refs_by_display is not None else ()
+            if (control == "=" or old_commit is not None) and len(candidates) > 1:
+                candidates.intersection_update(matching_refs)
             if not candidates:
-                candidates = {path for path in refs if cls._display_ref(path) == destination}
+                candidates.update(matching_refs)
+            # Git shortens refs/tags/refs/heads/main to refs/heads/main, so a
+            # displayed name under refs/ is only a full name if nothing shortens to it.
+            if not candidates and destination.startswith("refs/"):
+                candidates = {destination}
             if len(candidates) > 1 and ("tag" in operation or control == "t"):
                 candidates = {path for path in candidates if path.startswith("refs/tags/")}
             if len(candidates) != 1:
@@ -820,6 +847,9 @@ class Remote(LazyMixin, IterableObj):
                     continue
 
         refs = self.repo.git._call_process_safe("for_each_ref", "--format=%(refname)").split("\n")
+        refs_by_display: Dict[str, Set[str]] = {}
+        for path in refs:
+            refs_by_display.setdefault(FetchInfo._display_ref(path), set()).add(path)
         try:
             configured = self.config_reader.config.get_values(self._config_section_name(), "fetch")
         except (cp.NoSectionError, cp.NoOptionError):
@@ -827,7 +857,7 @@ class Remote(LazyMixin, IterableObj):
         specs = [*refspecs, *configured]
         for line in fetch_info_lines:
             try:
-                output.append(FetchInfo._from_line(self.repo, line, specs, refs))
+                output.append(FetchInfo._from_line(self.repo, line, specs, refs_by_display))
             except ValueError as exc:
                 _logger.warning("Cannot decode fetch result %r: %s", line, exc)
         # A source-only refspec reports both FETCH_HEAD and any opportunistic

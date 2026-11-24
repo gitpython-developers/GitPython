@@ -53,6 +53,51 @@ def test_fetch_and_pull_without_reading_fetch_head(remote_fixture):
     clone.close()
 
 
+@pytest.mark.parametrize("remote_fixture", [("tag-named-like-branch",)], indirect=True)
+def test_fetch_resolves_tag_named_like_a_full_branch_ref(remote_fixture):
+    # Git displays refs/tags/refs/heads/main as refs/heads/main.
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        branch = clone.heads.main.commit
+        [info] = [info for info in clone.remote().fetch() if info.flags & FetchInfo.NEW_TAG]
+        assert info.ref.path == "refs/tags/refs/heads/main"
+        assert info.commit == source.head.commit
+        assert clone.heads.main.commit == branch
+
+
+@pytest.mark.parametrize("remote_fixture", [("abbreviated-tag-source",)], indirect=True)
+def test_fetch_resolves_explicit_destination_that_looks_like_a_local_tag(remote_fixture):
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        [info] = clone.remote().fetch("tags/v1:refs/archive/v1", no_tags=True)
+        assert info.ref.path == "refs/archive/v1"
+        assert info.commit == source.head.commit
+        assert clone.tags["refs/archive/v1"].commit == clone.head.commit
+
+
+@pytest.mark.parametrize("remote_fixture", [("notes-and-tag-wildcards",)], indirect=True)
+def test_fetch_resolves_notes_with_a_tag_wildcard(remote_fixture):
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        remote = clone.remote()
+        for flags in (0, FetchInfo.HEAD_UPTODATE, FetchInfo.FAST_FORWARD):
+            if flags == FetchInfo.FAST_FORWARD:
+                source.git.update_ref("refs/notes/commits", "refs/fixture/updated-notes")
+            [info] = [info for info in remote.fetch() if info.remote_ref_path == "refs/notes/commits"]
+            assert info.ref.path == "refs/notes/commits"
+            assert info.commit == source.commit("refs/notes/commits")
+            assert info.flags == flags
+
+
+@pytest.mark.parametrize("remote_fixture", [("prefetch",)], indirect=True)
+def test_prefetch_indexes_displayed_refs_once(remote_fixture):
+    paths = {"refs/prefetch/remotes/origin/main", "refs/prefetch/remotes/origin/second"}
+    with Repo(remote_fixture / "clone") as clone:
+        with mock.patch.object(FetchInfo, "_display_ref", wraps=FetchInfo._display_ref) as display_ref:
+            result = clone.remote().fetch(prefetch=True)
+        assert {info.ref.path for info in result} == paths
+        assert all(info.flags == FetchInfo.HEAD_UPTODATE for info in result)
+        displayed = [args[0] for args, _ in display_ref.call_args_list if args[0] in paths]
+        assert len(displayed) == len(set(displayed))
+
+
 @pytest.mark.parametrize("remote_fixture", [("quoted",)], indirect=True)
 def test_quoted_remote_and_submodule_names(remote_fixture):
     tmp_path = remote_fixture
