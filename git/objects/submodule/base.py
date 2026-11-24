@@ -901,7 +901,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             the remote will be fetched, and the local tracking branch updated. This only
             works if we have a local tracking branch, which is the case if the remote
             repository had a master branch, or if the ``branch`` option was specified
-            for this submodule and the branch existed remotely.
+            for this submodule and the branch existed remotely. With ``branch = .``
+            and an active superproject branch, the submodule follows the remote branch
+            of the same name and checks it out detached if it differs from the upstream.
 
         :param progress:
             :class:`UpdateProgress` instance, or ``None`` if no progress should be
@@ -1122,31 +1124,36 @@ class Submodule(IndexObject, TraversableIterableObj):
             #############################
             binsha = self.binsha
             hexsha = self.hexsha
-            is_detached = False
+            checkout_detached = False
             if mrepo is not None:
                 # mrepo is only set if we are not in dry-run mode or if the module
                 # existed.
-                is_detached = mrepo.head.is_detached
+                checkout_detached = mrepo.head.is_detached
             # END handle dry_run
 
             if mrepo is not None and to_latest_revision:
                 msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
-                if not is_detached:
-                    rref = mrepo.head.reference.tracking_branch()
-                    if rref is not None:
-                        rcommit = rref.commit
-                        binsha = rcommit.binsha
-                        hexsha = rcommit.hexsha
-                    else:
-                        _logger.error(
-                            "%s a tracking branch was not set for local branch '%s'",
-                            msg_base,
-                            mrepo.head.reference,
-                        )
-                    # END handle remote ref
-                else:
+                upstream = None if checkout_detached else mrepo.active_branch.tracking_branch()
+                rref = upstream
+                if (
+                    git.Head.to_full_path(self.branch_path) == git.Head.to_full_path(".")
+                    and not self.repo.head.is_detached
+                ):
+                    remote = upstream.remote_name if isinstance(upstream, git.RemoteReference) else "origin"
+                    rref = git.RemoteReference(mrepo, f"refs/remotes/{remote}/{self.repo.active_branch.name}")
+                    # Keep the local branch pointing at its own history when following another branch.
+                    checkout_detached = rref != upstream
+
+                if rref is not None:
+                    rcommit = rref.commit
+                    binsha = rcommit.binsha
+                    hexsha = rcommit.hexsha
+                elif checkout_detached:
                     _logger.error("%s there was no local tracking branch", msg_base)
-                # END handle detached head
+                else:
+                    _logger.error(
+                        "%s a tracking branch was not set for local branch '%s'", msg_base, mrepo.head.reference
+                    )
             # END handle to_latest_revision option
 
             # Update the working tree.
@@ -1169,7 +1176,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                         else:
                             msg = "Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits"
                             msg %= (
-                                is_detached and "checkout" or "reset",
+                                checkout_detached and "checkout" or "reset",
                                 mrepo.head,
                                 mrepo,
                             )
@@ -1193,7 +1200,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 )
 
                 if not dry_run and may_reset:
-                    if is_detached:
+                    if checkout_detached:
                         # NOTE: For now we force. The user is not supposed to change
                         # detached submodules anyway. Maybe at some point this becomes
                         # an option, to properly handle user modifications - see below
