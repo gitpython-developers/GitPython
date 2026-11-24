@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from gitdb.exc import BadName
 
-from git import Commit, Repo, GitCommandError
+from git import Commit, Repo, GitCommandError, _backend
 from test.lib.fixtures import fixture_repo, read_only_fixture
 
 
@@ -153,6 +153,15 @@ def test_rev_parse_reflog_selectors(rev_parse_repo):
     assert repo.rev_parse("@{-1}") == side
 
     assert repo.rev_parse("%s@{upstream}" % main.name) == merge
+
+    before = _backend.statistics()
+    with pytest.raises((BadName, GitCommandError)):
+        repo.rev_parse("HEAD@{never}")
+    revision = "HEAD@{1970-01-01 00:00:01 +0000}"
+    assert repo.rev_parse(revision).hexsha == repo.git.rev_parse("--verify", revision)
+    if _backend.name == "gix":
+        key = ("rev_parse", "CLI: textual reflog dates (GIX-39)")
+        assert _backend.statistics().get(key, 0) == before.get(key, 0) + 2
 
 
 def test_rev_parse_commit_message_search(rev_parse_repo):

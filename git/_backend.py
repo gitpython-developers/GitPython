@@ -168,6 +168,15 @@ def _canonical_repository(repo: Any) -> Any:
 def _check_revision_grammar(ref: str) -> None:
     if ref.startswith(":/") or "^{/" in ref or "-dirty" in ref or re.search(r"-\d+-g[0-9a-fA-F]+|^[0-9a-fA-F]+-", ref):
         raise _Unsupported("revision grammar differences (GIX-17)")
+    prefix, opener, remainder = ref.partition("@{")
+    if opener and ":" not in prefix:
+        selector, closer, _ = remainder.partition("}")
+        if closer and not (
+            re.fullmatch(r"[0-9]+", selector)
+            or (not prefix and re.fullmatch(r"-[0-9]+", selector))
+            or selector.lower() in {"u", "upstream", "p", "push"}
+        ):
+            raise _Unsupported("textual reflog dates (GIX-39)")
 
 
 def _oid(repo: Any, ref: Any, env: Optional[Dict[str, Any]] = None) -> Any:
