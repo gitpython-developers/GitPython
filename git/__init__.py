@@ -195,10 +195,8 @@ def refresh(path: Optional[PathLike] = None) -> None:
         :meth:`Git.refresh <git.cmd.Git.refresh>` for details on how to achieve this.
 
     :note:
-        This calls :meth:`Git.refresh <git.cmd.Git.refresh>` and sets other global
-        configuration according to the effect of doing so. As such, this function should
-        usually be used instead of using :meth:`Git.refresh <git.cmd.Git.refresh>` or
-        :meth:`FetchInfo.refresh <git.remote.FetchInfo.refresh>` directly.
+        This calls :meth:`Git.refresh <git.cmd.Git.refresh>` and updates ``GIT_OK``.
+        Prefer this function to calling :meth:`Git.refresh <git.cmd.Git.refresh>` directly.
 
     :note:
         This function is called automatically, with no arguments, at import time.
@@ -208,8 +206,6 @@ def refresh(path: Optional[PathLike] = None) -> None:
 
     if not Git.refresh(path=path):
         return
-    if not FetchInfo.refresh():  # noqa: F405
-        return  # type: ignore[unreachable]
 
     GIT_OK = True
 
