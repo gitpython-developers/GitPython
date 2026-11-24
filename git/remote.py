@@ -399,14 +399,13 @@ class FetchInfo(IterableObj):
                 if spec.startswith("^") or ":" not in spec:
                     continue
                 remote, local = spec.lstrip("+").split(":", 1)
-                remote = cls._display_ref(remote)
                 if "*" in remote:
-                    prefix, suffix = remote.split("*", 1)
+                    prefix, suffix = cls._display_ref(remote).split("*", 1)
                     if not source.startswith(prefix) or not source.endswith(suffix):
                         continue
                     middle = source[len(prefix) : len(source) - len(suffix) if suffix else None]
                     local = local.replace("*", middle)
-                elif remote != source:
+                elif source not in (cls._display_ref(remote), cls._display_ref("refs/" + remote)):
                     continue
                 if cls._display_ref(local) == destination:
                     candidates.add(local)

@@ -64,6 +64,15 @@ def test_fetch_resolves_tag_named_like_a_full_branch_ref(remote_fixture):
         assert clone.heads.main.commit == branch
 
 
+@pytest.mark.parametrize("remote_fixture", [("abbreviated-tag-source",)], indirect=True)
+def test_fetch_resolves_explicit_destination_that_looks_like_a_local_tag(remote_fixture):
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        [info] = clone.remote().fetch("tags/v1:refs/archive/v1", no_tags=True)
+        assert info.ref.path == "refs/archive/v1"
+        assert info.commit == source.head.commit
+        assert clone.tags["refs/archive/v1"].commit == clone.head.commit
+
+
 @pytest.mark.parametrize("remote_fixture", [("quoted",)], indirect=True)
 def test_quoted_remote_and_submodule_names(remote_fixture):
     tmp_path = remote_fixture

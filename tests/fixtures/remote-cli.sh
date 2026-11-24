@@ -15,6 +15,13 @@ case "$1" in
         git -C source commit --allow-empty -m second
         git -C source tag refs/heads/main
         ;;
+    abbreviated-tag-source)
+        git clone source clone
+        git -C clone remote set-url origin ../source
+        git -C clone tag refs/archive/v1
+        git -C source commit --allow-empty -m second
+        git -C source tag v1
+        ;;
     quoted)
         git init --initial-branch=main parent
         ;;
