@@ -388,7 +388,7 @@ and predate the current fallback; they do not establish native coverage.
 | Tree enumeration, `ls_tree` | Native tree entries with modes, names, and object IDs | Other command options; entries with modes Git canonicalizes or that do not round-trip through native tree encoding; GIX-36 |
 | Reference object reads | One exact native lookup for direct, symbolic and absent references | Partial names and native decoding errors |
 | Reference-name validation | Native full-name validation without opening a repository | Standalone names outside the native grammar; GIX-20 |
-| Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics |
+| Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics, recursive `HEAD` lookup (GIX-44) |
 | Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options; GIX-25 |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
 | Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Non-UTF-8 subsection names, other/duplicate sections, ambiguous brackets, missing/implicit fields and parser errors; GIX-12. Lines other than comments, bare headers and single settings; GIX-35 |
@@ -1017,6 +1017,7 @@ identify the historical fixture where needed.
 | GIX-41 | Bug (open) | With Git 2.54.0 and GixPython 0.4.0, `tree-modes.sh` writes an entry with either an empty mode field or the literal `0`. Both are decoded by `Tree.iter()` as mode zero and kind `commit`. Git rejects the empty field with `malformed mode in tree entry` and lists the literal zero as a gitlink. `test_ambiguous_tree_entry_mode_uses_git` verifies both results for SHA-1 and SHA-256. | Reject a missing mode or expose the distinction between a missing mode and an encoded zero. `_ls_tree()` defers mode zero to Git for validation and formatting. |
 | GIX-42 | Bug (open) | With Git 2.54.0 and GixPython 0.4.0, `commit.sh negative-date` stores `-1 +0200 1700000000 -0500` in the author, committer and tagger identities. Git's `split_ident_line()` requires unsigned timestamp digits, so `git show --format=%ad --date=raw` reports no date and GitPython's CLI path returns `(0, 0)`. Native signature accessors expose `(-1, +7200)` as seconds and offset east of UTC. | Provide Git-compatible negative timestamp handling. `object_metadata()` retains CLI for negative dates. `test_deserialization_negative_timestamp_matches_git` verifies both object kinds. |
 | GIX-43 | Bug (open) | With Git 2.54.0 and GixPython 0.4.0, `commit.sh spaced-email` stores spaces inside the email brackets ahead of a date with trailing fields. Git's `%ae` and `%ce` preserve these bytes, but native commit author and committer accessors trim them. The native tagger accessor preserves the spaces. | Expose a signature identity that preserves the stored fields with Git-compatible delimiters. `object_metadata()` uses the existing CLI fallback if the native identity fails the raw header comparison. `test_deserialization_preserves_email_whitespace` verifies author, committer and tagger properties. |
+| GIX-44 | Bug (open) | With Git 2.54.0 and GixPython 0.3.0, the `branch-dot-alias` case of `submodule-cases.sh` sets `HEAD` to `refs/heads/dev`, which points to `refs/heads/master`. `Repository.head_name()` and `Repository.head_ref().name()` return `refs/heads/dev`. `git symbolic-ref HEAD` returns `refs/heads/master`, and `git submodule update --remote` selects `origin/master` for `branch = .`. `test_update_to_latest_revision_follows_superproject_branch_alias` verifies branch selection on clone and later updates. Redirect `dev` to `refs/heads/missing` and Git returns that terminal name, while `Reference.follow_to_object()` raises a missing-ref error. | Expose the terminal symbolic target with Git-compatible handling of unborn, detached and invalid references. `Submodule._branch_for_update()` uses recursive `git symbolic-ref --quiet -- HEAD` through the CLI fallback. |
 
 GIX-14 also covers configured worktree symlink resolution. On macOS with
 GixPython 0.3.0, CPython 3.12.14 and Git 2.54.0, set a submodule's
@@ -1179,6 +1180,12 @@ values both become `None`. A byte-key raw configuration accessor is needed to
 retain GitPython's configuration contract natively. The scripted
 `submodule-bytes.sh` regressions cover values, names and cached-field rereads;
 the native value test prohibits CLI execution.
+
+Repository `config --get` also uses Git for byte keys. Git 2.54.0 can read a raw
+key such as `remote.origin-<ff>.url`, while GixPython 0.3.0 raises
+`UnicodeEncodeError` for its surrogate-escaped form. The scalar lookup in
+`test_config_preserves_non_utf8_subsections_and_values` exercises this
+fallback, which also applies to submodule branch overrides.
 
 The October 7 inventory identified 951 remote-enumeration reads, 674 actor
 lookups, 262 remote-property reads, 202 tracking-branch lookups and 111 fetch

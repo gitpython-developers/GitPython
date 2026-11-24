@@ -85,6 +85,8 @@ def test_config_preserves_non_utf8_subsections_and_values(stream):
         remote = repo.remotes[0]
         assert remote.name == "origin-\udcff"
         assert remote.url == "target-\udcfe"
+        if os.name != "nt":
+            assert repo.git._call_process_safe("config", "--get", "remote.origin-\udcff.url") == "target-\udcfe"
 
 
 @pytest.mark.skipif(os.name == "nt", reason="Windows command arguments cannot carry arbitrary bytes")
