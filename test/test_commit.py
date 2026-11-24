@@ -706,6 +706,23 @@ class TestCommit(TestCommitSerialization):
                     key = (kind + ".decode", "native")
                     self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
 
+    def test_deserialization_negative_timestamp_matches_git(self):
+        with fixture_repo("commit.sh", "negative-date") as repo:
+            root = Path(repo.working_dir).parent
+            oid = (root / "object-id").read_text().strip()
+            tag_oid = (root / "tag-id").read_text().strip()
+            self.assertEqual(repo.git.show("-s", "--format=%ad", "--date=raw", oid), "")
+            before = _backend.statistics()
+            commit = Commit(repo, bytes.fromhex(oid))
+            self.assertEqual((commit.authored_date, commit.author_tz_offset), (0, 0))
+            self.assertEqual((commit.committed_date, commit.committer_tz_offset), (0, 0))
+            tag = TagObject(repo, bytes.fromhex(tag_oid))
+            self.assertEqual((tag.tagged_date, tag.tagger_tz_offset), (0, 0))
+            if _backend.name == "gix":
+                for kind in ("commit", "tag"):
+                    key = (kind + ".decode", "CLI: negative signature timestamp (GIX-42)")
+                    self.assertEqual(_backend.statistics().get(key, 0), before.get(key, 0) + 1)
+
     def test_deserialization_short_offset_matches_git(self):
         with fixture_repo("commit.sh", "short-offset") as repo:
             oid = (Path(repo.working_dir).parent / "object-id").read_text().strip()
