@@ -1665,6 +1665,7 @@ class IndexFile(LazyMixin, git_diff.Diffable):
                 self.repo._empty_tree_hexsha,
                 "--no-abbrev",
                 "--full-index",
+                "--no-textconv",
             ]
 
             if not any(x in kwargs for x in ("find_renames", "no_renames", "M")):

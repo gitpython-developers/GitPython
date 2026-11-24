@@ -9,7 +9,8 @@ import pytest
 from gitdb import IStream
 from gitdb.db import LooseObjectDB
 
-from git import Git, Repo
+from git import NULL_TREE, Git, Repo
+from git.diff import NULL_TREE_SHA
 from git.exc import GitCommandError, UnsafeOptionError, UnsupportedOperation
 from test.lib.fixtures import fixture_repo, writable_fixture
 
@@ -116,6 +117,16 @@ def test_managed_commands_disable_implicit_execution(plain_repo):
     assert any(option.startswith("core.hooksPath=") for option in command)
     assert execute.call_args.kwargs["shell"] is False
     assert execute.call_args.kwargs["env"]["GIT_NO_LAZY_FETCH"] == "1"
+
+
+@pytest.mark.parametrize("other", [NULL_TREE, NULL_TREE_SHA])
+@pytest.mark.parametrize("create_patch", [False, True])
+def test_index_diff_against_empty_tree_disables_textconv(plain_repo, other, create_patch):
+    with patch.object(Git, "_call_process_safe", autospec=True, side_effect=Git._call_process_safe) as run:
+        assert plain_repo.index.diff(other, create_patch=create_patch) == []
+
+    assert run.call_args.args[1] == "diff"
+    assert "--no-textconv" in run.call_args.args[2:]
 
 
 def test_blame_and_archive_do_not_run_configured_commands(repo):
