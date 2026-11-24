@@ -542,15 +542,22 @@ def is_dirty(command: Any, index: bool, working_tree: bool, untracked: bool, sub
             for item in entries:
                 if item.summary() is None:
                     continue
+                details = item.details
                 if item.kind == "TreeIndex":
-                    if index and (submodules or item.details["entry_mode"] != 0o160000):
+                    if index and (submodules or details["entry_mode"] != 0o160000):
                         dirty = True
                         break
-                elif item.details["kind"] == "DirectoryContents":
-                    if untracked and item.details["entry"]["status"] == "Untracked":
+                elif details["kind"] == "DirectoryContents":
+                    if untracked and details["entry"]["status"] == "Untracked":
                         dirty = True
                         break
                 elif working_tree:
+                    change = details.get("status", {})
+                    if (
+                        change.get("change") == "SubmoduleModification"
+                        and not change["status"].state["superproject_configuration"]
+                    ):
+                        raise _Unsupported("embedded repository diff policy (GIX-40)")
                     dirty = True
                     break
     except _Unsupported as exc:

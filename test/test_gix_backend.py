@@ -741,6 +741,16 @@ def test_native_status_tracks_submodule_dirtiness(repo):
         assert dirty == [repo.is_dirty(**option) for option in options]
 
 
+@pytest.mark.parametrize("target", ["untracked", "file"])
+def test_embedded_status_uses_git_diff_policy(repo, target):
+    expected = target == "file"
+    assert bool(repo.git.diff("--raw")) == expected
+    before = _backend.statistics()
+    assert repo.is_dirty() == expected
+    key = ("Repo.is_dirty", "CLI: embedded repository diff policy (GIX-40)")
+    assert _backend.statistics().get(key, 0) == before.get(key, 0) + 1
+
+
 @pytest.mark.parametrize("error", [OSError(22, "Invalid filename"), PermissionError(13, "Permission denied")])
 def test_ignore_metadata_errors_retain_cli(error):
     with fixture_repo("repo.sh", "ignore-verbatim") as repo:
