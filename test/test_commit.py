@@ -872,6 +872,21 @@ JzJMZDRLQLFvnzqZuCjE
         assert commit.trailers_list == [(KEY_2, VALUE_2)]
         assert commit.trailers_dict == {KEY_2: [VALUE_2]}
 
+    def test_trailers_ignore_patch_divider(self):
+        """A ``---`` line does not end a commit message, as in Git's ``%(trailers)``."""
+        commit = copy.copy(self.rorepo.commit("HEAD"))
+        # Dependabot writes its metadata after a `---` line and signs off below it.
+        commit.message = (
+            "Bump x from 1 to 2\n\nBumps x.\n\n---\nupdated-dependencies:\n- dependency-name: x\n...\n\n"
+            "Signed-off-by: dependabot[bot] <support@github.com>\n"
+        )
+        assert commit.trailers_list == [("Signed-off-by", "dependabot[bot] <support@github.com>")]
+
+        # A paragraph followed by `---` and more text is part of the body.
+        commit.message = "Subject\n\nReviewed-by: Maintainer <maintainer@example.com>\n---\nNot a trailer\n"
+        assert commit.trailers_list == []
+        assert commit.trailers_dict == {}
+
     def test_commit_co_authors(self):
         commit = copy.copy(self.rorepo.commit("dated"))
         commit.message = """Commit message
@@ -949,6 +964,22 @@ Co-authored-by: test_user_3 <test_user_3@github.com>"""
                 "Signed-off-by": ["Alice <alice@example.com>", "Bob <bob@example.com>"],
                 "Issue": ["456"],
             }
+
+    def test_create_from_tree_appends_trailers_after_patch_divider(self):
+        """Trailers go at the end of a message containing ``---``, as with ``git commit --trailer``."""
+        with fixture_repo("commit.sh", "tree", write=True) as rw_repo:
+            tree = rw_repo.tree((Path(rw_repo.working_tree_dir).parent / "tree-id").read_text().strip())
+
+            commit = Commit.create_from_tree(
+                rw_repo,
+                tree,
+                "Subject\n\nBody\n---\nNotes\n",
+                head=True,
+                trailers={"Signed-off-by": "Test User <test@test.com>"},
+            )
+
+            assert commit.message == "Subject\n\nBody\n---\nNotes\n\nSigned-off-by: Test User <test@test.com>\n"
+            assert commit.trailers_dict == {"Signed-off-by": ["Test User <test@test.com>"]}
 
     def test_create_from_tree_with_non_utf8_trailers(self):
         """Test that trailer creation and parsing respect the configured commit encoding."""
