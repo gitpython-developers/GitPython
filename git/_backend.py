@@ -335,10 +335,14 @@ def _ls_tree(repo: Any, args: List[str], kwargs: Dict[str, Any]) -> bytes:
     if len(args) != 3 or args[:2] != ["-z", "--full-tree"]:
         raise _Unsupported("tree options")
     with repo.find_tree(_oid(repo, args[2])).iter() as entries:
-        return b"".join(
-            b"%s %s\t%s\0" % (_LS_TREE_MODES[entry.kind()], str(entry.id()).encode("ascii"), entry.filename())
-            for entry in entries
-        )
+        records = []
+        for entry in entries:
+            if entry.mode() == 0:
+                raise _Unsupported("ambiguous zero tree entry mode (GIX-41)")
+            records.append(
+                b"%s %s\t%s\0" % (_LS_TREE_MODES[entry.kind()], str(entry.id()).encode("ascii"), entry.filename())
+            )
+        return b"".join(records)
 
 
 def check_ref_name(name: str) -> Any:

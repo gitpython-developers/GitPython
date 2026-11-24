@@ -276,6 +276,25 @@ def test_native_tree_entry_modes_match_git(object_format, entry_types):
             assert [(entry.path, entry.mode) for entry in tree] == expected
 
 
+@pytest.mark.parametrize("object_format", ["sha1", "sha256"])
+@pytest.mark.parametrize("entry_types", ["missing-mode", "zero-mode"])
+def test_ambiguous_tree_entry_mode_uses_git(object_format, entry_types):
+    with fixture_repo("tree-modes.sh", object_format, entry_types) as repo:
+        oid = (Path(repo.working_dir).parent / "tree-id").read_text().strip()
+        tree = Tree(repo, bytes.fromhex(oid), path="")
+        before = _backend.statistics()
+        if entry_types == "missing-mode":
+            with pytest.raises(GitCommandError, match="malformed mode"):
+                repo.git.ls_tree(oid)
+            with pytest.raises(GitCommandError, match="malformed mode"):
+                list(tree)
+        else:
+            assert "160000 commit" in repo.git.ls_tree(oid)
+            assert tree["module"].mode == 0o160000
+        key = ("ls_tree", "CLI: ambiguous zero tree entry mode (GIX-41)")
+        assert _backend.statistics().get(key, 0) == before.get(key, 0) + 1
+
+
 def test_native_metadata_paths_match_git_in_each_worktree(repo):
     tmp_path = Path(repo.working_dir).parent
     linked_path = tmp_path / "linked"

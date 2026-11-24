@@ -10,6 +10,10 @@ write_entry () {
 }
 {
     write_entry 100700 executable "$blob"
-    if test "$2" = gitlink; then write_entry 140000 module "$commit"; fi
+    case "$2" in
+    gitlink) write_entry 140000 module "$commit" ;;
+    missing-mode) write_entry '' module "$commit" ;;
+    zero-mode) write_entry 0 module "$commit" ;;
+    esac
     write_entry 120777 symlink "$blob"
 } | git -C repo hash-object --literally -w -t tree --stdin >tree-id
