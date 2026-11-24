@@ -394,21 +394,39 @@ class FetchInfo(IterableObj):
         if destination == "FETCH_HEAD":
             ref = SymbolicReference(repo, destination)
         else:
+            # Git's "new" status describes the source namespace.
+            if flags & cls.NEW_TAG:
+                wildcard_sources = ["refs/tags/" + source]
+            elif flags & cls.NEW_HEAD:
+                wildcard_sources = ["refs/heads/" + source]
+            else:
+                wildcard_sources = ["refs/remotes/" + source]
+                if operation != "[new ref]":
+                    wildcard_sources.extend(("refs/heads/" + source, "refs/tags/" + source))
+                if cls._display_ref(source) == source:
+                    wildcard_sources.append(source)
+
             candidates = set()
             for spec in refspecs:
                 if spec.startswith("^") or ":" not in spec:
                     continue
                 remote, local = spec.lstrip("+").split(":", 1)
                 if "*" in remote:
-                    prefix, suffix = cls._display_ref(remote).split("*", 1)
-                    if not source.startswith(prefix) or not source.endswith(suffix):
-                        continue
-                    middle = source[len(prefix) : len(source) - len(suffix) if suffix else None]
-                    local = local.replace("*", middle)
-                elif source not in (cls._display_ref(remote), cls._display_ref("refs/" + remote)):
-                    continue
-                if cls._display_ref(local) == destination:
+                    prefix, suffix = remote.split("*", 1)
+                    for path in wildcard_sources:
+                        if not path.startswith(prefix) or not path.endswith(suffix):
+                            continue
+                        middle = path[len(prefix) : len(path) - len(suffix) if suffix else None]
+                        mapped = local.replace("*", middle)
+                        if cls._display_ref(mapped) == destination:
+                            candidates.add(mapped)
+                elif (
+                    source in (cls._display_ref(remote), cls._display_ref("refs/" + remote))
+                    and cls._display_ref(local) == destination
+                ):
                     candidates.add(local)
+            if (control == "=" or old_commit is not None) and len(candidates) > 1:
+                candidates.intersection_update(refs)
             if not candidates:
                 candidates = {path for path in refs if cls._display_ref(path) == destination}
             # Git shortens refs/tags/refs/heads/main to refs/heads/main, so a

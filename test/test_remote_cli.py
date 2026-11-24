@@ -73,6 +73,19 @@ def test_fetch_resolves_explicit_destination_that_looks_like_a_local_tag(remote_
         assert clone.tags["refs/archive/v1"].commit == clone.head.commit
 
 
+@pytest.mark.parametrize("remote_fixture", [("notes-and-tag-wildcards",)], indirect=True)
+def test_fetch_resolves_notes_with_a_tag_wildcard(remote_fixture):
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        remote = clone.remote()
+        for flags in (0, FetchInfo.HEAD_UPTODATE, FetchInfo.FAST_FORWARD):
+            if flags == FetchInfo.FAST_FORWARD:
+                source.git.update_ref("refs/notes/commits", "refs/fixture/updated-notes")
+            [info] = [info for info in remote.fetch() if info.remote_ref_path == "refs/notes/commits"]
+            assert info.ref.path == "refs/notes/commits"
+            assert info.commit == source.commit("refs/notes/commits")
+            assert info.flags == flags
+
+
 @pytest.mark.parametrize("remote_fixture", [("quoted",)], indirect=True)
 def test_quoted_remote_and_submodule_names(remote_fixture):
     tmp_path = remote_fixture

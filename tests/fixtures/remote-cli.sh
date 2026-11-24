@@ -22,6 +22,18 @@ case "$1" in
         git -C source commit --allow-empty -m second
         git -C source tag v1
         ;;
+    notes-and-tag-wildcards)
+        git clone source clone
+        git -C clone remote set-url origin ../source
+        git -C clone config --unset-all remote.origin.fetch
+        git -C clone config --add remote.origin.fetch '+refs/notes/*:refs/notes/*'
+        git -C clone config --add remote.origin.fetch '+refs/tags/*:refs/tags/*'
+        git -C source notes add -m 'a note'
+        initial_notes=$(git -C source rev-parse refs/notes/commits)
+        git -C source notes append -m 'more notes'
+        git -C source update-ref refs/fixture/updated-notes refs/notes/commits
+        git -C source update-ref refs/notes/commits "$initial_notes"
+        ;;
     quoted)
         git init --initial-branch=main parent
         ;;
