@@ -2052,7 +2052,6 @@ class TestSubmodule(TestBase):
             parent.head.set_reference(parent.head.commit)
             submodule = parent.submodules[0]
             submodule.set_parent_commit(parent.head.commit)
-            assert submodule.branch_path == "."
             remote_tip = source.index.commit("Advance master again", skip_hooks=True)
             assert remote_tip.binsha != submodule.binsha
 
@@ -2224,6 +2223,43 @@ class TestSubmodule(TestBase):
             assert len(repo.submodules) == 1
         with git.Repo(self._fixture("list-valid", write=False) / "parent") as repo:
             assert len(repo.submodules) == 0
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_reread_branch_matches_iter_items(self):
+        rwdir = self._fixture("module")
+        with git.Repo(rwdir / "parent") as repo:
+            parent_commit = repo.head.commit
+            for branch in (None, "1.10", "2", "true", "dev", "refs/heads/dev"):
+                with self.subTest(branch=branch):
+                    if branch is not None:
+                        repo.git.config("-f", ".gitmodules", "submodule.module.branch", branch)
+                    expected = git.Head.to_full_path(Submodule.k_head_default if branch is None else branch)
+
+                    submodule = repo.submodules[0]
+                    assert submodule.branch_path == expected
+                    # Both clear the cache, so the branch is read from .gitmodules again.
+                    submodule.set_parent_commit(parent_commit)
+                    assert submodule.branch_path == expected
+                    assert submodule.branch_name == git.Head(repo, expected).name
+                    submodule._clear_cache()
+                    assert submodule.branch_path == expected
+
+    def test_valueless_branch_is_invalid(self):
+        parent = self._fixture("module") / "parent"
+        gitmodules = parent / ".gitmodules"
+        original = gitmodules.read_bytes()
+        with git.Repo(parent) as repo:
+            gitmodules.write_bytes(original + b"\tbranch = dev\n")
+            submodule = repo.submodules[0]
+            assert submodule.branch_path == "refs/heads/dev"
+            for trailing_value in (b"", b"\tbranch = dev\n"):
+                with self.subTest(trailing_value=trailing_value):
+                    gitmodules.write_bytes(original + b"\tbranch\n" + trailing_value)
+                    with pytest.raises(ValueError, match="Submodule 'module' has a valueless branch setting"):
+                        repo.submodules
+                    submodule._clear_cache()
+                    with pytest.raises(ValueError, match="Submodule 'module' has a valueless branch setting"):
+                        submodule.branch_path
 
     @pytest.mark.xfail(
         sys.platform == "win32",

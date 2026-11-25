@@ -179,30 +179,37 @@ class Submodule(IndexObject, TraversableIterableObj):
             if native is not NotImplemented and self.name in native:
                 values = native[self.name]
                 self.path, self._url = values["path"], values["url"]
-                self._branch_path = (
-                    GitConfigParser._string_to_value(values[self.k_head_option])
-                    if self.k_head_option in values
-                    else git.Head.to_full_path(self.k_head_default)
-                )
+                self._branch_path = git.Head.to_full_path(values.get(self.k_head_option, self.k_head_default))
                 return
             # Default submodule values.
             try:
-                self.path = reader.get("path")
+                path = reader.get("path")
             except cp.NoSectionError as e:
                 if self.repo.working_tree_dir is not None:
                     raise ValueError(
                         "This submodule instance does not exist anymore in '%s' file"
                         % osp.join(self.repo.working_tree_dir, ".gitmodules")
                     ) from e
+                raise
 
-            self._url = reader.get("url")
-            # GitPython extension values - optional.
-            self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
+            url = reader.get("url")
+            branch = self._configured_branch(self.name, reader.items_all())
+            self.path, self._url, self._branch_path = path, url, git.Head.to_full_path(branch)
         elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
         else:
             super()._set_cache_(attr)
         # END handle attribute name
+
+    @classmethod
+    def _configured_branch(cls, name: str, options: List[Tuple[str, List[Any]]]) -> str:
+        # Raw values preserve numeric-looking names and valueless keys.
+        for option, values in options:
+            if option == cls.k_head_option.lower():
+                if None in values:
+                    raise ValueError("Submodule %r has a valueless branch setting" % name)
+                return values[-1]
+        return cls.k_head_default
 
     @classmethod
     def _get_intermediate_items(cls, item: "Submodule") -> IterableList["Submodule"]:
@@ -1976,9 +1983,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             if native is NotImplemented:
                 p = parser.get(sms, "path")
                 u = parser.get(sms, "url")
-                b = cls.k_head_default
-                if parser.has_option(sms, cls.k_head_option):
-                    b = str(parser.get(sms, cls.k_head_option))
+                b = cls._configured_branch(n, parser.items_all(sms))
             else:
                 p, u = native[n]["path"], native[n]["url"]
                 b = native[n].get(cls.k_head_option, cls.k_head_default)

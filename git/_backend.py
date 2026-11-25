@@ -442,6 +442,9 @@ def submodule_config(source: Any) -> Any:
         # occurrences and duplicate sections until GIX-12 can preserve their order.
         if b"\0" in data or re.search(rb"\[(?!submodule[ \t])", data, re.I):
             raise _Unsupported("non-submodule configuration sections (GIX-12)")
+        # A later assignment can hide an implicit branch from the scalar getters.
+        if re.search(rb"(?:^|\])[ \t\r\f\v]*branch[ \t\r\f\v]*(?:[#;]|$)", data, re.I | re.M):
+            raise _Unsupported("possible valueless submodule branch (GIX-45)")
         modules = gix.ModulesFile.from_bytes(data)
         with modules.names() as cursor:
             names = list(cursor)
