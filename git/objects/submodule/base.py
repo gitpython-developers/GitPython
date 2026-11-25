@@ -183,24 +183,33 @@ class Submodule(IndexObject, TraversableIterableObj):
                 return
             # Default submodule values.
             try:
-                self.path = reader.get("path")
+                path = reader.get("path")
             except cp.NoSectionError as e:
                 if self.repo.working_tree_dir is not None:
                     raise ValueError(
                         "This submodule instance does not exist anymore in '%s' file"
                         % osp.join(self.repo.working_tree_dir, ".gitmodules")
                     ) from e
+                raise
 
-            self._url = reader.get("url")
-            # GitPython extension values - optional.
-            # Not get_value(): it turns `branch = 1.10` into the float 1.1.
-            branch = reader.get(self.k_head_option, fallback=None)
-            self._branch_path = git.Head.to_full_path(self.k_head_default if branch is None else branch)
+            url = reader.get("url")
+            branch = self._configured_branch(self.name, reader.items_all())
+            self.path, self._url, self._branch_path = path, url, git.Head.to_full_path(branch)
         elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
         else:
             super()._set_cache_(attr)
         # END handle attribute name
+
+    @classmethod
+    def _configured_branch(cls, name: str, options: List[Tuple[str, List[Any]]]) -> str:
+        # Raw values preserve numeric-looking names and valueless keys.
+        for option, values in options:
+            if option == cls.k_head_option.lower():
+                if None in values:
+                    raise ValueError("Submodule %r has a valueless branch setting" % name)
+                return values[-1]
+        return cls.k_head_default
 
     @classmethod
     def _get_intermediate_items(cls, item: "Submodule") -> IterableList["Submodule"]:
@@ -1974,9 +1983,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             if native is NotImplemented:
                 p = parser.get(sms, "path")
                 u = parser.get(sms, "url")
-                b = parser.get(sms, cls.k_head_option, fallback=None)
-                if b is None:
-                    b = cls.k_head_default
+                b = cls._configured_branch(n, parser.items_all(sms))
             else:
                 p, u = native[n]["path"], native[n]["url"]
                 b = native[n].get(cls.k_head_option, cls.k_head_default)
