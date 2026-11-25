@@ -2155,7 +2155,7 @@ class TestSubmodule(TestBase):
             with self.assertLogs("git.objects.submodule.root", "WARNING"):
                 RootModule(parent).update(previous_commit=previous)
             with submodule.module() as module:
-                assert module.remotes.origin.url == str(moved)
+                assert Path(module.remotes.origin.url).samefile(moved)
                 assert module.active_branch.name == "dev"
                 assert module.head.commit == git.Repo(moved).heads.dev.commit
 
