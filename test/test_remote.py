@@ -554,6 +554,33 @@ class TestRemote(TestBase):
             "pruned refs are skipped without a warning",
         )
 
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_revision_sources(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        parent = rw_repo.head.commit.parents[0]
+        res = remote.push(
+            [
+                "%s:refs/heads/pushed_hash" % parent.hexsha,
+                "HEAD~1:refs/heads/pushed_rev",
+                "HEAD:refs/heads/pushed_ref",
+            ]
+        )
+        infos = {info.remote_ref_string: info for info in res}
+        self.assertEqual(set(infos), {"refs/heads/pushed_hash", "refs/heads/pushed_rev", "refs/heads/pushed_ref"})
+        for name in ("refs/heads/pushed_hash", "refs/heads/pushed_rev"):
+            self.assertTrue(infos[name].flags & PushInfo.NEW_HEAD)
+            self.assertIsNone(infos[name].local_ref)
+            self.assertEqual(infos[name].local_hash, parent.hexsha)
+        self.assertEqual(infos["refs/heads/pushed_ref"].local_ref, rw_repo.head)
+        self.assertIsNone(infos["refs/heads/pushed_ref"].local_hash)
+
+        # The push moves self/pushed_ref, which the source is relative to.
+        remote.fetch()
+        (info,) = remote.push("self/pushed_ref~1:refs/heads/pushed_ref", force=True)
+        self.assertTrue(info.flags & PushInfo.FORCED_UPDATE)
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
     @with_rw_repo("HEAD", bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"

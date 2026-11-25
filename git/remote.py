@@ -32,6 +32,7 @@ from typing import (
 from git.cmd import Git, handle_process_output
 from git.compat import force_text
 from git.config import GitConfigParser, SectionConstraint, cp
+from git.exc import BadName
 from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
 from git.util import (
@@ -121,7 +122,11 @@ class PushInfo(IterableObj):
         info = remote.push()[0]
         info.flags          # bitflags providing more information about the result
         info.local_ref      # Reference pointing to the local reference that was pushed
-                            # It is None if the ref was deleted.
+                            # It is None if the ref was deleted, or if the pushed source
+                            # was not a reference, like a commit hash or HEAD~1.
+        info.local_hash     # Hash of the pushed object if the source was not a
+                            # reference, otherwise None. For new and rejected refs git
+                            # prints no hash, so the source is resolved after the push.
         info.remote_ref_string # path to the remote reference located on the remote side
         info.remote_ref # Remote Reference on the local side corresponding to
                         # the remote_ref_string. It can be a TagReference as well.
@@ -132,6 +137,7 @@ class PushInfo(IterableObj):
 
     __slots__ = (
         "local_ref",
+        "local_hash",
         "remote_ref_string",
         "flags",
         "_old_commit_sha",
@@ -173,6 +179,7 @@ class PushInfo(IterableObj):
         remote: "Remote",
         old_commit: Optional[str] = None,
         summary: str = "",
+        local_hash: Optional[str] = None,
     ) -> None:
         """Initialize a new instance.
 
@@ -180,6 +187,7 @@ class PushInfo(IterableObj):
         """
         self.flags = flags
         self.local_ref = local_ref
+        self.local_hash = local_hash
         self.remote_ref_string = remote_ref_string
         self._remote = remote
         self._old_commit_sha = old_commit
@@ -226,16 +234,18 @@ class PushInfo(IterableObj):
 
         # from_to handling
         from_ref_string, to_ref_string = from_to.split(":")
-        if flags & cls.DELETED:
-            from_ref: Union[SymbolicReference, None] = None
-        else:
-            if from_ref_string == "(delete)":
-                from_ref = None
-            else:
+        from_ref: Union[SymbolicReference, None] = None
+        is_revision = False
+        if not flags & cls.DELETED and from_ref_string != "(delete)":
+            try:
                 from_ref = Reference.from_path(remote.repo, from_ref_string)
+            except ValueError:
+                # Git prints the source as it was given, which can be any revision.
+                is_revision = True
 
         # Commit handling, could be message or commit info
         old_commit: Optional[str] = None
+        new_sha: Optional[str] = None
         if summary.startswith("["):
             if "[rejected]" in summary:
                 flags |= cls.REJECTED
@@ -256,12 +266,21 @@ class PushInfo(IterableObj):
             split_token = "..."
             if control_character == " ":
                 split_token = ".."
-            old_sha, _new_sha = summary.split(" ")[0].split(split_token)
+            old_sha, new_sha = summary.split(" ")[0].split(split_token)
             # Have to use constructor here as the sha usually is abbreviated.
             old_commit = old_sha
         # END message handling
 
-        return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
+        local_hash: Optional[str] = None
+        if is_revision:
+            # The push may have moved a ref the revision is relative to, like
+            # origin/main~1, so prefer the hash git reports as pushed.
+            try:
+                local_hash = remote.repo.rev_parse(new_sha or from_ref_string).hexsha
+            except BadName:
+                pass
+
+        return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary, local_hash)
 
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> NoReturn:  # -> Iterator['PushInfo']:
