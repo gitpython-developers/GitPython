@@ -32,7 +32,7 @@ from typing import (
 from git.cmd import Git, handle_process_output
 from git.compat import force_text
 from git.config import GitConfigParser, SectionConstraint, cp
-from git.exc import BadName
+from git.exc import GitCommandError, ODBError
 from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
 from git.util import (
@@ -171,6 +171,9 @@ class PushInfo(IterableObj):
         "!": ERROR,
     }
 
+    # git check-ref-format rejects these in ref names; revisions use them.
+    _re_revision_syntax = re.compile(r"[~^]|@\{")
+
     def __init__(
         self,
         flags: int,
@@ -237,11 +240,15 @@ class PushInfo(IterableObj):
         from_ref: Union[SymbolicReference, None] = None
         is_revision = False
         if not flags & cls.DELETED and from_ref_string != "(delete)":
-            try:
-                from_ref = Reference.from_path(remote.repo, from_ref_string)
-            except ValueError:
-                # Git prints the source as it was given, which can be any revision.
+            # Git prints the source as it was given, which can be any revision.
+            # from_path() would accept one under refs/, like refs/heads/main~1.
+            if cls._re_revision_syntax.search(from_ref_string):
                 is_revision = True
+            else:
+                try:
+                    from_ref = Reference.from_path(remote.repo, from_ref_string)
+                except ValueError:
+                    is_revision = True
 
         # Commit handling, could be message or commit info
         old_commit: Optional[str] = None
@@ -276,8 +283,13 @@ class PushInfo(IterableObj):
             # The push may have moved a ref the revision is relative to, like
             # origin/main~1, so prefer the hash git reports as pushed.
             try:
-                local_hash = remote.repo.rev_parse(new_sha or from_ref_string).hexsha
-            except BadName:
+                if new_sha:
+                    # rev-parse would prefer a ref spelled like the abbreviated ID.
+                    oids = remote.repo.git._call_process_safe("rev_parse", "--disambiguate=%s" % new_sha).split()
+                    local_hash = oids[0] if len(oids) == 1 else None
+                else:
+                    local_hash = remote.repo.rev_parse(from_ref_string).hexsha
+            except (ODBError, GitCommandError, ValueError):
                 pass
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary, local_hash)

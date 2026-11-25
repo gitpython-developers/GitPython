@@ -581,6 +581,38 @@ class TestRemote(TestBase):
         self.assertIsNone(info.local_ref)
         self.assertEqual(info.local_hash, parent.hexsha)
 
+        # A ref spelled like the abbreviated ID git prints must not win over the object.
+        rw_repo.create_head(rw_repo.git.rev_parse("--short", parent.hexsha), rw_repo.head.commit)
+        remote.push("HEAD:refs/heads/pushed_ref")
+        remote.fetch()
+        (info,) = remote.push("self/pushed_ref~1:refs/heads/pushed_ref", force=True)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
+        # A fully qualified revision is not a reference either.
+        source = rw_repo.create_head("push_source", rw_repo.head.commit)
+        (info,) = remote.push("%s~1:refs/heads/pushed_full" % source.path)
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
+        # A failed lookup keeps the result without a hash.
+        with mock.patch.object(rw_repo, "rev_parse", side_effect=GitCommandError("rev-parse", 128)):
+            (info,) = remote.push("HEAD~1:refs/heads/pushed_lookup")
+        self.assertTrue(info.flags & PushInfo.NEW_HEAD)
+        self.assertIsNone(info.local_hash)
+
+        run = Git._call_process_safe
+
+        def fail_disambiguate(git, method, *args, **kwargs):
+            if method == "rev_parse" and args and str(args[0]).startswith("--disambiguate="):
+                raise GitCommandError("rev-parse", 128)
+            return run(git, method, *args, **kwargs)
+
+        remote.push("HEAD:refs/heads/pushed_ref")
+        with mock.patch.object(Git, "_call_process_safe", fail_disambiguate):
+            (info,) = remote.push("HEAD~1:refs/heads/pushed_ref", force=True)
+        self.assertTrue(info.flags & PushInfo.FORCED_UPDATE)
+        self.assertIsNone(info.local_hash)
+
     @with_rw_repo("HEAD", bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
