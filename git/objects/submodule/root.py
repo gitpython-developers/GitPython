@@ -310,11 +310,15 @@ class RootModule(Submodule):
                                         smr.fetch(progress=progress)
 
                                     # If we have a tracking branch, it should be available
-                                    # in the new remote as well.
-                                    if len([r for r in smr.refs if r.remote_head == sm.branch_name]) == 0:
+                                    # in the new remote as well. An inherited branch has no
+                                    # name while the superproject HEAD is detached.
+                                    branch, _ = sm._branch_for_update(to_latest_revision=to_latest_revision)
+                                    if branch.name == ".":
+                                        _logger.warning("Failed to resolve tracking branch %s", branch.path)
+                                    elif len([r for r in smr.refs if r.remote_head == branch.name]) == 0:
                                         raise ValueError(
                                             "Submodule branch named %r was not available in new submodule remote at %r"
-                                            % (sm.branch_name, sm.url)
+                                            % (branch.name, sm.url)
                                         )
                                     # END head is not detached
 
@@ -334,29 +338,31 @@ class RootModule(Submodule):
                                     # branch exists in the remote. Now we have to ensure
                                     # that the sha we point to is still contained in the new
                                     # remote tracking branch.
-                                    smsha = sm.binsha
-                                    found = False
-                                    rref = smr.refs[self.branch_name]
-                                    for c in rref.commit.traverse():
-                                        if c.binsha == smsha:
-                                            found = True
-                                            break
-                                        # END traverse all commits in search for sha
-                                    # END for each commit
+                                    if branch.name != ".":
+                                        smsha = sm.binsha
+                                        found = False
+                                        rref = smr.refs[branch.name]
+                                        for c in rref.commit.traverse():
+                                            if c.binsha == smsha:
+                                                found = True
+                                                break
+                                            # END traverse all commits in search for sha
+                                        # END for each commit
 
-                                    if not found:
-                                        # Adjust our internal binsha to use the one of the
-                                        # remote this way, it will be checked out in the
-                                        # next step. This will change the submodule relative
-                                        # to us, so the user will be able to commit the
-                                        # change easily.
-                                        _logger.warning(
-                                            "Current sha %s was not contained in the tracking\
+                                        if not found:
+                                            # Adjust our internal binsha to use the one of the
+                                            # remote this way, it will be checked out in the
+                                            # next step. This will change the submodule relative
+                                            # to us, so the user will be able to commit the
+                                            # change easily.
+                                            _logger.warning(
+                                                "Current sha %s was not contained in the tracking\
              branch at the new remote, setting it the the remote's tracking branch",
-                                            sm.hexsha,
-                                        )
-                                        sm.binsha = rref.commit.binsha
-                                    # END reset binsha
+                                                sm.hexsha,
+                                            )
+                                            sm.binsha = rref.commit.binsha
+                                        # END reset binsha
+                                    # END verify resolved tracking branch
 
                                 # NOTE: All checkout is performed by the base
                                 # implementation of update.
@@ -372,7 +378,7 @@ class RootModule(Submodule):
 
                     # HANDLE PATH CHANGES
                     #####################
-                    if sm.branch_path != psm.branch_path:
+                    if sm._branch_path != psm._branch_path:
                         # Finally, create a new tracking branch which tracks the new
                         # remote branch.
                         progress.update(
@@ -381,7 +387,7 @@ class RootModule(Submodule):
                             len_csms,
                             prefix
                             + "Changing branch of submodule %r from %s to %s"
-                            % (sm.name, psm.branch_path, sm.branch_path),
+                            % (sm.name, psm._branch_path, sm._branch_path),
                         )
                         if not dry_run:
                             smm = sm.module()
@@ -393,25 +399,32 @@ class RootModule(Submodule):
                                     remote.fetch(progress=progress)
                                 # END for each remote
 
-                            try:
-                                tbr = git.Head.create(
-                                    smm,
-                                    sm.branch_name,
-                                    logmsg="branch: Created from HEAD",
-                                )
-                            except OSError:
-                                # ...or reuse the existing one.
-                                tbr = git.Head(smm, sm.branch_path)
-                            # END ensure tracking branch exists
+                            branch, _ = sm._branch_for_update(to_latest_revision=to_latest_revision)
+                            if branch.name == ".":
+                                # An inherited branch has no name while the superproject HEAD
+                                # is detached, which leaves nothing to track.
+                                _logger.warning("Failed to resolve tracking branch %s", branch.path)
+                            else:
+                                try:
+                                    tbr = git.Head.create(
+                                        smm,
+                                        branch.name,
+                                        logmsg="branch: Created from HEAD",
+                                    )
+                                except OSError:
+                                    # ...or reuse the existing one.
+                                    tbr = git.Head(smm, branch.path)
+                                # END ensure tracking branch exists
 
-                            tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
-                            # NOTE: All head-resetting is done in the base
-                            # implementation of update but we will have to checkout the
-                            # new branch here. As it still points to the currently
-                            # checked out commit, we don't do any harm.
-                            # As we don't want to update working-tree or index, changing
-                            # the ref is all there is to do.
-                            smm.head.reference = tbr
+                                tbr.set_tracking_branch(find_first_remote_branch(smmr, branch.name))
+                                # NOTE: All head-resetting is done in the base
+                                # implementation of update but we will have to checkout the
+                                # new branch here. As it still points to the currently
+                                # checked out commit, we don't do any harm.
+                                # As we don't want to update working-tree or index, changing
+                                # the ref is all there is to do.
+                                smm.head.reference = tbr
+                            # END handle resolved tracking branch
                         # END handle dry_run
 
                         progress.update(

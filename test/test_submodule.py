@@ -2072,6 +2072,94 @@ class TestSubmodule(TestBase):
                 assert module.head.commit.binsha == submodule.binsha
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_branch_dot_accessors_follow_superproject_branch(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent:
+            submodule = parent.submodules[0]
+            submodule.update()
+            for branch in ("dev", "master"):
+                parent.git.checkout(branch)
+                for reread in (False, True):
+                    with self.subTest(branch=branch, reread=reread):
+                        if reread:
+                            submodule.set_parent_commit(parent.head.commit)
+                        assert submodule.branch_name == branch
+                        assert submodule.branch_path == "refs/heads/" + branch
+                        assert submodule.branch.path == "refs/heads/" + branch
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_branch_dot_accessors_reject_detached_superproject(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent:
+            parent.head.set_reference(parent.head.commit)
+            submodule = parent.submodules[0]
+            submodule.update()
+            for accessor in ("branch", "branch_name", "branch_path"):
+                with self.subTest(accessor=accessor):
+                    with pytest.raises(ValueError, match="superproject HEAD is detached"):
+                        getattr(submodule, accessor)
+            assert "branch_path=refs/heads/." in repr(submodule)
+            with submodule.module() as module:
+                assert module.head.commit.binsha == submodule.binsha
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_root_update_detects_change_to_inherited_branch(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent:
+            parent.git.config("-f", ".gitmodules", "submodule.module.branch", "dev")
+            parent.index.add([".gitmodules"])
+            previous = parent.index.commit("Track dev", skip_hooks=True)
+            parent.git.config("-f", ".gitmodules", "submodule.module.branch", ".")
+            parent.index.add([".gitmodules"])
+            parent.index.commit("Track the superproject branch", skip_hooks=True)
+            submodule = parent.submodules[0]
+            submodule.update()
+
+            # Both revisions select dev, yet the configured values differ.
+            with submodule.module() as module:
+                module.head.set_reference(module.head.commit)
+                RootModule(parent).update(previous_commit=previous)
+                assert module.active_branch.tracking_branch() == module.remotes.origin.refs.dev
+                assert module.head.commit.binsha == submodule.binsha
+
+                module.head.set_reference(module.head.commit)
+                parent.head.set_reference(parent.head.commit)
+                with self.assertLogs("git.objects.submodule.root", "WARNING") as logs:
+                    RootModule(parent).update(previous_commit=previous)
+                assert any("Failed to resolve tracking branch refs/heads/." in line for line in logs.output)
+                assert module.head.is_detached
+                assert module.head.commit.binsha == submodule.binsha
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_root_update_url_change_checks_submodule_branch(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent:
+            parent.git.config("-f", ".gitmodules", "submodule.module.branch", "dev")
+            parent.index.add([".gitmodules"])
+            previous = parent.index.commit("Track dev", skip_hooks=True)
+            parent.submodules[0].update()
+
+            # The new remote has no master, the root module's default branch.
+            moved = rwdir / "moved"
+            git.Git().clone("-q", "--bare", "--single-branch", "-b", "dev", str(rwdir / "source"), str(moved))
+            parent.git.config("-f", ".gitmodules", "submodule.module.url", str(moved))
+            parent.index.add([".gitmodules"])
+            parent.index.commit("Move the submodule", skip_hooks=True)
+            submodule = parent.submodules[0]
+
+            # The recorded commit is only on master, so the update moves to dev's tip.
+            with self.assertLogs("git.objects.submodule.root", "WARNING"):
+                RootModule(parent).update(previous_commit=previous)
+            with submodule.module() as module:
+                assert module.remotes.origin.url == str(moved)
+                assert module.active_branch.name == "dev"
+                assert module.head.commit == git.Repo(moved).heads.dev.commit
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_update_after_deinit_fetches_new_gitlink_commit(self):
         rwdir = self._fixture("deinit-gitlink", execute=True)
         source_repo = git.Repo(rwdir / "source")

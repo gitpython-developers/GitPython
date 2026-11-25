@@ -248,7 +248,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             self._name,
             self.path,
             self.url,
-            self.branch_path,
+            self._branch_path,
         )
 
     @classmethod
@@ -1815,10 +1815,17 @@ class Submodule(IndexObject, TraversableIterableObj):
         :return:
             The branch instance that we are to checkout
 
+        :note:
+            A configured branch of ``.`` resolves to the branch with the name of the
+            superproject's current branch.
+
         :raise git.exc.InvalidGitRepositoryError:
             If our module is not yet checked out.
+
+        :raise ValueError:
+            If the configured branch is ``.`` and the superproject HEAD is detached.
         """
-        return mkhead(self.module(), self._branch_path)
+        return mkhead(self.module(), self.branch_path)
 
     @property
     def branch_path(self) -> PathLike:
@@ -1826,18 +1833,49 @@ class Submodule(IndexObject, TraversableIterableObj):
         :return:
             Full repository-relative path as string to the branch we would checkout from
             the remote and track
+
+        :note:
+            A configured branch of ``.`` resolves to the path of the superproject's
+            current branch.
+
+        :raise ValueError:
+            If the configured branch is ``.`` and the superproject HEAD is detached.
         """
-        return self._branch_path
+        if git.Head(self.repo, self._branch_path).name != ".":
+            return self._branch_path
+        branch = self._superproject_branch()
+        if branch is None:
+            raise ValueError(
+                f"Cannot resolve branch = . of submodule {self.name!r} because the superproject HEAD is detached"
+            )
+        return branch.path
 
     @property
     def branch_name(self) -> str:
         """
         :return:
             The name of the branch, which is the shortest possible branch name
+
+        :note:
+            A configured branch of ``.`` resolves to the name of the superproject's
+            current branch.
+
+        :raise ValueError:
+            If the configured branch is ``.`` and the superproject HEAD is detached.
         """
         # Use an instance method, for this we create a temporary Head instance which
         # uses a repository that is available at least (it makes no difference).
-        return git.Head(self.repo, self._branch_path).name
+        return git.Head(self.repo, self.branch_path).name
+
+    def _superproject_branch(self) -> Union["Head", None]:
+        """Return the superproject's current branch, or ``None`` if its HEAD is detached."""
+        try:
+            target = self.repo.git._call_process_safe("symbolic_ref", "--quiet", "--", "HEAD")
+        except GitCommandError as exc:
+            if exc.status != 1:
+                raise
+            return None
+        return git.Head(self.repo, target)
 
     def _branch_for_update(self, *, to_latest_revision: bool = False) -> Tuple["Head", bool]:
         """Return the clone branch and whether it selects the latest revision."""
@@ -1849,21 +1887,18 @@ class Submodule(IndexObject, TraversableIterableObj):
                 raise
             override = None
 
-        branch = mkhead(self.repo, self.branch_path if override is None else override)
+        branch = mkhead(self.repo, self._branch_path if override is None else override)
         if branch.name != ".":
             return branch, override is not None
-        try:
-            target = self.repo.git._call_process_safe("symbolic_ref", "--quiet", "--", "HEAD")
-        except GitCommandError as exc:
-            if exc.status != 1:
-                raise
+        superproject_branch = self._superproject_branch()
+        if superproject_branch is None:
             if to_latest_revision:
                 raise ValueError(
                     f"Cannot update submodule {self.name!r} to the latest revision with branch = . "
                     "because the superproject HEAD is detached"
-                ) from exc
+                )
             return branch, False
-        return git.Head(self.repo, target), True
+        return superproject_branch, True
 
     @property
     def url(self) -> str:

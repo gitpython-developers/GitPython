@@ -202,6 +202,14 @@ API changes
   literally, so an entry named ``*.txt`` no longer removes every ``.txt`` file.
   Path strings keep their pathspec semantics. ``Submodule.move()`` and
   ``Submodule.remove()`` remove the submodule's own index entry the same way.
+* With ``branch = .``, ``Submodule.branch``, ``branch_name`` and ``branch_path``
+  return the superproject's current branch instead of ``.``, matching
+  ``git submodule update --remote``, and raise ``ValueError`` while the
+  superproject HEAD is detached. When a submodule's URL changes,
+  ``RootModule.update()`` looks for the submodule's own branch on the new remote,
+  honouring a ``submodule.<name>.branch`` override in ``.git/config``, rather than
+  the root module's default branch, which raised ``IndexError`` on remotes
+  without ``master``.
 * Commit/tag metadata uses structured Gix decoders when the Gix backend supports
   the repository. The CLI backend retains raw decoding because Git has no faithful
   formatted query for all commit headers or arbitrary tag objects. ``gpgsig``
