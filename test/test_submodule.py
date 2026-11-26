@@ -2016,13 +2016,25 @@ class TestSubmodule(TestBase):
                 assert module.active_branch.name == "master"
                 assert module.head.commit == source.heads.master.commit
 
+            assert submodule.branch_name == "master"
+            assert submodule.branch_path == "refs/heads/master"
+            branch = submodule.branch
+            with branch.repo:
+                assert branch.name == "master"
+
             parent.git.config("--local", "submodule.module.branch", ".")
+            assert submodule.branch_name == "dev"
             submodule.update(to_latest_revision=True, no_fetch=True)
             with submodule.module() as module:
                 assert module.head.commit == source.heads.dev.commit
 
             parent.head.set_reference(parent.head.commit)
             parent.git.config("--local", "submodule.module.branch", "master")
+            assert submodule.branch_name == "master"
+            assert submodule.branch_path == "refs/heads/master"
+            branch = submodule.branch
+            with branch.repo:
+                assert branch.name == "master"
             submodule.update(to_latest_revision=True, no_fetch=True)
             with submodule.module() as module:
                 assert module.head.commit == source.heads.master.commit
@@ -2087,6 +2099,10 @@ class TestSubmodule(TestBase):
             branch = submodule.branch
             with branch.repo:
                 assert branch.path == branch_path
+
+            unnamed = Submodule(parent, configured.binsha, branch_path=branch_path)
+            assert unnamed.branch_path is branch_path
+            assert unnamed.branch_name == "dev"
 
     @patch_git_config("protocol.file.allow", "always")
     def test_branch_dot_accessors_follow_superproject_branch(self):

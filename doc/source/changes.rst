@@ -202,8 +202,9 @@ API changes
   literally, so an entry named ``*.txt`` no longer removes every ``.txt`` file.
   Path strings keep their pathspec semantics. ``Submodule.move()`` and
   ``Submodule.remove()`` remove the submodule's own index entry the same way.
-* With ``branch = .``, ``Submodule.branch``, ``branch_name`` and ``branch_path``
-  return the superproject's current branch instead of ``.``, matching
+* ``Submodule.branch``, ``branch_name`` and ``branch_path`` honor a branch
+  override in the superproject's Git configuration. With an effective
+  ``branch = .``, they return the superproject's current branch, matching
   ``git submodule update --remote``, and raise ``ValueError`` while the
   superproject HEAD is detached. When a submodule's URL changes,
   ``RootModule.update()`` looks for the submodule's own branch on the new remote,

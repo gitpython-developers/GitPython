@@ -1835,16 +1835,15 @@ class Submodule(IndexObject, TraversableIterableObj):
             the remote and track
 
         :note:
-            A configured branch of ``.`` resolves to the path of the superproject's
+            The superproject's Git configuration takes precedence over ``.gitmodules``.
+            An effective branch of ``.`` resolves to the path of the superproject's
             current branch.
 
         :raise ValueError:
             If the configured branch is ``.`` and the superproject HEAD is detached.
         """
-        if os.fspath(self._branch_path) not in (".", "refs/heads/."):
-            return self._branch_path
-        branch = self._superproject_branch()
-        if branch is None:
+        branch, _ = self._branch_for_update()
+        if os.fspath(branch.path) == "refs/heads/.":
             raise ValueError(
                 f"Cannot resolve branch = . of submodule {self.name!r} because the superproject HEAD is detached"
             )
@@ -1879,16 +1878,18 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     def _branch_for_update(self, *, to_latest_revision: bool = False) -> Tuple["Head", bool]:
         """Return the clone branch and whether it selects the latest revision."""
-        key = f"submodule.{self.name}.{self.k_head_option}"
-        try:
-            override = self.repo.git._call_process_safe("config", "--get", key)
-        except GitCommandError as exc:
-            if exc.status != 1:
-                raise
-            override = None
+        name = getattr(self, "name", None)
+        override = None
+        if name is not None:
+            key = f"submodule.{name}.{self.k_head_option}"
+            try:
+                override = self.repo.git._call_process_safe("config", "--get", key)
+            except GitCommandError as exc:
+                if exc.status != 1:
+                    raise
 
         branch = mkhead(self.repo, self._branch_path if override is None else override)
-        if branch.name != ".":
+        if os.fspath(branch.path) != "refs/heads/.":
             return branch, override is not None
         superproject_branch = self._superproject_branch()
         if superproject_branch is None:
