@@ -2205,6 +2205,29 @@ class TestSubmodule(TestBase):
                 assert module.head.commit == moved.heads.dev.commit
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_root_update_url_change_preserves_other_local_branch(self):
+        for scenario in ("root-url-local-override", "root-url-local-override-missing-gitlink"):
+            with self.subTest(scenario=scenario):
+                # The submodule URLs point to this private fixture's source and replacement.
+                rwdir = self._fixture(scenario, execute=True)
+                with git.Repo(rwdir / "parent") as parent, git.Repo(rwdir / "moved") as moved:
+                    submodule = parent.submodules[0]
+                    with submodule.module() as module:
+                        assert module.active_branch.name == "master"
+                        unpushed = module.head.commit
+                        assert unpushed.binsha != submodule.binsha
+
+                        RootModule(parent).update(previous_commit="before-url-change")
+
+                        assert Path(module.remotes.origin.url).samefile(rwdir / "moved")
+                        assert module.heads.master.commit == unpushed
+                        if scenario == "root-url-local-override":
+                            assert module.active_branch == module.heads.master
+                        else:
+                            assert module.head.is_detached
+                            assert module.head.commit == moved.heads.dev.commit
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_update_url_change_checks_submodule_branch(self):
         # The submodule URL points to this private fixture's source.
         rwdir = self._fixture("branch-dot", execute=True)

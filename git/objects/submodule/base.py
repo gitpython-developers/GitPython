@@ -894,6 +894,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         allow_unsafe_options: bool = False,
         allow_unsafe_protocols: bool = False,
         no_fetch: bool = False,
+        *,
+        _fallback_branch: Union[str, None] = None,
     ) -> "Submodule":
         """Update the repository of this submodule to point to the checkout we point at
         with the binsha of this instance.
@@ -1161,6 +1163,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     rcommit = rref.commit
                     binsha = rcommit.binsha
                     hexsha = rcommit.hexsha
+                    _fallback_branch = None
                 elif checkout_detached:
                     _logger.error("%s there was no local tracking branch", msg_base)
                 else:
@@ -1172,6 +1175,10 @@ class Submodule(IndexObject, TraversableIterableObj):
             # Update the working tree.
             # Handles dry_run.
             if mrepo is not None and (freshly_cloned or mrepo.head.commit.binsha != binsha):
+                # A URL change can substitute a gitlink from a different branch.
+                if _fallback_branch is not None and not checkout_detached:
+                    checkout_detached = mrepo.active_branch.name != _fallback_branch
+
                 # We must ensure that our destination sha (the one to point to) is in
                 # the future of our current head. Otherwise, we will reset changes that
                 # might have been done on the submodule, but were not yet pushed. We

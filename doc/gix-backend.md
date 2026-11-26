@@ -389,7 +389,7 @@ and predate the current fallback; they do not establish native coverage.
 | Reference object reads | One exact native lookup for direct, symbolic and absent references | Partial names and native decoding errors |
 | Reference-name validation | Native full-name validation without opening a repository | Standalone names outside the native grammar; GIX-20 |
 | Managed `symbolic_ref` | Nonrecursive target lookup | Mutation, command-level missing-reference diagnostics, recursive `HEAD` lookup (GIX-44) |
-| Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, other formats/options; GIX-25 |
+| Reference enumeration, `for_each_ref` | Sorted reference names and literal prefixes, preserving symbolic aliases | Dangling symbolic refs, root refs, glob patterns, ancestry filters, other formats/options; GIX-25 |
 | Managed `config --get KEY` | Merged repository config snapshot | Files/streams, enumeration, mutation; GIX-12 |
 | Submodule enumeration and cached fields | Dedicated native `.gitmodules` parser over the existing worktree/blob source, with raw path/URL/branch values | Non-UTF-8 subsection names, other/duplicate sections, ambiguous brackets, missing/implicit fields and native parser errors (GIX-12); possible valueless branch keys (GIX-45) |
 | Commit hooks | No bound native lookup/execution API | All hooks, including absent hooks; GIX-23 |
@@ -413,6 +413,12 @@ and predate the current fallback; they do not establish native coverage.
 | `Repo.is_dirty` | Index/tree/worktree status, configured submodule checks and pathspecs | Custom/sparse indexes, non-root command directories and embedded worktree changes (GIX-40) |
 | `Repo.untracked_files` | Native directory walk | Extra status options and non-root command directories |
 | `Repo.ignored` | Native excludes with tracked-file suppression | Symlink/submodule traversal, unsupported path normalization, and unavailable path metadata |
+
+For a submodule URL change, `RootModule.update()` uses Git's
+`for-each-ref --contains` to check whether any fetched branch of the replacement
+remote still contains the recorded gitlink. GixPython 0.4.0 exposes reference
+enumeration and pairwise merge-base queries. A direct replacement for this CLI
+fallback needs a Git-compatible ancestry filter over a ref namespace.
 
 Revision APIs preserve a reference object's validated full name. The shared
 `Git._check_revision()` first uses the exact reference reader to verify existence

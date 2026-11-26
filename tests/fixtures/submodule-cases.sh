@@ -46,7 +46,7 @@ case "$scenario" in
             deinit-nonempty) printf '%s' 'user content' > parent/module/file ;;
         esac
         ;;
-    branch-dot|branch-dot-alias|root-url-branch-dot|root-reuse-inherited-branch)
+    branch-dot|branch-dot-alias|root-url-branch-dot|root-reuse-inherited-branch|root-url-local-override*)
         git init -q -b master source
         git -C source commit --allow-empty -qm initial
         git -C source branch dev
@@ -72,6 +72,22 @@ case "$scenario" in
         git -C parent add .gitmodules
         git -C parent commit -qm 'Track the superproject branch'
         if test "$scenario" = root-reuse-inherited-branch; then exit 0; fi
+        case "$scenario" in
+            root-url-local-override*)
+                git -C parent tag before-url-change
+                git -C parent/module commit --allow-empty -qm 'Unpushed master commit'
+                git -C parent config --local submodule.module.branch dev
+                if test "$scenario" = root-url-local-override-missing-gitlink; then
+                    git clone -q --bare --single-branch -b dev source moved
+                else
+                    git clone -q --bare source moved
+                fi
+                git -C parent config -f .gitmodules submodule.module.url "$root/moved"
+                git -C parent add .gitmodules
+                git -C parent commit -qm 'Change submodule URL'
+                exit 0
+                ;;
+        esac
         git -C parent branch dev
         git clone -q -b dev parent clone
         if test "$scenario" = branch-dot-alias; then

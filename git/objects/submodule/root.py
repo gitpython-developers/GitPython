@@ -6,7 +6,7 @@ __all__ = ["RootModule", "RootUpdateProgress"]
 import logging
 
 # typing -------------------------------------------------------------------
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, Union
 
 import git
 from git.exc import InvalidGitRepositoryError
@@ -167,6 +167,7 @@ class RootModule(Submodule):
 
         repo = self.repo
         sms: "IterableList[Submodule]" = IterableList("name")
+        fallback_branches: Dict[str, str] = {}
 
         try:
             # SETUP BASE COMMIT
@@ -334,35 +335,25 @@ class RootModule(Submodule):
                                     # Rename the new remote back to what it was.
                                     smr.rename(orig_name)
 
-                                    # Early on, we verified that the our current tracking
-                                    # branch exists in the remote. Now we have to ensure
-                                    # that the sha we point to is still contained in the new
-                                    # remote tracking branch.
-                                    if branch.name != ".":
-                                        smsha = sm.binsha
-                                        found = False
-                                        rref = smr.refs[branch.name]
-                                        for c in rref.commit.traverse():
-                                            if c.binsha == smsha:
-                                                found = True
-                                                break
-                                            # END traverse all commits in search for sha
-                                        # END for each commit
-
-                                        if not found:
-                                            # Adjust our internal binsha to use the one of the
-                                            # remote this way, it will be checked out in the
-                                            # next step. This will change the submodule relative
-                                            # to us, so the user will be able to commit the
-                                            # change easily.
-                                            _logger.warning(
-                                                "Current sha %s was not contained in the tracking\
-             branch at the new remote, setting it the the remote's tracking branch",
-                                                sm.hexsha,
-                                            )
-                                            sm.binsha = rref.commit.binsha
-                                        # END reset binsha
-                                    # END verify resolved tracking branch
+                                    # The gitlink can be reachable from any branch on the new remote.
+                                    if branch.name != "." and (
+                                        not smm.is_valid_object(sm.hexsha, "commit")
+                                        or not smm.git._call_process_safe(
+                                            "for_each_ref",
+                                            "--format=%(refname)",
+                                            f"--contains={sm.hexsha}",
+                                            "--count=1",
+                                            "--",
+                                            f"refs/remotes/{orig_name}/",
+                                        )
+                                    ):
+                                        _logger.warning(
+                                            "Gitlink %s is unavailable on the new remote, using the tip of %s",
+                                            sm.hexsha,
+                                            branch.name,
+                                        )
+                                        sm.binsha = smr.refs[branch.name].commit.binsha
+                                        fallback_branches[sm.name] = branch.name
 
                                 # NOTE: All checkout is performed by the base
                                 # implementation of update.
@@ -453,6 +444,7 @@ class RootModule(Submodule):
                 force=force_reset,
                 keep_going=keep_going,
                 no_fetch=no_fetch,
+                _fallback_branch=fallback_branches.get(sm.name),
             )
 
             # Update recursively depth first - question is which inconsistent state will
