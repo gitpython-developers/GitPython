@@ -555,6 +555,17 @@ class TestRemote(TestBase):
         )
 
     @with_rw_repo("HEAD", bare=False)
+    def test_push_tree_path_source(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        blob = next(rw_repo.head.commit.tree.traverse(predicate=lambda item, depth: item.type == "blob"))
+
+        (info,) = remote.push(f"HEAD:{blob.path}:refs/tags/snapshot")
+
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, blob.hexsha)
+        self.assertEqual(rw_repo.tags.snapshot.object.hexsha, blob.hexsha)
+
+    @with_rw_repo("HEAD", bare=False)
     def test_push_revision_sources(self, rw_repo):
         remote = rw_repo.create_remote("self", rw_repo.git_dir)
         parent = rw_repo.head.commit.parents[0]

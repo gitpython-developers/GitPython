@@ -236,7 +236,7 @@ class PushInfo(IterableObj):
         # END handle control character
 
         # from_to handling
-        from_ref_string, to_ref_string = from_to.split(":")
+        from_ref_string, to_ref_string = from_to.rsplit(":", 1)
         from_ref: Union[SymbolicReference, None] = None
         is_revision = False
         if not flags & cls.DELETED and from_ref_string != "(delete)":
