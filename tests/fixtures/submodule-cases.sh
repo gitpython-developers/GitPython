@@ -46,23 +46,62 @@ case "$scenario" in
             deinit-nonempty) printf '%s' 'user content' > parent/module/file ;;
         esac
         ;;
-    branch-dot|branch-dot-alias)
+    branch-dot|branch-dot-alias|root-url-branch-dot|root-reuse-inherited-branch|root-url-local-override*)
         git init -q -b master source
         git -C source commit --allow-empty -qm initial
         git -C source branch dev
-        git -C source commit --allow-empty -qm 'Advance master'
+        printf 'master\n' > source/file
+        git -C source add file
+        git -C source commit -qm 'Advance master'
         git -C source checkout -q dev
-        git -C source commit --allow-empty -qm 'Advance dev'
+        printf 'dev\n' > source/file
+        git -C source add file
+        git -C source commit -qm 'Advance dev'
         git -C source checkout -q master
         source="$root/source"
         add_module module module
+        if test "$scenario" = root-reuse-inherited-branch; then
+            git -C parent config -f .gitmodules submodule.module.branch master
+            git -C parent commit -qam 'Track master'
+            git -C parent checkout -qb dev
+            git -C parent/module branch dev origin/dev
+            git -C parent tag before-branch-change
+            git -C parent update-index --cacheinfo "160000,$(git -C source rev-parse dev),module"
+        fi
         git -C parent config -f .gitmodules submodule.module.branch .
-        git -C parent commit -qam 'Track the superproject branch'
+        git -C parent add .gitmodules
+        git -C parent commit -qm 'Track the superproject branch'
+        if test "$scenario" = root-reuse-inherited-branch; then exit 0; fi
+        case "$scenario" in
+            root-url-local-override*)
+                git -C parent tag before-url-change
+                git -C parent/module commit --allow-empty -qm 'Unpushed master commit'
+                git -C parent config --local submodule.module.branch dev
+                if test "$scenario" = root-url-local-override-missing-gitlink; then
+                    git clone -q --bare --single-branch -b dev source moved
+                else
+                    git clone -q --bare source moved
+                fi
+                git -C parent config -f .gitmodules submodule.module.url "$root/moved"
+                git -C parent add .gitmodules
+                git -C parent commit -qm 'Change submodule URL'
+                exit 0
+                ;;
+        esac
         git -C parent branch dev
         git clone -q -b dev parent clone
         if test "$scenario" = branch-dot-alias; then
             git -C clone branch master refs/remotes/origin/master
             git -C clone symbolic-ref refs/heads/dev refs/heads/master
+        fi
+        if test "$scenario" = root-url-branch-dot; then
+            git -C clone submodule update --init
+            git -C clone tag before-url-change
+            git clone -q -b dev source moved
+            git -C moved commit --allow-empty -qm 'Advance dev on the replacement remote'
+            git -C clone config -f .gitmodules submodule.module.url "$root/moved"
+            git -C clone commit -qam 'Change submodule URL'
+            git -C clone checkout -q --detach HEAD
         fi
         ;;
     add-empty) git init -q -b master empty-repo ;;
