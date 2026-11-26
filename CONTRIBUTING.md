@@ -10,11 +10,27 @@ The following is a short step-by-step rundown of what one typically would do to 
 - Feel free to add yourself to AUTHORS file.
 - Create a pull request.
 
+## Submission requirements
+
+Every issue and pull request must address a problem that actually occurs in
+downstream software using GitPython. Identify the affected software. In the
+pull request description, explicitly state the problem the change fixes or link
+to an issue that documents it in the affected project's issue tracker. If you
+open a GitPython issue, describe what goes wrong in the downstream software.
+
+Proactive performance fixes are exempt from the downstream problem requirement
+only if they reduce the asymptotic time complexity. 
+State the time complexity before and after the change in the PR description
+and present benchmark numbers of before and after a possible fix.
+
+Security-related work is exempt from these requirements. Follow the
+[security policy](SECURITY.md#reporting-a-vulnerability) for reporting instructions.
+
 ## Prefer pull requests
 
 Pull requests are preferred when you have a fix or improvement to contribute: a PR
-can be treated as an issue with a fix attached. Describe the problem and proposed
-solution in the PR itself; a separate issue is not required.
+can be treated as an issue with a fix attached. Describe the proposed solution
+in the PR itself; a separate GitPython issue is not desirable.
 
 Please avoid opening an issue solely to follow it immediately with a PR that fixes
 it. Open the PR directly instead. Issues are still welcome for problems without a
