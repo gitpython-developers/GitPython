@@ -566,6 +566,21 @@ class TestRemote(TestBase):
         self.assertEqual(rw_repo.tags.snapshot.object.hexsha, blob.hexsha)
 
     @with_rw_repo("HEAD", bare=False)
+    def test_push_option_like_revision_source(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        rw_repo.git.update_ref("refs/tags/-release", "HEAD")
+
+        result = remote.push(["-release~1:refs/heads/snapshot", "HEAD:refs/heads/ordinary"])
+
+        infos = {info.remote_ref_string: info for info in result}
+        self.assertEqual(set(infos), {"refs/heads/snapshot", "refs/heads/ordinary"})
+        self.assertTrue(infos["refs/heads/snapshot"].flags & PushInfo.NEW_HEAD)
+        self.assertIsNone(infos["refs/heads/snapshot"].local_ref)
+        self.assertIsNone(infos["refs/heads/snapshot"].local_hash)
+        self.assertEqual(infos["refs/heads/ordinary"].local_ref, rw_repo.head)
+        self.assertEqual(rw_repo.heads.snapshot.commit, rw_repo.head.commit.parents[0])
+
+    @with_rw_repo("HEAD", bare=False)
     def test_push_revision_sources(self, rw_repo):
         remote = rw_repo.create_remote("self", rw_repo.git_dir)
         parent = rw_repo.head.commit.parents[0]

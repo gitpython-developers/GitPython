@@ -32,7 +32,7 @@ from typing import (
 from git.cmd import Git, handle_process_output
 from git.compat import force_text
 from git.config import GitConfigParser, SectionConstraint, cp
-from git.exc import GitCommandError, ODBError
+from git.exc import GitCommandError, ODBError, UnsafeOptionError
 from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
 from git.util import (
@@ -289,7 +289,7 @@ class PushInfo(IterableObj):
                     local_hash = oids[0] if len(oids) == 1 else None
                 else:
                     local_hash = remote.repo.rev_parse(from_ref_string).hexsha
-            except (ODBError, GitCommandError, ValueError):
+            except (ODBError, GitCommandError, UnsafeOptionError, ValueError):
                 pass
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary, local_hash)
