@@ -304,7 +304,7 @@ class PushInfo(IterableObj):
             local_hash = None
             if remote.repo.re_hexsha_only.fullmatch(new_sha):
                 local_hash = new_sha
-            elif env is not None:
+            else:
                 try:
                     # rev-parse would prefer a ref spelled like the abbreviated ID.
                     oids = remote.repo.git._call_process_safe(
@@ -1242,9 +1242,8 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_push_options,
             )
 
-        # Do not consume Git options reserved for the next command.
-        env = None if self.repo.git._git_options else kwargs.get("env") or {}
-        sources = self._push_sources(refspec, env) if env is not None else None
+        env = kwargs.get("env") or {}
+        sources = self._push_sources(refspec, env)
         proc = self.repo.git._call_process_safe(
             "push",
             "--",

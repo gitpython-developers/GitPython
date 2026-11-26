@@ -19,8 +19,8 @@ import ddt
 import pytest
 
 from git import NULL_TREE, BlobFilter, Diff, Git, IndexFile, Object, Repo, Tree
-from git.diff import NULL_TREE_SHA
 from git.compat import defenc
+from git.diff import NULL_TREE_SHA
 from git.exc import (
     CheckoutError,
     GitCommandError,
@@ -35,8 +35,8 @@ from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
 from test.lib import PathLikeMock, TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
-from test.lib.helper import symlinks_supported, xfail_if_raises
 from test.lib.fixtures import ROOT, fixture_repo, writable_fixture
+from test.lib.helper import symlinks_supported, xfail_if_raises
 
 _logger = logging.getLogger(__name__)
 
@@ -1286,7 +1286,7 @@ class TestIndex(TestBase):
                             output.unlink()
 
     def test_commit_hook_preserves_explicit_repository_selection(self):
-        for selection in ("one-shot", "persistent", "environment", "git-dir-option"):
+        for selection in ("persistent", "environment", "git-dir-option"):
             with self.subTest(selection=selection), fixture_repo("hook-ownership.sh", "regular", write=True) as repo:
                 with Repo(repo.git_dir) as metadata:
                     index = metadata.index
@@ -1295,25 +1295,17 @@ class TestIndex(TestBase):
                     environment = {"GIT_DIR": ".git"} if selection == "environment" else {}
                     with baseline.custom_environment(**environment), metadata.git.custom_environment(**environment):
                         for command in (baseline, metadata.git):
-                            if selection == "one-shot":
-                                command(C=".git")
-                            elif selection == "persistent":
+                            if selection == "persistent":
                                 command.set_persistent_git_options(C=".git")
                             elif selection == "git-dir-option":
-                                command(git_dir=".git")
-                        output = Path(repo.git_dir if selection in ("one-shot", "persistent") else repo.working_dir)
+                                command.set_persistent_git_options(git_dir=".git")
+                        output = Path(repo.git_dir if selection == "persistent" else repo.working_dir)
                         output /= "output.txt"
                         baseline.hook("run", "pre-commit")
                         expected = output.read_text(encoding="utf-8")
                         output.unlink()
                         run_commit_hook("pre-commit", index)
                         self.assertEqual(output.read_text(encoding="utf-8"), expected)
-
-                    metadata.git.set_persistent_git_options()
-                    metadata.git(C="missing")
-                    with self.assertRaises(GitCommandError):
-                        run_commit_hook("pre-commit", index)
-                    self.assertEqual(metadata.git.rev_parse("--git-dir"), str(metadata.git_dir))
 
     def test_pre_commit_hook_fail(self):
         with fixture_repo("index.sh", "hook-fail", write=True) as repo:

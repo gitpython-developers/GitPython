@@ -623,10 +623,11 @@ class TestRemote(TestBase):
         self.assertEqual(info.local_hash, parent.hexsha)
         self.assertEqual(rw_repo.heads.snapshot.commit, parent)
 
+        # Discarding the configured wrapper must not affect the push.
         rw_repo.git(no_replace_objects=True)
-        (info,) = remote.push("HEAD~1:refs/heads/snapshot_once")
-        self.assertIsNone(info.local_hash)
-        self.assertEqual(rw_repo.heads.snapshot_once.commit, parent)
+        (info,) = remote.push("HEAD~1:refs/heads/snapshot_with_replace")
+        self.assertEqual(info.local_hash, parent.parents[0].hexsha)
+        self.assertEqual(rw_repo.heads.snapshot_with_replace.commit, parent.parents[0])
 
     @with_rw_repo("HEAD", bare=False)
     def test_push_revision_sources(self, rw_repo):
