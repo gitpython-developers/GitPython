@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from git import FetchInfo, Repo
+from git import FetchInfo, Repo, _backend
 from git.objects.submodule.util import sm_section
 from test.lib.fixtures import writable_fixture
 
@@ -15,6 +15,24 @@ from test.lib.fixtures import writable_fixture
 def remote_fixture(request):
     with writable_fixture("remote-cli.sh", *request.param) as temporary:
         yield temporary.path().resolve()
+
+
+@pytest.mark.parametrize("remote_fixture", [("push-mirror", obj) for obj in ("sha1", "sha256")], indirect=True)
+def test_push_uses_mirror_remote_selector(remote_fixture):
+    with Repo(remote_fixture / "source") as source, Repo(remote_fixture / "clone") as clone:
+        expected = clone.commit("refs/remotes/mirror/main")
+        assert expected != clone.commit("refs/remotes/origin/main")
+        assert clone.git.rev_parse("--verify", "@{push}") == expected.hexsha
+        fallback = ("rev_parse", "CLI: push remote selectors (GIX-46)")
+        before = _backend.statistics().get(fallback, 0)
+
+        (info,) = clone.remote("origin").push("@{push}:refs/heads/snapshot")
+
+        assert source.heads.snapshot.commit == expected
+        assert info.local_ref is None
+        assert info.local_hash == expected.hexsha
+        if _backend.name == "gix":
+            assert _backend.statistics().get(fallback, 0) == before + 1
 
 
 @pytest.mark.parametrize(
