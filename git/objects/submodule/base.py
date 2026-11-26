@@ -1841,7 +1841,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         :raise ValueError:
             If the configured branch is ``.`` and the superproject HEAD is detached.
         """
-        if git.Head(self.repo, self._branch_path).name != ".":
+        if os.fspath(self._branch_path) not in (".", "refs/heads/."):
             return self._branch_path
         branch = self._superproject_branch()
         if branch is None:
@@ -1865,7 +1865,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         # Use an instance method, for this we create a temporary Head instance which
         # uses a repository that is available at least (it makes no difference).
-        return git.Head(self.repo, self.branch_path).name
+        return git.Head(self.repo, os.fspath(self.branch_path)).name
 
     def _superproject_branch(self) -> Union["Head", None]:
         """Return the superproject's current branch, or ``None`` if its HEAD is detached."""

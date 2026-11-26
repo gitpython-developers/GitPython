@@ -5,7 +5,7 @@ import gc
 from io import BytesIO
 import os
 import os.path as osp
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import sys
 from types import SimpleNamespace
@@ -2070,6 +2070,23 @@ class TestSubmodule(TestBase):
                     submodule.update(init=False, to_latest_revision=True)
             with submodule.module() as module:
                 assert module.head.commit.binsha == submodule.binsha
+
+    @patch_git_config("protocol.file.allow", "always")
+    def test_branch_accessors_accept_path_like_branch(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent:
+            configured = parent.submodules[0]
+            configured.update()
+            branch_path = PurePosixPath("refs/heads/dev")
+            submodule = Submodule(
+                parent, configured.binsha, path=configured.path, name=configured.name, branch_path=branch_path
+            )
+            assert submodule.branch_path is branch_path
+            assert submodule.branch_name == "dev"
+            branch = submodule.branch
+            with branch.repo:
+                assert branch.path == branch_path
 
     @patch_git_config("protocol.file.allow", "always")
     def test_branch_dot_accessors_follow_superproject_branch(self):
