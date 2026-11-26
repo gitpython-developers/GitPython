@@ -416,14 +416,12 @@ class RootModule(Submodule):
                                     tbr = git.Head(smm, branch.path)
                                 # END ensure tracking branch exists
 
-                                tbr.set_tracking_branch(find_first_remote_branch(smmr, branch.name))
-                                # NOTE: All head-resetting is done in the base
-                                # implementation of update but we will have to checkout the
-                                # new branch here. As it still points to the currently
-                                # checked out commit, we don't do any harm.
-                                # As we don't want to update working-tree or index, changing
-                                # the ref is all there is to do.
-                                smm.head.reference = tbr
+                                tracking_branch = find_first_remote_branch(smmr, branch.name)
+                                if tbr.commit == smm.head.commit:
+                                    smm.head.reference = tbr
+                                else:
+                                    tbr.checkout(force=force_reset)
+                                tbr.set_tracking_branch(tracking_branch)
                             # END handle resolved tracking branch
                         # END handle dry_run
 

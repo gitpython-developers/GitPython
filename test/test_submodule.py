@@ -2167,6 +2167,25 @@ class TestSubmodule(TestBase):
                 assert module.head.commit.binsha == submodule.binsha
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_root_update_checks_out_reused_inherited_branch(self):
+        # The submodule URL points to this private fixture's source.
+        rwdir = self._fixture("root-reuse-inherited-branch", execute=True)
+        with git.Repo(rwdir / "parent") as parent:
+            submodule = parent.submodules[0]
+            with submodule.module() as module:
+                path = Path(submodule.abspath, "file")
+                assert module.active_branch.name == "master"
+                assert path.read_text() == "master\n"
+                assert module.heads.dev.commit.binsha == submodule.binsha
+
+                RootModule(parent).update(previous_commit="before-branch-change")
+
+                assert module.active_branch == module.heads.dev
+                assert module.head.commit.binsha == submodule.binsha
+                assert module.git.show(":file") == "dev"
+                assert path.read_text() == "dev\n"
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_update_retries_url_change_after_detached_superproject(self):
         # The submodule URLs point to this private fixture's source and replacement.
         rwdir = self._fixture("root-url-branch-dot", execute=True)
