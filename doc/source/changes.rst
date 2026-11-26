@@ -19,6 +19,7 @@ Security fixes
 - https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-f8wj-prgh-h9j7
 - https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-j3hg-fv33-37rw
 - https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-j8pf-7m8v-xx38
+- https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-7vgr-8w94-8qm9 
 
 Git executable and safety
 -------------------------
