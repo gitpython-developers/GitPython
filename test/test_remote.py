@@ -581,6 +581,20 @@ class TestRemote(TestBase):
         self.assertEqual(rw_repo.heads.snapshot.commit, rw_repo.head.commit.parents[0])
 
     @with_rw_repo("HEAD", bare=False)
+    def test_push_describe_source_with_ref_prefix(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        current = rw_repo.head.commit
+        rw_repo.create_tag("refs/releases/base", current.parents[0])
+        source = rw_repo.git.describe("--tags", "--long", "--match=refs/releases/base")
+        self.assertTrue(source.startswith("refs/releases/base-"))
+
+        (info,) = remote.push(f"{source}:refs/heads/snapshot")
+
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, current.hexsha)
+        self.assertEqual(rw_repo.heads.snapshot.commit, current)
+
+    @with_rw_repo("HEAD", bare=False)
     def test_push_revision_sources(self, rw_repo):
         remote = rw_repo.create_remote("self", rw_repo.git_dir)
         parent = rw_repo.head.commit.parents[0]

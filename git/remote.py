@@ -246,9 +246,12 @@ class PushInfo(IterableObj):
                 is_revision = True
             else:
                 try:
-                    from_ref = Reference.from_path(remote.repo, from_ref_string)
+                    candidate = Reference.from_path(remote.repo, from_ref_string)
+                    candidate._get_ref_info(remote.repo, from_ref_string)
                 except ValueError:
                     is_revision = True
+                else:
+                    from_ref = candidate
 
         # Commit handling, could be message or commit info
         old_commit: Optional[str] = None
