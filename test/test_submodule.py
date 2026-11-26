@@ -2167,6 +2167,25 @@ class TestSubmodule(TestBase):
                 assert module.head.commit.binsha == submodule.binsha
 
     @patch_git_config("protocol.file.allow", "always")
+    def test_root_update_retries_url_change_after_detached_superproject(self):
+        # The submodule URLs point to this private fixture's source and replacement.
+        rwdir = self._fixture("root-url-branch-dot", execute=True)
+        with git.Repo(rwdir / "clone") as parent, git.Repo(rwdir / "moved") as moved:
+            root = RootModule(parent)
+            with parent.submodules[0].module() as module:
+                with pytest.raises(ValueError, match="superproject HEAD is detached"):
+                    root.update(previous_commit="before-url-change", to_latest_revision=True)
+
+                assert {remote.name for remote in module.remotes} == {"origin"}
+                assert Path(module.remotes.origin.url).samefile(rwdir / "source")
+
+                parent.git.checkout("dev")
+                root.update(previous_commit="before-url-change", to_latest_revision=True)
+                assert {remote.name for remote in module.remotes} == {"origin"}
+                assert Path(module.remotes.origin.url).samefile(rwdir / "moved")
+                assert module.head.commit == moved.heads.dev.commit
+
+    @patch_git_config("protocol.file.allow", "always")
     def test_root_update_url_change_checks_submodule_branch(self):
         # The submodule URL points to this private fixture's source.
         rwdir = self._fixture("branch-dot", execute=True)

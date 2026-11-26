@@ -46,7 +46,7 @@ case "$scenario" in
             deinit-nonempty) printf '%s' 'user content' > parent/module/file ;;
         esac
         ;;
-    branch-dot|branch-dot-alias)
+    branch-dot|branch-dot-alias|root-url-branch-dot)
         git init -q -b master source
         git -C source commit --allow-empty -qm initial
         git -C source branch dev
@@ -63,6 +63,15 @@ case "$scenario" in
         if test "$scenario" = branch-dot-alias; then
             git -C clone branch master refs/remotes/origin/master
             git -C clone symbolic-ref refs/heads/dev refs/heads/master
+        fi
+        if test "$scenario" = root-url-branch-dot; then
+            git -C clone submodule update --init
+            git -C clone tag before-url-change
+            git clone -q -b dev source moved
+            git -C moved commit --allow-empty -qm 'Advance dev on the replacement remote'
+            git -C clone config -f .gitmodules submodule.module.url "$root/moved"
+            git -C clone commit -qam 'Change submodule URL'
+            git -C clone checkout -q --detach HEAD
         fi
         ;;
     add-empty) git init -q -b master empty-repo ;;

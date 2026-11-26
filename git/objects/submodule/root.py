@@ -304,6 +304,7 @@ class RootModule(Submodule):
                                     # offline updates instead of replacing the remote.
                                     previous_remote.set_url(git.Git.polish_url(sm_url))
                                 else:
+                                    branch, _ = sm._branch_for_update(to_latest_revision=to_latest_revision)
                                     assert nn not in [r.name for r in rmts]
                                     smr = smm.create_remote(nn, sm_url)
                                     with smm.git.custom_environment(**sm._transport_env()):
@@ -312,7 +313,6 @@ class RootModule(Submodule):
                                     # If we have a tracking branch, it should be available
                                     # in the new remote as well. An inherited branch has no
                                     # name while the superproject HEAD is detached.
-                                    branch, _ = sm._branch_for_update(to_latest_revision=to_latest_revision)
                                     if branch.name == ".":
                                         _logger.warning("Failed to resolve tracking branch %s", branch.path)
                                     elif len([r for r in smr.refs if r.remote_head == branch.name]) == 0:
