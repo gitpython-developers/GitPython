@@ -117,7 +117,8 @@ API changes
   upstream location; remote tracking branches retain their existing behavior.
 * ``Remote.push()`` no longer drops results whose source is not a reference,
   such as a commit hash or ``HEAD~1``. Their ``PushInfo.local_ref`` is ``None``,
-  and the new ``PushInfo.local_hash`` holds the hash of the pushed object.
+  and the new ``PushInfo.local_hash`` holds the hash reported by Git or
+  resolved from an explicit source before the push, when available.
 * ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
   writes, existence checks, and enumeration use Git, including packed objects.
   Precompressed input streams and custom object-output writers are unsupported.

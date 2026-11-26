@@ -385,6 +385,7 @@ and predate the current fallback; they do not establish native coverage.
 | Standalone discovery helpers | Native storage directories and gitfiles reopened at their canonical native Git directory | Rejected candidates and the same layout/environment guards as `Repo` opening; GIX-14 |
 | `Repo.rev_parse`, `rev_parse` metadata queries | Revision lookup, common directory, object format, bare flag, worktree root, fixed `modules`/`COMMIT_EDITMSG` locations | Repository-format validation, other metadata paths, symlinked metadata leaves, message searches and describe forms; GIX-1/14/17/22 |
 | Revision path/mode metadata | Native revision specification, including tree paths and index stages | Custom/sparse indexes, unsupported revision grammar or path normalization |
+| `Remote.push` status | Managed revision lookup for explicit sources and exact reference lookup in the repository's default context | Git handles transport, abbreviated summary IDs, and exact reference checks with per-call environment overrides |
 | Tree enumeration, `ls_tree` | Native tree entries with modes, names, and object IDs | Other command options; entries with modes Git canonicalizes or that do not round-trip through native tree encoding; GIX-36 |
 | Reference object reads | One exact native lookup for direct, symbolic and absent references | Partial names and native decoding errors |
 | Reference-name validation | Native full-name validation without opening a repository | Standalone names outside the native grammar; GIX-20 |

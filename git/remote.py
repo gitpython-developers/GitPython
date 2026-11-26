@@ -19,10 +19,12 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     NoReturn,
     Optional,
     Sequence,
     Set,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -32,7 +34,7 @@ from typing import (
 from git.cmd import Git, handle_process_output
 from git.compat import force_text
 from git.config import GitConfigParser, SectionConstraint, cp
-from git.exc import GitCommandError, ODBError, UnsafeOptionError
+from git.exc import GitCommandError, UnsafeOptionError
 from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
 from git.util import (
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
 
 _T_RemoteName = TypeVar("_T_RemoteName", bound=Union[str, "Remote"])
+_PushSource = Tuple[Optional[SymbolicReference], Optional[str]]
 
 flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
@@ -125,8 +128,8 @@ class PushInfo(IterableObj):
                             # It is None if the ref was deleted, or if the pushed source
                             # was not a reference, like a commit hash or HEAD~1.
         info.local_hash     # Hash of the pushed object if the source was not a
-                            # reference, otherwise None. For new and rejected refs git
-                            # prints no hash, so the source is resolved after the push.
+                            # reference and the hash was reported by Git or could be
+                            # resolved before the push. Otherwise None.
         info.remote_ref_string # path to the remote reference located on the remote side
         info.remote_ref # Remote Reference on the local side corresponding to
                         # the remote_ref_string. It can be a TagReference as well.
@@ -222,7 +225,30 @@ class PushInfo(IterableObj):
         # END
 
     @classmethod
-    def _from_line(cls, remote: "Remote", line: str) -> "PushInfo":
+    def _source_ref(
+        cls, remote: "Remote", source: str, env: Optional[Mapping[str, str]]
+    ) -> Optional[SymbolicReference]:
+        # Git also prints revision expressions here, including ones under refs/.
+        if cls._re_revision_syntax.search(source):
+            return None
+        try:
+            ref = Reference.from_path(remote.repo, source)
+            if env:
+                remote.repo.git._call_process_safe("show_ref", "--exists", "--", source, env=env)
+            else:
+                ref._get_ref_info(remote.repo, source)
+        except (GitCommandError, ValueError):
+            return None
+        return ref
+
+    @classmethod
+    def _from_line(
+        cls,
+        remote: "Remote",
+        line: str,
+        sources: Optional[Mapping[str, _PushSource]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ) -> "PushInfo":
         """Create a new :class:`PushInfo` instance as parsed from line which is expected
         to be like refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes."""
         control_character, from_to, summary = line.split("\t", 3)
@@ -238,20 +264,12 @@ class PushInfo(IterableObj):
         # from_to handling
         from_ref_string, to_ref_string = from_to.rsplit(":", 1)
         from_ref: Union[SymbolicReference, None] = None
-        is_revision = False
+        local_hash: Optional[str] = None
         if not flags & cls.DELETED and from_ref_string != "(delete)":
-            # Git prints the source as it was given, which can be any revision.
-            # from_path() would accept one under refs/, like refs/heads/main~1.
-            if cls._re_revision_syntax.search(from_ref_string):
-                is_revision = True
+            if sources is not None and from_ref_string in sources:
+                from_ref, local_hash = sources[from_ref_string]
             else:
-                try:
-                    candidate = Reference.from_path(remote.repo, from_ref_string)
-                    candidate._get_ref_info(remote.repo, from_ref_string)
-                except ValueError:
-                    is_revision = True
-                else:
-                    from_ref = candidate
+                from_ref = cls._source_ref(remote, from_ref_string, env)
 
         # Commit handling, could be message or commit info
         old_commit: Optional[str] = None
@@ -281,19 +299,20 @@ class PushInfo(IterableObj):
             old_commit = old_sha
         # END message handling
 
-        local_hash: Optional[str] = None
-        if is_revision:
-            # The push may have moved a ref the revision is relative to, like
-            # origin/main~1, so prefer the hash git reports as pushed.
-            try:
-                if new_sha:
+        if from_ref is None and new_sha:
+            # Prefer the object ID reported by the push over the pre-push lookup.
+            local_hash = None
+            if remote.repo.re_hexsha_only.fullmatch(new_sha):
+                local_hash = new_sha
+            elif env is not None:
+                try:
                     # rev-parse would prefer a ref spelled like the abbreviated ID.
-                    oids = remote.repo.git._call_process_safe("rev_parse", "--disambiguate=%s" % new_sha).split()
+                    oids = remote.repo.git._call_process_safe(
+                        "rev_parse", "--disambiguate=%s" % new_sha, env=env
+                    ).split()
                     local_hash = oids[0] if len(oids) == 1 else None
-                else:
-                    local_hash = remote.repo.rev_parse(from_ref_string).hexsha
-            except (ODBError, GitCommandError, UnsafeOptionError, ValueError):
-                pass
+                except (GitCommandError, UnsafeOptionError, ValueError):
+                    pass
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary, local_hash)
 
@@ -907,6 +926,9 @@ class Remote(LazyMixin, IterableObj):
         proc: "Git.AutoInterrupt",
         progress: Union[Callable[..., Any], RemoteProgress, None],
         kill_after_timeout: Union[None, float] = None,
+        *,
+        sources: Optional[Mapping[str, _PushSource]] = None,
+        env: Optional[Mapping[str, str]] = None,
     ) -> PushInfoList:
         progress = to_progress_instance(progress)
 
@@ -929,7 +951,7 @@ class Remote(LazyMixin, IterableObj):
         # Optional lookups are independent of the push's process timeout.
         for line in list(push_info_lines):
             try:
-                output.append(PushInfo._from_line(self, line))
+                output.append(PushInfo._from_line(self, line, sources, env))
             except ValueError:
                 # Non-status lines are handled through stderr and the exit code below.
                 pass
@@ -947,6 +969,27 @@ class Remote(LazyMixin, IterableObj):
                 output.error = e
 
         return output
+
+    def _push_sources(self, refspecs: Sequence[str], env: Mapping[str, str]) -> Dict[str, _PushSource]:
+        sources: Dict[str, _PushSource] = {}
+        for refspec in refspecs:
+            source, separator, _ = refspec.lstrip("+").rpartition(":")
+            if not separator or not source or source in sources:
+                continue
+            ref = PushInfo._source_ref(self, source, env)
+            oid = None
+            if ref is None:
+                try:
+                    Git._check_operand(source, "revision")
+                    resolved = self.repo.git._call_process_safe(
+                        "rev_parse", "--verify", "--quiet", "--end-of-options", source, env=env
+                    )
+                    if self.repo.re_hexsha_only.fullmatch(resolved):
+                        oid = resolved
+                except (GitCommandError, UnsafeOptionError, ValueError):
+                    pass
+            sources[source] = ref, oid
+        return sources
 
     def _assert_refspec(self) -> None:
         """Turns out we can't deal with remotes if the refspec is missing."""
@@ -1199,6 +1242,9 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_push_options,
             )
 
+        # Do not consume Git options reserved for the next command.
+        env = None if self.repo.git._git_options else kwargs.get("env") or {}
+        sources = self._push_sources(refspec, env) if env is not None else None
         proc = self.repo.git._call_process_safe(
             "push",
             "--",
@@ -1211,7 +1257,7 @@ class Remote(LazyMixin, IterableObj):
             kill_after_timeout=kill_after_timeout,
             **kwargs,
         )
-        return self._get_push_info(proc, progress, kill_after_timeout=kill_after_timeout)
+        return self._get_push_info(proc, progress, kill_after_timeout=kill_after_timeout, sources=sources, env=env)
 
     @property
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
