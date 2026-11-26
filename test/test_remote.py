@@ -554,6 +554,145 @@ class TestRemote(TestBase):
             "pruned refs are skipped without a warning",
         )
 
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_tree_path_source(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        blob = next(rw_repo.head.commit.tree.traverse(predicate=lambda item, depth: item.type == "blob"))
+
+        (info,) = remote.push(f"HEAD:{blob.path}:refs/tags/snapshot")
+
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, blob.hexsha)
+        self.assertEqual(rw_repo.tags.snapshot.object.hexsha, blob.hexsha)
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_option_like_revision_source(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        rw_repo.git.update_ref("refs/tags/-release", "HEAD")
+
+        result = remote.push(["-release~1:refs/heads/snapshot", "HEAD:refs/heads/ordinary"])
+
+        infos = {info.remote_ref_string: info for info in result}
+        self.assertEqual(set(infos), {"refs/heads/snapshot", "refs/heads/ordinary"})
+        self.assertTrue(infos["refs/heads/snapshot"].flags & PushInfo.NEW_HEAD)
+        self.assertIsNone(infos["refs/heads/snapshot"].local_ref)
+        self.assertIsNone(infos["refs/heads/snapshot"].local_hash)
+        self.assertEqual(infos["refs/heads/ordinary"].local_ref, rw_repo.head)
+        self.assertEqual(rw_repo.heads.snapshot.commit, rw_repo.head.commit.parents[0])
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_describe_source_with_ref_prefix(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        current = rw_repo.head.commit
+        rw_repo.create_tag("refs/releases/base", current.parents[0])
+        source = rw_repo.git.describe("--tags", "--long", "--match=refs/releases/base")
+        self.assertTrue(source.startswith("refs/releases/base-"))
+
+        (info,) = remote.push(f"{source}:refs/heads/snapshot")
+
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, current.hexsha)
+        self.assertEqual(rw_repo.heads.snapshot.commit, current)
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_snapshots_source_before_updating_tracking_ref(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        current = rw_repo.head.commit
+        parent = current.parents[0]
+        previous_source = parent.parents[0]
+        remote.push(f"{parent.hexsha}:refs/heads/pushed_ref").raise_if_error()
+
+        result = remote.push(["HEAD:refs/heads/pushed_ref", "self/pushed_ref~1:refs/heads/snapshot"])
+
+        result.raise_if_error()
+        infos = {info.remote_ref_string: info for info in result}
+        self.assertEqual(infos["refs/heads/snapshot"].local_hash, previous_source.hexsha)
+        self.assertEqual(rw_repo.heads.snapshot.commit, previous_source)
+        self.assertEqual(rw_repo.commit("refs/remotes/self/pushed_ref"), current)
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_resolves_revision_source_with_call_environment(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        parent = rw_repo.head.commit.parents[0]
+        rw_repo.git.replace("HEAD", parent.hexsha)
+        self.assertEqual(rw_repo.git.rev_parse("HEAD~1"), parent.parents[0].hexsha)
+
+        (info,) = remote.push("HEAD~1:refs/heads/snapshot", env={"GIT_NO_REPLACE_OBJECTS": "1"})
+
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, parent.hexsha)
+        self.assertEqual(rw_repo.heads.snapshot.commit, parent)
+
+        # Discarding the configured wrapper must not affect the push.
+        rw_repo.git(no_replace_objects=True)
+        (info,) = remote.push("HEAD~1:refs/heads/snapshot_with_replace")
+        self.assertEqual(info.local_hash, parent.parents[0].hexsha)
+        self.assertEqual(rw_repo.heads.snapshot_with_replace.commit, parent.parents[0])
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_revision_sources(self, rw_repo):
+        remote = rw_repo.create_remote("self", rw_repo.git_dir)
+        parent = rw_repo.head.commit.parents[0]
+        res = remote.push(
+            [
+                "%s:refs/heads/pushed_hash" % parent.hexsha,
+                "HEAD~1:refs/heads/pushed_rev",
+                "HEAD:refs/heads/pushed_ref",
+            ]
+        )
+        infos = {info.remote_ref_string: info for info in res}
+        self.assertEqual(set(infos), {"refs/heads/pushed_hash", "refs/heads/pushed_rev", "refs/heads/pushed_ref"})
+        for name in ("refs/heads/pushed_hash", "refs/heads/pushed_rev"):
+            self.assertTrue(infos[name].flags & PushInfo.NEW_HEAD)
+            self.assertIsNone(infos[name].local_ref)
+            self.assertEqual(infos[name].local_hash, parent.hexsha)
+        self.assertEqual(infos["refs/heads/pushed_ref"].local_ref, rw_repo.head)
+        self.assertIsNone(infos["refs/heads/pushed_ref"].local_hash)
+
+        # The push moves self/pushed_ref, which the source is relative to.
+        remote.fetch()
+        (info,) = remote.push("self/pushed_ref~1:refs/heads/pushed_ref", force=True)
+        self.assertTrue(info.flags & PushInfo.FORCED_UPDATE)
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
+        # A ref spelled like the abbreviated ID git prints must not win over the object.
+        rw_repo.create_head(rw_repo.git.rev_parse("--short", parent.hexsha), rw_repo.head.commit)
+        remote.push("HEAD:refs/heads/pushed_ref")
+        remote.fetch()
+        (info,) = remote.push("self/pushed_ref~1:refs/heads/pushed_ref", force=True)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
+        # A fully qualified revision is not a reference either.
+        source = rw_repo.create_head("push_source", rw_repo.head.commit)
+        (info,) = remote.push("%s~1:refs/heads/pushed_full" % source.path)
+        self.assertIsNone(info.local_ref)
+        self.assertEqual(info.local_hash, parent.hexsha)
+
+        run = Git._call_process_safe
+
+        def fail_revision(git, method, *args, **kwargs):
+            if method == "rev_parse" and args == ("--verify", "--quiet", "--end-of-options", "HEAD~1"):
+                raise GitCommandError("rev-parse", 128)
+            return run(git, method, *args, **kwargs)
+
+        # A failed lookup keeps the result without a hash.
+        with mock.patch.object(Git, "_call_process_safe", fail_revision):
+            (info,) = remote.push("HEAD~1:refs/heads/pushed_lookup")
+        self.assertTrue(info.flags & PushInfo.NEW_HEAD)
+        self.assertIsNone(info.local_hash)
+
+        def fail_disambiguate(git, method, *args, **kwargs):
+            if method == "rev_parse" and args and str(args[0]).startswith("--disambiguate="):
+                raise GitCommandError("rev-parse", 128)
+            return run(git, method, *args, **kwargs)
+
+        remote.push("HEAD:refs/heads/pushed_ref")
+        with mock.patch.object(Git, "_call_process_safe", fail_disambiguate):
+            (info,) = remote.push("HEAD~1:refs/heads/pushed_ref", force=True)
+        self.assertTrue(info.flags & PushInfo.FORCED_UPDATE)
+        self.assertIsNone(info.local_hash)
+
     @with_rw_repo("HEAD", bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
@@ -1111,6 +1250,34 @@ def test_timeout_stalled_remote(protocol, operation):
 
 
 class TestTimeouts(TestBase):
+    @skipIf(sys.platform == "win32", "requires POSIX timeout signalling")
+    @with_rw_repo("HEAD", bare=False)
+    def test_push_hash_lookup_waits_for_status_output(self, repo):
+        current = repo.head.commit
+        parent = current.parents[0]
+        lines = (
+            f"+\tHEAD~1:refs/heads/snapshot\t{current.hexsha[:12]}...{parent.hexsha[:12]} (forced update)\n"
+            "=\tHEAD:refs/heads/ordinary\t[up to date]"
+        )
+        process = repo.git.execute(
+            [sys.executable, "-c", f"print({lines!r})"], as_process=True, universal_newlines=True
+        )
+        run = Git._call_process_safe
+        stream_closed = []
+
+        def track_disambiguate(git, method, *args, **kwargs):
+            if method == "rev_parse" and args[0].startswith("--disambiguate="):
+                stream_closed.append(process.stdout.closed)
+            return run(git, method, *args, **kwargs)
+
+        with mock.patch.object(Git, "_call_process_safe", track_disambiguate):
+            result = repo.remote("origin")._get_push_info(process, None, kill_after_timeout=5, env={})
+
+        result.raise_if_error()
+        assert stream_closed == [True]
+        assert [info.remote_ref_string for info in result] == ["refs/heads/snapshot", "refs/heads/ordinary"]
+        assert result[0].local_hash == parent.hexsha
+
     @skipIf(sys.platform == "win32", "requires POSIX timeout signalling")
     @with_rw_repo("HEAD", bare=False)
     def test_timeout_partial_push(self, repo):

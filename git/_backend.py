@@ -171,10 +171,12 @@ def _check_revision_grammar(ref: str) -> None:
     prefix, opener, remainder = ref.partition("@{")
     if opener and ":" not in prefix:
         selector, closer, _ = remainder.partition("}")
+        if closer and selector.lower() == "push":
+            raise _Unsupported("push remote selectors (GIX-46)")
         if closer and not (
             re.fullmatch(r"[0-9]+", selector)
             or (not prefix and re.fullmatch(r"-[0-9]+", selector))
-            or selector.lower() in {"u", "upstream", "p", "push"}
+            or selector.lower() in {"u", "upstream", "p"}
         ):
             raise _Unsupported("textual reflog dates (GIX-39)")
 

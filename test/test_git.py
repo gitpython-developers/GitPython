@@ -1008,6 +1008,35 @@ class TestGit(TestBase):
         output_value = self.git(c="user.name=%s" % input_value).config("--get", "user.name")
         self.assertEqual(input_value, output_value)
 
+    def test_one_shot_options_belong_to_the_returned_wrapper(self):
+        with self.git.custom_environment(GIT_EDITOR="original"):
+            configured = self.git(c="core.editor=one-shot")
+            configured.update_environment(GIT_EDITOR="configured")
+            self.assertEqual(self.git.var("GIT_EDITOR"), "original")
+            self.assertEqual(configured.var("GIT_EDITOR"), "configured")
+
+        configured = self.git(c="gitpython.oneShot=first")
+        other = self.git(c="gitpython.oneShot=second")
+        with self.assertRaises(GitCommandError):
+            self.git.config("--get", "gitpython.oneShot")
+        self.assertEqual(configured.config("--get", "gitpython.oneShot"), "first")
+        self.assertEqual(other.config("--get", "gitpython.oneShot"), "second")
+        with self.assertRaises(GitCommandError):
+            configured.config("--get", "gitpython.oneShot")
+
+    def test_one_shot_options_preserve_subclass_state(self):
+        class CustomGit(Git):
+            __slots__ = ("label", "__dict__")
+            extra: str
+
+        git = CustomGit(self.git.working_dir)
+        git.label = "label"
+        git.extra = "extra"
+        configured = git(version=True)
+        assert isinstance(configured, CustomGit)
+        self.assertEqual((configured.label, configured.extra), ("label", "extra"))
+        self.assertEqual(configured.NoOp(), git.version())
+
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
         self.git.log(n=1)
 

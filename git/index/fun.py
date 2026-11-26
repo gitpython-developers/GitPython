@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Tuple, Union, cast
 from git.cmd import Git
 from git.exc import GitCommandError, HookExecutionError, UnsafeOptionError
 from git.types import PathLike
+
 from .typ import BaseIndexEntry
 
 if TYPE_CHECKING:
@@ -38,8 +39,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         raise UnsafeOptionError("Git arguments cannot contain NUL bytes")
     command = index.repo.git
     # Repo's automatic GIT_DIR bypasses Git's discovery-time ownership check.
-    one_shot_options, command._git_options = command._git_options, ()
-    options = [*command._persistent_git_options, *one_shot_options]
+    options = list(command._persistent_git_options)
     discovery_env = {}
     if (
         "GIT_DIR" in command._repository_environment
@@ -57,7 +57,6 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
         env=discovery_env,
         _repository_redirected="-C" in options,
     )
-    command._git_options = one_shot_options
     try:
         index.repo.git._call_process_safe(
             "hook",

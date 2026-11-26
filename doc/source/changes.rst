@@ -115,6 +115,15 @@ API changes
   current repository (``branch.<name>.remote=.``) as the upstream, instead of
   constructing an invalid ``refs/remotes/./...`` reference. Git resolves the
   upstream location; remote tracking branches retain their existing behavior.
+* ``repo.git(**options)`` returns a separate ``Git`` wrapper whose next subcommand
+  receives the options. Chained calls such as ``repo.git(c="core.abbrev=12").log()``
+  still work. A standalone ``repo.git(**options)`` call no longer affects later
+  repository operations; use per-call environment overrides or
+  ``set_persistent_git_options()`` instead.
+* ``Remote.push()`` no longer drops results whose source is not a reference,
+  such as a commit hash or ``HEAD~1``. Their ``PushInfo.local_ref`` is ``None``,
+  and the new ``PushInfo.local_hash`` holds the hash reported by Git or
+  resolved from an explicit source before the push, when available.
 * ``GitCmdObjectDB`` no longer inherits ``LooseObjectDB``. Its object reads,
   writes, existence checks, and enumeration use Git, including packed objects.
   Precompressed input streams and custom object-output writers are unsupported.

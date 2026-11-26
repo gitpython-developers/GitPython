@@ -19,8 +19,10 @@ import subprocess
 import sys
 import threading
 import time
+from copy import copy
 from subprocess import DEVNULL, PIPE, Popen
 from textwrap import dedent
+from types import MemberDescriptorType
 
 # typing ---------------------------------------------------------------------------
 from typing import (
@@ -43,8 +45,8 @@ from typing import (
     overload,
 )
 
-from git.compat import defenc, safe_decode, safe_encode
 from git import _backend
+from git.compat import defenc, safe_decode, safe_encode
 from git.exc import (
     CommandError,
     GitCommandError,
@@ -340,7 +342,13 @@ def dashify(string: str) -> str:
 
 
 def slots_to_dict(self: "Git", exclude: Sequence[str] = ()) -> Dict[str, Any]:
-    return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
+    state = {}
+    for cls in reversed(type(self).__mro__):
+        for name, descriptor in vars(cls).items():
+            if isinstance(descriptor, MemberDescriptorType) and name not in exclude:
+                with contextlib.suppress(AttributeError):
+                    state[name] = descriptor.__get__(self)
+    return state
 
 
 def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], excluded: Sequence[str] = ()) -> None:
@@ -648,7 +656,7 @@ class Git:
     ]
 
     def __getstate__(self) -> Dict[str, Any]:
-        return slots_to_dict(self, exclude=self._excluded_)
+        return {**getattr(self, "__dict__", {}), **slots_to_dict(self, exclude=self._excluded_)}
 
     def __setstate__(self, d: Dict[str, Any]) -> None:
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
@@ -1820,7 +1828,10 @@ class Git:
         return outlist
 
     def __call__(self, **kwargs: Any) -> "Git":
-        """Specify command line options to the git executable for a subcommand call.
+        """Return a separate Git wrapper with options for its next subcommand call.
+
+        The original wrapper is unchanged. Discarding the returned wrapper discards
+        the one-shot options as well.
 
         :param kwargs:
             A dict of keyword arguments.
@@ -1831,8 +1842,13 @@ class Git:
 
             git(work_tree='/tmp').difftool()
         """
-        self._git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
-        return self
+        # The copy excludes cached cat-file processes, which must not be shared.
+        command = copy(self)
+        command._repo = self._repo
+        command._environment = self._environment.copy()
+        command._repository_environment = self._repository_environment.copy()
+        command._git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
+        return command
 
     @overload
     def _call_process(

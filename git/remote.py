@@ -19,10 +19,12 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     NoReturn,
     Optional,
     Sequence,
     Set,
+    Tuple,
     TypeVar,
     Union,
     cast,
@@ -32,6 +34,7 @@ from typing import (
 from git.cmd import Git, handle_process_output
 from git.compat import force_text
 from git.config import GitConfigParser, SectionConstraint, cp
+from git.exc import GitCommandError, UnsafeOptionError
 from git.refs import Reference, RemoteReference, SymbolicReference, TagReference
 from git.types import AnyGitObject, Literal, PathLike
 from git.util import (
@@ -48,6 +51,7 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
 
 _T_RemoteName = TypeVar("_T_RemoteName", bound=Union[str, "Remote"])
+_PushSource = Tuple[Optional[SymbolicReference], Optional[str]]
 
 flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
@@ -121,7 +125,11 @@ class PushInfo(IterableObj):
         info = remote.push()[0]
         info.flags          # bitflags providing more information about the result
         info.local_ref      # Reference pointing to the local reference that was pushed
-                            # It is None if the ref was deleted.
+                            # It is None if the ref was deleted, or if the pushed source
+                            # was not a reference, like a commit hash or HEAD~1.
+        info.local_hash     # Hash of the pushed object if the source was not a
+                            # reference and the hash was reported by Git or could be
+                            # resolved before the push. Otherwise None.
         info.remote_ref_string # path to the remote reference located on the remote side
         info.remote_ref # Remote Reference on the local side corresponding to
                         # the remote_ref_string. It can be a TagReference as well.
@@ -132,6 +140,7 @@ class PushInfo(IterableObj):
 
     __slots__ = (
         "local_ref",
+        "local_hash",
         "remote_ref_string",
         "flags",
         "_old_commit_sha",
@@ -165,6 +174,9 @@ class PushInfo(IterableObj):
         "!": ERROR,
     }
 
+    # git check-ref-format rejects these in ref names; revisions use them.
+    _re_revision_syntax = re.compile(r"[~^]|@\{")
+
     def __init__(
         self,
         flags: int,
@@ -173,6 +185,7 @@ class PushInfo(IterableObj):
         remote: "Remote",
         old_commit: Optional[str] = None,
         summary: str = "",
+        local_hash: Optional[str] = None,
     ) -> None:
         """Initialize a new instance.
 
@@ -180,6 +193,7 @@ class PushInfo(IterableObj):
         """
         self.flags = flags
         self.local_ref = local_ref
+        self.local_hash = local_hash
         self.remote_ref_string = remote_ref_string
         self._remote = remote
         self._old_commit_sha = old_commit
@@ -211,7 +225,30 @@ class PushInfo(IterableObj):
         # END
 
     @classmethod
-    def _from_line(cls, remote: "Remote", line: str) -> "PushInfo":
+    def _source_ref(
+        cls, remote: "Remote", source: str, env: Optional[Mapping[str, str]]
+    ) -> Optional[SymbolicReference]:
+        # Git also prints revision expressions here, including ones under refs/.
+        if cls._re_revision_syntax.search(source):
+            return None
+        try:
+            ref = Reference.from_path(remote.repo, source)
+            if env:
+                remote.repo.git._call_process_safe("show_ref", "--exists", "--", source, env=env)
+            else:
+                ref._get_ref_info(remote.repo, source)
+        except (GitCommandError, ValueError):
+            return None
+        return ref
+
+    @classmethod
+    def _from_line(
+        cls,
+        remote: "Remote",
+        line: str,
+        sources: Optional[Mapping[str, _PushSource]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ) -> "PushInfo":
         """Create a new :class:`PushInfo` instance as parsed from line which is expected
         to be like refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes."""
         control_character, from_to, summary = line.split("\t", 3)
@@ -225,17 +262,18 @@ class PushInfo(IterableObj):
         # END handle control character
 
         # from_to handling
-        from_ref_string, to_ref_string = from_to.split(":")
-        if flags & cls.DELETED:
-            from_ref: Union[SymbolicReference, None] = None
-        else:
-            if from_ref_string == "(delete)":
-                from_ref = None
+        from_ref_string, to_ref_string = from_to.rsplit(":", 1)
+        from_ref: Union[SymbolicReference, None] = None
+        local_hash: Optional[str] = None
+        if not flags & cls.DELETED and from_ref_string != "(delete)":
+            if sources is not None and from_ref_string in sources:
+                from_ref, local_hash = sources[from_ref_string]
             else:
-                from_ref = Reference.from_path(remote.repo, from_ref_string)
+                from_ref = cls._source_ref(remote, from_ref_string, env)
 
         # Commit handling, could be message or commit info
         old_commit: Optional[str] = None
+        new_sha: Optional[str] = None
         if summary.startswith("["):
             if "[rejected]" in summary:
                 flags |= cls.REJECTED
@@ -256,12 +294,27 @@ class PushInfo(IterableObj):
             split_token = "..."
             if control_character == " ":
                 split_token = ".."
-            old_sha, _new_sha = summary.split(" ")[0].split(split_token)
+            old_sha, new_sha = summary.split(" ")[0].split(split_token)
             # Have to use constructor here as the sha usually is abbreviated.
             old_commit = old_sha
         # END message handling
 
-        return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
+        if from_ref is None and new_sha:
+            # Prefer the object ID reported by the push over the pre-push lookup.
+            local_hash = None
+            if remote.repo.re_hexsha_only.fullmatch(new_sha):
+                local_hash = new_sha
+            else:
+                try:
+                    # rev-parse would prefer a ref spelled like the abbreviated ID.
+                    oids = remote.repo.git._call_process_safe(
+                        "rev_parse", "--disambiguate=%s" % new_sha, env=env
+                    ).split()
+                    local_hash = oids[0] if len(oids) == 1 else None
+                except (GitCommandError, UnsafeOptionError, ValueError):
+                    pass
+
+        return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary, local_hash)
 
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> NoReturn:  # -> Iterator['PushInfo']:
@@ -873,6 +926,9 @@ class Remote(LazyMixin, IterableObj):
         proc: "Git.AutoInterrupt",
         progress: Union[Callable[..., Any], RemoteProgress, None],
         kill_after_timeout: Union[None, float] = None,
+        *,
+        sources: Optional[Mapping[str, _PushSource]] = None,
+        env: Optional[Mapping[str, str]] = None,
     ) -> PushInfoList:
         progress = to_progress_instance(progress)
 
@@ -882,22 +938,23 @@ class Remote(LazyMixin, IterableObj):
         # to override the previous one. This is why we read the bytes manually.
         progress_handler = progress.new_message_handler()
         output: PushInfoList = PushInfoList()
-
-        def stdout_handler(line: str) -> None:
-            try:
-                output.append(PushInfo._from_line(self, line))
-            except ValueError:
-                # If an error happens, additional info is given which we parse below.
-                pass
+        push_info_lines: List[str] = []
 
         handle_process_output(
             proc,
-            stdout_handler,
+            push_info_lines.append,
             progress_handler,
             finalizer=None,
             decode_streams=False,
             kill_after_timeout=kill_after_timeout,
         )
+        # Optional lookups are independent of the push's process timeout.
+        for line in list(push_info_lines):
+            try:
+                output.append(PushInfo._from_line(self, line, sources, env))
+            except ValueError:
+                # Non-status lines are handled through stderr and the exit code below.
+                pass
         stderr_text = "\n".join(progress.error_lines)
         try:
             proc.wait(stderr=stderr_text)
@@ -912,6 +969,27 @@ class Remote(LazyMixin, IterableObj):
                 output.error = e
 
         return output
+
+    def _push_sources(self, refspecs: Sequence[str], env: Mapping[str, str]) -> Dict[str, _PushSource]:
+        sources: Dict[str, _PushSource] = {}
+        for refspec in refspecs:
+            source, separator, _ = refspec.lstrip("+").rpartition(":")
+            if not separator or not source or source in sources:
+                continue
+            ref = PushInfo._source_ref(self, source, env)
+            oid = None
+            if ref is None:
+                try:
+                    Git._check_operand(source, "revision")
+                    resolved = self.repo.git._call_process_safe(
+                        "rev_parse", "--verify", "--quiet", "--end-of-options", source, env=env
+                    )
+                    if self.repo.re_hexsha_only.fullmatch(resolved):
+                        oid = resolved
+                except (GitCommandError, UnsafeOptionError, ValueError):
+                    pass
+            sources[source] = ref, oid
+        return sources
 
     def _assert_refspec(self) -> None:
         """Turns out we can't deal with remotes if the refspec is missing."""
@@ -1164,6 +1242,8 @@ class Remote(LazyMixin, IterableObj):
                 unsafe_options=self.unsafe_git_push_options,
             )
 
+        env = kwargs.get("env") or {}
+        sources = self._push_sources(refspec, env)
         proc = self.repo.git._call_process_safe(
             "push",
             "--",
@@ -1176,7 +1256,7 @@ class Remote(LazyMixin, IterableObj):
             kill_after_timeout=kill_after_timeout,
             **kwargs,
         )
-        return self._get_push_info(proc, progress, kill_after_timeout=kill_after_timeout)
+        return self._get_push_info(proc, progress, kill_after_timeout=kill_after_timeout, sources=sources, env=env)
 
     @property
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
