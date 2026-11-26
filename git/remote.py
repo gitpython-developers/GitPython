@@ -913,22 +913,23 @@ class Remote(LazyMixin, IterableObj):
         # to override the previous one. This is why we read the bytes manually.
         progress_handler = progress.new_message_handler()
         output: PushInfoList = PushInfoList()
-
-        def stdout_handler(line: str) -> None:
-            try:
-                output.append(PushInfo._from_line(self, line))
-            except ValueError:
-                # If an error happens, additional info is given which we parse below.
-                pass
+        push_info_lines: List[str] = []
 
         handle_process_output(
             proc,
-            stdout_handler,
+            push_info_lines.append,
             progress_handler,
             finalizer=None,
             decode_streams=False,
             kill_after_timeout=kill_after_timeout,
         )
+        # Optional lookups are independent of the push's process timeout.
+        for line in list(push_info_lines):
+            try:
+                output.append(PushInfo._from_line(self, line))
+            except ValueError:
+                # Non-status lines are handled through stderr and the exit code below.
+                pass
         stderr_text = "\n".join(progress.error_lines)
         try:
             proc.wait(stderr=stderr_text)

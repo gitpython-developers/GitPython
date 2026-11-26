@@ -1198,6 +1198,34 @@ def test_timeout_stalled_remote(protocol, operation):
 class TestTimeouts(TestBase):
     @skipIf(sys.platform == "win32", "requires POSIX timeout signalling")
     @with_rw_repo("HEAD", bare=False)
+    def test_push_hash_lookup_waits_for_status_output(self, repo):
+        current = repo.head.commit
+        parent = current.parents[0]
+        lines = (
+            f"+\tHEAD~1:refs/heads/snapshot\t{current.hexsha[:12]}...{parent.hexsha[:12]} (forced update)\n"
+            "=\tHEAD:refs/heads/ordinary\t[up to date]"
+        )
+        process = repo.git.execute(
+            [sys.executable, "-c", f"print({lines!r})"], as_process=True, universal_newlines=True
+        )
+        run = Git._call_process_safe
+        stream_closed = []
+
+        def track_disambiguate(git, method, *args, **kwargs):
+            if method == "rev_parse" and args[0].startswith("--disambiguate="):
+                stream_closed.append(process.stdout.closed)
+            return run(git, method, *args, **kwargs)
+
+        with mock.patch.object(Git, "_call_process_safe", track_disambiguate):
+            result = repo.remote("origin")._get_push_info(process, None, kill_after_timeout=5)
+
+        result.raise_if_error()
+        assert stream_closed == [True]
+        assert [info.remote_ref_string for info in result] == ["refs/heads/snapshot", "refs/heads/ordinary"]
+        assert result[0].local_hash == parent.hexsha
+
+    @skipIf(sys.platform == "win32", "requires POSIX timeout signalling")
+    @with_rw_repo("HEAD", bare=False)
     def test_timeout_partial_push(self, repo):
         process = repo.git.execute(
             [
