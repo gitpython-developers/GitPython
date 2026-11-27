@@ -8,7 +8,7 @@ import os.path as osp
 import ddt
 import pytest
 
-from git import NULL_TREE, Diff, DiffIndex, Diffable, Repo
+from git import NULL_TREE, Actor, Diff, DiffIndex, Diffable, Repo
 from git.compat import safe_encode
 from git.diff import decode_path
 from git.exc import UnsafeOptionError
@@ -660,3 +660,26 @@ class TestDiff(TestBase):
             b_path = d.b_path
             self.assertEqual(a_path, " file.txt")
             self.assertEqual(b_path, " file.txt")
+
+
+@pytest.mark.parametrize(
+    ("option", "value"),
+    [("diff.noprefix", "true"), ("diff.srcPrefix", "x/"), ("diff.dstPrefix", "y/")],
+)
+def test_worktree_patch_diff_ignores_prefix_configuration(tmp_path, option, value):
+    author = Actor("Test Author", "author@example.invalid")
+    with Repo.init(tmp_path / "repo") as repo:
+        repo.git.config(option, value)
+        tracked = tmp_path / "repo" / "file.txt"
+        tracked.write_text("before\n")
+        repo.index.add(["file.txt"])
+        repo.index.commit("initial", author=author, committer=author)
+        tracked.write_text("after\n")
+
+        # The raw format reports the change regardless of the header prefixes.
+        assert len(repo.index.diff(None)) == 1
+
+        # Patch headers must keep the a/ and b/ names the parser recognizes.
+        (diff,) = repo.index.diff(None, create_patch=True)
+        assert diff.a_path == "file.txt"
+        assert diff.diff == b"@@ -1 +1 @@\n-before\n+after\n"

@@ -88,6 +88,10 @@ API changes
   undecodable bytes. Diff blob paths can be used for tree lookup, and renames
   between distinct byte names are detected correctly. Patch rename fields
   contain unquoted filename bytes.
+* Patch diffs request the ``a/`` and ``b/`` header prefixes explicitly, so
+  ``diff.noprefix``, ``diff.srcPrefix`` and ``diff.dstPrefix`` no longer make
+  ``Diffable.diff(..., create_patch=True)`` return an empty ``DiffIndex`` for
+  index and working-tree changes.
 * Tree serialization now delegates construction to Git or the supported Gix
   backend. ``Tree.cache`` and ``TreeModifier`` edit one tree's in-memory entries;
   ``set_done()`` orders entries by filename bytes, including undecodable names.

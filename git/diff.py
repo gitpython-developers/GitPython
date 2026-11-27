@@ -281,6 +281,12 @@ class Diffable:
         if create_patch:
             args.append("-p")
             args.append("--no-ext-diff")
+            # The patch parser only recognizes "a/"/"b/"-prefixed header names, and
+            # `git diff` (unlike `git diff-tree`) lets configuration such as
+            # diff.noprefix, diff.srcPrefix or diff.dstPrefix replace or drop them,
+            # which would otherwise yield an empty DiffIndex for a changed worktree.
+            args.append("--src-prefix=a/")
+            args.append("--dst-prefix=b/")
         else:
             args.append("--raw")
             args.append("-z")
